@@ -49,18 +49,25 @@ module.exports = class TablePanel {
     const table = new Table(this.schema, this.table);
 
     // TODO: each await should also send an update to the frontend loading screen (below)
-    // UPDATE: 'Fetching base info'
+    Tools.setLoadingText(this.panel.webview, `Fetching base info`);
     const info = await table.getInfo();
-    // UPDATE: 'Fetching columns'
+
+    Tools.setLoadingText(this.panel.webview, `Fetching columns`);
     const columns = await table.getColumns();
-    // UPDATE: 'Fetching constraints'
+
+    Tools.setLoadingText(this.panel.webview, `Fetching constraints`);
     const keyContraints = await table.getConstraints();
-    // UPDATE: 'Fetching constraint columns'
+
+    Tools.setLoadingText(this.panel.webview, `Fetching constraint columns`);
     const constraintColumns = await table.getConstraintColumns();
-    // UPDATE: 'Fetching foreign keys'
+
+    Tools.setLoadingText(this.panel.webview, `Fetching foreign keys`);
     const foreignKeys = await table.getForeignKeys();
-    // UPDATE: 'Fetching check constraints'
+    
+    Tools.setLoadingText(this.panel.webview, `Fetching check constraints`);
     const checkConstraints = await table.getCheckConstraintsInfo(keyContraints.filter(c => c.CONSTRAINT_TYPE === `CHECK`));
+
+    Tools.setLoadingText(this.panel.webview, `Rendering`);
 
     const columnData = Tools.generateTable(
       `tableColumns`, 

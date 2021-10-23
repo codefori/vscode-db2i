@@ -11,6 +11,13 @@ module.exports = class {
     return webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...pathList));
   }
 
+  static setLoadingText(webview, text) {
+    webview.postMessage({
+      command: "loadingText",
+      text,
+    });
+  }
+
   static getLoadingHTML(webview, extensionUri) {
     const toolkitUri = this.getUri(webview, extensionUri, [
       "node_modules",
@@ -27,6 +34,18 @@ module.exports = class {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <script type="module" src="${toolkitUri}"></script>
+          <script>
+            window.addEventListener("message", (event) => {
+              const command = event.data.command;
+
+              switch (command) {
+                case "loadingText":
+                  const text = document.getElementById("loadingText");
+                  text.innerText = event.data.text;
+                  break;
+              }
+            });
+          </script>
           <style type="text/css">
             .loading {
               position: fixed; /* or absolute */
@@ -37,6 +56,7 @@ module.exports = class {
           </style>
         </head>
         <body>
+          <p id="loadingText">Loading..</p>
           <section class="loading">
             <p><vscode-progress-ring></vscode-progress-ring></p>
           </div>
