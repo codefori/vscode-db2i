@@ -2,6 +2,8 @@
 
 Db2 for IBM i tools is a reimplementation of the Schemas tool inside of Access Client Solutions. There is a lot to do so it will not likely be on the Marketplace any time soon.
 
+![](./media/main.png)
+
 ## Want to help?
 
 See the [Projects](https://github.com/halcyon-tech/vscode-db2i/projects) tab to see our progress and what you could work on.
