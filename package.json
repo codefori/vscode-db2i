@@ -1,0 +1,112 @@
+{
+  "name": "vscode-db2i",
+  "displayName": "Db2 for IBM i",
+  "description": "Db2 for IBM i tools in VS Code",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.61.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:schemaBrowser"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "db2-explorer",
+          "title": "Db2 for i",
+          "icon": "$(database)"
+        }
+      ]
+    },
+    "views": {
+      "db2-explorer": [
+        {
+          "id": "schemaBrowser",
+          "name": "Schema Browser",
+          "visibility": "visible",
+          "when": "code-for-ibmi:connected == true"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "db2-explorer",
+        "contents": "No connection found. Connect to an IBM i first."
+      }
+    ],
+    "commands": [
+      {
+        "command": "vscode-db2i.refreshSchemaBrowser",
+        "title": "Refresh Schema Browser",
+        "category": "Db2 for i",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-db2i.addSchemaToSchemaBrowser",
+        "title": "Add Schema to Schema Browser",
+        "category": "Db2 for i",
+        "icon": "$(add)"
+      },
+      {
+        "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
+        "title": "Remove schema from view",
+        "category": "Db2 for i",
+        "icon": "$(remove)"
+      },
+      {
+        "command": "vscode-db2i.generateSQL",
+        "title": "Generate SQL",
+        "category": "Db2 for i",
+        "icon": "$(add)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "vscode-db2i.addSchemaToSchemaBrowser",
+          "group": "navigation",
+          "when": "view == schemaBrowser"
+        },
+        {
+          "command": "vscode-db2i.refreshSchemaBrowser",
+          "group": "navigation",
+          "when": "view == schemaBrowser"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
+          "when": "view == schemaBrowser && viewItem == schema"
+        },
+        {
+          "command": "vscode-db2i.generateSQL",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^7.1.3",
+    "@types/mocha": "^8.2.2",
+    "@types/node": "14.x",
+    "@types/vscode": "^1.61.0",
+    "eslint": "^7.27.0",
+    "glob": "^7.1.7",
+    "mocha": "^8.4.0",
+    "typescript": "^4.3.2",
+    "vscode-test": "^1.5.2"
+  },
+  "dependencies": {
+    "@vscode/webview-ui-toolkit": "^0.8.2"
+  }
+}
