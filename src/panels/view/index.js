@@ -106,7 +106,7 @@ module.exports = class ViewPanel {
                       <vscode-text-field readonly value="${info.SYSTEM_TABLE_NAME}">System name</vscode-text-field>
                     </section> -->
                     <section class="component">
-                      <vscode-text-field readonly value="${checkValues[info.CHECK_OPTION] || `None`}">Insert allowed</vscode-text-field>
+                      <vscode-text-field readonly value="${checkValues[info.CHECK_OPTION] || `None`}">Check option</vscode-text-field>
                     </section>
                     <section class="component">
                       <vscode-text-field readonly value="${info.IS_INSERTABLE_INTO === `YES` ? `Yes` : `No`}">Insert allowed</vscode-text-field>
