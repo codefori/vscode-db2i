@@ -67,6 +67,26 @@ module.exports = class {
 
   /**
    * 
+   * @param {{title: string, content: string}[]} data 
+   */
+  static generateTabs(data) {
+    let html = `<vscode-panels>`;
+
+    data.forEach((tab, index) => {
+      html += `<vscode-panel-tab id="tab-${index}">${tab.title}</vscode-panel-tab>`;
+    });
+
+    data.forEach((tab, index) => {
+      html += `<vscode-panel-view id="view-${index}">${tab.content}</vscode-panel-view>`;
+    });
+
+    html += `</vscode-panels>`;
+
+    return html;
+  }
+
+  /**
+   * 
    * @param {{title: string, columnDataKey: string}[]} columns 
    * @param {object[]} rows 
    * @returns {{html: string, js: string}}

@@ -124,44 +124,46 @@ module.exports = class TablePanel {
         </head>
         <body>
           <section class="tables">
-            <vscode-panels aria-label="Default">
-              <vscode-panel-tab id="tab-1">Table</vscode-panel-tab>
-              <vscode-panel-tab id="tab-2">Columns</vscode-panel-tab>
-              <vscode-panel-tab id="tab-3">Key Constaints</vscode-panel-tab>
-              <vscode-panel-tab id="tab-4">Foreign Key Constraints</vscode-panel-tab>
-              <vscode-panel-tab id="tab-5">Check Constraints</vscode-panel-tab>
-              <vscode-panel-view id="view-1">
-                <section class="component-container">
-                  <section class="component">
-                    <vscode-text-field readonly value="${info.TABLE_NAME}">Name</vscode-text-field>
+            ${Tools.generateTabs([
+              {
+                title: `Table`,
+                content: `
+                  <section class="component-container">
+                    <section class="component">
+                      <vscode-text-field readonly value="${info.TABLE_NAME}">Name</vscode-text-field>
+                    </section>
+                    <section class="component">
+                      <vscode-text-field readonly value="${info.TABLE_SCHEMA}">Schema</vscode-text-field>
+                    </section>
+                    <section class="component">
+                      <vscode-text-field readonly value="${info.SYSTEM_TABLE_NAME}">System name</vscode-text-field>
+                    </section>
+                    <section class="component">
+                      <vscode-text-field readonly value="${info.TABLE_TEXT}" size="50">Text</vscode-text-field>
+                    </section>
+                    <section class="component">
+                      <vscode-text-field readonly value="${info.LONG_COMMENT || ``}" size="50">Comment</vscode-text-field>
+                    </section>
                   </section>
-                  <section class="component">
-                    <vscode-text-field readonly value="${info.TABLE_SCHEMA}">Schema</vscode-text-field>
-                  </section>
-                  <section class="component">
-                    <vscode-text-field readonly value="${info.SYSTEM_TABLE_NAME}">System name</vscode-text-field>
-                  </section>
-                  <section class="component">
-                    <vscode-text-field readonly value="${info.TABLE_TEXT}" size="50">Text</vscode-text-field>
-                  </section>
-                  <section class="component">
-                    <vscode-text-field readonly value="${info.LONG_COMMENT || ``}" size="50">Comment</vscode-text-field>
-                  </section>
-                </section>
-              </vscode-panel-view>
-              <vscode-panel-view id="view-2">
-                ${columnData.html}
-              </vscode-panel-view>
-              <vscode-panel-view id="view-3">
-                ${keyContraintsData.html}
-              </vscode-panel-view>
-              <vscode-panel-view id="view-4">
-                ${foreignKeysData.html}
-              </vscode-panel-view>
-              <vscode-panel-view id="view-5">
-                ${checkData.html}
-              </vscode-panel-view>
-            </vscode-panels>
+                  `
+              },
+              {
+                title: `Columns`,
+                content: columnData.html
+              },
+              {
+                title: `Key constraints`,
+                content: keyContraintsData.html
+              },
+              {
+                title: `Foreign keys`,
+                content: foreignKeysData.html
+              },
+              {
+                title: `Check constraints`,
+                content: checkData.html
+              }
+            ])}
           </section>
         </body>
       </html>
