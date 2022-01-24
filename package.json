@@ -107,6 +107,7 @@
     "vscode-test": "^1.5.2"
   },
   "dependencies": {
-    "@vscode/webview-ui-toolkit": "^0.8.5"
+    "@vscode/webview-ui-toolkit": "^0.8.5",
+    "sql-formatter": "^4.0.2"
   }
 }

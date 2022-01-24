@@ -2,6 +2,8 @@ const vscode = require(`vscode`);
 
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
+const Statement = require(`./statement`);
+
 const typeMap = {
   'tables': [`T`, `P`],
   'views': [`V`],
@@ -139,9 +141,12 @@ module.exports = class Database {
     schema = schema.toUpperCase();
 
     const lines = await content.runSQL([
-      `CALL QSYS2.GENERATE_SQL('${object}', '${schema}', '${type}', REPLACE_OPTION => '1')`
+      `CALL QSYS2.GENERATE_SQL('${object}', '${schema}', '${type}', CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
     ].join(` `));
 
-    return lines.map(line => line.SRCDTA).join(`\n`);
+    const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
+    const formatted = Statement.format(generatedStatement);
+
+    return formatted;
   }
 }

@@ -2,7 +2,8 @@
 const vscode = require(`vscode`);
 const Tools = require(`../tools`);
 
-const Table = require(`../../database/view`);
+const Statement = require(`../../database/statement`);
+const View = require(`../../database/view`);
 const Headers = require(`./headers`);
 
 const checkValues = {
@@ -32,7 +33,7 @@ module.exports = class ViewPanel {
 
     this.panel = vscode.window.createWebviewPanel(
       `view`,
-      `Table ${this.view}`,
+      `View ${this.view}`,
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -52,7 +53,7 @@ module.exports = class ViewPanel {
       "toolkit.js",
     ]);
 
-    const view = new Table(this.schema, this.view);
+    const view = new View(this.schema, this.view);
 
     Tools.setLoadingText(this.panel.webview, `Fetching base info`);
     const info = await view.getInfo();
@@ -131,7 +132,7 @@ module.exports = class ViewPanel {
               },
               {
                 title: `Query text`,
-                content: `<pre>${info.VIEW_DEFINITION}</pre>`
+                content: `<pre>${Statement.format(info.VIEW_DEFINITION)}</pre>`
               }
             ])}
           </section>
