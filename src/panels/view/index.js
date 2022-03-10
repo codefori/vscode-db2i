@@ -94,37 +94,44 @@ module.exports = class ViewPanel {
             ${Tools.generateTabs([
     {
       title: `View`,
-      content: `
-                  <section class="component-container">
-                    <section class="component">
-                      <vscode-text-field readonly value="${info.TABLE_NAME}">Name</vscode-text-field>
-                    </section>
-                    <section class="component">
-                      <vscode-text-field readonly value="${info.TABLE_SCHEMA}">Schema</vscode-text-field>
-                    </section>
-                    <!-- <section class="component">
-                      <vscode-text-field readonly value="${info.SYSTEM_TABLE_NAME}">System name</vscode-text-field>
-                    </section> -->
-                    <section class="component">
-                      <vscode-text-field readonly value="${checkValues[info.CHECK_OPTION] || `None`}">Check option</vscode-text-field>
-                    </section>
-                    <section class="component">
-                      <vscode-text-field readonly value="${info.IS_INSERTABLE_INTO === `YES` ? `Yes` : `No`}">Insert allowed</vscode-text-field>
-                    </section>
-                    <section class="component">
-                      <vscode-text-field readonly value="${info.IS_UPDATABLE === `Y` ? `Yes` : `No`}">Update allowed</vscode-text-field>
-                    </section>
-                    <section class="component">
-                      <vscode-text-field readonly value="${info.IS_DELETABLE === `Y` ? `Yes` : `No`}">Delete allowed</vscode-text-field>
-                    </section>
-                    <!-- <section class="component">
-                      <vscode-text-field readonly value="${info.TABLE_TEXT}" size="50">Text</vscode-text-field>
-                    </section>
-                    <section class="component">
-                      <vscode-text-field readonly value="${info.LONG_COMMENT || ``}" size="50">Comment</vscode-text-field>
-                    </section> -->
-                  </section>
-                  `
+      content: Tools.generateFields([
+        {
+          label: `Name`,
+          value: info.TABLE_NAME
+        },
+        {
+          label: `Schema`,
+          value: info.TABLE_SCHEMA
+        },
+        {
+          label: `System name`,
+          value: info.SYSTEM_TABLE_NAME
+        },
+        {
+          label: `Check option`,
+          value: checkValues[info.CHECK_OPTION] || `None`
+        },
+        {
+          label: `Insert allowed`,
+          value: info.IS_INSERTABLE_INTO === `YES` ? `Yes` : `No`
+        },
+        {
+          label: `Update allowed`,
+          value: info.IS_UPDATABLE === `Y` ? `Yes` : `No`
+        },
+        {
+          label: `Delete allowed`,
+          value: info.IS_DELETABLE === `Y` ? `Yes` : `No`
+        },
+        {
+          label: `Text`,
+          value: info.TABLE_TEXT
+        },
+        {
+          label: `Comment`,
+          value: info.LONG_COMMENT || ``
+        }
+      ]),
     },
     {
       title: `Columns`,

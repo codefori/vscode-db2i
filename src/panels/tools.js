@@ -95,7 +95,7 @@ module.exports = class {
     fields.forEach(field => {
       html += /*html*/`
       <section class="component">
-        <vscode-text-field readonly value="${field.value.replace(new RegExp(`"`, `g`), `&quot;`)}" ${field.size ? `size="${field.size}"` : ``}>${field.label || ``}</vscode-text-field>
+        <vscode-text-field readonly value="${field.value ? field.value.replace(new RegExp(`"`, `g`), `&quot;`) : ``}" ${field.size ? `size="${field.size}"` : ``}>${field.label || ``}</vscode-text-field>
       </section>
       `;
     });
