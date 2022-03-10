@@ -39,11 +39,11 @@ module.exports = class TablePanel {
 
   async _getContent() {
     const toolkitUri = Tools.getUri(this.panel.webview, this.extensionUri, [
-      "node_modules",
-      "@vscode",
-      "webview-ui-toolkit",
-      "dist",
-      "toolkit.js",
+      `node_modules`,
+      `@vscode`,
+      `webview-ui-toolkit`,
+      `dist`,
+      `toolkit.js`,
     ]);
 
     const table = new Table(this.schema, this.table);
@@ -125,9 +125,9 @@ module.exports = class TablePanel {
         <body>
           <section class="tables">
             ${Tools.generateTabs([
-              {
-                title: `Table`,
-                content: `
+    {
+      title: `Table`,
+      content: `
                   <section class="component-container">
                     <section class="component">
                       <vscode-text-field readonly value="${info.TABLE_NAME}">Name</vscode-text-field>
@@ -146,24 +146,24 @@ module.exports = class TablePanel {
                     </section>
                   </section>
                   `
-              },
-              {
-                title: `Columns`,
-                content: columnData.html
-              },
-              {
-                title: `Key constraints`,
-                content: keyContraintsData.html
-              },
-              {
-                title: `Foreign keys`,
-                content: foreignKeysData.html
-              },
-              {
-                title: `Check constraints`,
-                content: checkData.html
-              }
-            ])}
+    },
+    {
+      title: `Columns`,
+      content: columnData.html
+    },
+    {
+      title: `Key constraints`,
+      content: keyContraintsData.html
+    },
+    {
+      title: `Foreign keys`,
+      content: foreignKeysData.html
+    },
+    {
+      title: `Check constraints`,
+      content: checkData.html
+    }
+  ])}
           </section>
         </body>
       </html>

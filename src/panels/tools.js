@@ -13,18 +13,18 @@ module.exports = class {
 
   static setLoadingText(webview, text) {
     webview.postMessage({
-      command: "loadingText",
+      command: `loadingText`,
       text,
     });
   }
 
   static getLoadingHTML(webview, extensionUri) {
     const toolkitUri = this.getUri(webview, extensionUri, [
-      "node_modules",
-      "@vscode",
-      "webview-ui-toolkit",
-      "dist",
-      "toolkit.js",
+      `node_modules`,
+      `@vscode`,
+      `webview-ui-toolkit`,
+      `dist`,
+      `toolkit.js`,
     ]);
 
     return /*html*/ `

@@ -46,11 +46,11 @@ module.exports = class ViewPanel {
 
   async _getContent() {
     const toolkitUri = Tools.getUri(this.panel.webview, this.extensionUri, [
-      "node_modules",
-      "@vscode",
-      "webview-ui-toolkit",
-      "dist",
-      "toolkit.js",
+      `node_modules`,
+      `@vscode`,
+      `webview-ui-toolkit`,
+      `dist`,
+      `toolkit.js`,
     ]);
 
     const view = new View(this.schema, this.view);
@@ -92,9 +92,9 @@ module.exports = class ViewPanel {
         <body>
           <section class="tables">
             ${Tools.generateTabs([
-              {
-                title: `View`,
-                content: `
+    {
+      title: `View`,
+      content: `
                   <section class="component-container">
                     <section class="component">
                       <vscode-text-field readonly value="${info.TABLE_NAME}">Name</vscode-text-field>
@@ -125,16 +125,16 @@ module.exports = class ViewPanel {
                     </section> -->
                   </section>
                   `
-              },
-              {
-                title: `Columns`,
-                content: columnData.html
-              },
-              {
-                title: `Query text`,
-                content: `<pre>${Statement.format(info.VIEW_DEFINITION)}</pre>`
-              }
-            ])}
+    },
+    {
+      title: `Columns`,
+      content: columnData.html
+    },
+    {
+      title: `Query text`,
+      content: `<pre>${Statement.format(info.VIEW_DEFINITION)}</pre>`
+    }
+  ])}
           </section>
         </body>
       </html>

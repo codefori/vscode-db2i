@@ -1,6 +1,6 @@
 
 const vscode = require(`vscode`);
-const Database = require("../database/schemas");
+const Database = require(`../database/schemas`);
 
 const Panels = require(`../panels`);
 
@@ -83,14 +83,14 @@ module.exports = class schemaBrowser {
         if (schema && object && type) {
           let panel;
           switch (type) {
-            case `table`:
-              panel = new Panels.table(schema, object, context.extensionUri);
-              panel.render();
-              break;
-            case `view`:
-              panel = new Panels.view(schema, object, context.extensionUri);
-              panel.render();
-              break;
+          case `table`:
+            panel = new Panels.table(schema, object, context.extensionUri);
+            panel.render();
+            break;
+          case `view`:
+            panel = new Panels.view(schema, object, context.extensionUri);
+            panel.render();
+            break;
           }
         }
       }),
@@ -175,29 +175,29 @@ module.exports = class schemaBrowser {
     if (element) {
       const type = element.contextValue;
       switch (type) {
-        case `schema`:
-          // @ts-ignore exists on Schema
-          items = getSchemaItems(element.schema);
-          break;
+      case `schema`:
+        // @ts-ignore exists on Schema
+        items = getSchemaItems(element.schema);
+        break;
 
-        case `tables`:
-        case `aliases`:
-        case `views`:
-        case `constraints`:
-        case `procedures`:
-        case `functions`:
-        case `packages`:
-        case `triggers`:
-        case `types`:
-        case `sequences`:
-        case `indexes`:
-        case `variables`:
-          // @ts-ignore exists on Schema
-          items = await this.fetchData(element.schema, type, false);
+      case `tables`:
+      case `aliases`:
+      case `views`:
+      case `constraints`:
+      case `procedures`:
+      case `functions`:
+      case `packages`:
+      case `triggers`:
+      case `types`:
+      case `sequences`:
+      case `indexes`:
+      case `variables`:
+        // @ts-ignore exists on Schema
+        items = await this.fetchData(element.schema, type, false);
 
-          // @ts-ignore
-          items.push(moreButton(element.schema, type));
-          break;
+        // @ts-ignore
+        items.push(moreButton(element.schema, type));
+        break;
       }
 
     } else {
@@ -205,11 +205,11 @@ module.exports = class schemaBrowser {
       if (connection) {
         const config = instance.getConfig();
 
-          const libraries = config.databaseBrowserList;
+        const libraries = config.databaseBrowserList;
 
-          for (let library of libraries) {
-            items.push(new Schema(library));
-          }
+        for (let library of libraries) {
+          items.push(new Schema(library));
+        }
       }
     }
 
