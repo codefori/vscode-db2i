@@ -1,12 +1,13 @@
 module.exports = {
   columns: [ 
-    { columnDataKey: `COLUMN_NAME`, title: `Column Name` },
-    { columnDataKey: `SYSTEM_COLUMN_NAME`, title: `System Name` },
+    { columnDataKey: `ORDINAL_POSITION`, title: `Number` },
+    { columnDataKey: `PARAMETER_MODE`, title: `Mode` },
+    { columnDataKey: `PARAMETER_NAME`, title: `Name` },
     { columnDataKey: `DATA_TYPE`, title: `Data Type` },
-    { columnDataKey: `LENGTH`, title: `Length` },
-    { columnDataKey: `NULLABLE`, title: `Nullable` },
-    { columnDataKey: `COLUMN_DEFAULT`, title: `Default` },
-    { columnDataKey: `COLUMN_TEXT	`, title: `Text` },
-    { columnDataKey: `CCSID`, title: `CCSID` }
+    { columnDataKey: `CHARACTER_MAXIMUM_LENGTH`, title: `Length` },
+    { columnDataKey: `CCSID`, title: `CCSID` },
+    // { columnDataKey: `Locator	`, title: `Text` },
+    { columnDataKey: `DEFAULT`, title: `Default Value` },
+    { columnDataKey: `LONG_COMMENT`, title: `Text` }
   ],
 }

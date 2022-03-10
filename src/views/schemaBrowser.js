@@ -91,6 +91,10 @@ module.exports = class schemaBrowser {
             panel = new Panels.view(schema, object, context.extensionUri);
             panel.render();
             break;
+          case `procedure`:
+            panel = new Panels.procedure(schema, object, context.extensionUri);
+            panel.render();
+            break;
           }
         }
       }),

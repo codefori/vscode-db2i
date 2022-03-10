@@ -140,6 +140,7 @@ module.exports = class Database {
 
     schema = schema.toUpperCase();
 
+    // TODO: fix?
     const lines = await content.runSQL([
       `CALL QSYS2.GENERATE_SQL('${object}', '${schema}', '${type}', CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
     ].join(` `));
