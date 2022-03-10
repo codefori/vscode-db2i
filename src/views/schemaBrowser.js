@@ -205,15 +205,11 @@ module.exports = class schemaBrowser {
       if (connection) {
         const config = instance.getConfig();
 
-        if (connection.remoteFeatures.db2util) {
           const libraries = config.databaseBrowserList;
 
           for (let library of libraries) {
             items.push(new Schema(library));
           }
-        } else {
-          items.push(new vscode.TreeItem(`'db2util' not installed on system or is disabled in the settings.`, vscode.TreeItemCollapsibleState.None));
-        }
       }
     }
 
