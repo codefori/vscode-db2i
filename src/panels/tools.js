@@ -87,11 +87,19 @@ module.exports = class {
 
   /**
    * 
-   * @param {{title: string, columnDataKey: string}[]} columns 
+   * @param {{title: string, columnDataKey: string|number, transform?: (row: object) => string|number}[]} columns 
    * @param {object[]} rows 
    * @returns {{html: string, js: string}}
    */
   static generateTable(id, columns, rows) {
+    rows.forEach(row => {
+      columns.forEach(column => {
+        if (row[column.columnDataKey] && column.transform) {
+          row[column.columnDataKey] = column.transform(row);
+        }
+      });
+    });
+    
     let result = {
       html: `<vscode-data-grid id="${id}"></vscode-data-grid>`,
       js: [
