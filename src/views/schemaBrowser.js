@@ -36,6 +36,7 @@ module.exports = class schemaBrowser {
 
     context.subscriptions.push(
       vscode.commands.registerCommand(`vscode-db2i.refreshSchemaBrowser`, async () => {
+        this.cache = {};
         this.refresh();
       }),
 
