@@ -77,12 +77,30 @@ module.exports = class {
     });
 
     data.forEach((tab, index) => {
-      html += `<vscode-panel-view id="view-${index}">${tab.content}</vscode-panel-view>`;
+      html += `<vscode-panel-view id="view-${index}"><section class="component-container">${tab.content}</section></vscode-panel-view>`;
     });
 
     html += `</vscode-panels>`;
 
     return html;
+  }
+
+  /**
+   * 
+   * @param {{label?: string, value: string, size?: number}[]} fields 
+   */
+  static generateFields(fields) {
+    let html = ``;
+
+    fields.forEach(field => {
+      html += /*html*/`
+      <section class="component">
+        <vscode-text-field readonly value="${field.value.replace(new RegExp(`"`, `g`), `&quot;`)}" ${field.size ? `size="${field.size}"` : ``}>${field.label || ``}</vscode-text-field>
+      </section>
+      `;
+    });
+
+    return html
   }
 
   /**
