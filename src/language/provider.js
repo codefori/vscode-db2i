@@ -65,7 +65,6 @@ exports.initialise = async (context) => {
   ),
 
   vscode.languages.registerCompletionItemProvider({language: `sql` }, {
-    // @ts-ignore
     provideCompletionItems: async (document, position) => {
       ///** @type vscode.CompletionItem[] */
       const items = [];
@@ -86,15 +85,20 @@ exports.initialise = async (context) => {
               ast.from.find(f => f.table === prefix);
 
             if (definedAs) {
-              const columns = await Store.getTable(definedAs.db, definedAs.table);
+              if (definedAs.db) {
+                const columns = await Store.getTable(definedAs.db, definedAs.table);
 
-              columns.forEach(column => {
-                const item = new vscode.CompletionItem(column.COLUMN_NAME.toLowerCase(), vscode.CompletionItemKind.Field);
-                item.insertText = new vscode.SnippetString(column.COLUMN_NAME.toLowerCase());
-                item.detail = column.DATA_TYPE;
-                item.documentation = new vscode.MarkdownString(`${column.COLUMN_TEXT} (\`${definedAs.db}.${definedAs.table}\`)`);
-                items.push(item);
-              });
+                columns.forEach(column => {
+                  const item = new vscode.CompletionItem(column.COLUMN_NAME.toLowerCase(), vscode.CompletionItemKind.Field);
+                  item.insertText = new vscode.SnippetString(column.COLUMN_NAME.toLowerCase());
+                  item.detail = column.DATA_TYPE;
+                  item.documentation = new vscode.MarkdownString(`${column.COLUMN_TEXT} (\`${definedAs.db}.${definedAs.table}\`)`);
+                  items.push(item);
+                });
+              } else {
+                // Usually indicates we're trying to find tables in a schema
+                // TODO
+              }
             }
           }
         }
