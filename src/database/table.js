@@ -23,7 +23,7 @@ module.exports = class Table {
     const content = instance.getContent();
     
     return content.runSQL([
-      `SELECT * FROM QSYS2.SYSCOLUMNS`,
+      `SELECT * FROM QSYS2.SYSCOLUMNS2`,
       `WHERE TABLE_SCHEMA = '${this.schema}' AND TABLE_NAME = '${this.tableName}'`,
       `ORDER BY ORDINAL_POSITION`
     ].join(` `));

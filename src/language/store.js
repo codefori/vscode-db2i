@@ -2,49 +2,63 @@
 const vscode = require(`vscode`);
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
-const Table = require(`../database/table`);
-
 exports.data = {
-  routines: [],
+  /** @type {{[schema: string]: object[]}} */
+  routines: {},
   /** @type {{[path: string]: object[]}} */
-  tables: {},
+  columns: {},
+  /** @type {{[schema: string]: object[]}} */
+  objects: {}
 }
 
-exports.refresh = async () => {
-  const config = instance.getConfig();
+exports.refresh = () => {
+  this.data.routines = {};
+  this.data.columns = {};
+  this.data.objects = {};
+}
 
-  const schemas = config.databaseBrowserList;
+exports.hasConnection = () => {
+  return instance.getConnection() !== undefined;
+}
 
-  this.data.routines = await this.getRoutines(schemas);
+exports.routinesAvailable = async (schema) => {  schema = schema.toUpperCase();
+  if (this.data.routines[schema]) {
+    return this.data.routines[schema];
+  }
+
+  // No waiting for the content to load
+  this.getRoutines(schema);
+
+  return null;
 }
 
 /**
- * @param {string[]} schemas 
+ * @param {string} schema 
  */
-exports.getRoutines = async (schemas) => {
+exports.getRoutines = async (schema) => {
   const content = instance.getContent();
 
-  const schemaList = schemas.map(schema => schema.toUpperCase());
+  schema = schema.toUpperCase();
 
-  [`QSYS2`, `QSYS`].forEach(schema => {
-    if (!schemaList.includes(schema)) schemaList.push(schema);
-  });
+  if (this.data.routines[schema]) {
+    return this.data.routines[schema];
+  }
   
   const routineStatement = [
     `select SPECIFIC_SCHEMA, SPECIFIC_NAME, ROUTINE_SCHEMA as PRETTY_SCHEMA, ROUTINE_NAME as PRETTY_NAME, MAX_DYNAMIC_RESULT_SETS as RESULT_SETS, ROUTINE_TYPE, EXTERNAL_NAME, LONG_COMMENT`,
-    `from QSYS2.SYSROUTINES where ROUTINE_SCHEMA in (${schemaList.map(s => `'${s.toUpperCase()}'`).join(`, `)})`,
+    `from QSYS2.SYSROUTINES where ROUTINE_SCHEMA = '${schema}'`,
   ].join(` `);
 
   const routines = await content.runSQL(routineStatement);
 
   const parmStatement = [
     `select SPECIFIC_SCHEMA, SPECIFIC_NAME, ORDINAL_POSITION, PARAMETER_MODE, PARAMETER_NAME, DATA_TYPE, IS_NULLABLE, DEFAULT`,
-    `from QSYS2.SYSPARMS where SPECIFIC_SCHEMA in (${schemaList.map(s => `'${s.toUpperCase()}'`).join(`, `)})`,
+    `from QSYS2.SYSPARMS where SPECIFIC_SCHEMA = '${schema}'`,
   ].join(` `);
 
   const parms = await content.runSQL(parmStatement);
 
-  return routines.map(proc => {
+  this.data.routines[schema] = routines.map(proc => {
     return {
       schema: proc.PRETTY_SCHEMA,
       name: proc.PRETTY_NAME,
@@ -67,21 +81,48 @@ exports.getRoutines = async (schemas) => {
         .sort((a, b) => (a.order > b.order) ? 1 : ((b.order > a.order) ? -1 : 0))
     };
   });
+
+  return this.data.routines[schema];
 }
 
-exports.getTable = async (schema, name) => {
+exports.getColumns = async (schema, name) => {
+  const content = instance.getContent();
+
   schema = schema.toUpperCase();
   name = name.toUpperCase();
 
   const key = `${schema}.${name}`;
 
-  if (this.data.tables[key]) {
-    return this.data.tables[key];
+  if (this.data.columns[key]) {
+    return this.data.columns[key];
   }
 
-  const table = new Table(schema, name);
+  const columns = await content.runSQL([
+    `SELECT * FROM QSYS2.SYSCOLUMNS2`,
+    `WHERE TABLE_SCHEMA = '${schema}' AND TABLE_NAME = '${name}'`,
+    `ORDER BY ORDINAL_POSITION`
+  ].join(` `));
   
-  this.data.tables[key] = await table.getColumns();
+  this.data.columns[key] = columns;
 
-  return this.data.tables[key];
+  return this.data.columns[key];
+}
+
+exports.getObjects = async (schema) => {
+  const content = instance.getContent();
+
+  schema = schema.toUpperCase();
+
+  if (this.data.objects[schema]) {
+    return this.data.objects[schema];
+  }
+
+  const objects = await content.runSQL([
+    `SELECT TABLE_NAME, TABLE_TYPE, TABLE_TEXT FROM QSYS2.SYSTABLES`,
+    `WHERE TABLE_SCHEMA = '${schema}' and TABLE_TYPE in ('T', 'P', 'V')`,
+  ].join(` `));
+
+  this.data.objects[schema] = objects;
+
+  return this.data.objects[schema];
 }

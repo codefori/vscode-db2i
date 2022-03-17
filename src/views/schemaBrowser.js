@@ -2,6 +2,8 @@
 const vscode = require(`vscode`);
 const Database = require(`../database/schemas`);
 
+const Store = require(`../language/store`);
+
 const Panels = require(`../panels`);
 
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
@@ -37,6 +39,7 @@ module.exports = class schemaBrowser {
     context.subscriptions.push(
       vscode.commands.registerCommand(`vscode-db2i.refreshSchemaBrowser`, async () => {
         this.cache = {};
+        Store.refresh();
         this.refresh();
       }),
 
@@ -219,6 +222,8 @@ module.exports = class schemaBrowser {
         for (let library of libraries) {
           items.push(new Schema(library));
         }
+      } else {
+        items.push(new Schema(`No connection. Refresh when ready.`));
       }
     }
 
