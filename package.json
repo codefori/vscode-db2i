@@ -13,6 +13,9 @@
 	"author": {
 		"name": "Halcyon-Tech, Liam Allan"
 	},
+  "repository": {
+    "url": "https://github.com/halcyon-tech/vscode-db2i"
+  },
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -115,7 +118,8 @@
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",
-    "test": "node ./test/runTest.js"
+    "test": "node ./test/runTest.js",
+		"package": "vsce package"
   },
   "devDependencies": {
     "@types/glob": "^7.1.3",
