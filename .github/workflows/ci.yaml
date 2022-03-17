@@ -19,5 +19,5 @@ jobs:
       - name: Upload build
         uses: actions/upload-artifact@v2
         with:
-          name: code-for-ibmi-pr-build
+          name: vscode-db2i-release-build
           path: ./*.vsix
