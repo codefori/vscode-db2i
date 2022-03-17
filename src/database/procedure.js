@@ -2,7 +2,7 @@
 const vscode = require(`vscode`);
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
-module.exports = class View {
+module.exports = class Procedure {
   constructor(schema, procName) {
     this.schema = schema.toUpperCase();
     this.procName = procName.toUpperCase();
