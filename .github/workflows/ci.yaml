@@ -1,0 +1,23 @@
+on:
+  release:
+    types: [created]
+    
+jobs:
+  release:
+    name: Release and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - run: npm install
+      
+      - run: npm install -g vsce
+      - name: Create build
+        run: npm run package
+        
+      - name: Upload build
+        uses: actions/upload-artifact@v2
+        with:
+          name: code-for-ibmi-pr-build
+          path: ./*.vsix
