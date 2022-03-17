@@ -108,6 +108,7 @@
   },
   "dependencies": {
     "@vscode/webview-ui-toolkit": "^0.8.5",
+    "node-sql-parser": "^4.1.1",
     "sql-formatter": "^4.0.2"
   }
 }

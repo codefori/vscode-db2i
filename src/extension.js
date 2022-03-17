@@ -3,6 +3,10 @@
 const vscode = require(`vscode`);
 const schemaBrowser = require(`./views/schemaBrowser`);
 
+const languageProvider = require(`./language/provider`);
+
+const LanguageStore = require(`./language/store`);
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 
@@ -21,6 +25,10 @@ function activate(context) {
       new schemaBrowser(context)
     ),
   );
+
+  LanguageStore.refresh().then(() => {
+    languageProvider.initialise(context)
+  });
 }
 
 // this method is called when your extension is deactivated
