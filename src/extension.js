@@ -3,6 +3,10 @@
 const vscode = require(`vscode`);
 const schemaBrowser = require(`./views/schemaBrowser`);
 
+const Configuration = require(`./configuration`);
+
+const languageProvider = require(`./language/provider`);
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 
@@ -15,12 +19,16 @@ function activate(context) {
   // This line of code will only be executed once when your extension is activated
   console.log(`Congratulations, your extension "vscode-db2i" is now active!`);
 
-  context.subscriptions.push(
-    vscode.window.registerTreeDataProvider(
-      `schemaBrowser`,
-      new schemaBrowser(context)
-    ),
-  );
+  if (Configuration.get(`schemas`)) {
+    context.subscriptions.push(
+      vscode.window.registerTreeDataProvider(
+        `schemaBrowser`,
+        new schemaBrowser(context)
+      ),
+    );
+  }
+
+  languageProvider.initialise(context);
 }
 
 // this method is called when your extension is deactivated

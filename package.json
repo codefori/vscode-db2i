@@ -9,11 +9,33 @@
   "categories": [
     "Other"
   ],
+  "publisher": "halcyontechltd",
+	"author": {
+		"name": "Halcyon-Tech, Liam Allan"
+	},
   "activationEvents": [
-    "onView:schemaBrowser"
+    "onStartupFinished"
   ],
+  "extensionDependencies": [
+		"halcyontechltd.code-for-ibmi"
+	],
   "main": "./src/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Db2 for IBM i",
+      "properties": {
+        "vscode-db2i.validator": {
+          "type": "boolean",
+          "description": "Enable/disable the SQL validator",
+          "default": false
+        },
+        "vscode-db2i.schemas": {
+          "type": "boolean",
+          "description": "Enable/disable the Schemas tool (preview)",
+          "default": false
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -108,6 +130,7 @@
   },
   "dependencies": {
     "@vscode/webview-ui-toolkit": "^0.8.5",
+    "node-sql-parser": "^4.1.1",
     "sql-formatter": "^4.0.2"
   }
 }
