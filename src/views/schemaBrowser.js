@@ -103,6 +103,9 @@ module.exports = class schemaBrowser {
             panel = new Panels.trigger(schema, object, context.extensionUri);
             panel.render();
             break;
+          default:
+            vscode.window.showInformationMessage(`No view available for ${type}.`);
+            break;
           }
         }
       }),
