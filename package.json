@@ -31,11 +31,6 @@
           "type": "boolean",
           "description": "Enable/disable the SQL validator",
           "default": false
-        },
-        "vscode-db2i.schemas": {
-          "type": "boolean",
-          "description": "Enable/disable the Schemas tool (preview)",
-          "default": false
         }
       }
     },
