@@ -115,7 +115,17 @@ exports.initialise = async (context) => {
                   columns.forEach(column => {
                     const item = new vscode.CompletionItem(column.COLUMN_NAME.toLowerCase(), vscode.CompletionItemKind.Field);
                     item.insertText = new vscode.SnippetString(column.COLUMN_NAME.toLowerCase());
-                    item.detail = column.DATA_TYPE;
+                    
+                    let detail = null, length;
+                    if ([`DECIMAL`, `ZONED`].includes(column.DATA_TYPE)) {
+                      length = column.NUMERIC_PRECISION || null;
+                      detail = `${column.DATA_TYPE}${length ? `(${length}${column.NUMERIC_PRECISION ? `, ${column.NUMERIC_SCALE}` : ``})` : ``}`
+                    } else {
+                      length = column.CHARACTER_MAXIMUM_LENGTH || null;
+                      detail = `${column.DATA_TYPE}${length ? `(${length})` : ``}`
+                    }
+
+                    item.detail = detail;
                     item.documentation = new vscode.MarkdownString(`${column.COLUMN_TEXT} (\`${definedAs.db}.${definedAs.table}\`)`);
                     items.push(item);
                   });
