@@ -2,9 +2,9 @@
 
 Db2 for IBM i tools provides SQL functionality to VS Code. It is in preview right now.
 
+* Schemas view
 * Language tools. List tables and views and their columns when writing SQL, as well as procedures and functions
 * Language validator* (must be enabled in VS Code settings)
-* Schemas tool* (in preview)
 
 \* *must be enabled in the settings*
 
