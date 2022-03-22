@@ -8,5 +8,125 @@
   "lower": {
     "prefix": "lower",
     "body": "lower(${1:string})",
-  }
+  },
+  "abs": {
+    "prefix": "abs",
+    "body": "abs(${1:number})",
+    "description": "The ABS function returns the absolute value of a number."
+  },
+  "absval": {
+    "prefix": "absval",
+    "body": "absval(${1:number})",
+    "description": "The ABS function returns the absolute value of a number."
+  },
+  "acos": {
+    "prefix": "acos",
+    "body": "acos(${1:number})",
+    "description": "The ACOS function returns the arc cosine of the argument as an angle expressed in radians. The ACOS and COS functions are inverse operations."
+  },
+  "add_months": {
+    "prefix": "add_months",
+    "body": "add_months(${1:datetime}, ${2:number})",
+    "description": "The ADD_MONTHS function returns a date or timestamp that represents expression plus numeric-expression months."
+  },
+  "antilog": {
+    "prefix": "antilog",
+    "body": "antilog(${1:number})",
+    "description": "The ANTILOG function returns the anti-logarithm (base 10) of a number. The ANTILOG and LOG functions are inverse operations."
+  },
+  "array_max_cardinality": {
+    "prefix": "array_max_cardinality",
+    "body": "array_max_cardinality(${1:array})",
+    "description": "The ARRAY_MAX_CARDINALITY function returns a value representing the maximum number of elements an array can contain. This is the cardinality specified on the CREATE TYPE (Array) statement for the user-defined array type."
+  },
+  "array_trim": {
+    "prefix": "array_trim",
+    "body": "array_trim(${1:array}, ${2:number})",
+    "description": "The ARRAY_TRIM function returns a copy of the array argument from which the specified number of elements have been removed from the end of the array."
+  },
+  "ascii": {
+    "prefix": "ascii",
+    "body": "ascii(${1:string/number})",
+    "description": "The ASCII function returns the ASCII code value of the leftmost character of the argument as an integer."
+  },
+  "asin": {
+    "prefix": "asin",
+    "body": "asin(${1:number})",
+    "description": "The ASIN function returns the arc sine of the argument as an angle expressed in radians. The ASIN and SIN functions are inverse operations."
+  },
+  "atan": {
+    "prefix": "atan",
+    "body": "atan(${1:number})",
+    "description": "The ATAN function returns the arc tangent of the argument as an angle expressed in radians. The ATAN and TAN functions are inverse operations."
+  },
+  "atanh": {
+    "prefix": "atanh",
+    "body": "atanh(${1:number})",
+    "description": "The ATANH function returns the hyperbolic arc tangent of a number, in radians. The ATANH and TANH functions are inverse operations."
+  },
+  "atan2": {
+    "prefix": "atan2",
+    "body": "atan2(${1:number}, ${2:number})",
+    "description": "The ATAN2 function returns the arc tangent of x and y coordinates as an angle expressed in radians. The first and second arguments specify the x and y coordinates, respectively."
+  },
+  "base64_decode": {
+    "prefix": "base64_decode",
+    "body": "base64_decode(${1:string})",
+    "description": "The BASE64_DECODE scalar function returns a character string that has been Base64 decoded. Base64 encoding is widely used to represent binary data as a string."
+  },
+  "base64_encode": {
+    "prefix": "base64_encode",
+    "body": "base64_encode(${1:binary_string})",
+    "description": "The BASE64_ENCODE scalar function returns the Base64 encoded version of a binary value."
+  },
+  "bigint": {
+    "prefix": "bigint",
+    "body": "bigint(${1:number/string/datetime})",
+    "description": "The BIGINT function returns a big integer representation."
+  },
+  "binary":{
+    "prefix": "binary",
+    "body": "binary(${1:string}, ${2:int16})",
+    "description": "The BINARY function returns a BINARY representation of a string of any type."
+  },
+  "bitand": {
+    "prefix": "bitand",
+    "body": "bitand(${1:number}, ${2:number})",
+    "description": "These bitwise functions operate on the \"two's complement\" representation of the integer value of the input arguments and return the result as a corresponding base 10 integer value in a data type based on the data type of the input arguments."
+  },
+  "bitandnot": {
+    "prefix": "bitandnot",
+    "body": "bitandnot(${1:number}, ${2:number})",
+    "description": "These bitwise functions operate on the \"two's complement\" representation of the integer value of the input arguments and return the result as a corresponding base 10 integer value in a data type based on the data type of the input arguments."
+  },
+  "bitor": {
+    "prefix": "bitor",
+    "body": "bitor(${1:number}, ${2:number})",
+    "description": "These bitwise functions operate on the \"two's complement\" representation of the integer value of the input arguments and return the result as a corresponding base 10 integer value in a data type based on the data type of the input arguments."
+  },
+  "bitxor": {
+    "prefix": "bitxor",
+    "body": "bitxor(${1:number}, ${2:number})",
+    "description": "These bitwise functions operate on the \"two's complement\" representation of the integer value of the input arguments and return the result as a corresponding base 10 integer value in a data type based on the data type of the input arguments."
+  },
+  "bitnot": {
+    "prefix": "bitnot",
+    "body": "bitnot(${1:number})",
+    "description": "These bitwise functions operate on the \"two's complement\" representation of the integer value of the input arguments and return the result as a corresponding base 10 integer value in a data type based on the data type of the input arguments."
+  },
+  "bit_length": {
+    "prefix": "bit_length",
+    "body": "bit_length(${1:string/number})",
+    "description": "The BIT_LENGTH function returns the length of a string expression in bits."
+  },
+  "blob": {
+    "prefix": "blob",
+    "body": "blob(${1:binary_string}, ${2:int})",
+    "description": "The BLOB function returns a BLOB representation of a string of any type."
+  },
+  "bson_to_json":{
+    "prefix": "bson_to_json",
+    "body": "bson_to_json(${1:bson})",
+    "description": "The BSON_TO_JSON function converts a string containing formatted BSON data to a character string containing the data formatted as JSON."
+  },
 }
