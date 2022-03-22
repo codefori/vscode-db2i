@@ -1,0 +1,10 @@
+{
+  "upper": {
+    "prefix": "upper",
+    "body": "upper(${1:string})",
+  },
+  "lower": {
+    "prefix": "lower",
+    "body": "lower(${1:string})",
+  }
+}

@@ -2,13 +2,13 @@
 const vscode = require(`vscode`);
 const Database = require(`../database/schemas`);
 
+const Configuration = require(`../configuration`);
+
 const Store = require(`../language/store`);
 
 const Panels = require(`../panels`);
 
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
-
-const PAGE_SIZE = 10;
 
 const viewItem = {
   "tables": `table`,
@@ -138,6 +138,7 @@ module.exports = class schemaBrowser {
    * @param {boolean} [addRows] True when we need rows added
    */
   async fetchData(schema, type, addRows) {
+    const pageSize = Configuration.get(`pageSize`);
     const key = `${schema}-${type}`;
     let offset;
 
@@ -149,7 +150,7 @@ module.exports = class schemaBrowser {
       }
 
       const data = await Database.getObjects(schema, type, {
-        limit: PAGE_SIZE,
+        limit: pageSize,
         offset
       });
 
@@ -258,7 +259,7 @@ class SchemaItem extends vscode.TreeItem {
 
 class SQLObject extends vscode.TreeItem {
   constructor(item) {
-    super(item.name, vscode.TreeItemCollapsibleState.None);
+    super(item.name.toLowerCase(), vscode.TreeItemCollapsibleState.None);
 
     const type = viewItem[item.type];
 

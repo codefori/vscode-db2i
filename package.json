@@ -24,6 +24,12 @@
 	],
   "main": "./src/extension.js",
   "contributes": {
+    "snippets": [
+      {
+        "language": "sql",
+        "path": "./src/language/scalars.code-snippets"
+      }
+    ],
     "configuration": {
       "title": "Db2 for IBM i",
       "properties": {
@@ -31,6 +37,11 @@
           "type": "boolean",
           "description": "Enable/disable the SQL validator",
           "default": false
+        },
+        "vscode-db2i.pageSize": {
+          "type": "number",
+          "description": "Page size for Schema browser",
+          "default": 100
         }
       }
     },
