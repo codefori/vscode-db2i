@@ -129,4 +129,84 @@
     "body": "bson_to_json(${1:bson})",
     "description": "The BSON_TO_JSON function converts a string containing formatted BSON data to a character string containing the data formatted as JSON."
   },
+  "cardinality":{
+    "prefix": "cardinality",
+    "body": "cardinality(${1:array})",
+    "description": "The CARDINALITY function returns a value representing the number of elements of an array."
+  },
+  "ceiling":{
+    "prefix": "ceiling",
+    "body": "ceiling(${1:number})",
+    "description": "The CEILING or CEIL function returns the smallest integer value that is greater than or equal to expression."
+  },
+  "ceil":{
+    "prefix": "ceil",
+    "body": "ceil(${1:number})",
+    "description": "The CEILING or CEIL function returns the smallest integer value that is greater than or equal to expression."
+  },
+  "character_length": {
+    "prefix": "character_length",
+    "body": "character_length(${1:string})",
+    "description": "The CHARACTER_LENGTH or CHAR_LENGTH function returns the length of a string expression."
+  },
+  "char_length": {
+    "prefix": "char_length",
+    "body": "char_length(${1:string})",
+    "description": "The CHARACTER_LENGTH or CHAR_LENGTH function returns the length of a string expression."
+  },
+  "chr": {
+    "prefix": "chr",
+    "body": "chr(${1:number})",
+    "description": "The CHR function returns the EBCDIC character that has the ASCII code value specified by the argument. If expression is 0, the result is the blank character."
+  },
+  "clob": {
+    "prefix": "clob",
+    "body": "clob(${1:string}, ${2:int?})",
+    "description": "The CLOB function returns a character-string representation."
+  },
+  "coalesce": {
+    "prefix": "coalesce",
+    "body": "coalesce(${1:expression}, ${2:...})",
+    "description": "The COALESCE function returns the value of the first non-null expression."
+  },
+  "compare_decfloat": {
+    "prefix": "compare_decfloat",
+    "body": "compare_decfloat(${1:expression}, ${2:expression})",
+    "description": "The COMPARE_DECFLOAT function returns an ordering for DECFLOAT values."
+  },
+  "concat": {
+    "prefix": "concat",
+    "body": "concat(${1:expression}, ${2:expression})",
+    "description": "The CONCAT function combines two arguments."
+  },
+  "contains": {
+    "prefix": "contains",
+    "body": "contains(${1:string}, ${2:string}, {3:options?})",
+    "description": "The CONTAINS function searches a text search index using criteria that are specified in a search argument and returns a result about whether or not a match was found."
+  },
+  "cos": {
+    "prefix": "cos",
+    "body": "cos(${1:number})",
+    "description": "The COS function returns the cosine of the argument, where the argument is an angle expressed in radians. The COS and ACOS functions are inverse operations."
+  },
+  "cosh": {
+    "prefix": "cosh",
+    "body": "cosh(${1:number})",
+    "description": "The COSH function returns the hyperbolic cosine of the argument, where the argument is an angle expressed in radians."
+  },
+  "cot": {
+    "prefix": "cot",
+    "body": "cot(${1:number})",
+    "description": "The COT function returns the cotangent of the argument, where the argument is an angle expressed in radians."
+  },
+  "curdate": {
+    "prefix": "curdate",
+    "body": "curdate()",
+    "description": "The CURDATE function returns a date based on a reading of the time-of-day clock when the SQL statement is executed at the current server. The value returned by the CURDATE function is the same as the value returned by the CURRENT DATE special register."
+  },
+  "curtime": {
+    "prefix": "curtime",
+    "body": "curtime()",
+    "description": "The CURTIME function returns a time based on a reading of the time-of-day clock when the SQL statement is executed at the current server. The value returned by the CURTIME function is the same as the value returned by the CURRENT TIME special register."
+  },
 }
