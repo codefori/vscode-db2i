@@ -1,4 +1,5 @@
 // https://www.ibm.com/docs/en/SSAE4W_9.6.0/db2/rbafzpdf.pdf @ line 287
+// https://www.ibm.com/docs/en/i/7.3?topic=reference-built-in-functions
 {
   "upper": {
     "prefix": "upper",
