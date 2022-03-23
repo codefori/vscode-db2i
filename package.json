@@ -27,7 +27,7 @@
     "snippets": [
       {
         "language": "sql",
-        "path": "./src/language/builtins.code-snippets"
+        "path": "./src/language/scalars.code-snippets"
       }
     ],
     "configuration": {
