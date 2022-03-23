@@ -209,4 +209,29 @@
     "body": "curtime()",
     "description": "The CURTIME function returns a time based on a reading of the time-of-day clock when the SQL statement is executed at the current server. The value returned by the CURTIME function is the same as the value returned by the CURRENT TIME special register."
   },
+  "xmlvalidate": {
+    "prefix": "xmlvalidate",
+    "body": "xmlvalidate(${1:XML-expression} ${2:ACCORDING TO XML SCHEMA ${3:ID XML-schema-name|{$4:URI XML-uri1|NO NAMESPACE} {$5:LOCATION XML-uri2}}}))",
+    "description": "The XMLVALIDATE function returns a copy of the input XML value augmented with information obtained from XML schema validation, including default values and type annotations."
+  },
+  "xor": {
+    "prefix": "xor",
+    "body": "xor(${1:expression}, ${2:expression+})",
+    "description": "The XOR function returns a string that is the logical XOR of the argument strings. This function takes the first argument string, does an XOR operation with the next string, and then continues to do XOR operations for each successive argument using the previous result."
+  },
+  "xsltransform": {
+    "prefix": "xsltransform",
+    "body": "xsltransform(${1:XML-document} USING ${2:xsl-stylesheet} {$3:WITH xsl-parameters?} {$4:AS data-type?})",
+    "description": "The XSLTRANSFORM transforms an XML document into a different data format. The data can be transformed into any form possible for the XSLT processor."
+  },
+  "year": {
+    "prefix": "year",
+    "body": "year(${1:expression})",
+    "description": "The YEAR function returns the year part of a value"
+  },
+  "zoned": {
+    "prefix": "zoned",
+    "body": "zoned(${1:expression}, ${2:precision?}, ${3:scale?}, ${4:decimal-character})",
+    "description": "The ZONED function returns a zoned decimal representation."
+  }
 }
