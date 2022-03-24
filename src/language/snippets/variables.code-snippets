@@ -1,0 +1,209 @@
+// https://www.ibm.com/docs/en/i/7.4?topic=statement-special-registers-in-sql-statements
+// https://www.ibm.com/docs/en/i/7.3?topic=reference-built-in-global-variables
+{
+  "client_host": {
+    "prefix": "client_host",
+    "body": "client_host",
+    "description": "This global variable contains the host name of the current client, as returned by the system."
+  },
+  "client_ipaddr": {
+    "prefix": "client_ipaddr",
+    "body": "client_ipaddr",
+    "description": "This global variable contains the IP address of the current client, as returned by the system."
+  },
+  "client_port": {
+    "prefix": "client_port",
+    "body": "client_port",
+    "description": "This global variable contains the port number used by the current client to communicate with the server."
+  },
+  "job_name": {
+    "prefix": "job_name",
+    "body": "job_name",
+    "description": "This global variable contains the name of the current job."
+  },
+  "package_name": {
+    "prefix": "package_name",
+    "body": "package_name",
+    "description": "This global variable contains the name of the package currently being used for a DRDA connection."
+  },
+  "package_schema": {
+    "prefix": "package_schema",
+    "body": "package_schema",
+    "description": "This global variable contains the schema name of the package currently being used for a DRDA connection."
+  },
+  "package_version": {
+    "prefix": "package_version",
+    "body": "package_version",
+    "description": "This global variable contains the version identifier of the package currently being used for a DRDA connection."
+  },
+  "process_id": {
+    "prefix": "process_id",
+    "body": "process_id",
+    "description": "This global variable contains the process ID of the current job."
+  },
+  "routine_schema": {
+    "prefix": "routine_schema",
+    "body": "routine_schema",
+    "description": "This global variable contains the schema name of the currently executing routine."
+  },
+  "routine_specific_name": {
+    "prefix": "routine_specific_name",
+    "body": "routine_specific_name",
+    "description": "This global variable contains the name of the currently executing routine."
+  },
+  "routine_type": {
+    "prefix": "routine_type",
+    "body": "routine_type",
+    "description": "This global variable contains the type of the currently executing routine."
+  },
+  "server_mode_job_name": {
+    "prefix": "server_mode_job_name",
+    "body": "server_mode_job_name",
+    "description": "This global variable contains the name of the job that established the SQL server mode connection."
+  },
+  "thread_id": {
+    "prefix": "thread_id",
+    "body": "thread_id",
+    "description": "This global variable contains the thread ID of the current thread."
+  },
+  "current_client_acctng": {
+    "prefix": "current_client_acctng",
+    "body": "current_client_acctng",
+    "description": "The accounting string for the client connection."
+  },
+  "current_client_applname": {
+    "prefix": "current_client_applname",
+    "body": "current_client_applname",
+    "description": "The application name for the client connection."
+  },
+  "current_client_programid": {
+    "prefix": "current_client_programid",
+    "body": "current_client_programid",
+    "description": "The program ID for the client connection."
+  },
+  "current_client_userid": {
+    "prefix": "current_client_userid",
+    "body": "current_client_userid",
+    "description": "The client user ID for the client connection."
+  },
+  "current_client_wrkstnname": {
+    "prefix": "current_client_wrkstnname",
+    "body": "current_client_wrkstnname",
+    "description": "The workstation name for the client connection."
+  },
+  "current_date": {
+    "prefix": "current_date",
+    "body": "current_date",
+    "description": "The current date."
+  },
+  "current_debug_mode": {
+    "prefix": "current_debug_mode",
+    "body": "current_debug_mode",
+    "description": "The debug mode to be used when creating or altering routines."
+  },
+  "current_decfloat_rounding_mode": {
+    "prefix": "current_decfloat_rounding_mode",
+    "body": "current_decfloat_rounding_mode",
+    "description": "The rounding mode to be used when working with decimal floating point values."
+  },
+  "current_degree": {
+    "prefix": "current_degree",
+    "body": "current_degree",
+    "description": "The number of tasks the database manager should run in parallel."
+  },
+  "current_implicit_xmlparse_option": {
+    "prefix": "current_implicit_xmlparse_option",
+    "body": "current_implicit_xmlparse_option",
+    "description": "The whitespace handling options to be used for XML data when implicitly parsed without validation."
+  },
+  "current path": {
+    "prefix": "current path",
+    "body": "current path",
+    "description": "The SQL path used to resolve unqualified data type names, procedure names, and function names in dynamically prepared SQL statements."
+  },
+  "current_path": {
+    "prefix": "current_path",
+    "body": "current_path",
+    "description": "The SQL path used to resolve unqualified data type names, procedure names, and function names in dynamically prepared SQL statements."
+  },
+  "current function path": {
+    "prefix": "current function path",
+    "body": "current function path",
+    "description": "The SQL path used to resolve unqualified data type names, procedure names, and function names in dynamically prepared SQL statements."
+  },
+  "current schema": {
+    "prefix": "current schema",
+    "body": "current schema",
+    "description": "The schema name used to qualify unqualified database object references where applicable in dynamically prepared SQL statements."
+  },
+  "current server": {
+    "prefix": "current server",
+    "body": "current server",
+    "description": "The name of the relational database currently being used."
+  },
+  "current_server": {
+    "prefix": "current_server",
+    "body": "current_server",
+    "description": "The name of the relational database currently being used."
+  },
+  "current temporal system_time": {
+    "prefix": "current temporal system_time",
+    "body": "current temporal system_time",
+    "description": "The timestamp to use when querying a system_period temporal table."
+  },
+  "current time": {
+    "prefix": "current time",
+    "body": "current time",
+    "description": "The current time."
+  },
+  "current_time": {
+    "prefix": "current_time",
+    "body": "current_time",
+    "description": "The current time."
+  },
+  "current timestamp": {
+    "prefix": "current timestamp",
+    "body": "current timestamp",
+    "description": "The current date and time in timestamp format."
+  },
+  "current_timestamp": {
+    "prefix": "current_timestamp",
+    "body": "current_timestamp",
+    "description": "The current date and time in timestamp format."
+  },
+  "current timezone": {
+    "prefix": "current timezone",
+    "body": "current timezone",
+    "description": "A duration of time that links local time to Universal Time Coordinated (UTC) using the formula: `local time - CURRENT TIMEZONE = UTC`. It is taken from the system value QUTCOFFSET."
+  },
+  "current_timezone": {
+    "prefix": "current_timezone",
+    "body": "current_timezone",
+    "description": "A duration of time that links local time to Universal Time Coordinated (UTC) using the formula: `local time - CURRENT TIMEZONE = UTC`. It is taken from the system value QUTCOFFSET."
+  },
+  "current user": {
+    "prefix": "current user",
+    "body": "current user",
+    "description": "The primary authorization identifier of the job."
+  },
+  "current_user": {
+    "prefix": "current_user",
+    "body": "current_user",
+    "description": "The primary authorization identifier of the job."
+  },
+  "session_user": {
+    "prefix": "session_user",
+    "body": "session_user",
+    "description": "The runtime authorization identifier (user profile) of the job."
+  },
+  "user": {
+    "prefix": "user",
+    "body": "user",
+    "description": "The runtime authorization identifier (user profile) of the job."
+  },
+  "system_user": {
+    "prefix": "system_user",
+    "body": "system_user",
+    "description": "The authorization identifier (user profile) of the user connected to the database."
+  },
+}
