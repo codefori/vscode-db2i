@@ -213,6 +213,181 @@
     "body": "curtime()",
     "description": "The CURTIME function returns a time based on a reading of the time-of-day clock when the SQL statement is executed at the current server. The value returned by the CURTIME function is the same as the value returned by the CURRENT TIME special register."
   },
+  "database": {
+    "prefix": "database",
+    "body": "database()",
+    "description": "The DATABASE function returns the current server."
+  },
+  "datapartitionname": {
+    "prefix": "datapartitionname",
+    "body": "datapartitionname(${1:table-designator})",
+    "description": "The DATAPARTITIONNAME function returns the partition name of where a row is located. If the argument identifies a non-partitioned table, an empty string is returned."
+  },
+  "datapartitionnum": {
+    "prefix": "datapartitionnum",
+    "body": "datapartitionnum(${1:table-designator})",
+    "description": "The DATAPARTITIONNUM function returns the data partition number of a row. If the argument identifies a non-partitioned table, the value 0 is returned."
+  },
+  "date": {
+    "prefix": "date",
+    "body": "date(${1:expression})",
+    "description": "The DATE function returns a date from a value."
+  },
+  "day": {
+    "prefix": "day",
+    "body": "day(${1:expression})",
+    "description": "The DAY function returns the day part of a value."
+  },
+  "dayname": {
+    "prefix": "dayname",
+    "body": "dayname(${1:expression})",
+    "description": "Returns a mixed case character string containing the name of the day (for example, Friday) for the day portion of the argument."
+  },
+  "dayofmonth": {
+    "prefix": "dayofmonth",
+    "body": "dayofmonth(${1:expression})",
+    "description": "The DAYOFMONTH function returns an integer between 1 and 31 that represents the day of the month."
+  },
+  "dayofweek": {
+    "prefix": "dayofweek",
+    "body": "dayofweek(${1:expression})",
+    "description": "The DAYOFWEEK function returns an integer between 1 and 7 that represents the day of the week, where 1 is Sunday and 7 is Saturday."
+  },
+  "dayofweek_iso": {
+    "prefix": "dayofweek_iso",
+    "body": "dayofweek_iso(${1:expression})",
+    "description": "The DAYOFWEEK_ISO function returns an integer between 1 and 7 that represents the day of the week, where 1 is Monday and 7 is Sunday."
+  },
+  "dayofyear": {
+    "prefix": "dayofyear",
+    "body": "dayofyear(${1:expression})",
+    "description": "The DAYOFYEAR function returns an integer between 1 and 366 that represents the day of the year where 1 is January 1."
+  },
+  "days": {
+    "prefix": "days",
+    "body": "days(${1:expression})",
+    "description": "The DAYS function returns an integer representation of a date."
+  },
+  "dbclob": {
+    "prefix": "dbclob",
+    "body": "dbclob(${1:expression}, ${2:int?})",
+    "description": "The DBCLOB function returns a graphic-string representation."
+  },
+  "dbpartitionname": {
+    "prefix": "dbpartitionname",
+    "body": "dbpartitionname(${1:table-designator})",
+    "description": "TThe DBPARTITIONNAME function returns the relational database name (database partition name) of where a row is located. If the argument identifies a non-distributed table, the current server is returned."
+  },
+  "dbpartitionnum": {
+    "prefix": "dbpartitionnum",
+    "body": "dbpartitionnum(${1:table-designator})",
+    "description": "The DBPARTITIONNUM function returns the node number (database partition number) of a row."
+  },
+  "decfloat": {
+    "prefix": "decfloat",
+    "body": "decfloat(${1:expression},${2|34,16|},${3:int?})",
+    "description": "The DECFLOAT function returns a decimal floating-point representation of a number or a string representation of a number."
+  },
+  "decfloat_sortkey": {
+    "prefix": "decfloat_sortkey",
+    "body": "decfloat_sortkey(${1:expression})",
+    "description": "The DECFLOAT_SORTKEY function returns a binary value that may be used to sort DECFLOAT values."
+  },
+  "decimal": {
+    "prefix": "decimal",
+    "body": "decimal(${1:number/string/datetime})",
+    "description": "The DECIMAL function returns a decimal representation."
+  },
+  "dec": {
+    "prefix": "dec",
+    "body": "dec(${1:number/string/datetime})",
+    "description": "The DEC function returns a decimal representation."
+  },
+  "decrypt_bit": {
+    "prefix": "decrypt_bit",
+    "body": "decrypt_bit(${1:encrypted-data},${2:password-string?},${3:CCSID?})",
+    "description": "The DECRYPT_BIT function return a value that is the result of decrypting encrypted data. The password used for decryption is either the password-string value or the ENCRYPTION PASSWORD value assigned by the SET ENCRYPTION PASSWORD statement."
+  },
+  "decrypt_binary": {
+    "prefix": "decrypt_binary",
+    "body": "decrypt_binary(${1:encrypted-data},${2:password-string?},${3:CCSID?})",
+    "description": "The DECRYPT_BINARY function return a value that is the result of decrypting encrypted data. The password used for decryption is either the password-string value or the ENCRYPTION PASSWORD value assigned by the SET ENCRYPTION PASSWORD statement."
+  }, 
+  "decrypt_char": { 
+    "prefix": "decrypt_char",
+    "body": "decrypt_char(${1:encrypted-data},${2:password-string?},${3:CCSID?})",
+    "description": "The DECRYPT_CHAR function return a value that is the result of decrypting encrypted data. The password used for decryption is either the password-string value or the ENCRYPTION PASSWORD value assigned by the SET ENCRYPTION PASSWORD statement."
+  },
+  "decrypt_db": {
+    "prefix": "decrypt_db",
+    "body": "decrypt_db(${1:encrypted-data},${2:password-string?},${3:CCSID?})",
+    "description": "The DECRYPT_DB function return a value that is the result of decrypting encrypted data. The password used for decryption is either the password-string value or the ENCRYPTION PASSWORD value assigned by the SET ENCRYPTION PASSWORD statement."
+  },
+  "degrees": {
+    "prefix": "degrees",
+    "body": "degrees(${1:expression})",
+    "description": "The DEGREES function returns the number of degrees of the argument which is an angle expressed in radians."
+  },
+  "difference": {
+    "prefix": "difference",
+    "body": "difference(${1:expression-1},${2:expression-2})",
+    "description": "The DIFFERENCE function returns a value from 0 to 4 representing the difference between the sounds of two strings based on applying the SOUNDEX function to the strings. A value of 4 is the best possible sound match."
+  },
+  "digits": {
+    "prefix": "digits",
+    "body": "digits(${1:expression})",
+    "description": "The DIGITS function returns a character-string representation of the absolute value of a number."
+  },
+  "dlcomment": {
+    "prefix": "dlcomment",
+    "body": "dlcomment(${1:datalink-expression})",
+    "description": "The DLCOMMENT function returns the comment value, if it exists, from a DataLink value."
+  },
+  "dllinktype": {
+    "prefix": "dllinktype",
+    "body": "dllinktype(${1:datalink-expression})",
+    "description": "The DLLINKTYPE function returns the link type value from a DataLink value."
+  },
+  "dlurlcomplete": {
+    "prefix": "dlurlcomplete",
+    "body": "dlurlcomplete(${1:datalink-expression})",
+    "description": "The DLURLCOMPLETE function returns the complete URL value from a DataLink value with a link type of URL. The value is the same as what would be returned by the concatenation of DLURLSCHEME with '://', then DLURLSERVER, and then DLURLPATH. If the DataLink has an attribute of FILE LINK CONTROL and READ PERMISSION DB, the value includes a file access token."
+  },
+  "dlurlpath": {
+    "prefix": "dlurlpath",
+    "body": "dlurlpath(${1:datalink-expression})",
+    "description": "The DLURLPATH function returns the path and file name necessary to access a file within a given server from a DataLink value with a linktype of URL. When appropriate, the value includes a file access token."
+  },
+  "dlurlpathonly": {
+    "prefix": "dlurlpathonly",
+    "body": "dlurlpathonly(${1:datalink-expression})",
+    "description": "The DLURLPATHONLY function returns the path and file name necessary to access a file within a given server from a DataLink value with a linktype of URL. The value returned NEVER includes a file access token."
+  },
+  "dlurlscheme": {
+    "prefix": "dlurlscheme",
+    "body": "dlurlscheme(${1:datalink-expression})",
+    "description": "The DLURLSCHEME function returns the scheme from a DataLink value with a linktype of URL. The value will always be in upper case."
+  },
+  "dlurlserver": {
+    "prefix": "dlurlserver",
+    "body": "dlurlserver(${1:datalink-expression})",
+    "description": "The DLURLSERVER function returns the file server from a DataLink value with a linktype of URL. The value will always be in upper case."
+  },
+  "dlvalue": {
+    "prefix": "dlvalue",
+    "body": "dlvalue(${1:data-location},${2:linetype-stringdata-location?},${3:comment-string})",
+    "description": "The DLVALUE function returns a DataLink value. When the function is on the right hand side of a SET clause in an UPDATE statement or is in a VALUES clause in an INSERT statement, it usually also creates a link to a file. However, if only a comment is specified (in which case the data-location is a zero-length string), the DataLink value is created with empty linkage attributes so there is no file link."
+  },
+  "double_precision": {
+    "prefix": "double_precision",
+    "body": "double_precision(${1:number/string/datetime})",
+    "description": "The DOUBLE_PRECISION function return a floating-point representation."
+  },
+  "double": {
+    "prefix": "double",
+    "body": "double(${1:number/string/datetime})",
+    "description": "The DOUBLE function return a floating-point representation."
+  },
   "xmlvalidate": {
     "prefix": "xmlvalidate",
     "body": "xmlvalidate(${1:XML-expression} ${2:ACCORDING TO XML SCHEMA ${3:ID XML-schema-name|{$4:URI XML-uri1|NO NAMESPACE} {$5:LOCATION XML-uri2}}}))",
@@ -231,7 +406,7 @@
   "year": {
     "prefix": "year",
     "body": "year(${1:expression})",
-    "description": "The YEAR function returns the year part of a value"
+    "description": "The YEAR function returns the year part of a value."
   },
   "zoned": {
     "prefix": "zoned",
