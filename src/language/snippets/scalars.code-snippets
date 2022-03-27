@@ -143,6 +143,11 @@
     "body": "ceil(${1:number})",
     "description": "The CEILING or CEIL function returns the smallest integer value that is greater than or equal to expression."
   },
+  "char": {
+    "prefix": "char",
+    "body": "char(${1:expression})",
+    "description": "The CHAR function returns a fixed-length character-string representation."
+  },
   "character_length": {
     "prefix": "character_length",
     "body": "character_length(${1:string})",
