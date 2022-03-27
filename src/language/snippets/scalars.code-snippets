@@ -375,7 +375,7 @@
   },
   "dlvalue": {
     "prefix": "dlvalue",
-    "body": "dlvalue(${1:data-location},${2:linetype-stringdata-location?},${3:comment-string})",
+    "body": "dlvalue(${1:data-location},${2:linetype-string?},${3:comment-string})",
     "description": "The DLVALUE function returns a DataLink value. When the function is on the right hand side of a SET clause in an UPDATE statement or is in a VALUES clause in an INSERT statement, it usually also creates a link to a file. However, if only a comment is specified (in which case the data-location is a zero-length string), the DataLink value is created with empty linkage attributes so there is no file link."
   },
   "double_precision": {
