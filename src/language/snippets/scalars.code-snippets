@@ -383,10 +383,95 @@
     "body": "double_precision(${1:number/string/datetime})",
     "description": "The DOUBLE_PRECISION function return a floating-point representation."
   },
-  "double": {
-    "prefix": "double",
-    "body": "double(${1:number/string/datetime})",
-    "description": "The DOUBLE function return a floating-point representation."
+  "encrypt_aes": {
+    "prefix": "encrypt_aes",
+    "body": "encrypt_aes(${1:data-string},${2:password-string?},${3:hint-string?})",
+    "description": "The ENCRYPT_AES function returns a value that is the result of encrypting data-string using the AES encryption algorithm. The password used for decryption is either the password-string value or the encryption password value (assigned by the SET ENCRYPTION PASSWORD statement)."
+  },
+  "encrypt_rc2": {
+    "prefix": "encrypt_rc2",
+    "body": "encrypt_rc2(${1:data-string},${2:password-string?},${3:hint-string?})",
+    "description": "The ENCRYPT_RC2 function returns a value that is the result of encrypting data-string using the RC2 encryption algorithm. The password used for decryption is either the password-string value or the encryption password value (assigned by the SET ENCRYPTION PASSWORD statement)."
+  },
+  "encrypt_tdes": {
+    "prefix": "encrypt_tdes",
+    "body": "encrypt_tdes(${1:data-string},${2:password-string?},${3:hint-string?})",
+    "description": "The ENCRYPT_TDES function returns a value that is the result of encrypting data-string using the Triple DES encryption algorithm. The password used for decryption is either the password-string value or the encryption password value (assigned by the SET ENCRYPTION PASSWORD statement)."
+  },
+  "exp": {
+    "prefix": "exp",
+    "body": "exp(${1:expression})",
+    "description": "The EXP function returns a value that is the base of the natural logarithm (e) raised to a power specified by the argument. The EXP and LN functions are inverse operations."
+  },
+  "extract": {
+    "prefix": "extract",
+    "body": "extract(${1|YEAR,MONTH,DAY,HOUR,MINUTE,SECOND|},${2:date/time/timestamp-expression})",
+    "description": "The EXTRACT function returns a specified portion of a datetime value."
+  },
+  "float": {
+    "prefix": "float",
+    "body": "float(${1:numeric/string-expression})",
+    "description": "The FLOAT function returns a floating point representation of a number or string."
+  },
+  "floor": {
+    "prefix": "floor",
+    "body": "floor(${1:expression})",
+    "description": "The FLOOR function returns the largest integer value less than or equal to expression."
+  },
+  "generate_unique": {
+    "prefix": "generate_unique",
+    "body": "generate_unique()",
+    "description": "The GENERATE_UNIQUE function returns a bit data character string 13 bytes long (CHAR(13) FOR BIT DATA) that is unique compared to any other execution of the same function. The function is defined as non-deterministic."
+  },
+  "get_blob_from_file": {
+    "prefix": "get_blob_from_file",
+    "body": "get_blob_from_file(${1:string-expression},${2:integer?})",
+    "description": "The GET_BLOB_FROM_FILE function returns the data from a source stream file or a source physical file."
+  },
+  "get_clob_from_file": {
+    "prefix": "get_clob_from_file",
+    "body": "get_clob_from_file(${1:string-expression},${2:integer?})",
+    "description": "The GET_CLOB_FROM_FILE function returns the data from a source stream file or a source physical file."
+  },
+  "get_dbclob_from_file": {
+    "prefix": "get_dbclob_from_file",
+    "body": "get_dbclob_from_file(${1:string-expression},${2:integer?})",
+    "description": "The GET_DBCLOB_FROM_FILE function returns the data from a source stream file or a source physical file."
+  },
+  "gethint": {
+    "prefix": "gethint",
+    "body": "gethint(${1:string-expression})",
+    "description": "The GETHINT function will return the password hint if one is found in the encrypted-data. A password hint is a phrase that will help data owners remember passwords (For example, 'Ocean' as a hint to remember 'Pacific')."
+  },
+  "graphic": {
+    "prefix": "graphic",
+    "body": "graphic(${1:expression})",
+    "description": "The GRAPHIC function returns a fixed-length graphic-string representation of a string expression."
+  },
+  "get_xml_file": {
+    "prefix": "get_xml_file",
+    "body": "get_xml_file(${1:string-expression})",
+    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
+  },
+  "get_xml_file": {
+    "prefix": "get_xml_file",
+    "body": "get_xml_file(${1:string-expression})",
+    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
+  },
+  "get_xml_file": {
+    "prefix": "get_xml_file",
+    "body": "get_xml_file(${1:string-expression})",
+    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
+  },
+  "get_xml_file": {
+    "prefix": "get_xml_file",
+    "body": "get_xml_file(${1:string-expression})",
+    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
+  },
+  "get_xml_file": {
+    "prefix": "get_xml_file",
+    "body": "get_xml_file(${1:string-expression})",
+    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
   },
   "xmlvalidate": {
     "prefix": "xmlvalidate",
