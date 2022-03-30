@@ -448,30 +448,120 @@
     "body": "graphic(${1:expression})",
     "description": "The GRAPHIC function returns a fixed-length graphic-string representation of a string expression."
   },
-  "get_xml_file": {
-    "prefix": "get_xml_file",
-    "body": "get_xml_file(${1:string-expression})",
-    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
+  "hash": {
+    "prefix": "hash",
+    "body": "hash(${1:expression})",
+    "description": "The HASH function returns the partition number of a set of values."
   },
-  "get_xml_file": {
-    "prefix": "get_xml_file",
-    "body": "get_xml_file(${1:string-expression})",
-    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
+  "hashed_value": {
+    "prefix": "hashed_value",
+    "body": "hashed_value(${1:table-designator})",
+    "description": "The HASHED_VALUE function returns the partition map index number of a row obtained by applying the hashing function on the partitioning key value of the row."
   },
-  "get_xml_file": {
-    "prefix": "get_xml_file",
-    "body": "get_xml_file(${1:string-expression})",
-    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
+  "hex": {
+    "prefix": "hex",
+    "body": "hex(${1:expression})",
+    "description": "The HEX function returns a hexadecimal representation of a value."
   },
-  "get_xml_file": {
-    "prefix": "get_xml_file",
-    "body": "get_xml_file(${1:string-expression})",
-    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
+  "hour": {
+    "prefix": "hour",
+    "body": "hour(${1:expression})",
+    "description": "The HOUR function returns the hour part of a value."
   },
-  "get_xml_file": {
-    "prefix": "get_xml_file",
-    "body": "get_xml_file(${1:string-expression})",
-    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
+  "identity_val_local": {
+    "prefix": "identity_val_local",
+    "body": "identity_val_local()",
+    "description": "IDENTITY_VAL_LOCAL is a non-deterministic function that returns the most recently assigned value for an identity column."
+  },
+  "ifnull": {
+    "prefix": "ifnull",
+    "body": "ifnull(${1:expression},${2:expression})",
+    "description": "The IFNULL function returns the value of the first non-null expression."
+  },
+  "insert": {
+    "prefix": "insert",
+    "body": "insert(${1:source-string},${2:start},${3:length},${4:insert-string})",
+    "description": "Returns a string where length characters have been deleted from source-string beginning at start and where insert-string has been inserted into source-string beginning at start."
+  },
+  "integer": {
+    "prefix": "integer",
+    "body": "integer(${2:numeric/string/date/time})",
+    "description": "The INTEGER function returns an integer representation."
+  },
+  "int": {
+    "prefix": "int",
+    "body": "int(${2:numeric/string/date/time})",
+    "description": "The INT function returns an integer representation."
+  },
+  "julian_day": {
+    "prefix": "julian_day",
+    "body": "julian_day(${1:expression})",
+    "description": "The JULIAN_DAY function returns an integer value representing a number of days from January 1, 4713 B.C. (the start of the Julian date calendar) to the date specified in the argument."
+  },
+  "land": {
+    "prefix": "land",
+    "body": "land(${1:expression},${2:expression},${3:expression?})",
+    "description": "The LAND function returns a string that is the logical 'AND' of the argument strings. This function takes the first argument string, does an AND operation with the next string, and then continues to do AND operations with each successive argument using the previous result."
+  },
+  "last_day": {
+    "prefix": "last_day",
+    "body": "last_day(${1:expression})",
+    "description": "The LAST_DAY function returns a date or timestamp that represents the last day of the month indicated by expression."
+  },
+  "lcase": {
+    "prefix": "lcase",
+    "body": "lcase(${1:expression})",
+    "description": "The LCASE function returns a string in which all the characters have been converted to lowercase characters, based on the CCSID of the argument."
+  },
+  "left": {
+    "prefix": "left",
+    "body": "left(${1:expression},${2:integer})",
+    "description": "The LEFT function returns the leftmost integer characters of expression."
+  },
+  "length": {
+    "prefix": "length",
+    "body": "length(${1:expression})",
+    "description": "The LENGTH function returns the length of a value."
+  },
+  "ln": {
+    "prefix": "ln",
+    "body": "ln(${1:expression})",
+    "description": "The LN function returns the natural logarithm of a number. The LN and EXP functions are inverse operations."
+  },
+  "lnot": {
+    "prefix": "lnot",
+    "body": "lnot(${1:expression})",
+    "description": "The LNOT function returns a string that is the logical NOT of the argument string."
+  },
+  "locate": {
+    "prefix": "locate",
+    "body": "locate(${1:search-string},${2:source-string},${3:start?})",
+    "description": "The LOCATE function returns the starting position of the first occurrence of one string (called the search-string) within another string (called the source-string).."
+  },
+  "locate_in_string": {
+    "prefix": "locate_in_string",
+    "body": "locate_in_string(${1:source-string},${2:search-string},${3:start?},${4:instance?})",
+    "description": "The LOCATE_IN_STRING function returns the starting position of a string (called the search-string) within another string (called the source-string)."
+  },
+  "log10": {
+    "prefix": "log10",
+    "body": "log10(${1:expression})",
+    "description": "The LOG10 function returns the common logarithm (base 10) of a number. The LOG10 and ANTILOG functions are inverse operations."
+  },
+  "lor": {
+    "prefix": "lor",
+    "body": "lor(${1:expression},${2:expression?},${3:expression?})",
+    "description": "The LOR function returns a string that is the logical OR of the argument strings."
+  },
+  "lpad": {
+    "prefix": "lpad",
+    "body": "lpad(${1:expression},${2:length},${3:pad?})",
+    "description": "The LPAD function returns a string composed of expression that is padded on the left."
+  },
+  "ltrim": {
+    "prefix": "ltrim",
+    "body": "ltrim(${1:string-expression},${2:trim-expression?})",
+    "description": "The LTRIM function removes any of the specified characters from the beginning of an expression."
   },
   "xmlvalidate": {
     "prefix": "xmlvalidate",
