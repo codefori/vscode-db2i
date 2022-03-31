@@ -285,7 +285,7 @@
   },
   "decfloat": {
     "prefix": "decfloat",
-    "body": "decfloat(${1:expression},${2|34,16|},${3:int?})",
+    "body": "decfloat(${1:expression}, ${2|34,16|}, ${3:int?})",
     "description": "The DECFLOAT function returns a decimal floating-point representation of a number or a string representation of a number."
   },
   "decfloat_sortkey": {
@@ -305,22 +305,22 @@
   },
   "decrypt_bit": {
     "prefix": "decrypt_bit",
-    "body": "decrypt_bit(${1:encrypted-data},${2:password-string?},${3:CCSID?})",
+    "body": "decrypt_bit(${1:encrypted-data}, ${2:password-string?}, ${3:CCSID?})",
     "description": "The DECRYPT_BIT function return a value that is the result of decrypting encrypted data. The password used for decryption is either the password-string value or the ENCRYPTION PASSWORD value assigned by the SET ENCRYPTION PASSWORD statement."
   },
   "decrypt_binary": {
     "prefix": "decrypt_binary",
-    "body": "decrypt_binary(${1:encrypted-data},${2:password-string?},${3:CCSID?})",
+    "body": "decrypt_binary(${1:encrypted-data}, ${2:password-string?}, ${3:CCSID?})",
     "description": "The DECRYPT_BINARY function return a value that is the result of decrypting encrypted data. The password used for decryption is either the password-string value or the ENCRYPTION PASSWORD value assigned by the SET ENCRYPTION PASSWORD statement."
   }, 
   "decrypt_char": { 
     "prefix": "decrypt_char",
-    "body": "decrypt_char(${1:encrypted-data},${2:password-string?},${3:CCSID?})",
+    "body": "decrypt_char(${1:encrypted-data}, ${2:password-string?}, ${3:CCSID?})",
     "description": "The DECRYPT_CHAR function return a value that is the result of decrypting encrypted data. The password used for decryption is either the password-string value or the ENCRYPTION PASSWORD value assigned by the SET ENCRYPTION PASSWORD statement."
   },
   "decrypt_db": {
     "prefix": "decrypt_db",
-    "body": "decrypt_db(${1:encrypted-data},${2:password-string?},${3:CCSID?})",
+    "body": "decrypt_db(${1:encrypted-data}, ${2:password-string?}, ${3:CCSID?})",
     "description": "The DECRYPT_DB function return a value that is the result of decrypting encrypted data. The password used for decryption is either the password-string value or the ENCRYPTION PASSWORD value assigned by the SET ENCRYPTION PASSWORD statement."
   },
   "degrees": {
@@ -330,7 +330,7 @@
   },
   "difference": {
     "prefix": "difference",
-    "body": "difference(${1:expression-1},${2:expression-2})",
+    "body": "difference(${1:expression-1}, ${2:expression-2})",
     "description": "The DIFFERENCE function returns a value from 0 to 4 representing the difference between the sounds of two strings based on applying the SOUNDEX function to the strings. A value of 4 is the best possible sound match."
   },
   "digits": {
@@ -375,7 +375,7 @@
   },
   "dlvalue": {
     "prefix": "dlvalue",
-    "body": "dlvalue(${1:data-location},${2:linetype-string?},${3:comment-string})",
+    "body": "dlvalue(${1:data-location}, ${2:linetype-string?}, ${3:comment-string})",
     "description": "The DLVALUE function returns a DataLink value. When the function is on the right hand side of a SET clause in an UPDATE statement or is in a VALUES clause in an INSERT statement, it usually also creates a link to a file. However, if only a comment is specified (in which case the data-location is a zero-length string), the DataLink value is created with empty linkage attributes so there is no file link."
   },
   "double_precision": {
@@ -385,17 +385,17 @@
   },
   "encrypt_aes": {
     "prefix": "encrypt_aes",
-    "body": "encrypt_aes(${1:data-string},${2:password-string?},${3:hint-string?})",
+    "body": "encrypt_aes(${1:data-string}, ${2:password-string?}, ${3:hint-string?})",
     "description": "The ENCRYPT_AES function returns a value that is the result of encrypting data-string using the AES encryption algorithm. The password used for decryption is either the password-string value or the encryption password value (assigned by the SET ENCRYPTION PASSWORD statement)."
   },
   "encrypt_rc2": {
     "prefix": "encrypt_rc2",
-    "body": "encrypt_rc2(${1:data-string},${2:password-string?},${3:hint-string?})",
+    "body": "encrypt_rc2(${1:data-string}, ${2:password-string?}, ${3:hint-string?})",
     "description": "The ENCRYPT_RC2 function returns a value that is the result of encrypting data-string using the RC2 encryption algorithm. The password used for decryption is either the password-string value or the encryption password value (assigned by the SET ENCRYPTION PASSWORD statement)."
   },
   "encrypt_tdes": {
     "prefix": "encrypt_tdes",
-    "body": "encrypt_tdes(${1:data-string},${2:password-string?},${3:hint-string?})",
+    "body": "encrypt_tdes(${1:data-string}, ${2:password-string?}, ${3:hint-string?})",
     "description": "The ENCRYPT_TDES function returns a value that is the result of encrypting data-string using the Triple DES encryption algorithm. The password used for decryption is either the password-string value or the encryption password value (assigned by the SET ENCRYPTION PASSWORD statement)."
   },
   "exp": {
@@ -405,7 +405,7 @@
   },
   "extract": {
     "prefix": "extract",
-    "body": "extract(${1|YEAR,MONTH,DAY,HOUR,MINUTE,SECOND|},${2:date/time/timestamp-expression})",
+    "body": "extract(${1|YEAR,MONTH,DAY,HOUR,MINUTE,SECOND|}, ${2:date/time/timestamp-expression})",
     "description": "The EXTRACT function returns a specified portion of a datetime value."
   },
   "float": {
@@ -425,17 +425,17 @@
   },
   "get_blob_from_file": {
     "prefix": "get_blob_from_file",
-    "body": "get_blob_from_file(${1:string-expression},${2:integer?})",
+    "body": "get_blob_from_file(${1:string-expression}, ${2:integer?})",
     "description": "The GET_BLOB_FROM_FILE function returns the data from a source stream file or a source physical file."
   },
   "get_clob_from_file": {
     "prefix": "get_clob_from_file",
-    "body": "get_clob_from_file(${1:string-expression},${2:integer?})",
+    "body": "get_clob_from_file(${1:string-expression}, ${2:integer?})",
     "description": "The GET_CLOB_FROM_FILE function returns the data from a source stream file or a source physical file."
   },
   "get_dbclob_from_file": {
     "prefix": "get_dbclob_from_file",
-    "body": "get_dbclob_from_file(${1:string-expression},${2:integer?})",
+    "body": "get_dbclob_from_file(${1:string-expression}, ${2:integer?})",
     "description": "The GET_DBCLOB_FROM_FILE function returns the data from a source stream file or a source physical file."
   },
   "gethint": {
@@ -475,12 +475,12 @@
   },
   "ifnull": {
     "prefix": "ifnull",
-    "body": "ifnull(${1:expression},${2:expression})",
+    "body": "ifnull(${1:expression}, ${2:expression})",
     "description": "The IFNULL function returns the value of the first non-null expression."
   },
   "insert": {
     "prefix": "insert",
-    "body": "insert(${1:source-string},${2:start},${3:length},${4:insert-string})",
+    "body": "insert(${1:source-string}, ${2:start}, ${3:length}, ${4:insert-string})",
     "description": "Returns a string where length characters have been deleted from source-string beginning at start and where insert-string has been inserted into source-string beginning at start."
   },
   "integer": {
@@ -500,7 +500,7 @@
   },
   "land": {
     "prefix": "land",
-    "body": "land(${1:expression},${2:expression+})",
+    "body": "land(${1:expression}, ${2:expression+})",
     "description": "The LAND function returns a string that is the logical 'AND' of the argument strings. This function takes the first argument string, does an AND operation with the next string, and then continues to do AND operations with each successive argument using the previous result."
   },
   "last_day": {
@@ -515,7 +515,7 @@
   },
   "left": {
     "prefix": "left",
-    "body": "left(${1:expression},${2:integer})",
+    "body": "left(${1:expression}, ${2:integer})",
     "description": "The LEFT function returns the leftmost integer characters of expression."
   },
   "length": {
@@ -535,12 +535,12 @@
   },
   "locate": {
     "prefix": "locate",
-    "body": "locate(${1:search-string},${2:source-string},${3:start?})",
+    "body": "locate(${1:search-string}, ${2:source-string}, ${3:start?})",
     "description": "The LOCATE function returns the starting position of the first occurrence of one string (called the search-string) within another string (called the source-string).."
   },
   "locate_in_string": {
     "prefix": "locate_in_string",
-    "body": "locate_in_string(${1:source-string},${2:search-string},${3:start?},${4:instance?})",
+    "body": "locate_in_string(${1:source-string}, ${2:search-string}, ${3:start?}, ${4:instance?})",
     "description": "The LOCATE_IN_STRING function returns the starting position of a string (called the search-string) within another string (called the source-string)."
   },
   "log10": {
@@ -550,22 +550,22 @@
   },
   "lor": {
     "prefix": "lor",
-    "body": "lor(${1:expression},${2:expression+})",
+    "body": "lor(${1:expression}, ${2:expression+})",
     "description": "The LOR function returns a string that is the logical OR of the argument strings."
   },
   "lpad": {
     "prefix": "lpad",
-    "body": "lpad(${1:expression},${2:length},${3:pad?})",
+    "body": "lpad(${1:expression}, ${2:length}, ${3:pad?})",
     "description": "The LPAD function returns a string composed of expression that is padded on the left."
   },
   "ltrim": {
     "prefix": "ltrim",
-    "body": "ltrim(${1:string-expression},${2:trim-expression?})",
+    "body": "ltrim(${1:string-expression}, ${2:trim-expression?})",
     "description": "The LTRIM function removes any of the specified characters from the beginning of an expression."
   },
   "max": {
     "prefix": "max",
-    "body": "max(${1:expression},${2:expression+})",
+    "body": "max(${1:expression}, ${2:expression+})",
     "description": "The MAX scalar function returns the maximum value in a set of values."
   },
   "max_cardinality": {
@@ -585,7 +585,7 @@
   },
   "min": {
     "prefix": "min",
-    "body": "min(${1:expression},${2:expression+})",
+    "body": "min(${1:expression}, ${2:expression+})",
     "description": "The MIN scalar function returns the minimum value in a set of values."
   },
   "minute": {
@@ -595,7 +595,7 @@
   },
   "mod": {
     "prefix": "mod",
-    "body": "mod(${1:expression},${2:expression})",
+    "body": "mod(${1:expression}, ${2:expression})",
     "description": "The MOD function divides the first argument by the second argument and returns the remainder."
   },
   "month": {
@@ -610,42 +610,42 @@
   },
   "month_between": {
     "prefix": "month_between",
-    "body": "month_between(${1:expression},${2:expression})",
+    "body": "month_between(${1:expression}, ${2:expression})",
     "description": "The MONTHS_BETWEEN function returns an estimate of the number of months between expression1 and expression2."
   },
   "mqread": {
     "prefix": "mqread",
-    "body": "mqread(${1:receive-service?},${2:service-policy?},${3:correl-id?})",
+    "body": "mqread(${1:receive-service?}, ${2:service-policy?}, ${3:correl-id?})",
     "description": "The MQREAD function returns a message from a specified MQSeries location (return value of VARCHAR) without removing the message from the queue."
   },
   "mqreadclob": {
     "prefix": "mqreadclob",
-    "body": "mqreadclob(${1:receive-service?},${2:service-policy?},${3:correl-id?})",
+    "body": "mqreadclob(${1:receive-service?}, ${2:service-policy?}, ${3:correl-id?})",
     "description": "The MQREADCLOB function returns a message from a specified MQSeries location (return value of CLOB) without removing the message from the queue."
   },
   "mqreceive": {
     "prefix": "mqreceive",
-    "body": "mqreceive(${1:receive-service?},${2:service-policy?},${3:correl-id?})",
+    "body": "mqreceive(${1:receive-service?}, ${2:service-policy?}, ${3:correl-id?})",
     "description": "The MQRECEIVE function returns a message from a specified MQSeries location (return value of VARCHAR) with removal of the message from the queue."
   },
   "mqreceiveclob": {
     "prefix": "mqreceiveclob",
-    "body": "mqreceiveclob(${1:receive-service?},${2:service-policy?},${3:correl-id?})",
+    "body": "mqreceiveclob(${1:receive-service?}, ${2:service-policy?}, ${3:correl-id?})",
     "description": "The MQRECEIVECLOB function returns a message from a specified MQSeries location (return value of CLOB) with removal of the message from the queue."
   },
   "mqsend": {
     "prefix": "mqsend",
-    "body": "mqsend(${1:send-service?},${2:service-policy?},${3:msg-data},${4:correl-id?})",
+    "body": "mqsend(${1:send-service?}, ${2:service-policy?}, ${3:msg-data}, ${4:correl-id?})",
     "description": "The MQSEND function sends a message to a specified MQSeries location."
   },
   "multiply_alt": {
     "prefix": "multiply_alt",
-    "body": "multiply_alt(${1:expression},${2:expression})",
+    "body": "multiply_alt(${1:expression}, ${2:expression})",
     "description": "The MULTIPLY_ALT scalar function returns the product of the two arguments as a decimal value."
   },
   "next_day": {
     "prefix": "next_day",
-    "body": "next_day(${1:expression},${2:string-expression})",
+    "body": "next_day(${1:expression}, ${2:string-expression})",
     "description": "The NEXT_DAY function returns a date or timestamp value that represents the first weekday, named by string-expression, that is later than the date expression."
   },
   "normalize_decfloat": {
@@ -660,7 +660,7 @@
   },
   "nullif": {
     "prefix": "nullif",
-    "body": "nullif(${1:expression},${2:expression})",
+    "body": "nullif(${1:expression}, ${2:expression})",
     "description": "The NULLIF function returns a null value if the arguments compare equal, otherwise it returns the value of the first argument."
   },
   "octet_length": {
@@ -670,7 +670,7 @@
   },
   "overlay": {
     "prefix": "overlay",
-    "body": "overlay(${1:source-string},${2:insert-string},${3:start},${4:length})",
+    "body": "overlay(${1:source-string}, ${2:insert-string}, ${3:start}, ${4:length})",
     "description": "Returns a string where length characters have been deleted from source-string beginning at start and where insert-string has been inserted into source-string beginning at start."
   },
   "pi": {
@@ -680,22 +680,22 @@
   },
   "position": {
     "prefix": "position",
-    "body": "position(${1:search-string},${2:source-string})",
+    "body": "position(${1:search-string}, ${2:source-string})",
     "description": "The POSITION function returns the starting position of the first occurrence of one string (called the search-string) within another string (called the source-string)."
   },
   "posstr": {
     "prefix": "posstr",
-    "body": "posstr(${1:source-string},${2:search-string})",
+    "body": "posstr(${1:source-string}, ${2:search-string})",
     "description": "The POSSTR function returns the starting position of the first occurrence of one string (called the search-string) within another string (called the source-string)."
   },
   "power": {
     "prefix": "power",
-    "body": "power(${1:expression},${2:expression}))",
+    "body": "power(${1:expression}, ${2:expression}))",
     "description": "The POWER function returns the result of raising the first argument to the power of the second argument."
   },
   "quantize": {
     "prefix": "quantize",
-    "body": "quantize(${1:expression},${2:expression})",
+    "body": "quantize(${1:expression}, ${2:expression})",
     "description": "The QUANTIZE function returns a decimal floating-point value that is equal in value (except for any rounding) and sign to expression-1 and which has an exponent set equal to the exponent in expression-2."
   },
   "quarter": {
@@ -710,7 +710,7 @@
   },
   "raise_error": {
     "prefix": "raise_error",
-    "body": "raise_error(${1:sqlstate},${2:diagnostic-string}))",
+    "body": "raise_error(${1:sqlstate}, ${2:diagnostic-string}))",
     "description": "The RAISE_ERROR function causes the statement that invokes the function to return an error with the specified SQLSTATE (along with SQLCODE -438) and diagnostic string."
   },
   "rand": {
@@ -725,32 +725,32 @@
   },
   "regexp_count": {
     "prefix": "regexp_count",
-    "body": "regexp_count(${1:source-string},${2:pattern-expression}),${3:start?}),${4:flags?}))",
+    "body": "regexp_count(${1:source-string}, ${2:pattern-expression}), ${3:start?}), ${4:flags?}))",
     "description": "The REGEXP_COUNT function returns a count of the number of times that a regular expression pattern is matched in a string."
   },
   "regexp_instr": {
     "prefix": "regexp_instr",
-    "body": "regexp_instr(${1:source-string},${2:pattern-expression}),${3:start?}),${4:occurence?}),${5:return-option?}),${6:flags?}),${7:group?}))",
+    "body": "regexp_instr(${1:source-string}, ${2:pattern-expression}), ${3:start?}), ${4:occurence?}), ${5:return-option?}), ${6:flags?}), ${7:group?}))",
     "description": "The REGEXP_INSTR returns the starting position or the position after the end of the matched substring, depending on the value of the return_option argument."
   },
   "regexp_replace": {
     "prefix": "regexp_replace",
-    "body": "regexp_replace(${1:source-string},${2:pattern-expression}),${3:replacement-string?}),${4:start?}),${5:occurence?}),${6:flags?}))",
+    "body": "regexp_replace(${1:source-string}, ${2:pattern-expression}), ${3:replacement-string?}), ${4:start?}), ${5:occurence?}), ${6:flags?}))",
     "description": "The REGEXP_REPLACE function returns a modified version of the source string where occurrences of the regular expression pattern found in the source string are replaced with the specified replacement string."
   },
   "regexp_substr": {
     "prefix": "regexp_substr",
-    "body": "regexp_substr(${1:source-string},${2:pattern-expression}),${3:start?}),${4:occurence?}),${5:flags?}),${6:group?}))",
+    "body": "regexp_substr(${1:source-string}, ${2:pattern-expression}), ${3:start?}), ${4:occurence?}), ${5:flags?}), ${6:group?}))",
     "description": "The REGEXP_SUBSTR function returns one occurrence of a substring of a string that matches the regular expression pattern."
   },
   "repeat": {
     "prefix": "repeat",
-    "body": "repeat(${1:expression},${2:integer}))",
+    "body": "repeat(${1:expression}, ${2:integer}))",
     "description": "The REPEAT function returns a string composed of expression repeated integer times."
   },
   "replace": {
     "prefix": "replace",
-    "body": "replace(${1:source-string},${2:search-string}),${3:replace-string?}))",
+    "body": "replace(${1:source-string}, ${2:search-string}), ${3:replace-string?}))",
     "description": "The REPLACE function replaces all occurrences of search-string in source-string with replace-string. If search-string is not found in source-string, source-string is returned unchanged."
   },
   "rid": {
@@ -760,17 +760,17 @@
   },
   "right": {
     "prefix": "right",
-    "body": "right(${1:expression},${2:integer}))",
+    "body": "right(${1:expression}, ${2:integer}))",
     "description": "The RIGHT function returns the rightmost integer characters of expression."
   },
   "round": {
     "prefix": "round",
-    "body": "round(${1:expression},${2:expression?}))",
+    "body": "round(${1:expression}, ${2:expression?}))",
     "description": "The ROUND function returns expression–1 rounded to some number of places to the right or left of the decimal point."
   },
   "round_timestamp": {
     "prefix": "round_timestamp",
-    "body": "round_timestamp(${1:expression},${2:format-string?}))",
+    "body": "round_timestamp(${1:expression}, ${2:format-string?}))",
     "description": "The ROUND_TIMESTAMP function returns a timestamp that is the expression rounded to the unit specified by the format-string. If format-string is not specified, expression is rounded to the nearest day, as if 'DD' was specified for format-string."
   },
   "rowid": {
@@ -780,7 +780,7 @@
   },
   "rpad": {
     "prefix": "rpad",
-    "body": "rpad(${1:expression},${2:lenght}),${3:pad?}))",
+    "body": "rpad(${1:expression}, ${2:lenght}), ${3:pad?}))",
     "description": "The RPAD function returns a string composed of expression that is padded on the right."
   },
   "rrn": {
@@ -790,17 +790,17 @@
   },
   "rtrim": {
     "prefix": "rtrim",
-    "body": "rtrim(${1:string-expression},${2:trim-expression?})",
+    "body": "rtrim(${1:string-expression}, ${2:trim-expression?})",
     "description": "The RTRIM function removes any of the specified characters from the end of an expression."
   },
   "score": {
     "prefix": "score",
-    "body": "score(${1:column-name},${2:search-argument},${3:search-argument-options?})",
+    "body": "score(${1:column-name}, ${2:search-argument}, ${3:search-argument-options?})",
     "description": "The SCORE function searches a text search index using criteria that are specified in a search argument and returns a relevance score that measures how well a document matches the query."
   },
   "second": {
     "prefix": "second",
-    "body": "second(${1:expression},${2:precision-constant?})",
+    "body": "second(${1:expression}, ${2:precision-constant?})",
     "description": "The SECOND function returns the seconds part of a value with optional fractional seconds."
   },
   "sign": {
@@ -840,8 +840,218 @@
   },
   "strip": {
     "prefix": "strip",
-    "body": "strip(${1:expression},${2|BOTH,B,LEADING,L,TRAILING,T|},${3:strip-character?})",
+    "body": "strip(${1:expression}, ${2|BOTH,B,LEADING,L,TRAILING,T|}, ${3:strip-character?})",
     "description": "The STRIP function removes blanks or another specified character from the end, the beginning, or both ends of a string expression."
+  },
+  "substr": {
+    "prefix": "substr",
+    "body": "substr(${1:expression}, ${2:start}, ${3:length?})",
+    "description": "The SUBSTR function returns a substring of a string."
+  },
+  "substring": {
+    "prefix": "substring",
+    "body": "substring(${1:expression}, ${2:start}, ${3:length?})",
+    "description": "The SUBSTRING function returns a substring of a string."
+  },
+  "table_name": {
+    "prefix": "table_name",
+    "body": "table_name(${1:object-name}, ${2:object-schema})",
+    "description": "The TABLE_NAME function returns an unqualified name of the object found for an alias."
+  },
+  "table_schema": {
+    "prefix": "table_schema",
+    "body": "table_schema(${1:object-name}, ${2:object-schema})",
+    "description": "The TABLE_SCHEMA function returns the schema name of the object found for an alias."
+  },
+  "tan": {
+    "prefix": "tan",
+    "body": "tan(${1:expression})",
+    "description": "The TAN function returns the tangent of the argument, where the argument is an angle expressed in radians. The TAN and ATAN functions are inverse operations."
+  },
+  "tanh": {
+    "prefix": "tanh",
+    "body": "tanh(${1:expression})",
+    "description": "The TANH function returns the hyperbolic tangent of the argument, where the argument is an angle expressed in radians. The TANH and ATANH functions are inverse operations."
+  },
+  "time": {
+    "prefix": "time",
+    "body": "time(${1:expression})",
+    "description": "The TIME function returns a time from a value."
+  },
+  "timestamp": {
+    "prefix": "timestamp",
+    "body": "timestamp(${1:expression}, ${2|expression,precision-constant|})",
+    "description": "The TIMESTAMP function returns a timestamp from its argument or arguments."
+  },
+  "timestamp_format": {
+    "prefix": "timestamp_format",
+    "body": "timestamp_format(${1:string-expression}, ${2:format-string}, ${3|6,precision-constant|})",
+    "description": "The TIMESTAMP_FORMAT function returns a timestamp that is based on the interpretation of the input string using the specified format.."
+  },
+  "timestamp_iso": {
+    "prefix": "timestamp_iso",
+    "body": "timestamp_iso(${1:expression})",
+    "description": "Returns a timestamp value based on a date, time, or timestamp argument."
+  },
+  "timestampdiff": {
+    "prefix": "timestampdiff",
+    "body": "timestampdiff(${1:numeric-expression}, ${2:string-expression})",
+    "description": "The TIMESTAMPDIFF function returns an estimated number of intervals of the type defined by the first argument, based on the difference between two timestamps."
+  },
+  "totalorder": {
+    "prefix": "totalorder",
+    "body": "totalorder(${1:expression}, ${2:expression})",
+    "description": "The TOTALORDER function returns an ordering for DECFLOAT values."
+  },
+  "translate": {
+    "prefix": "translate",
+    "body": "translate(${1:expression}, ${2:to-string}, ${3:from-string}, ${4:pad})",
+    "description": "The TRANSLATE function returns a value in which one or more characters in expression may have been converted into other characters."
+  },
+  "trim": {
+    "prefix": "trim",
+    "body": "trim(${1|BOTH,B,LEADING,L,TRAILING,T|} ${2:strip-character} FROM ${3:expression})",
+    "description": "The TRIM function removes blanks or another specified character from the end, from the beginning, or from both of a string expression."
+  },
+  "trim_array": {
+    "prefix": "trim_array",
+    "body": "trim_array(${1:array-variable-name}, ${2|numeric-constant,numeric-variable|})",
+    "description": "The TRIM_ARRAY function returns a copy of the array argument from which the specified number of elements have been removed from the end of the array."
+  },
+  "truncate": {
+    "prefix": "truncate",
+    "body": "truncate(${1:expression}, ${2|0,expression|})",
+    "description": "The TRUNCATE function returns expression–1 truncated to some number of places to the right or left of the decimal point."
+  },
+  "trunc": {
+    "prefix": "trunc",
+    "body": "trunc(${1:expression}, ${2|0,expression|})",
+    "description": "The TRUNC function returns expression–1 truncated to some number of places to the right or left of the decimal point."
+  },
+  "trunc_timestamp": {
+    "prefix": "trunc_timestamp",
+    "body": "trunc_timestamp(${1:expression}, ${2|'DD',format-string|})",
+    "description": "The TRUNC_TIMESTAMP function returns a timestamp that is the expression truncated to the unit specified by the format-string.."
+  },
+  "ucase": {
+    "prefix": "ucase",
+    "body": "ucase(${1:expression})",
+    "description": "The UCASE function returns a string in which all the characters have been converted to uppercase characters, based on the CCSID of the argument."
+  },
+  "value": {
+    "prefix": "value",
+    "body": "value(${1:expression}, ${2:expression+})",
+    "description": "The VALUE function returns the value of the first non-null expression."
+  },
+  "varbinary": {
+    "prefix": "varbinary",
+    "body": "varbinary(${1:string-expression}, ${2:integer?})",
+    "description": "The VARBINARY function returns a VARBINARY representation of a string of any type."
+  },
+  "varbinary_format": {
+    "prefix": "varbinary_format",
+    "body": "varbinary_format(${1:expression}, ${2:format-string?})",
+    "description": "The VARBINARY_FORMAT function returns a binary string representation of a character string that has been formatted using a format-string."
+  },
+  "varchar": {
+    "prefix": "varchar",
+    "body": "varchar(${1:expression})",
+    "description": "The VARCHAR function returns a character-string representation."
+  },
+  "varchar_format": {
+    "prefix": "varchar_format",
+    "body": "varchar_format(${1:expression}, ${2:format-string?})",
+    "description": "The VARCHAR_FORMAT function returns a character string representation of the first argument in the format indicated by the optional format-string."
+  },
+  "varchar_format_binary": {
+    "prefix": "varchar_format_binary",
+    "body": "varchar_format_binary(${1:expression}, ${2:format-string?})",
+    "description": "The VARCHAR_FORMAT_BINARY function returns a character string representation of a bit string that has been formatted using a format-string."
+  },
+  "vargraphic": {
+    "prefix": "vargraphic",
+    "body": "vargraphic(${1:expression})",
+    "description": "The VARGRAPHIC function returns a graphic-string representation."
+  },
+  "verify_group_for_user": {
+    "prefix": "verify_group_for_user",
+    "body": "verify_group_for_user(${1|SESSION_USER,USER,CURRENT_USER|}, ${2:authorization-id-expression+})",
+    "description": "The VERIFY_GROUP_FOR_USER function returns a value that indicates whether the specified user is in the list of user profiles or is a member of any of the group user profiles specified by the list of authorization-id-expression arguments."
+  },
+  "week": {
+    "prefix": "week",
+    "body": "week(${1:expression})",
+    "description": "The WEEK function returns an integer between 1 and 54 that represents the week of the year. The week starts with Sunday, and January 1 is always in the first week."
+  },
+  "week_iso": {
+    "prefix": "week_iso",
+    "body": "week_iso(${1:expression})",
+    "description": "The WEEK_ISO function returns an integer between 1 and 53 that represents the week of the year. The week starts with Monday."
+  },
+  "wrap": {
+    "prefix": "wrap",
+    "body": "wrap(${1:object-definition-string})",
+    "description": "The WRAP function transforms a readable DDL statement into an obfuscated DDL statement."
+  },
+  "xmlattributes": {
+    "prefix": "xmlattributes",
+    "body": "xmlattributes(${1:xmlattributes} AS ${2:attribute-name?} +)",
+    "description": "The XMLATTRIBUTES function constructs XML attributes from the arguments."
+  },
+  "xmlcomment": {
+    "prefix": "xmlcomment",
+    "body": "xmlcomment(${1:string-expression})",
+    "description": "The XMLCOMMENT function returns an XML value with the input argument as the content."
+  },
+  "xmlconcat": {
+    "prefix": "xmlconcat",
+    "body": "xmlconcat(${1:xml-expression}, ${2:xml-expression+})",
+    "description": "The XMLCONCAT function returns a sequence containing the concatenation of a variable number of XML input arguments."
+  },
+  "xmldocument": {
+    "prefix": "xmldocument",
+    "body": "xmldocument(${1:xml-expression+})",
+    "description": "The XMLDOCUMENT function returns an XML value."
+  },
+  "xmlelement": {
+    "prefix": "xmlelement",
+    "body": "xmlelement(NAME ${1:element-name}, ${2:xmlnamespaces-declaration?}, ${3:xmlattributes-function?, ${4:element-content-expression+})",
+    "description": "The XMLELEMENT function returns an XML value that is an XML element."
+  },
+  "xmlforest": {
+    "prefix": "xmlforest",
+    "body": "xmlforest(${1:xmlnamespaces-declaration?}, ${2:element-content-expression+} AS ${3:element-name?})",
+    "description": "The XMLFOREST function returns an XML value that is a sequence of XML elements."
+  },
+  "xmlnamespaces": {
+    "prefix": "xmlnamespaces",
+    "body": "xmlnamespaces(${1:namespace-uri+} AS ${2:namespace-prefix})",
+    "description": "The XMLNAMESPACES declaration constructs namespace declarations from the arguments. This declaration can only be used as an argument for the XMLELEMENT and XMLFOREST functions. The result is one or more XML namespace declarations containing in-scope namespaces for each non-null input value."
+  },
+  "xmlparse": {
+    "prefix": "xmlparse",
+    "body": "xmlparse( DOCUMENT ${1:string-expression} ${2|STRIP WHITESPACE,PRESERVE WHITESPACE|})",
+    "description": "The XMLPARSE function parses the arguments as an XML document and returns an XML value."
+  },
+  "xmlpi": {
+    "prefix": "xmlpi",
+    "body": "xmlpi( NAME ${1:pi-name}, ${2:string-expression?})",
+    "description": "The XMLPI function returns an XML value with a single processing instruction."
+  },
+  "xmlrow": {
+    "prefix": "xmlrow",
+    "body": "xmlrow( ${1:xml-expression+})",
+    "description": "The XMLROW function returns an XML value that is a well-formed XML document."
+  },
+  "xmlserialize": {
+    "prefix": "xmlserialize",
+    "body": "xmlserialize( CONTENT ${1:xml-expression} AS ${2:data-type})",
+    "description": "The XMLSERIALIZE function returns a serialized XML value of the specified data type generated from the XML-expression argument."
+  },
+  "xmltext": {
+    "prefix": "xmltext",
+    "body": "xmltext( ${1:string-expression+})",
+    "description": "The XMLTEXT function returns an XML value that contains the value of string-expression."
   },
   "xmlvalidate": {
     "prefix": "xmlvalidate",
