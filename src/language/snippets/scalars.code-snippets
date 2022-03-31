@@ -550,7 +550,7 @@
   },
   "lor": {
     "prefix": "lor",
-    "body": "lor(${1:expression},${2:expression?},${3:expression?})",
+    "body": "lor(${1:expression},${2:expression},${3:expression?})",
     "description": "The LOR function returns a string that is the logical OR of the argument strings."
   },
   "lpad": {
@@ -562,6 +562,146 @@
     "prefix": "ltrim",
     "body": "ltrim(${1:string-expression},${2:trim-expression?})",
     "description": "The LTRIM function removes any of the specified characters from the beginning of an expression."
+  },
+  "max": {
+    "prefix": "max",
+    "body": "max(${1:expression},${2:expression},${3:expression?})",
+    "description": "The MAX scalar function returns the maximum value in a set of values."
+  },
+  "max_cardinality": {
+    "prefix": "max_cardinality",
+    "body": "max_cardinality(${1:array-expression})",
+    "description": "The MAX_CARDINALITY function returns a value representing the maximum number of elements an array can contain."
+  },
+  "microsecond": {
+    "prefix": "microsecond",
+    "body": "microsecond(${1:expression}",
+    "description": "The MICROSECOND function returns the microsecond part of a value."
+  },
+  "midnight_seconds": {
+    "prefix": "midnight_seconds",
+    "body": "midnight_seconds(${1:expression})",
+    "description": "The MIDNIGHT_SECONDS function returns an integer value that is greater than or equal to 0 and less than or equal to 86 400 representing the number of seconds between midnight and the time value specified in the argument."
+  },
+  "min": {
+    "prefix": "min",
+    "body": "min(${1:expression},${2:expression},${3:expression?})",
+    "description": "The MIN scalar function returns the minimum value in a set of values."
+  },
+  "minute": {
+    "prefix": "minute",
+    "body": "minute(${1:expression})",
+    "description": "The MINUTE function returns the minute part of a value."
+  },
+  "mod": {
+    "prefix": "mod",
+    "body": "mod(${1:expression},${2:expression})",
+    "description": "The MOD function divides the first argument by the second argument and returns the remainder."
+  },
+  "month": {
+    "prefix": "month",
+    "body": "month(${1:expression})",
+    "description": "The MONTH function returns the month part of a value."
+  },
+  "monthname": {
+    "prefix": "monthname",
+    "body": "monthname(${1:expression})",
+    "description": "Returns a mixed case character string containing the name of the month (for example, January) for the month portion of the argument."
+  },
+  "month_between": {
+    "prefix": "month_between",
+    "body": "month_between(${1:expression},${2:expression})",
+    "description": "The MONTHS_BETWEEN function returns an estimate of the number of months between expression1 and expression2."
+  },
+  "mqread": {
+    "prefix": "mqread",
+    "body": "mqread(${1:receive-service?},${2:service-policy?},${3:correl-id?})",
+    "description": "The MQREAD function returns a message from a specified MQSeries location (return value of VARCHAR) without removing the message from the queue."
+  },
+  "mqreadclob": {
+    "prefix": "mqreadclob",
+    "body": "mqreadclob(${1:receive-service?},${2:service-policy?},${3:correl-id?})",
+    "description": "The MQREADCLOB function returns a message from a specified MQSeries location (return value of CLOB) without removing the message from the queue."
+  },
+  "mqreceive": {
+    "prefix": "mqreceive",
+    "body": "mqreceive(${1:receive-service?},${2:service-policy?},${3:correl-id?})",
+    "description": "The MQRECEIVE function returns a message from a specified MQSeries location (return value of VARCHAR) with removal of the message from the queue."
+  },
+  "mqreceiveclob": {
+    "prefix": "mqreceiveclob",
+    "body": "mqreceiveclob(${1:receive-service?},${2:service-policy?},${3:correl-id?})",
+    "description": "The MQRECEIVECLOB function returns a message from a specified MQSeries location (return value of CLOB) with removal of the message from the queue."
+  },
+  "mqsend": {
+    "prefix": "mqsend",
+    "body": "mqsend(${1:send-service?},${2:service-policy?},${3:msg-data},${4:correl-id?})",
+    "description": "The MQSEND function sends a message to a specified MQSeries location."
+  },
+  "multiply_alt": {
+    "prefix": "multiply_alt",
+    "body": "multiply_alt(${1:expression},${2:expression})",
+    "description": "The MULTIPLY_ALT scalar function returns the product of the two arguments as a decimal value."
+  },
+  "next_day": {
+    "prefix": "next_day",
+    "body": "next_day(${1:expression},${2:string-expression})",
+    "description": "The NEXT_DAY function returns a date or timestamp value that represents the first weekday, named by string-expression, that is later than the date expression."
+  },
+  "normalize_decfloat": {
+    "prefix": "normalize_decfloat",
+    "body": "normalize_decfloat(${1:expression})",
+    "description": "The NORMALIZE_DECFLOAT function returns a DECFLOAT value equal to the input argument set to its simplest form."
+  },
+  "now": {
+    "prefix": "now",
+    "body": "now()",
+    "description": "The NOW function returns a timestamp based on a reading of the time-of-day clock when the SQL statement is executed at the current server."
+  },
+  "nullif": {
+    "prefix": "nullif",
+    "body": "nullif(${1:expression},${2:expression})",
+    "description": "The NULLIF function returns a null value if the arguments compare equal, otherwise it returns the value of the first argument."
+  },
+  "octet_length": {
+    "prefix": "octet_length",
+    "body": "octet_length(${1:expression})",
+    "description": "The OCTET_LENGTH function returns the length of a string expression in octets (bytes)."
+  },
+  "overlay": {
+    "prefix": "overlay",
+    "body": "overlay(${1:source-string},${2:insert-string},${3:start},${4:length})",
+    "description": "Returns a string where length characters have been deleted from source-string beginning at start and where insert-string has been inserted into source-string beginning at start."
+  },
+  "pi": {
+    "prefix": "pi",
+    "body": "pi()",
+    "description": "Returns the value of π 3.141592653589793. There are no arguments."
+  },
+  "position": {
+    "prefix": "position",
+    "body": "position(${1:search-string},${2:source-string})",
+    "description": "The POSITION function returns the starting position of the first occurrence of one string (called the search-string) within another string (called the source-string)."
+  },
+  "posstr": {
+    "prefix": "posstr",
+    "body": "posstr(${1:source-string},${2:search-string})",
+    "description": "The POSSTR function returns the starting position of the first occurrence of one string (called the search-string) within another string (called the source-string)."
+  },
+  "power": {
+    "prefix": "power",
+    "body": "power(${1:expression},${2:expression}))",
+    "description": "The POWER function returns the result of raising the first argument to the power of the second argument."
+  },
+  "quantize": {
+    "prefix": "quantize",
+    "body": "quantize(${1:expression},${2:expression})",
+    "description": "The QUANTIZE function returns a decimal floating-point value that is equal in value (except for any rounding) and sign to expression-1 and which has an exponent set equal to the exponent in expression-2."
+  },
+  "quarter": {
+    "prefix": "quarter",
+    "body": "quarter(${1:expression})",
+    "description": "The QUARTER function returns an integer between 1 and 4 that represents the quarter of the year in which the date resides. For example, any dates in January, February, or March will return the integer 1."
   },
   "xmlvalidate": {
     "prefix": "xmlvalidate",
