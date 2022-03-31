@@ -500,7 +500,7 @@
   },
   "land": {
     "prefix": "land",
-    "body": "land(${1:expression},${2:expression},${3:expression?})",
+    "body": "land(${1:expression},${2:expression+})",
     "description": "The LAND function returns a string that is the logical 'AND' of the argument strings. This function takes the first argument string, does an AND operation with the next string, and then continues to do AND operations with each successive argument using the previous result."
   },
   "last_day": {
@@ -550,7 +550,7 @@
   },
   "lor": {
     "prefix": "lor",
-    "body": "lor(${1:expression},${2:expression},${3:expression?})",
+    "body": "lor(${1:expression},${2:expression+})",
     "description": "The LOR function returns a string that is the logical OR of the argument strings."
   },
   "lpad": {
@@ -565,7 +565,7 @@
   },
   "max": {
     "prefix": "max",
-    "body": "max(${1:expression},${2:expression},${3:expression?})",
+    "body": "max(${1:expression},${2:expression+})",
     "description": "The MAX scalar function returns the maximum value in a set of values."
   },
   "max_cardinality": {
@@ -585,7 +585,7 @@
   },
   "min": {
     "prefix": "min",
-    "body": "min(${1:expression},${2:expression},${3:expression?})",
+    "body": "min(${1:expression},${2:expression+})",
     "description": "The MIN scalar function returns the minimum value in a set of values."
   },
   "minute": {
@@ -702,6 +702,146 @@
     "prefix": "quarter",
     "body": "quarter(${1:expression})",
     "description": "The QUARTER function returns an integer between 1 and 4 that represents the quarter of the year in which the date resides. For example, any dates in January, February, or March will return the integer 1."
+  },
+  "radians": {
+    "prefix": "radians",
+    "body": "radians(${1:expression})",
+    "description": "The RADIANS function returns the number of radians for an argument that is expressed in degrees."
+  },
+  "raise_error": {
+    "prefix": "raise_error",
+    "body": "raise_error(${1:sqlstate},${2:diagnostic-string}))",
+    "description": "The RAISE_ERROR function causes the statement that invokes the function to return an error with the specified SQLSTATE (along with SQLCODE -438) and diagnostic string."
+  },
+  "rand": {
+    "prefix": "rand",
+    "body": "rand(${1:expression})",
+    "description": "The RAND function returns a floating point value greater than or equal to 0 and less than or equal to 1."
+  },
+  "real": {
+    "prefix": "real",
+    "body": "real(${1:numeric/string-expression})",
+    "description": "The REAL function returns a single-precision floating-point representation."
+  },
+  "regexp_count": {
+    "prefix": "regexp_count",
+    "body": "regexp_count(${1:source-string},${2:pattern-expression}),${3:start?}),${4:flags?}))",
+    "description": "The REGEXP_COUNT function returns a count of the number of times that a regular expression pattern is matched in a string."
+  },
+  "regexp_instr": {
+    "prefix": "regexp_instr",
+    "body": "regexp_instr(${1:source-string},${2:pattern-expression}),${3:start?}),${4:occurence?}),${5:return-option?}),${6:flags?}),${7:group?}))",
+    "description": "The REGEXP_INSTR returns the starting position or the position after the end of the matched substring, depending on the value of the return_option argument."
+  },
+  "regexp_replace": {
+    "prefix": "regexp_replace",
+    "body": "regexp_replace(${1:source-string},${2:pattern-expression}),${3:replacement-string?}),${4:start?}),${5:occurence?}),${6:flags?}))",
+    "description": "The REGEXP_REPLACE function returns a modified version of the source string where occurrences of the regular expression pattern found in the source string are replaced with the specified replacement string."
+  },
+  "regexp_substr": {
+    "prefix": "regexp_substr",
+    "body": "regexp_substr(${1:source-string},${2:pattern-expression}),${3:start?}),${4:occurence?}),${5:flags?}),${6:group?}))",
+    "description": "The REGEXP_SUBSTR function returns one occurrence of a substring of a string that matches the regular expression pattern."
+  },
+  "repeat": {
+    "prefix": "repeat",
+    "body": "repeat(${1:expression},${2:integer}))",
+    "description": "The REPEAT function returns a string composed of expression repeated integer times."
+  },
+  "replace": {
+    "prefix": "replace",
+    "body": "replace(${1:source-string},${2:search-string}),${3:replace-string?}))",
+    "description": "The REPLACE function replaces all occurrences of search-string in source-string with replace-string. If search-string is not found in source-string, source-string is returned unchanged."
+  },
+  "rid": {
+    "prefix": "rid",
+    "body": "rid(${1:table-designator})",
+    "description": "The RID function returns the relative record number of a row as a BIGINT."
+  },
+  "right": {
+    "prefix": "right",
+    "body": "right(${1:expression},${2:integer}))",
+    "description": "The RIGHT function returns the rightmost integer characters of expression."
+  },
+  "round": {
+    "prefix": "round",
+    "body": "round(${1:expression},${2:expression?}))",
+    "description": "The ROUND function returns expression–1 rounded to some number of places to the right or left of the decimal point."
+  },
+  "round_timestamp": {
+    "prefix": "round_timestamp",
+    "body": "round_timestamp(${1:expression},${2:format-string?}))",
+    "description": "The ROUND_TIMESTAMP function returns a timestamp that is the expression rounded to the unit specified by the format-string. If format-string is not specified, expression is rounded to the nearest day, as if 'DD' was specified for format-string."
+  },
+  "rowid": {
+    "prefix": "rowid",
+    "body": "rowid(${1:string-expression})",
+    "description": "The ROWID function casts a character string to a row ID."
+  },
+  "rpad": {
+    "prefix": "rpad",
+    "body": "rpad(${1:expression},${2:lenght}),${3:pad?}))",
+    "description": "The RPAD function returns a string composed of expression that is padded on the right."
+  },
+  "rrn": {
+    "prefix": "rrn",
+    "body": "rrn(${1:table-designator})",
+    "description": "The RRN function returns the relative record number of a row."
+  },
+  "rtrim": {
+    "prefix": "rtrim",
+    "body": "rtrim(${1:string-expression},${2:trim-expression?})",
+    "description": "The RTRIM function removes any of the specified characters from the end of an expression."
+  },
+  "score": {
+    "prefix": "score",
+    "body": "score(${1:column-name},${2:search-argument},${3:search-argument-options?})",
+    "description": "The SCORE function searches a text search index using criteria that are specified in a search argument and returns a relevance score that measures how well a document matches the query."
+  },
+  "second": {
+    "prefix": "second",
+    "body": "second(${1:expression},${2:precision-constant?})",
+    "description": "The SECOND function returns the seconds part of a value with optional fractional seconds."
+  },
+  "sign": {
+    "prefix": "sign",
+    "body": "sign(${1:expression})",
+    "description": "The SIGN function returns an indicator of the sign of expression."
+  },
+  "sin": {
+    "prefix": "sin",
+    "body": "sin(${1:expression})",
+    "description": "The SIN function returns the sine of the argument, where the argument is an angle expressed in radians. The SIN and ASIN functions are inverse operations."
+  },
+  "sinh": {
+    "prefix": "sinh",
+    "body": "sinh(${1:expression})",
+    "description": "The SINH function returns the hyperbolic sine of the argument, where the argument is an angle expressed in radians."
+  },
+  "smallint": {
+    "prefix": "smallint",
+    "body": "smallint(${1:numeric/string-expression})",
+    "description": "The SMALLINT function returns a small integer representation."
+  },
+  "soundex": {
+    "prefix": "soundex",
+    "body": "soundex(${1:expression})",
+    "description": "The SOUNDEX function returns a 4 character code representing the sound of the words in the argument. The result can be used to compare with the sound of other strings."
+  },
+  "space": {
+    "prefix": "space",
+    "body": "space(${1:expression})",
+    "description": "The SPACE function returns a character string that consists of the number of SBCS blanks that the argument specifies."
+  },
+  "sqrt": {
+    "prefix": "sqrt",
+    "body": "sqrt(${1:expression})",
+    "description": "The SQRT function returns the square root of a number."
+  },
+  "strip": {
+    "prefix": "strip",
+    "body": "strip(${1:expression},${2|BOTH,B,LEADING,L,TRAILING,T|},${3:strip-character?})",
+    "description": "The STRIP function removes blanks or another specified character from the end, the beginning, or both ends of a string expression."
   },
   "xmlvalidate": {
     "prefix": "xmlvalidate",
