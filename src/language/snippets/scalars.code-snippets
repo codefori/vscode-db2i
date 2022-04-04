@@ -1077,5 +1077,85 @@
     "prefix": "zoned",
     "body": "zoned(${1:expression}, ${2:precision?}, ${3:scale?}, ${4:decimal-character})",
     "description": "The ZONED function returns a zoned decimal representation."
+  },
+  "decfloat_format": {
+    "prefix": "decfloat_format",
+    "body": "decfloat_format(${1:string-expression}, ${2:format-string?})",
+    "description": "The DECFLOAT_FORMAT function returns a DECFLOAT(34) value that is based on the interpretation of the input string using the specified format."
+  },
+  "get_xml_file": {
+    "prefix": "get_xml_file",
+    "body": "get_xml_file(${1:string-expression})",
+    "description": "The GET_XML_FILE function returns the data from a source stream file or a source physical file."
+  },
+  "greatest": {
+    "prefix": "greatest",
+    "body": "greatest(${1:expression}, ${2:precision?+})",
+    "description": "The GREATEST scalar function returns the maximum value in a set of values."
+  },
+  "hextoraw": {
+    "prefix": "hextoraw",
+    "body": "hextoraw(${1:expression}, ${2:format-string?})",
+    "description": "The HEXTORAW function returns a binary string representation of a character string that has been formatted using a format-string."
+  },
+  "http_delete": {
+    "prefix": "http_delete",
+    "body": "http_delete(${1:url}, ${2:options?})",
+    "description": "The HTTP_DELETE scalar function deletes a text-based resource from the specified URL through an HTTP DELETE request."
+  },
+  "http_get": {
+    "prefix": "http_get",
+    "body": "http_get(${1:url}, ${2:options?})",
+    "description": "The HTTP_GET scalar function retrieves a text-based resource from the specified URL through an HTTP GET request."
+  },
+  "http_post": {
+    "prefix": "http_post",
+    "body": "http_post(${1:url}, ${2:request-message}, ${3:options?})",
+    "description": "The HTTP_POST scalar function updates a text-based resource under the specified URL through an HTTP POST request."
+  },
+  "http_put": {
+    "prefix": "http_put",
+    "body": "http_put(${1:url}, ${2:request-message}, ${3:options?})",
+    "description": "The HTTP_PUT scalar function retrieves a text-based resource from the specified URL through an HTTP PUT request."
+  },
+  "interpret": {
+    "prefix": "interpret",
+    "body": "interpret(${1:expression} AS ${2:data-type})",
+    "description": "The INTERPRET function returns the first operand interpreted as the specified data-type."
+  },
+  "instr": {
+    "prefix": "instr",
+    "body": "instr(${1:source-string}, ${2:search-string}, ${3:start?}, ${4:instance?})",
+    "description": "The INSTR function returns the starting position of a string (called the search-string) within another string (called the source-string)."
+  },
+  "json_array": {
+    "prefix": "json_array",
+    "body": "json_array(${1:json-expression})",
+    "description": "The JSON_ARRAY function generates a JSON array either by explicitly listing the array elements or by using a query."
+  },
+  "json_object": {
+    "prefix": "json_object",
+    "body": "json_object( KEY ${1:key-name-expression+} VALUE ${2:json-expression+})",
+    "description": "The JSON_OBJECT function generates a JSON object using the specified key:value pairs."
+  },
+  "json_query": {
+    "prefix": "json_query",
+    "body": "json_query(${1:json-expression}, ${2:sql-json-path-expression})",
+    "description": "The JSON_QUERY function returns an SQL/JSON value from the specified JSON text by using an SQL/JSON path expression."
+  },
+  "json_to_bson": {
+    "prefix": "json_to_bson",
+    "body": "json_to_bson(${1:json-expression})",
+    "description": "The JSON_TO_BSON function converts a string containing formatted JSON data to a binary string containing the data formatted as BSON."
+  },
+  "json_value": {
+    "prefix": "json_value",
+    "body": "json_value(${1:json-expression}, ${2:sql-json-path-expression})",
+    "description": "The JSON_VALUE function returns an SQL scalar value from a JSON text by using an SQL/JSON path expression."
+  },
+  "least": {
+    "prefix": "least",
+    "body": "least(${1:expression}, ${2:expression?+})",
+    "description": "The LEAST scalar function returns the minimum value in a set of values."
   }
 }
