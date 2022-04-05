@@ -608,9 +608,9 @@
     "body": "monthname(${1:expression})",
     "description": "Returns a mixed case character string containing the name of the month (for example, January) for the month portion of the argument."
   },
-  "month_between": {
-    "prefix": "month_between",
-    "body": "month_between(${1:expression}, ${2:expression})",
+  "months_between": {
+    "prefix": "months_between",
+    "body": "months_between(${1:expression}, ${2:expression})",
     "description": "The MONTHS_BETWEEN function returns an estimate of the number of months between expression1 and expression2."
   },
   "mqread": {
@@ -1157,5 +1157,70 @@
     "prefix": "least",
     "body": "least(${1:expression}, ${2:expression?+})",
     "description": "The LEAST scalar function returns the minimum value in a set of values."
+  },
+  "nvl": {
+    "prefix": "nvl",
+    "body": "nvl(${1:expression}, ${2:expression+})",
+    "description": "The NVL function returns the value of the first non-null expression."
+  },
+  "pow": {
+    "prefix": "pow",
+    "body": "pow(${1:expression}, ${2:expression})",
+    "description": "The POWER or POW function returns the result of raising the first argument to the power of the second argument."
+  },
+  "random": {
+    "prefix": "random",
+    "body": "random(${1:expression})",
+    "description": "The RANDOM or RAND function returns a floating point value greater than or equal to 0 and less than or equal to 1."
+  },
+  "strleft": {
+    "prefix": "strleft",
+    "body": "strleft(${1:expression}, ${2:integer})",
+    "description": "The STRLEFT function returns the leftmost integer characters of expression."
+  },
+  "strpos": {
+    "prefix": "strpos",
+    "body": "strpos(${1:source-string}, ${2:search-string})",
+    "description": "The STRPOS function returns the starting position of the first occurrence of one string (called the search-string) within another string (called the source-string)."
+  },
+  "strright": {
+    "prefix": "strright",
+    "body": "strright(${1:expression}, ${2:integer})",
+    "description": "The STRRIGHT function returns the rightmost integer characters of expression."
+  },
+  "to_char": {
+    "prefix": "to_char",
+    "body": "to_char(${1:string/timestamp/numeric-expression}, ${2:format-string?}, ${3:scale?}, ${4:decimal-character})",
+    "description": "The TO_CHAR function returns a character string representation of the first argument in the format indicated by the optional format-string."
+  },
+  "to_clob": {
+    "prefix": "to_clob",
+    "body": "to_clob(${1:expression})",
+    "description": "The TO_CLOB function returns a character-string representation."
+  },
+  "to_date": {
+    "prefix": "to_date",
+    "body": "to_date(${1:string-expression}, ${2:format-string}, ${3:precision-constant?})",
+    "description": "The TO_DATE function returns a timestamp that is based on the interpretation of the input string using the specified format."
+  },
+  "to_number": {
+    "prefix": "to_number",
+    "body": "to_number(${1:string-expression}, ${2:format-string?})",
+    "description": "The TO_NUMBER function returns a DECFLOAT(34) value that is based on the interpretation of the input string using the specified format."
+  },
+  "to_timestamp": {
+    "prefix": "to_timestamp",
+    "body": "to_timestamp(${1:string-expression}, ${2:format-string}, ${3:precision-constant?})",
+    "description": "The TO_TIMESTAMP function returns a timestamp that is based on the interpretation of the input string using the specified format."
+  },
+  "url_decode": {
+    "prefix": "url_decode",
+    "body": "url_decode(${1:character-string})",
+    "description": "The URL_DECODE scalar function completes URL decoding of the provided text using UTF-8 encoding."
+  },
+  "url_encode": {
+    "prefix": "url_encode",
+    "body": "url_encode(${1:character-string})",
+    "description": "The URL_ENCODE scalar function completes URL encoding of the provided text using UTF-8 encoding."
   }
 }
