@@ -32,6 +32,10 @@
       {
         "language": "sql",
         "path": "./src/language/snippets/variables.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "./src/language/snippets/aggregates.code-snippets"
       }
     ],
     "configuration": {

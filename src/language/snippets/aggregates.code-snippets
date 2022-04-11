@@ -1,0 +1,7 @@
+// https://www.ibm.com/docs/en/i/7.3?topic=functions-aggregate
+{
+  "upper": {
+    "prefix": "upper",
+    "body": "upper(${1:string})",
+  },
+}
