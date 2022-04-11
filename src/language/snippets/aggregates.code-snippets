@@ -1,7 +1,53 @@
 // https://www.ibm.com/docs/en/i/7.3?topic=functions-aggregate
 {
-  "upper": {
-    "prefix": "upper",
-    "body": "upper(${1:string})",
+  "array_agg": {
+    "prefix": "array_agg",
+    "body": "array_agg(${1:expression} ORDER BY ${2:sort-key-expression} ${3|ASC,DESC|})",
+    "description": "The ARRAY_AGG function aggregates a set of elements into an array."
   },
+  "avg": {
+    "prefix": "avg",
+    "body": "avg(${1|ALL,DISTINCT|} ${2:numeric-expression})",
+    "description": "The AVG function returns the average of a set of numbers."
+  }, 
+  "correlation": {
+    "prefix": "correlation",
+    "body": "correlation(${1:expression}, ${2:expression})",
+    "description": "The CORRELATION function returns the coefficient of correlation of a set of number pairs."
+  }, 
+  "corr": {
+    "prefix": "corr",
+    "body": "corr(${1:expression}, ${2:expression})",
+    "description": "The CORR function returns the coefficient of correlation of a set of number pairs."
+  }, 
+  "count": {
+    "prefix": "count",
+    "body": "count(${1|ALL,DISTINCT|} ${2:expression})",
+    "description": "The COUNT function returns the number of rows or values in a set of rows or values."
+  }, 
+  "count_big": {
+    "prefix": "count_big",
+    "body": "count_big(${1|ALL,DISTINCT|} ${2:expression})",
+    "description": "The COUNT_BIG function returns the number of rows or values in a set of rows or values. It is similar to COUNT except that the result can be greater than the maximum value of integer."
+  }, 
+  "covariance": {
+    "prefix": "covariance",
+    "body": "covariance(${1:expression}, ${2:expression})",
+    "description": "The COVARIANCE function returns the (population) covariance of a set of number pairs."
+  },
+  "covar": {
+    "prefix": "covar",
+    "body": "covar(${1:expression}, ${2:expression})",
+    "description": "The COVAR function returns the (population) covariance of a set of number pairs."
+  },   
+  "covariance_samp": {
+    "prefix": "covariance_samp",
+    "body": "covariance_samp(${1:expression}, ${2:expression})",
+    "description": "The COVARIANCE_SAMP function returns the unbiased sample covariance (n-1) of a set of number pairs."
+  },
+  "covar_samp": {
+    "prefix": "covar_samp",
+    "body": "covar_samp(${1:expression}, ${2:expression})",
+    "description": "The COVAR_SAMP function returns the unbiased sample covariance (n-1) of a set of number pairs."
+  },    
 }

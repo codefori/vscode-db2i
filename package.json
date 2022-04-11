@@ -10,9 +10,9 @@
     "Other"
   ],
   "publisher": "halcyontechltd",
-	"author": {
-		"name": "Halcyon-Tech, Liam Allan"
-	},
+  "author": {
+    "name": "Halcyon-Tech, Liam Allan"
+  },
   "repository": {
     "url": "https://github.com/halcyon-tech/vscode-db2i"
   },
@@ -20,8 +20,8 @@
     "onStartupFinished"
   ],
   "extensionDependencies": [
-		"halcyontechltd.code-for-ibmi"
-	],
+    "halcyontechltd.code-for-ibmi"
+  ],
   "main": "./src/extension.js",
   "contributes": {
     "snippets": [
@@ -133,7 +133,7 @@
     "lint": "eslint .",
     "pretest": "npm run lint",
     "test": "node ./test/runTest.js",
-		"package": "vsce package"
+    "package": "vsce package"
   },
   "devDependencies": {
     "@types/glob": "^7.1.3",
