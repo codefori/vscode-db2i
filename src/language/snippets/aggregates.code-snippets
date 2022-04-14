@@ -85,4 +85,60 @@
     "body": "min(${1|ALL,DISTINCT|} ${2:expression})",
     "description": "The MIN aggregate function returns the minimum value in a set of values in a group."
   },
+  "percentile_cont": {
+    "prefix": "percentile_cont",
+    "body": "percentile_cont(${1:percentile-expression}) WITHIN GROUP (ORDER BY ${2:sort-expression})",
+    "description": "The PERCENTILE_CONT function returns the value that corresponds to the specified percentile given a sort specification by using a continuous distribution model."
+  },
+  "percentile_disc": {
+    "prefix": "percentile_disc",
+    "body": "percentile_disc(${1:percentile-expression}) WITHIN GROUP (ORDER BY ${2:sort-expression})",
+    "description": "The PERCENTILE_DISC function returns the value that corresponds to the specified percentile given a sort specification by using a discrete distribution model."
+  },
+  "regr_avgx": {
+    "prefix": "regr_avgx",
+    "body": "regr_avgx(${1:y-expression}, ${2:x-expression})",
+    "description": "The REGR_AVGX functions return quantities that can be used to compute various diagnostic statistics needed for the evaluation of the quality and statistical validity of the regression model."
+  },
+  "regr_avgy": {
+    "prefix": "regr_avgy",
+    "body": "regr_avgy(${1:y-expression}, ${2:x-expression})",
+    "description": "The REGR_AVGY functions return quantities that can be used to compute various diagnostic statistics needed for the evaluation of the quality and statistical validity of the regression model."
+  },
+  "regr_sxx": {
+    "prefix": "regr_sxx",
+    "body": "regr_sxx(${1:y-expression}, ${2:x-expression})",
+    "description": "The REGR_SXX functions return quantities that can be used to compute various diagnostic statistics needed for the evaluation of the quality and statistical validity of the regression model."
+  },
+  "regr_sxy": {
+    "prefix": "regr_sxy",
+    "body": "regr_sxy(${1:y-expression}, ${2:x-expression})",
+    "description": "The REGR_SXY functions return quantities that can be used to compute various diagnostic statistics needed for the evaluation of the quality and statistical validity of the regression model."
+  },
+  "regr_syy": {
+    "prefix": "regr_syy",
+    "body": "regr_syy(${1:y-expression}, ${2:x-expression})",
+    "description": "The REGR_SYY functions return quantities that can be used to compute various diagnostic statistics needed for the evaluation of the quality and statistical validity of the regression model."
+  },
+  "regr_count": {
+    "prefix": "regr_count",
+    "body": "regr_count(${1:y-expression}, ${2:x-expression})",
+    "description": "The REGR_COUNT function returns the number of non-null number pairs used to fit the regression line."
+  },
+  "regr_intercept": {
+    "prefix": "regr_intercept",
+    "body": "regr_intercept(${1:y-expression}, ${2:x-expression})",
+    "description": "The REGR_INTERCEPT function returns the y-intercept of the regression line (\"b\" in the equation y = a * x + b)."
+  },
+  "regr_r2": {
+    "prefix": "regr_r2",
+    "body": "regr_r2(${1:y-expression}, ${2:x-expression})",
+    "description": "The REGR_R2 function returns the coefficient of determination (\"R-squared\" or \"goodness-of-fit\") for the regression."
+  },
+  "regr_slope": {
+    "prefix": "regr_slope",
+    "body": "regr_slope(${1:y-expression}, ${2:x-expression})",
+    "description": "The REGR_SLOPE function returns the slope of the line (\"a\" in the equation y = a * x + b)."
+  },
+
 }
