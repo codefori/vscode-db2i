@@ -140,5 +140,59 @@
     "body": "regr_slope(${1:y-expression}, ${2:x-expression})",
     "description": "The REGR_SLOPE function returns the slope of the line (\"a\" in the equation y = a * x + b)."
   },
-
+  "stddev_pop": {
+    "prefix": "stddev_pop",
+    "body": "stddev_pop(${1|ALL,DISTINCT|} ${2:numeric-expression})",
+    "description": "The STDDEV_POP function returns the biased standard deviation (/n) of a set of numbers."
+  },
+  "stddev": {
+    "prefix": "stddev",
+    "body": "stddev(${1|ALL,DISTINCT|} ${2:numeric-expression})",
+    "description": "The STDDEV function returns the biased standard deviation (/n) of a set of numbers."
+  },
+  "stddev_samp": {
+    "prefix": "stddev_samp",
+    "body": "stddev_samp(${1|ALL,DISTINCT|} ${2:numeric-expression})",
+    "description": "The STDDEV_SAMP function returns the sample standard deviation (/n-1) of a set of numbers."
+  },
+  "sum": {
+    "prefix": "sum",
+    "body": "sum(${1|ALL,DISTINCT|} ${2:numeric-expression})",
+    "description": "The SUM function returns the sum of a set of numbers."
+  },
+  "var_pop": {
+    "prefix": "var_pop",
+    "body": "var_pop(${1|ALL,DISTINCT|} ${2:numeric-expression})",
+    "description": "The VAR_POP function returns the biased variance (/n) of a set of numbers."
+  },
+  "variance": {
+    "prefix": "variance",
+    "body": "variance(${1|ALL,DISTINCT|} ${2:numeric-expression})",
+    "description": "The VARIANCE function returns the biased variance (/n) of a set of numbers."
+  },
+  "var": {
+    "prefix": "var",
+    "body": "var(${1|ALL,DISTINCT|} ${2:numeric-expression})",
+    "description": "The VAR function returns the biased variance (/n) of a set of numbers."
+  },
+  "var_samp": {
+    "prefix": "var_samp",
+    "body": "var_samp(${1|ALL,DISTINCT|} ${2:numeric-expression})",
+    "description": "The VAR_SAMP function returns the sample variance (/n-1) of a set of numbers."
+  },
+  "variance_samp": {
+    "prefix": "variance_samp",
+    "body": "variance_samp(${1|ALL,DISTINCT|} ${2:numeric-expression})",
+    "description": "The VARIANCE_SAMP function returns the sample variance (/n-1) of a set of numbers."
+  },
+  "xmlagg": {
+    "prefix": "xmlagg",
+    "body": "xmlagg(${1:xml-expression} ORDER BY ${2:sort-key-expression} ${3|ASC,DESC|})",
+    "description": "The XMLAGG function returns an XML sequence containing an item for each non-null value in a set of XML values."
+  },
+  "xmlgroup": {
+    "prefix": "xmlgroup",
+    "body": "xmlgroup(${1:expression+})",
+    "description": "The XMLGROUP function returns an XML value that is a well-formed XML document."
+  }
 }
