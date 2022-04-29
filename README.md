@@ -1,6 +1,6 @@
 # vscode-db2i
 
-Db2 for IBM i tools provides SQL functionality to VS Code. It is in preview right now.
+Db2 for IBM i tools provides SQL functionality to VS Code. **It is in preview right now**.
 
 * Schemas view
 * Language tools. List tables and views and their columns when writing SQL, as well as procedures and functions
