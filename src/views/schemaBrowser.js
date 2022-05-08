@@ -46,13 +46,13 @@ module.exports = class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.addSchemaToSchemaBrowser`, async () => {
         const config = instance.getConfig();
 
-        let schemas = config.databaseBrowserList;
+        const schemas = config.databaseBrowserList || [];
 
         const newSchema = await vscode.window.showInputBox({
           prompt: `Library to add to Database Browser`
         });
 
-        if (newSchema) {
+        if (newSchema && !schemas.includes(newSchema.toUpperCase())) {
           schemas.push(newSchema.toUpperCase());
           await config.set(`databaseBrowserList`, schemas);
           this.refresh();
@@ -221,7 +221,7 @@ module.exports = class schemaBrowser {
       if (connection) {
         const config = instance.getConfig();
 
-        const libraries = config.databaseBrowserList;
+        const libraries = config.databaseBrowserList || [];
 
         for (let library of libraries) {
           items.push(new Schema(library));
