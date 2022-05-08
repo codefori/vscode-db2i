@@ -136,7 +136,19 @@ exports.initialise = async (context) => {
                     }
 
                     item.detail = detail;
-                    item.documentation = new vscode.MarkdownString(`${column.COLUMN_TEXT} (\`${definedAs.db}.${definedAs.table}\`)`);
+
+                    const docs = [];
+
+                    if (column.SYSTEM_COLUMN_NAME && column.SYSTEM_COLUMN_NAME !== column.COLUMN_NAME)
+                      docs.push(`${column.COLUMN_NAME.toLowerCase()} (${column.SYSTEM_COLUMN_NAME})`);
+
+                    if (column.COLUMN_TEXT)
+                      docs.push(column.COLUMN_TEXT);
+
+                    docs.push(`(\`${definedAs.db}.${definedAs.table}\`)`);
+
+                    item.documentation = new vscode.MarkdownString(docs.join(`\n\n`));
+
                     items.push(item);
                   });
                 } else {
