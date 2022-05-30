@@ -5,7 +5,7 @@ const { Parser } = require(`node-sql-parser`);
 const Store = require(`./store`);
 const Configuration = require(`../configuration`);
 
-/** @type {{[path: string]: object}} */
+/** @type {{[path: string]: object[]}} */
 const workingAst = {}
 
 /**
@@ -36,12 +36,26 @@ exports.initialise = async (context) => {
           });
 
           if (sqlAst) {
-            workingAst[document.uri.path] = sqlAst;
+            const astArray = Array.isArray(sqlAst) ? sqlAst : [sqlAst];
+            workingAst[document.uri.path] = astArray;
           }
             
           linterDiagnostics.set(document.uri, []);
         } catch (e) {
-          const location = e.location;
+          let location = e.location;
+
+          if (!location) {
+            location = {
+              start: {
+                line: 1,
+                column: 1,
+              },
+              end: {
+                line: 1,
+                column: 1,
+              },
+            };
+          }
 
           if (Configuration.get(`validator`)) {
             editTimeout = setTimeout(async () => {
@@ -61,8 +75,8 @@ exports.initialise = async (context) => {
         ///** @type vscode.CompletionItem[] */
         const items = [];
 
-        const ast = workingAst[document.uri.path];
-        if (ast) {
+        const astList = workingAst[document.uri.path];
+        astList.forEach((ast) => {
           if (ast.from && ast.from.length > 0) {
             ast.from.forEach(definedAs => {
               const item = new vscode.CompletionItem(definedAs.as || definedAs.table, vscode.CompletionItemKind.Struct);
@@ -70,7 +84,7 @@ exports.initialise = async (context) => {
               items.push(item);
             });
           }
-        };
+        });
 
         return items;
       }
@@ -91,11 +105,7 @@ exports.initialise = async (context) => {
 
       let fallbackLookup = false;
 
-      const baseAst = workingAst[document.uri.path];
-
-      let astList = [];
-      if (Array.isArray(baseAst)) astList = baseAst;
-      else if (baseAst) astList = [baseAst];
+      const astList = workingAst[document.uri.path];
 
       if (prefix) {
         for (const ast of astList) {
@@ -126,7 +136,19 @@ exports.initialise = async (context) => {
                     }
 
                     item.detail = detail;
-                    item.documentation = new vscode.MarkdownString(`${column.COLUMN_TEXT} (\`${definedAs.db}.${definedAs.table}\`)`);
+
+                    const docs = [];
+
+                    if (column.SYSTEM_COLUMN_NAME && column.SYSTEM_COLUMN_NAME !== column.COLUMN_NAME)
+                      docs.push(`${column.COLUMN_NAME.toLowerCase()} (${column.SYSTEM_COLUMN_NAME})`);
+
+                    if (column.COLUMN_TEXT)
+                      docs.push(column.COLUMN_TEXT);
+
+                    docs.push(`(\`${definedAs.db}.${definedAs.table}\`)`);
+
+                    item.documentation = new vscode.MarkdownString(docs.join(`\n\n`));
+
                     items.push(item);
                   });
                 } else {

@@ -7,17 +7,19 @@ jobs:
     name: Release and publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
         with:
-          fetch-depth: 1
+          node-version: '16'
+      - uses: actions/checkout@v2
+      
       - run: npm install
       
-      - run: npm install -g vsce
-      - name: Create build
-        run: npm run package
-        
-      - name: Upload build
-        uses: actions/upload-artifact@v2
-        with:
-          name: vscode-db2i-release-build
-          path: ./*.vsix
+      - run: npm install -g vsce ovsx
+      
+      - name: Publish to Marketplace
+        run: vsce publish -p $PUBLISHER_TOKEN
+        env:
+          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+
+      - name: Publish to Open VSX
+        run: npx ovsx publish -p ${{ secrets.OPENVSX_TOKEN }}
