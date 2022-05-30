@@ -3,8 +3,7 @@
 const vscode = require(`vscode`);
 const schemaBrowser = require(`./views/schemaBrowser`);
 
-const Configuration = require(`./configuration`);
-
+const JSONServices = require(`./language/json`);
 const languageProvider = require(`./language/provider`);
 
 // this method is called when your extension is activated
@@ -26,6 +25,7 @@ function activate(context) {
     ),
   );
 
+  JSONServices.initialise(context);
   languageProvider.initialise(context);
 }
 

@@ -105,9 +105,20 @@
         "title": "Generate SQL",
         "category": "Db2 for i",
         "icon": "$(add)"
-      }
+      },
+      {
+				"command": "vscode-db2i.pasteGenerator",
+				"title": "Paste JSON as SQL"
+			}
     ],
     "menus": {
+      "editor/context": [
+				{
+					"command": "vscode-db2i.pasteGenerator",
+					"group": "1_sql",
+					"when": "editorLangId == sql"
+				}
+			],
       "view/title": [
         {
           "command": "vscode-db2i.addSchemaToSchemaBrowser",
