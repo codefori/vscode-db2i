@@ -17,9 +17,9 @@
     "Other"
   ],
   "publisher": "halcyontechltd",
-	"author": {
-		"name": "Halcyon-Tech, Liam Allan"
-	},
+  "author": {
+    "name": "Halcyon-Tech, Liam Allan"
+  },
   "repository": {
     "url": "https://github.com/halcyon-tech/vscode-db2i"
   },
@@ -39,6 +39,10 @@
       {
         "language": "sql",
         "path": "./src/language/snippets/variables.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "./src/language/snippets/aggregates.code-snippets"
       }
     ],
     "configuration": {
