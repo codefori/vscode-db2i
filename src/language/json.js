@@ -37,7 +37,7 @@ exports.generateSQL = (jsonIn) => {
 }
 
 const generateArray = (elementIn) => {
-  const firstValue = Array.isArray(elementIn) ? elementIn[0] : elementIn;
+  const firstValue = (Array.isArray(elementIn) ? elementIn[0] : elementIn) || ``;
   if (typeof firstValue === `object`) {
     return `(SELECT json_arrayagg(${generateObject(firstValue)}) from SYSIBM.SYSDUMMY1)`
   } else {
@@ -50,14 +50,26 @@ const generateObject = (objIn) => {
 
   Object.keys(objIn).forEach((key) => {
     const value = objIn[key];
-    if (typeof value === `object`) {
-      if (Array.isArray(value)) {
-        items.push(`'${key}': ${generateArray(value[0])} format json`);
+    if (value) {
+      if (typeof value === `object`) {
+        if (Array.isArray(value)) {
+          items.push(`'${key}': ${generateArray(value[0])} format json`);
+        } else {
+          items.push(`'${key}': ${generateObject(value)}`);
+        }
       } else {
-        items.push(`'${key}': ${generateObject(value)}`);
+        switch (typeof value) {
+        case `string`:
+          items.push(`'${key}': '${value}'`);
+          break;
+        case `boolean`:
+          items.push(`'${key}': '${value}' format json`);
+          break;
+        default:
+          items.push(`'${key}': ${value}`);
+          break;
+        }
       }
-    } else {
-      items.push(`'${key}': ${typeof value === `string` ? `'${value}'` : value}`);
     }
   });
 

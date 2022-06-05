@@ -7,6 +7,6 @@ vsc-extension-quickstart.md
 **/jsconfig.json
 **/*.map
 **/.eslintrc.json
-media/**
+media/main.png
 node_modules
 src
