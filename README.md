@@ -16,10 +16,9 @@ See the [Projects](https://github.com/halcyon-tech/vscode-db2i/projects) tab to 
 
 ### Help with Built-in function snippets
 
-* `./src/language/builtins.code-snippets` will be used to defined all available built-in functions in Db2 for i.
-* This is used to make writing SQL, and having access to all scalars, easy.
-* You can find a PDF reference and a list of built-in functions [on this PDF](https://www.ibm.com/docs/en/SSAE4W_9.6.0/db2/rbafzpdf.pdf), starting at page 287
-* We simply need a new snippet object for each function.
+* `./src/language/*.code-snippets` will be used to defined all available functions and variables in Db2 for i.
+* This is used to make writing SQL, and having access to all globals, easy.
+* We simply need a new snippet object for each function or variable.
 
 ### Help with Schemas tool views.
 
