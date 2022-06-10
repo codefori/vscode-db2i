@@ -77,38 +77,40 @@ exports.initialise = async (context) => {
         const items = [];
 
         const instance = getInstance();
-        const config = instance ? instance.getConfig() : null;
+        const config = instance && instance.getConnection() ? instance.getConfig() : null;
         const currentLibrary = config ? config.currentLibrary : null;
 
         const astList = workingAst[document.uri.path];
-        astList.forEach((ast) => {
-          if (ast.from && ast.from.length > 0) {
-            ast.from.forEach(definedAs => {
-              const item = new vscode.CompletionItem(definedAs.as || definedAs.table, vscode.CompletionItemKind.Struct);
-              item.detail = `${definedAs.db}.${definedAs.table}`;
+        if (astList) {
+          astList.forEach((ast) => {
+            if (ast.from && ast.from.length > 0) {
+              ast.from.forEach(definedAs => {
+                const item = new vscode.CompletionItem(definedAs.as || definedAs.table, vscode.CompletionItemKind.Struct);
+                item.detail = `${definedAs.db}.${definedAs.table}`;
+                items.push(item);
+              });
+            }
+          });
+
+          if (currentLibrary) {
+            const objects = await Store.getObjects(currentLibrary);
+
+            objects.forEach(object => {
+              let type;
+
+              switch (object.TABLE_TYPE) {
+              case `T`: type = `Table`; break;
+              case `V`: type = `View`; break;
+              case `P`: type = `Table`; break;
+              }
+
+              const item = new vscode.CompletionItem(object.TABLE_NAME.toLowerCase(), vscode.CompletionItemKind.Struct);
+              item.insertText = new vscode.SnippetString(object.TABLE_NAME.toLowerCase());
+              item.detail = type;
+              item.documentation = object.TABLE_TEXT;
               items.push(item);
             });
           }
-        });
-
-        if (currentLibrary) {
-          const objects = await Store.getObjects(currentLibrary);
-
-          objects.forEach(object => {
-            let type;
-
-            switch (object.TABLE_TYPE) {
-            case `T`: type = `Table`; break;
-            case `V`: type = `View`; break;
-            case `P`: type = `Table`; break;
-            }
-
-            const item = new vscode.CompletionItem(object.TABLE_NAME.toLowerCase(), vscode.CompletionItemKind.Struct);
-            item.insertText = new vscode.SnippetString(object.TABLE_NAME.toLowerCase());
-            item.detail = type;
-            item.documentation = object.TABLE_TEXT;
-            items.push(item);
-          });
         }
 
         return items;
@@ -132,7 +134,7 @@ exports.initialise = async (context) => {
 
       const astList = workingAst[document.uri.path];
 
-      if (prefix) {
+      if (prefix && astList) {
         for (const ast of astList) {
           fallbackLookup = false;
 
