@@ -2,6 +2,7 @@ const vscode = require(`vscode`);
 
 const { Parser } = require(`node-sql-parser`);
 
+const getInstance = require(`../base`);
 const Store = require(`./store`);
 const Configuration = require(`../configuration`);
 
@@ -75,6 +76,10 @@ exports.initialise = async (context) => {
         ///** @type vscode.CompletionItem[] */
         const items = [];
 
+        const instance = getInstance();
+        const config = instance ? instance.getConfig() : null;
+        const currentLibrary = config ? config.currentLibrary : null;
+
         const astList = workingAst[document.uri.path];
         astList.forEach((ast) => {
           if (ast.from && ast.from.length > 0) {
@@ -86,6 +91,26 @@ exports.initialise = async (context) => {
           }
         });
 
+        if (currentLibrary) {
+          const objects = await Store.getObjects(currentLibrary);
+
+          objects.forEach(object => {
+            let type;
+
+            switch (object.TABLE_TYPE) {
+            case `T`: type = `Table`; break;
+            case `V`: type = `View`; break;
+            case `P`: type = `Table`; break;
+            }
+
+            const item = new vscode.CompletionItem(object.TABLE_NAME.toLowerCase(), vscode.CompletionItemKind.Struct);
+            item.insertText = new vscode.SnippetString(object.TABLE_NAME.toLowerCase());
+            item.detail = type;
+            item.documentation = object.TABLE_TEXT;
+            items.push(item);
+          });
+        }
+
         return items;
       }
     }, ` `)
@@ -93,14 +118,14 @@ exports.initialise = async (context) => {
 
   vscode.languages.registerCompletionItemProvider({language: `sql` }, {
     provideCompletionItems: async (document, position) => {
-      ///** @type vscode.CompletionItem[] */
+      //** @type vscode.CompletionItem[] */
       const items = [];
 
       if (!Store.hasConnection()) return [];
 
       const currentPosition = new vscode.Position(position.line, position.character - 1);
       const range = document.getWordRangeAtPosition(currentPosition);
-
+      
       const prefix = range ? document.getText(range) : null;
 
       let fallbackLookup = false;
@@ -117,10 +142,15 @@ exports.initialise = async (context) => {
               ast.from.find(f => f.as === prefix) ||
               ast.from.find(f => f.table === prefix);
 
+              const instance = getInstance();
+              const config = instance ? instance.getConfig() : null;
+              const currentLibrary = config ? config.currentLibrary : null;
+
               if (definedAs) {
 
-                if (definedAs.db) {
-                  const columns = await Store.getColumns(definedAs.db, definedAs.table);
+                if (definedAs.db || definedAs.as) {
+                  const usingSchema = definedAs.db || currentLibrary;
+                  const columns = await Store.getColumns(usingSchema, definedAs.table);
 
                   columns.forEach(column => {
                     const item = new vscode.CompletionItem(column.COLUMN_NAME.toLowerCase(), vscode.CompletionItemKind.Field);
@@ -145,7 +175,7 @@ exports.initialise = async (context) => {
                     if (column.COLUMN_TEXT)
                       docs.push(column.COLUMN_TEXT);
 
-                    docs.push(`(\`${definedAs.db}.${definedAs.table}\`)`);
+                    docs.push(`(\`${usingSchema}.${definedAs.table}\`)`);
 
                     item.documentation = new vscode.MarkdownString(docs.join(`\n\n`));
 
