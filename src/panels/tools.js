@@ -1,6 +1,8 @@
 
 const vscode = require(`vscode`);
 
+const WebToolkit = require(`@vscode/webview-ui-toolkit/dist/toolkit.min.js`);
+
 module.exports = class {
   /**
    * @param {vscode.Webview} webview 
@@ -19,21 +21,13 @@ module.exports = class {
   }
 
   static getLoadingHTML(webview, extensionUri) {
-    const toolkitUri = this.getUri(webview, extensionUri, [
-      `node_modules`,
-      `@vscode`,
-      `webview-ui-toolkit`,
-      `dist`,
-      `toolkit.js`,
-    ]);
-
     return /*html*/ `
       <!DOCTYPE html>
       <html lang="en">
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <script type="module" src="${toolkitUri}"></script>
+          <script type="module">${WebToolkit}</script>
           <script>
             window.addEventListener("message", (event) => {
               const command = event.data.command;

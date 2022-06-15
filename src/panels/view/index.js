@@ -1,4 +1,6 @@
 
+const WebToolkit = require(`@vscode/webview-ui-toolkit/dist/toolkit.min.js`);
+
 const vscode = require(`vscode`);
 const Tools = require(`../tools`);
 
@@ -45,14 +47,6 @@ module.exports = class ViewPanel {
   }
 
   async _getContent() {
-    const toolkitUri = Tools.getUri(this.panel.webview, this.extensionUri, [
-      `node_modules`,
-      `@vscode`,
-      `webview-ui-toolkit`,
-      `dist`,
-      `toolkit.js`,
-    ]);
-
     const view = new View(this.schema, this.view);
 
     Tools.setLoadingText(this.panel.webview, `Fetching base info`);
@@ -75,7 +69,7 @@ module.exports = class ViewPanel {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <script type="module" src="${toolkitUri}"></script>
+          <script type="module">${WebToolkit}</script>
           <style type="text/css">
             .component {
               margin-bottom: 0.5rem;

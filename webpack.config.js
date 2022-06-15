@@ -25,11 +25,10 @@ const config = {
     extensions: [`.ts`, `.js`, `.svg`],
   },
   module: {
-    
     rules: [
       {
         test: /\.js$/,
-        include: path.resolve(__dirname, `node_modules/@bendera/vscode-webview-elements/dist`),
+        include: path.resolve(__dirname, `node_modules/@vscode/webview-ui-toolkit/dist/toolkit.min.js`),
         type: `asset/source`
       }
     ]
