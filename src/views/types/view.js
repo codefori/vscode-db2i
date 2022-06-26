@@ -1,5 +1,4 @@
 
-const vscode = require(`vscode`);
 const View = require(`../../database/view`);
 const ColumnTreeItem = require(`./ColumnTreeItem`);
 
