@@ -1,6 +1,7 @@
 
 interface TableColumn {
   COLUMN_NAME: string,
+  SYSTEM_COLUMN_NAME: string,
   CONSTRAINT_NAME?: string,
   DATA_TYPE: string,
   CHARACTER_MAXIMUM_LENGTH?: number,
