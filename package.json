@@ -117,11 +117,6 @@
         "category": "Db2 for i"
       },
       {
-        "command": "vscode-db2i.showObjectInfo",
-        "title": "Show object info (Legacy)",
-        "category": "Db2 for i"
-      },
-      {
 				"command": "vscode-db2i.pasteGenerator",
 				"title": "Paste JSON as SQL"
 			}
@@ -161,11 +156,6 @@
           "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
           "when": "view == schemaBrowser && viewItem == schema",
 					"group": "db2@3"
-        },
-        {
-          "command": "vscode-db2i.showObjectInfo",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
-					"group": "db2_legacy@1"
         }
       ]
     }
