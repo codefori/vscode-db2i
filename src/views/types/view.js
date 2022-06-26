@@ -1,11 +1,10 @@
 
 const vscode = require(`vscode`);
-const Table = require(`../../database/table`);
-
+const View = require(`../../database/view`);
 const ColumnTreeItem = require(`./ColumnTreeItem`);
 
 exports.getChildren = async (schema, name) => {
-  const columns = await Table.getItems(schema, name);
+  const columns = await View.getColumns(schema, name);
 
   return columns.map(column => new ColumnTreeItem(schema, name, column));
 }
