@@ -124,6 +124,21 @@ module.exports = class schemaBrowser {
           }
         }
       }),
+
+      vscode.commands.registerCommand(`vscode-db2i.setCurrentSchema`, async (node) => {
+        if (node && node.contextValue === `schema`) {
+          const schema = node.schema.toUpperCase();
+
+          const config = instance.getConfig();
+          const currentLibrary = config.currentLibrary.toUpperCase();
+  
+          if (schema && schema !== currentLibrary) {
+            await config.set(`currentLibrary`, schema);
+          }
+
+          vscode.window.showInformationMessage(`Current schema set to ${schema}.`);
+        }
+      })
     )
   }
 
