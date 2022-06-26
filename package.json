@@ -112,13 +112,13 @@
         "icon": "$(add)"
       },
       {
-        "command": "vscode-db2i.setCurrentSchema",
-        "title": "Set current schema",
+        "command": "vscode-db2i.generateSelect",
+        "title": "Generate SELECT",
         "category": "Db2 for i"
       },
       {
-        "command": "vscode-db2i.showObjectInfo",
-        "title": "Show object info (Legacy)",
+        "command": "vscode-db2i.setCurrentSchema",
+        "title": "Set current schema",
         "category": "Db2 for i"
       },
       {
@@ -153,6 +153,11 @@
 					"group": "db2@1"
 				},
         {
+          "command": "vscode-db2i.generateSelect",
+          "when": "viewItem == table || viewItem == view || viewItem == alias",
+          "group": "db2@1"
+        },
+        {
           "command": "vscode-db2i.generateSQL",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
 					"group": "db2@2"
@@ -161,11 +166,6 @@
           "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
           "when": "view == schemaBrowser && viewItem == schema",
 					"group": "db2@3"
-        },
-        {
-          "command": "vscode-db2i.showObjectInfo",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
-					"group": "db2_legacy@1"
         }
       ]
     }

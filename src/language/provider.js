@@ -78,9 +78,10 @@ exports.initialise = async (context) => {
 
         const instance = getInstance();
         const config = instance && instance.getConnection() ? instance.getConfig() : null;
-        const currentLibrary = config ? config.currentLibrary : null;
+        const currentSchema = config ? config.currentLibrary : null;
 
         const astList = workingAst[document.uri.path];
+        let newestTable;
         if (astList) {
           astList.forEach((ast) => {
             if (ast.from && ast.from.length > 0) {
@@ -88,12 +89,21 @@ exports.initialise = async (context) => {
                 const item = new vscode.CompletionItem(definedAs.as || definedAs.table, vscode.CompletionItemKind.Struct);
                 item.detail = `${definedAs.db}.${definedAs.table}`;
                 items.push(item);
+
+                // We want to get the fields for `FROM` clause when `AS` is not used.
+                if (!definedAs.as)
+                  newestTable = definedAs.table;
               });
             }
           });
 
-          if (currentLibrary) {
-            const objects = await Store.getObjects(currentLibrary);
+          if (newestTable) {
+            const columns = await Store.getColumns(currentSchema, newestTable);
+            items.push(...columns.map(column => new ColumnItem(currentSchema, newestTable, column)));
+          }
+
+          if (currentSchema) {
+            const objects = await Store.getObjects(currentSchema);
 
             objects.forEach(object => {
               let type;
@@ -153,36 +163,7 @@ exports.initialise = async (context) => {
                 if (definedAs.db || definedAs.as) {
                   const usingSchema = definedAs.db || currentLibrary;
                   const columns = await Store.getColumns(usingSchema, definedAs.table);
-
-                  columns.forEach(column => {
-                    const item = new vscode.CompletionItem(column.COLUMN_NAME.toLowerCase(), vscode.CompletionItemKind.Field);
-                    item.insertText = new vscode.SnippetString(column.COLUMN_NAME.toLowerCase());
-                    
-                    let detail = null, length;
-                    if ([`DECIMAL`, `ZONED`].includes(column.DATA_TYPE)) {
-                      length = column.NUMERIC_PRECISION || null;
-                      detail = `${column.DATA_TYPE}${length ? `(${length}${column.NUMERIC_PRECISION ? `, ${column.NUMERIC_SCALE}` : ``})` : ``}`
-                    } else {
-                      length = column.CHARACTER_MAXIMUM_LENGTH || null;
-                      detail = `${column.DATA_TYPE}${length ? `(${length})` : ``}`
-                    }
-
-                    item.detail = detail;
-
-                    const docs = [];
-
-                    if (column.SYSTEM_COLUMN_NAME && column.SYSTEM_COLUMN_NAME !== column.COLUMN_NAME)
-                      docs.push(`${column.COLUMN_NAME.toLowerCase()} (${column.SYSTEM_COLUMN_NAME})`);
-
-                    if (column.COLUMN_TEXT)
-                      docs.push(column.COLUMN_TEXT);
-
-                    docs.push(`(\`${usingSchema}.${definedAs.table}\`)`);
-
-                    item.documentation = new vscode.MarkdownString(docs.join(`\n\n`));
-
-                    items.push(item);
-                  });
+                  items.push(...columns.map(column => new ColumnItem(usingSchema, definedAs.table, column)));
                 } else {
                   const objects = await Store.getObjects(prefix);
 
@@ -241,4 +222,40 @@ exports.initialise = async (context) => {
       return items;
     }
   }, `.`)
+}
+
+class ColumnItem extends vscode.CompletionItem {
+  /**
+   * 
+   * @param {string} schema 
+   * @param {string} table 
+   * @param {TableColumn} column 
+   */
+  constructor(schema, table, column) {
+    super(column.COLUMN_NAME.toLowerCase(), vscode.CompletionItemKind.Field);
+    this.insertText = new vscode.SnippetString(column.COLUMN_NAME.toLowerCase());
+    
+    let detail = null, length;
+    if ([`DECIMAL`, `ZONED`].includes(column.DATA_TYPE)) {
+      length = column.NUMERIC_PRECISION || null;
+      detail = `${column.DATA_TYPE}${length ? `(${length}${column.NUMERIC_PRECISION ? `, ${column.NUMERIC_SCALE}` : ``})` : ``}`
+    } else {
+      length = column.CHARACTER_MAXIMUM_LENGTH || null;
+      detail = `${column.DATA_TYPE}${length ? `(${length})` : ``}`
+    }
+
+    this.detail = detail;
+
+    const docs = [];
+
+    if (column.SYSTEM_COLUMN_NAME && column.SYSTEM_COLUMN_NAME !== column.COLUMN_NAME)
+      docs.push(`${column.COLUMN_NAME.toLowerCase()} (${column.SYSTEM_COLUMN_NAME})`);
+
+    if (column.COLUMN_TEXT)
+      docs.push(column.COLUMN_TEXT);
+
+    docs.push(`(\`${schema}.${table}\`)`);
+
+    this.documentation = new vscode.MarkdownString(docs.join(`\n\n`));
+  }
 }

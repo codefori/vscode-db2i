@@ -45,7 +45,7 @@ module.exports = class Database {
 
     case `functions`:
       objects = await content.runSQL([
-        `select ROUTINE_NAME as NAME, ROUTINE_TEXT as TEXT from QSYS2.SYSFUNCS`,
+        `select ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT from QSYS2.SYSFUNCS`,
         `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and ROUTINE_NAME like '%${details.filter}%'`: ``}`,
         `order by ROUTINE_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`

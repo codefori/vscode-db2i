@@ -1,12 +1,12 @@
 
 const vscode = require(`vscode`);
-const Database = require(`../database/schemas`);
+const Schemas = require(`../database/schemas`);
 
 const Configuration = require(`../configuration`);
 
 const Store = require(`../language/store`);
 
-const Panels = require(`../panels`);
+const Types = require(`./types`);
 
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
@@ -23,6 +23,18 @@ const viewItem = {
   "packages": `package`,
   "triggers": `trigger`,
   "types": `type`
+}
+
+const itemIcons = {
+  "table": `split-horizontal`,
+  "procedure": `run`,
+  "function": `run`,
+  "alias": `symbol-reference`,
+  "view": `symbol-constant`,
+  "type": `symbol-parameter`,
+  "trigger": `play`,
+  "variable": `symbol-value`,
+  "index": `list-tree`
 }
 
 module.exports = class schemaBrowser {
@@ -83,49 +95,23 @@ module.exports = class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.showObjectInfo`, (node) => {
-        if (node) {
-          const {schema, name: object, type} = node;
-
-          if (schema && object && type) {
-            let panel;
-            switch (type) {
-            case `table`:
-              panel = new Panels.table(schema, object, context.extensionUri);
-              panel.render();
-              break;
-            case `view`:
-              panel = new Panels.view(schema, object, context.extensionUri);
-              panel.render();
-              break;
-            case `procedure`:
-              panel = new Panels.procedure(schema, object, context.extensionUri);
-              panel.render();
-              break;
-            case `trigger`:
-              panel = new Panels.trigger(schema, object, context.extensionUri);
-              panel.render();
-              break;
-            default:
-              vscode.window.showInformationMessage(`No view available for ${type}.`);
-              break;
-            }
+      vscode.commands.registerCommand(`vscode-db2i.generateSQL`, async (object) => {
+        if (object) {
+          try {
+            const content = await Schemas.generateSQL(object.schema, object.name, object.type.toUpperCase());
+            const textDoc = await vscode.workspace.openTextDocument({language: `sql`, content});
+            await vscode.window.showTextDocument(textDoc);
+          } catch (e) {
+            vscode.window.showErrorMessage(e);
           }
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.generateSQL`, async (object) => {
-        if (object) {
-          try {
-            const lines = await Database.generateSQL(object.schema, object.name, object.type.toUpperCase());
-            const textDoc = await vscode.workspace.openTextDocument(vscode.Uri.parse(`untitled:` + `${object.name.toLowerCase()}.sql`));
-            const editor = await vscode.window.showTextDocument(textDoc);
-            editor.edit(edit => {
-              edit.insert(new vscode.Position(0, 0), lines);
-            })
-          } catch (e) {
-            vscode.window.showErrorMessage(e);
-          }
+      vscode.commands.registerCommand(`vscode-db2i.generateSelect`, async (object) => {
+        if (object && object instanceof SQLObject) {
+          const content = `SELECT * FROM ${object.schema}.${object.name} as a;`;
+          const textDoc = await vscode.workspace.openTextDocument({language: `sql`, content});
+          await vscode.window.showTextDocument(textDoc);
         }
       }),
 
@@ -168,7 +154,7 @@ module.exports = class schemaBrowser {
         offset = 0;
       }
 
-      const data = await Database.getObjects(schema, type, {
+      const data = await Schemas.getObjects(schema, type, {
         limit: pageSize,
         offset
       });
@@ -201,38 +187,31 @@ module.exports = class schemaBrowser {
   }
 
   /**
-   * @param {vscode.TreeItem|Schema} [element]
+   * @param {Schema|SchemaItem|SQLObject} [element]
    * @returns {Promise<vscode.TreeItem[]>};
    */
   async getChildren(element) {
     let items = [];
 
     if (element) {
-      const type = element.contextValue;
-      switch (type) {
-      case `schema`:
-        // @ts-ignore exists on Schema
-        items = getSchemaItems(element.schema);
-        break;
 
-      case `tables`:
-      case `aliases`:
-      case `views`:
-      case `constraints`:
-      case `procedures`:
-      case `functions`:
-      case `packages`:
-      case `triggers`:
-      case `types`:
-      case `sequences`:
-      case `indexes`:
-      case `variables`:
-        // @ts-ignore exists on Schema
-        items = await this.fetchData(element.schema, type, false);
+      const contextValue = element.contextValue;
+
+      if (element instanceof Schema) {
+        items = getSchemaItems(element.schema);
+      } else
+      if (element instanceof SchemaItem) {
+        items = await this.fetchData(element.schema, contextValue, false);
 
         // @ts-ignore
-        items.push(moreButton(element.schema, type));
-        break;
+        items.push(moreButton(element.schema, contextValue));
+      } else
+      if (element instanceof SQLObject) {
+        const type = element.type;
+
+        if (Types[type]) {
+          items = await Types[type].getChildren(element.schema, element.name);
+        }
       }
 
     } else {
@@ -278,9 +257,8 @@ class SchemaItem extends vscode.TreeItem {
 
 class SQLObject extends vscode.TreeItem {
   constructor(item) {
-    super(item.name.toLowerCase(), vscode.TreeItemCollapsibleState.None);
-
     const type = viewItem[item.type];
+    super(item.name.toLowerCase(), Types[type] ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 
     this.contextValue = type;
     this.path = `${item.schema}.${item.name}`;
@@ -288,28 +266,30 @@ class SQLObject extends vscode.TreeItem {
     this.name = item.name;
     this.type = type;
     this.description = item.text;
+
+    this.iconPath = itemIcons[type] ? new vscode.ThemeIcon(itemIcons[type]) : undefined;
   }
 }
 
 const getSchemaItems = (schema) => {
   const items = [
     //new SchemaItem(`All Database Objects`, `all`, schema),
-    new SchemaItem(`Aliases`, `aliases`, schema),
+    new SchemaItem(`Aliases`, `aliases`, schema, `symbol-reference`),
     //new SchemaItem(`Column Masks`, `masks`, schema),
-    new SchemaItem(`Constraints`, `constraints`, schema),
-    new SchemaItem(`Function`, `functions`, schema),
-    new SchemaItem(`Global Variables`, `variables`, schema),
-    new SchemaItem(`Indexes`, `indexes`, schema),
+    //new SchemaItem(`Constraints`, `constraints`, schema),
+    new SchemaItem(`Function`, `functions`, schema, `symbol-function`),
+    new SchemaItem(`Global Variables`, `variables`, schema, `symbol-variable`),
+    new SchemaItem(`Indexes`, `indexes`, schema, `tag`),
     //new SchemaItem(`Journal Receivers`, `receivers`, schema),
     //new SchemaItem(`Journals`, `journals`, schema),
-    new SchemaItem(`Procedures`, `procedures`, schema),
+    new SchemaItem(`Procedures`, `procedures`, schema, `gear`),
     //new SchemaItem(`Row Permissions`, `permissions`, schema),
-    new SchemaItem(`Sequences`, `sequences`, schema),
-    new SchemaItem(`SQL Packages`, `packages`, schema),
-    new SchemaItem(`Tables`, `tables`, schema),
-    new SchemaItem(`Triggers`, `triggers`, schema),
-    new SchemaItem(`Types`, `types`, schema),
-    new SchemaItem(`Views`, `views`, schema)
+    //new SchemaItem(`Sequences`, `sequences`, schema),
+    //new SchemaItem(`SQL Packages`, `packages`, schema),
+    new SchemaItem(`Tables`, `tables`, schema, `menu`),
+    new SchemaItem(`Triggers`, `triggers`, schema, `symbol-event`),
+    new SchemaItem(`Types`, `types`, schema, `symbol-type-parameter`),
+    new SchemaItem(`Views`, `views`, schema, `symbol-interface`)
   ];
 
   return items;

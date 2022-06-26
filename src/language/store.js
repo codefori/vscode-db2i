@@ -85,6 +85,12 @@ exports.getRoutines = async (schema) => {
   return this.data.routines[schema];
 }
 
+/**
+ * 
+ * @param {string} schema 
+ * @param {string} name 
+ * @returns {Promise<TableColumn[]>}
+ */
 exports.getColumns = async (schema, name) => {
   const content = instance.getContent();
 
