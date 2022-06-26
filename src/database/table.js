@@ -8,7 +8,12 @@ module.exports = class Table {
     this.tableName = tableName.toUpperCase();
   }
 
-  async getColumnInfo() {
+  /**
+   * @param {string} schema 
+   * @param {string} name 
+   * @returns {Promise<TableColumn[]>}
+   */
+  static async getItems(schema, name) {
     const content = instance.getContent();
 
     const sql = [
@@ -16,8 +21,9 @@ module.exports = class Table {
       `  column.COLUMN_NAME,`,
       `  key.CONSTRAINT_NAME,`,
       `  column.DATA_TYPE, `,
-      `  column.LENGTH, `,
+      `  column.CHARACTER_MAXIMUM_LENGTH,`,
       `  column.NUMERIC_SCALE, `,
+      `  column.NUMERIC_PRECISION,`,
       `  column.IS_NULLABLE, `,
       `  column.HAS_DEFAULT, `,
       `  column.COLUMN_DEFAULT, `,
@@ -29,12 +35,11 @@ module.exports = class Table {
       `    column.table_schema = key.table_schema and`,
       `    column.table_name = key.table_name and`,
       `    column.column_name = key.column_name`,
-      `WHERE column.TABLE_SCHEMA = '${this.schema}' AND column.TABLE_NAME = '${this.tableName}'`,
+      `WHERE column.TABLE_SCHEMA = '${schema.toUpperCase()}' AND column.TABLE_NAME = '${name.toUpperCase()}'`,
       `ORDER BY column.ORDINAL_POSITION`,
     ].join(` `);
 
-    const rows = await content.runSQL(sql);
-
+    return content.runSQL(sql);
   }
 
   async getInfo() {

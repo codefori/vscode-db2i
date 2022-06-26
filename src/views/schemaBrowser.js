@@ -1,12 +1,14 @@
 
 const vscode = require(`vscode`);
-const Database = require(`../database/schemas`);
+const Schemas = require(`../database/schemas`);
 
 const Configuration = require(`../configuration`);
 
 const Store = require(`../language/store`);
 
 const Panels = require(`../panels`);
+
+const Types = require(`./types`);
 
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
@@ -23,6 +25,10 @@ const viewItem = {
   "packages": `package`,
   "triggers": `trigger`,
   "types": `type`
+}
+
+const itemIcons = {
+  "table": `symbol-file`,
 }
 
 module.exports = class schemaBrowser {
@@ -117,7 +123,7 @@ module.exports = class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.generateSQL`, async (object) => {
         if (object) {
           try {
-            const lines = await Database.generateSQL(object.schema, object.name, object.type.toUpperCase());
+            const lines = await Schemas.generateSQL(object.schema, object.name, object.type.toUpperCase());
             const textDoc = await vscode.workspace.openTextDocument(vscode.Uri.parse(`untitled:` + `${object.name.toLowerCase()}.sql`));
             const editor = await vscode.window.showTextDocument(textDoc);
             editor.edit(edit => {
@@ -168,7 +174,7 @@ module.exports = class schemaBrowser {
         offset = 0;
       }
 
-      const data = await Database.getObjects(schema, type, {
+      const data = await Schemas.getObjects(schema, type, {
         limit: pageSize,
         offset
       });
@@ -223,10 +229,8 @@ module.exports = class schemaBrowser {
       if (element instanceof SQLObject) {
         const type = element.type;
 
-        switch (type) {
-        case `table`:
-          items = [new vscode.TreeItem(`Hello world`)];
-          break;
+        if (Types[type]) {
+          items = await Types[type].getChildren(element.schema, element.name);
         }
       }
 
@@ -273,9 +277,8 @@ class SchemaItem extends vscode.TreeItem {
 
 class SQLObject extends vscode.TreeItem {
   constructor(item) {
-    super(item.name.toLowerCase(), vscode.TreeItemCollapsibleState.Collapsed);
-
     const type = viewItem[item.type];
+    super(item.name.toLowerCase(), Types[type] ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 
     this.contextValue = type;
     this.path = `${item.schema}.${item.name}`;
@@ -283,6 +286,8 @@ class SQLObject extends vscode.TreeItem {
     this.name = item.name;
     this.type = type;
     this.description = item.text;
+
+    this.iconPath = itemIcons[type] ? new vscode.ThemeIcon(itemIcons[type]) : undefined;
   }
 }
 
