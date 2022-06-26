@@ -26,7 +26,7 @@ const viewItem = {
 }
 
 const itemIcons = {
-  "table": `symbol-file`,
+  "table": `split-horizontal`,
 }
 
 module.exports = class schemaBrowser {
@@ -261,22 +261,22 @@ class SQLObject extends vscode.TreeItem {
 const getSchemaItems = (schema) => {
   const items = [
     //new SchemaItem(`All Database Objects`, `all`, schema),
-    new SchemaItem(`Aliases`, `aliases`, schema),
+    new SchemaItem(`Aliases`, `aliases`, schema, `symbol-reference`),
     //new SchemaItem(`Column Masks`, `masks`, schema),
-    new SchemaItem(`Constraints`, `constraints`, schema),
-    new SchemaItem(`Function`, `functions`, schema),
-    new SchemaItem(`Global Variables`, `variables`, schema),
-    new SchemaItem(`Indexes`, `indexes`, schema),
+    //new SchemaItem(`Constraints`, `constraints`, schema),
+    new SchemaItem(`Function`, `functions`, schema, `symbol-function`),
+    new SchemaItem(`Global Variables`, `variables`, schema, `symbol-variable`),
+    new SchemaItem(`Indexes`, `indexes`, schema, `tag`),
     //new SchemaItem(`Journal Receivers`, `receivers`, schema),
     //new SchemaItem(`Journals`, `journals`, schema),
-    new SchemaItem(`Procedures`, `procedures`, schema),
+    new SchemaItem(`Procedures`, `procedures`, schema, `gear`),
     //new SchemaItem(`Row Permissions`, `permissions`, schema),
-    new SchemaItem(`Sequences`, `sequences`, schema),
-    new SchemaItem(`SQL Packages`, `packages`, schema),
-    new SchemaItem(`Tables`, `tables`, schema),
-    new SchemaItem(`Triggers`, `triggers`, schema),
-    new SchemaItem(`Types`, `types`, schema),
-    new SchemaItem(`Views`, `views`, schema)
+    //new SchemaItem(`Sequences`, `sequences`, schema),
+    //new SchemaItem(`SQL Packages`, `packages`, schema),
+    new SchemaItem(`Tables`, `tables`, schema, `menu`),
+    new SchemaItem(`Triggers`, `triggers`, schema, `symbol-event`),
+    new SchemaItem(`Types`, `types`, schema, `symbol-type-parameter`),
+    new SchemaItem(`Views`, `views`, schema, `symbol-interface`)
   ];
 
   return items;
