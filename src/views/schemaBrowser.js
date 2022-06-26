@@ -27,6 +27,7 @@ const viewItem = {
 
 const itemIcons = {
   "table": `split-horizontal`,
+  "procedure": `run`
 }
 
 module.exports = class schemaBrowser {
