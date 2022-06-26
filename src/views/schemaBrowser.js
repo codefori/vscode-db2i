@@ -83,29 +83,33 @@ module.exports = class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.showObjectInfo`, async (schema, object, type) => {
-        if (schema && object && type) {
-          let panel;
-          switch (type) {
-          case `table`:
-            panel = new Panels.table(schema, object, context.extensionUri);
-            panel.render();
-            break;
-          case `view`:
-            panel = new Panels.view(schema, object, context.extensionUri);
-            panel.render();
-            break;
-          case `procedure`:
-            panel = new Panels.procedure(schema, object, context.extensionUri);
-            panel.render();
-            break;
-          case `trigger`:
-            panel = new Panels.trigger(schema, object, context.extensionUri);
-            panel.render();
-            break;
-          default:
-            vscode.window.showInformationMessage(`No view available for ${type}.`);
-            break;
+      vscode.commands.registerCommand(`vscode-db2i.showObjectInfo`, (node) => {
+        if (node) {
+          const {schema, name: object, type} = node;
+
+          if (schema && object && type) {
+            let panel;
+            switch (type) {
+            case `table`:
+              panel = new Panels.table(schema, object, context.extensionUri);
+              panel.render();
+              break;
+            case `view`:
+              panel = new Panels.view(schema, object, context.extensionUri);
+              panel.render();
+              break;
+            case `procedure`:
+              panel = new Panels.procedure(schema, object, context.extensionUri);
+              panel.render();
+              break;
+            case `trigger`:
+              panel = new Panels.trigger(schema, object, context.extensionUri);
+              panel.render();
+              break;
+            default:
+              vscode.window.showInformationMessage(`No view available for ${type}.`);
+              break;
+            }
           }
         }
       }),
@@ -284,12 +288,6 @@ class SQLObject extends vscode.TreeItem {
     this.name = item.name;
     this.type = type;
     this.description = item.text;
-
-    this.command = {
-      command: `vscode-db2i.showObjectInfo`,
-      title: `Show Object Info`,
-      arguments: [this.schema, this.name, this.type]
-    };
   }
 }
 
