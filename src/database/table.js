@@ -8,6 +8,35 @@ module.exports = class Table {
     this.tableName = tableName.toUpperCase();
   }
 
+  async getColumnInfo() {
+    const content = instance.getContent();
+
+    const sql = [
+      `SELECT `,
+      `  column.COLUMN_NAME,`,
+      `  key.CONSTRAINT_NAME,`,
+      `  column.DATA_TYPE, `,
+      `  column.LENGTH, `,
+      `  column.NUMERIC_SCALE, `,
+      `  column.IS_NULLABLE, `,
+      `  column.HAS_DEFAULT, `,
+      `  column.COLUMN_DEFAULT, `,
+      `  column.COLUMN_TEXT, `,
+      `  column.IS_IDENTITY`,
+      `FROM QSYS2.SYSCOLUMNS2 as column`,
+      `LEFT JOIN QSYS2.syskeycst as key`,
+      `  on `,
+      `    column.table_schema = key.table_schema and`,
+      `    column.table_name = key.table_name and`,
+      `    column.column_name = key.column_name`,
+      `WHERE column.TABLE_SCHEMA = '${this.schema}' AND column.TABLE_NAME = '${this.tableName}'`,
+      `ORDER BY column.ORDINAL_POSITION`,
+    ].join(` `);
+
+    const rows = await content.runSQL(sql);
+
+  }
+
   async getInfo() {
     const content = instance.getContent();
 
