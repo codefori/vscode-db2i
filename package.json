@@ -112,6 +112,11 @@
         "icon": "$(add)"
       },
       {
+        "command": "vscode-db2i.generateSelect",
+        "title": "Generate SELECT",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.setCurrentSchema",
         "title": "Set current schema",
         "category": "Db2 for i"
@@ -147,6 +152,11 @@
 					"when": "viewItem == schema",
 					"group": "db2@1"
 				},
+        {
+          "command": "vscode-db2i.generateSelect",
+          "when": "viewItem == table || viewItem == view || viewItem == alias",
+          "group": "db2@1"
+        },
         {
           "command": "vscode-db2i.generateSQL",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
