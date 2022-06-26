@@ -201,38 +201,33 @@ module.exports = class schemaBrowser {
   }
 
   /**
-   * @param {vscode.TreeItem|Schema} [element]
+   * @param {Schema|SchemaItem|SQLObject} [element]
    * @returns {Promise<vscode.TreeItem[]>};
    */
   async getChildren(element) {
     let items = [];
 
     if (element) {
-      const type = element.contextValue;
-      switch (type) {
-      case `schema`:
-        // @ts-ignore exists on Schema
-        items = getSchemaItems(element.schema);
-        break;
 
-      case `tables`:
-      case `aliases`:
-      case `views`:
-      case `constraints`:
-      case `procedures`:
-      case `functions`:
-      case `packages`:
-      case `triggers`:
-      case `types`:
-      case `sequences`:
-      case `indexes`:
-      case `variables`:
-        // @ts-ignore exists on Schema
-        items = await this.fetchData(element.schema, type, false);
+      const contextValue = element.contextValue;
+
+      if (element instanceof Schema) {
+        items = getSchemaItems(element.schema);
+      } else
+      if (element instanceof SchemaItem) {
+        items = await this.fetchData(element.schema, contextValue, false);
 
         // @ts-ignore
-        items.push(moreButton(element.schema, type));
-        break;
+        items.push(moreButton(element.schema, contextValue));
+      } else
+      if (element instanceof SQLObject) {
+        const type = element.type;
+
+        switch (type) {
+        case `table`:
+          items = [new vscode.TreeItem(`Hello world`)];
+          break;
+        }
       }
 
     } else {
@@ -278,7 +273,7 @@ class SchemaItem extends vscode.TreeItem {
 
 class SQLObject extends vscode.TreeItem {
   constructor(item) {
-    super(item.name.toLowerCase(), vscode.TreeItemCollapsibleState.None);
+    super(item.name.toLowerCase(), vscode.TreeItemCollapsibleState.Collapsed);
 
     const type = viewItem[item.type];
 
