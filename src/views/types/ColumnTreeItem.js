@@ -26,7 +26,7 @@ module.exports = class ColumnTreeItem extends vscode.TreeItem {
 
     const descriptionParts = [
       detail,
-      data.IS_IDENTITY === `Y` ? `Identity` : ``,
+      data.IS_IDENTITY === `YES` ? `Identity` : ``,
       data.IS_NULLABLE === `Y` ? `nullable` : ``,
       data.HAS_DEFAULT === `Y` ? `${data.COLUMN_DEFAULT} def.` : ``,
       data.COLUMN_TEXT,

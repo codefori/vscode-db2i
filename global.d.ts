@@ -10,7 +10,7 @@ interface TableColumn {
   HAS_DEFAULT: "Y" | "N",
   COLUMN_DEFAULT?: string,
   COLUMN_TEXT: string,
-  IS_IDENTITY: "Y" | "N",
+  IS_IDENTITY: "YES" | "NO",
 }
 
 interface SQLParm {
