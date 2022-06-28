@@ -88,12 +88,6 @@ exports.initialise = (context) => {
         const statement = this.parseStatement(editor);
 
         if (statement.content.trim().length > 0) {
-
-          statement.content = [
-            `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
-            statement.content
-          ].join(`;\n`);
-
           try {
             if (statement.type === `cl`) {
               const commandResult = await vscode.commands.executeCommand(`code-for-ibmi.runCommand`, {
@@ -111,8 +105,18 @@ exports.initialise = (context) => {
               if (commandResult.stderr.length > 0) output += `${commandResult.stderr}\n\n`;
               if (commandResult.stdout.length > 0) output += `${commandResult.stdout}\n\n`;
 
-              // TODO: CompileTools.appendOutput(output);
+              const textDoc = await vscode.workspace.openTextDocument({language: `txt`, content: output});
+              await vscode.window.showTextDocument(textDoc, {
+                preserveFocus: true,
+                preview: true
+              });
+
             } else {
+              statement.content = [
+                `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
+                statement.content
+              ].join(`;\n`);
+
               if (statement.type === `statement`) {
                 resultSetProvider.setLoadingText(`Executing statement...`);
               }
