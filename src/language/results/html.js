@@ -89,7 +89,19 @@ exports.generateScroller = (basicSelect) => {
           let isFetching = false;
 
           window.addEventListener("load", main);
-          function main() {
+            function main() {
+              let Observer = new IntersectionObserver(function(entries) {
+              // isIntersecting is true when element and viewport are overlapping
+              // isIntersecting is false when element and viewport don't overlap
+              if(entries[0].isIntersecting === true) {
+                if (isFetching === false && noMoreRows === false) {
+                  fetchNextPage();
+                }
+              }
+            }, { threshold: [0] });
+
+            Observer.observe(document.getElementById("nextButton"));
+
             window.addEventListener('message', event => {
               const scroller = document.getElementById("scroller");
               const data = event.data;
@@ -99,15 +111,15 @@ exports.generateScroller = (basicSelect) => {
 
                   isFetching = false;
 
-                  scroller.columnDefinitions = Object.keys(data.rows[0]).map(col => ({
-                    title: col,
-                    columnDataKey: col,
-                  }));
-
-                  console.log({rowsData: scroller.rowsData})
+                  if (scroller.columnDefinitions.length === 0) {
+                    scroller.columnDefinitions = Object.keys(data.rows[0]).map(col => ({
+                      title: col,
+                      columnDataKey: col,
+                    }));
+                  }
 
                   if (scroller.rowsData.length > 0) {
-                    scroller.rowsData.push(...data.rows);
+                    scroller.rowsData = [...scroller.rowsData, ...data.rows];
                   } else {
                     scroller.rowsData = data.rows;
                   }
@@ -115,6 +127,9 @@ exports.generateScroller = (basicSelect) => {
                   if (data.rows.length < limit) {
                     noMoreRows = true;
                   }
+
+                  const nextButton = document.getElementById("nextButton");
+                  nextButton.innerText = noMoreRows ? 'End of data' : 'Fetching more...';
                   break;
 
                 case 'fetch':
@@ -128,8 +143,6 @@ exports.generateScroller = (basicSelect) => {
           }
 
           function fetchNextPage() {
-            console.log({ nextOffset, limit, basicSelect });
-
             isFetching = true;
             vscode.postMessage({
               query: basicSelect,
@@ -143,6 +156,8 @@ exports.generateScroller = (basicSelect) => {
       </head>
       <body>
         <vscode-data-grid id="scroller"></vscode-data-grid>
+        <vscode-divider></vscode-divider>
+        <p id="nextButton">Execute statement.</p>
       </body>
     </html>
   `;

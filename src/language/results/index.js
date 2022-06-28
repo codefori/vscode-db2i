@@ -28,6 +28,31 @@ class ResultSetPanelProvider {
     };
 
     webviewView.webview.html = html.getLoadingHTML();
+    this._view.webview.onDidReceiveMessage(async (message) => {
+      if (message.query && message.limit && message.offset >= 0) {
+        const instance = await getInstance();
+        const content = instance.getContent();
+        const config = instance.getConfig();
+
+        const statement = [
+          `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
+          `WITH SCROLLING AS (${message.query}) SELECT * FROM SCROLLING LIMIT ${message.limit} OFFSET ${message.offset}`,
+        ].join(`;\n`);
+
+        let data = [];
+        try {
+          data = await content.runSQL(statement);
+        } catch (e) {
+          this.setError(e.message);
+          data = [];
+        }
+
+        this._view.webview.postMessage({
+          command: `rows`,
+          rows: data,
+        });
+      }
+    });
   }
 
   async focus() {
@@ -67,35 +92,10 @@ class ResultSetPanelProvider {
     await this.focus();
 
     this._view.webview.html = html.generateScroller(basicSelect);
-    this._view.webview.onDidReceiveMessage(async (message) => {
-      if (message.query && message.limit && message.offset >= 0) {
-        const instance = await getInstance();
-        const content = instance.getContent();
-        const config = instance.getConfig();
 
-        const statement = [
-          `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
-          `WITH SCROLLING AS (${message.query}) SELECT * FROM SCROLLING LIMIT ${message.limit} OFFSET ${message.offset}`,
-        ].join(`;\n`);
-
-        let data = [];
-        try {
-          data = await content.runSQL(statement);
-        } catch (e) {
-          // TODO: nice error?
-          data = [];
-        }
-
-        this._view.webview.postMessage({
-          command: `rows`,
-          rows: data,
-        });
-      }
+    this._view.webview.postMessage({
+      command: `fetch`
     });
-
-    // this._view.webview.postMessage({
-    //   command: `fetch`
-    // });
   }
 
   setError(error) {
