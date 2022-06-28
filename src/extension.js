@@ -5,6 +5,7 @@ const schemaBrowser = require(`./views/schemaBrowser`);
 
 const JSONServices = require(`./language/json`);
 const languageProvider = require(`./language/provider`);
+const resultsProvider = require(`./language/results`);
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -27,6 +28,7 @@ function activate(context) {
 
   JSONServices.initialise(context);
   languageProvider.initialise(context);
+  resultsProvider.initialise(context);
 }
 
 // this method is called when your extension is deactivated
