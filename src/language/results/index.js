@@ -56,15 +56,50 @@ class ResultSetPanelProvider {
   /**
    * @param {object[]} results 
    */
-  setResults(results) {
-    this.focus();
+  async setResults(results) {
+    await this.focus();
     this.loadingState = false;
     const content = html.generateResults(results);
     this._view.webview.html = content;
   }
 
+  async setScrolling(basicSelect) {
+    await this.focus();
+
+    this._view.webview.html = html.generateScroller(basicSelect);
+    this._view.webview.onDidReceiveMessage(async (message) => {
+      if (message.query && message.limit && message.offset >= 0) {
+        const instance = await getInstance();
+        const content = instance.getContent();
+        const config = instance.getConfig();
+
+        const statement = [
+          `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
+          `WITH SCROLLING AS (${message.query}) SELECT * FROM SCROLLING LIMIT ${message.limit} OFFSET ${message.offset}`,
+        ].join(`;\n`);
+
+        let data = [];
+        try {
+          data = await content.runSQL(statement);
+        } catch (e) {
+          // TODO: nice error?
+          data = [];
+        }
+
+        this._view.webview.postMessage({
+          command: `rows`,
+          rows: data,
+        });
+      }
+    });
+
+    // this._view.webview.postMessage({
+    //   command: `fetch`
+    // });
+  }
+
   setError(error) {
-    // TODO: error
+    // TODO: pretty error
     this._view.webview.html = `<p>${error}</p>`;
   }
 }
@@ -112,63 +147,69 @@ exports.initialise = (context) => {
               });
 
             } else {
-              statement.content = [
-                `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
-                statement.content
-              ].join(`;\n`);
 
-              if (statement.type === `statement`) {
-                resultSetProvider.setLoadingText(`Executing statement...`);
-              }
+              if (statement.content.toUpperCase().startsWith(`SELECT`) && !statement.content.toUpperCase().includes(`LIMIT`)) {
+                resultSetProvider.setScrolling(statement.content);
 
-              const data = await content.runSQL(statement.content);
+              } else {
+                statement.content = [
+                  `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
+                  statement.content
+                ].join(`;\n`);
 
-              if (data.length > 0) {
-                switch (statement.type) {
-                case `statement`:
-                  resultSetProvider.setResults(data);
-                  break;
+                if (statement.type === `statement`) {
+                  resultSetProvider.setLoadingText(`Executing statement...`);
+                }
 
-                case `csv`:
-                case `json`:
-                case `sql`:
-                  let content = ``;
+                const data = await content.runSQL(statement.content);
+
+                if (data.length > 0) {
                   switch (statement.type) {
-                  case `csv`: content = csv.stringify(data, {
-                    header: true,
-                    quoted_string: true,
-                  }); break;
-                  case `json`: content = JSON.stringify(data, null, 2); break;
+                  case `statement`:
+                    resultSetProvider.setResults(data);
+                    break;
 
-                  case `sql`: 
-                    const keys = Object.keys(data[0]);
+                  case `csv`:
+                  case `json`:
+                  case `sql`:
+                    let content = ``;
+                    switch (statement.type) {
+                    case `csv`: content = csv.stringify(data, {
+                      header: true,
+                      quoted_string: true,
+                    }); break;
+                    case `json`: content = JSON.stringify(data, null, 2); break;
 
-                    const insertStatement = [
-                      `insert into TABLE (`,
-                      `  ${keys.join(`, `)}`,
-                      `) values `,
-                      data.map(
-                        row => `  (${keys.map(key => {
-                          if (row[key] === null) return `null`;
-                          if (typeof row[key] === `string`) return `'${row[key].replace(/'/g, `''`)}'`;
-                          return row[key];
-                        }).join(`, `)})`
-                      ).join(`,\n`),
-                    ];
-                    content = insertStatement.join(`\n`); 
+                    case `sql`: 
+                      const keys = Object.keys(data[0]);
+
+                      const insertStatement = [
+                        `insert into TABLE (`,
+                        `  ${keys.join(`, `)}`,
+                        `) values `,
+                        data.map(
+                          row => `  (${keys.map(key => {
+                            if (row[key] === null) return `null`;
+                            if (typeof row[key] === `string`) return `'${row[key].replace(/'/g, `''`)}'`;
+                            return row[key];
+                          }).join(`, `)})`
+                        ).join(`,\n`),
+                      ];
+                      content = insertStatement.join(`\n`); 
+                      break;
+                    }
+
+                    const textDoc = await vscode.workspace.openTextDocument({language: statement.type, content});
+                    await vscode.window.showTextDocument(textDoc);
                     break;
                   }
 
-                  const textDoc = await vscode.workspace.openTextDocument({language: statement.type, content});
-                  await vscode.window.showTextDocument(textDoc);
-                  break;
-                }
-
-              } else {
-                if (statement.type === `statement`) {
-                  resultSetProvider.setError(`Query executed with no data returned.`);
                 } else {
-                  vscode.window.showInformationMessage(`Query executed with no data returned.`);
+                  if (statement.type === `statement`) {
+                    resultSetProvider.setError(`Query executed with no data returned.`);
+                  } else {
+                    vscode.window.showInformationMessage(`Query executed with no data returned.`);
+                  }
                 }
               }
             }

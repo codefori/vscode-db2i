@@ -70,6 +70,86 @@ exports.getLoadingHTML = () => {
 
 /**
  * 
+ * @param {string} basicSelect
+ * @returns {string}
+ */
+exports.generateScroller = (basicSelect) => {
+  return /*html*/ `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        ${head}
+        <script>
+          const vscode = acquireVsCodeApi();
+          const basicSelect = ${JSON.stringify(basicSelect)};
+          const limit = 50;
+
+          let nextOffset = 0;
+          let noMoreRows = false;
+          let isFetching = false;
+
+          window.addEventListener("load", main);
+          function main() {
+            window.addEventListener('message', event => {
+              const scroller = document.getElementById("scroller");
+              const data = event.data;
+
+              switch (data.command) {
+                case 'rows':
+
+                  isFetching = false;
+
+                  scroller.columnDefinitions = Object.keys(data.rows[0]).map(col => ({
+                    title: col,
+                    columnDataKey: col,
+                  }));
+
+                  console.log({rowsData: scroller.rowsData})
+
+                  if (scroller.rowsData.length > 0) {
+                    scroller.rowsData.push(...data.rows);
+                  } else {
+                    scroller.rowsData = data.rows;
+                  }
+
+                  if (data.rows.length < limit) {
+                    noMoreRows = true;
+                  }
+                  break;
+
+                case 'fetch':
+                  scroller.columnDefinitions = [];
+                  scroller.rowsData = [];
+                  nextOffset = 0;
+                  fetchNextPage();
+                  break;
+              }
+            });
+          }
+
+          function fetchNextPage() {
+            console.log({ nextOffset, limit, basicSelect });
+
+            isFetching = true;
+            vscode.postMessage({
+              query: basicSelect,
+              limit,
+              offset: nextOffset,
+            });
+
+            nextOffset += limit;
+          }
+        </script>
+      </head>
+      <body>
+        <vscode-data-grid id="scroller"></vscode-data-grid>
+      </body>
+    </html>
+  `;
+}
+
+/**
+ * 
  * @param {object[]} rows 
  * @returns {string}
  */
