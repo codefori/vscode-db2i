@@ -36,7 +36,7 @@ class ResultSetPanelProvider {
 
         const statement = [
           `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
-          `WITH SCROLLING AS (${message.query}) SELECT * FROM SCROLLING LIMIT ${message.limit} OFFSET ${message.offset}`,
+          `${message.query} LIMIT ${message.limit} OFFSET ${message.offset}`,
         ].join(`;\n`);
 
         let data = [];
@@ -147,11 +147,12 @@ exports.initialise = (context) => {
               });
 
             } else {
-
-              if (statement.content.toUpperCase().startsWith(`SELECT`) && !statement.content.toUpperCase().includes(`LIMIT`)) {
+              if (statement.type === `statement` && this.isBasicStatement(statement.content)) {
+                // If it's a basic statement, we can let it scroll!
                 resultSetProvider.setScrolling(statement.content);
 
               } else {
+                // Otherwise... it's a bit complicated.
                 statement.content = [
                   `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
                   statement.content
@@ -234,6 +235,11 @@ exports.initialise = (context) => {
   )
 }
 
+exports.isBasicStatement = (statement) => {
+  const basicStatement = statement.trim().toUpperCase();
+
+  return statement.startsWith(`SELECT`) && !statement.includes(`LIMIT`);
+}
 
 /**
  * @param {vscode.TextEditor} editor
