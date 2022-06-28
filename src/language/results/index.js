@@ -9,6 +9,8 @@ class ResultSetPanelProvider {
   constructor() {
     /** @type {vscode.WebviewView} */
     this._view = undefined;
+
+    this.loadingState = false;
   }
 
   /**
@@ -25,10 +27,10 @@ class ResultSetPanelProvider {
       enableScripts: true,
     };
 
-    webviewView.webview.html = html.setSimpleMessage(`Database result set will show here.`);
+    webviewView.webview.html = html.getLoadingHTML();
   }
 
-  async setHTML(html) {
+  async focus() {
     if (!this._view) {
       // Weird one. Kind of a hack. _view.show doesn't work yet because it's not initialized.
       // But, we can call a VS Code API to focus on the tab, which then
@@ -38,7 +40,32 @@ class ResultSetPanelProvider {
     }
     
     this._view.show(true);
-    this._view.webview.html = html;
+  }
+
+  async setLoadingText(content) {
+    await this.focus();
+
+    if (!this.loadingState) {
+      this._view.webview.html = html.getLoadingHTML();
+      this.loadingState = true;
+    }
+
+    html.setLoadingText(this._view.webview, content);
+  }
+
+  /**
+   * @param {object[]} results 
+   */
+  setResults(results) {
+    this.focus();
+    this.loadingState = false;
+    const content = html.generateResults(results);
+    this._view.webview.html = content;
+  }
+
+  setError(error) {
+    // TODO: error
+    this._view.webview.html = `<p>${error}</p>`;
   }
 }
 
@@ -87,7 +114,7 @@ exports.initialise = (context) => {
               // TODO: CompileTools.appendOutput(output);
             } else {
               if (statement.type === `statement`) {
-                resultSetProvider.setHTML(html.setSimpleMessage(`Executing statement...`));
+                resultSetProvider.setLoadingText(`Executing statement...`);
               }
 
               const data = await content.runSQL(statement.content);
@@ -95,7 +122,7 @@ exports.initialise = (context) => {
               if (data.length > 0) {
                 switch (statement.type) {
                 case `statement`:
-                  resultSetProvider.setHTML(html.generateTable(statement.content, data));
+                  resultSetProvider.setResults(data);
                   break;
 
                 case `csv`:
@@ -135,7 +162,7 @@ exports.initialise = (context) => {
 
               } else {
                 if (statement.type === `statement`) {
-                  resultSetProvider.setHTML(html.setSimpleMessage(`Query executed with no data returned.`));
+                  resultSetProvider.setError(`Query executed with no data returned.`);
                 } else {
                   vscode.window.showInformationMessage(`Query executed with no data returned.`);
                 }
@@ -151,7 +178,7 @@ exports.initialise = (context) => {
             }
 
             if (statement.type === `statement`) {
-              resultSetProvider.setHTML(html.setSimpleMessage(errorText, `errortext`));
+              resultSetProvider.setError(errorText);
             } else {
               vscode.window.showErrorMessage(errorText);
             }

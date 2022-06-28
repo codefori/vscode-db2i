@@ -1,4 +1,9 @@
-const css = /*html*/`
+const WebToolkit = require(`@vscode/webview-ui-toolkit/dist/toolkit.min.js`);
+
+const head = /*html*/`
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script type="module">${WebToolkit}</script>
   <style>
     .center-screen {
       display: flex;
@@ -19,89 +24,105 @@ const css = /*html*/`
       padding: 1em;
       color: var(--vscode-errorForeground);
     }
+
+    .loading {
+      position: fixed; /* or absolute */
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
   </style>`;
 
-exports.setSimpleMessage = (text, className=`plaintext`) => {
-  return `
-  <!DOCTYPE html>
-  <html>
-    <head>
-      ${css}
-    </head>
-    <body>
-      <div class="center-screen">
-        <span class="${className}">${text}</span>
-      </div>
-    </body>
-  </html>`;
+exports.setLoadingText = (webview, text) => {
+  webview.postMessage({
+    command: `loadingText`,
+    text,
+  });
 }
 
+exports.getLoadingHTML = () => {
+  return /*html*/ `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        ${head}
+        <script>
+          window.addEventListener("message", (event) => {
+            const command = event.data.command;
+            switch (command) {
+              case "loadingText":
+                const text = document.getElementById("loadingText");
+                text.innerText = event.data.text;
+                break;
+            }
+          });
+        </script>
+      </head>
+      <body>
+        <p id="loadingText">Loading..</p>
+        <section class="loading">
+          <p><vscode-progress-ring></vscode-progress-ring></p>
+        </div>
+      </body>
+    </html>
+  `;
+}
 
 /**
- * @param {any[]} array
- * @returns {string} HTML
+ * 
+ * @param {object[]} rows 
+ * @returns {string}
  */
-exports.generateTable = (statement, array) => {
-  // Setup basics of valid HTML5 document
-  let html = /*html*/`
+exports.generateResults = (rows) => {
+  const columns = Object.keys(rows[0]).map(column => ({
+    title: column,
+    columnDataKey: column,
+  }));
+
+  const inlineData = this.generateTable(`results`, columns, rows);
+
+  return /*html*/ `
     <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset='utf-8'>
-      <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-      <title>Database Result</title>
-      <meta name='viewport' content='width=device-width, initial-scale=1'>
-      <style>
-        body {
-          color: var(--vscode-editor-foreground);
-        }
-        table {
-          font-weight: var(--vscode-editor-font-weight);
-          font-size: var(--vscode-editor-font-size);
-          width: 100%;
-          border-collapse: collapse;
-          margin: 5px 0;
-          font-family: sans-serif;
-          min-width: 400px;
-          <!-- box-shadow: 0 0 20px rgba(0, 0, 0, 0.15); -->
-        }
-        ::selection {
-          font-weight: bold;
-          background-color: var(--vscode-editor-selectionBackground);
-        }
-        table thead tr {
-          background-color: var(--);
-          color: var(--vscode-editor-foreground);
-          text-align: left;
-        }
-        table th,
-        table td {
-          padding: 12px 15px;
-        }
+    <html lang="en">
+      <head>
+        ${head}
+        <script>
+          window.addEventListener("load", main);
+          function main() {
+            ${inlineData.js}
+          }
+        </script>
+      </head>
+      <body>
+        ${inlineData.html}
+      </body>
+    </html>
+  `;
+}
 
-        table tbody tr {
-          border-bottom: 1px solid var(--vscode-editor-selectionBackground);
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <table>
-          <thead>`;
+/**
+   * 
+   * @param {{title: string, columnDataKey: string|number, transform?: (row: object) => string|number}[]} columns 
+   * @param {object[]} rows 
+   * @returns {{html: string, js: string}}
+   */
+exports.generateTable = (id, columns, rows) => {
+  rows.forEach(row => {
+    columns.forEach(column => {
+      if (row[column.columnDataKey] && column.transform) {
+        row[column.columnDataKey] = column.transform(row);
+      }
+    });
+  });
+    
+  let result = {
+    html: `<vscode-data-grid id="${id}"></vscode-data-grid>`,
+    js: [
+      `const ${id} = document.getElementById("${id}");`,
+      `${id}.columnDefinitions = ${JSON.stringify(columns)};`,
+      `${id}.rowsData = ${JSON.stringify(rows)};`,
+    ].join(``),
+  };
 
-  const keys = Object.keys(array[0]);
-
-  html += `<tr>${keys.map(key => `<th>${key}</th>`).join(``)}</tr></thead><tbody>`;
-  html += array.map(row => {
-    return `<tr>` + keys.map(key => `<td>${row[key]}</td>`).join(``) + `</tr>`
-  }).join(``);
-
-  html += `
-          </tbody>
-        </table>
-      </div>
-    </body>
-  </html>`;
-
-  return html;
+  return result;
 }
