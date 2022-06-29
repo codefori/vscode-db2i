@@ -25,3 +25,9 @@ interface SQLParm {
   DEFAULT?: string,
   LONG_COMMENT?: string
 }
+
+interface StatementInfo {
+  content: string,
+  type: "statement"|"json"|"csv"|"cl"|"sql",
+  open?: boolean
+}

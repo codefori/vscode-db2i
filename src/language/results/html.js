@@ -70,6 +70,103 @@ exports.getLoadingHTML = () => {
 
 /**
  * 
+ * @param {string} basicSelect
+ * @returns {string}
+ */
+exports.generateScroller = (basicSelect) => {
+  return /*html*/ `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        ${head}
+        <script>
+          const vscode = acquireVsCodeApi();
+          const basicSelect = ${JSON.stringify(basicSelect)};
+          const limit = 50;
+
+          let nextOffset = 0;
+          let noMoreRows = false;
+          let isFetching = false;
+
+          window.addEventListener("load", main);
+            function main() {
+              let Observer = new IntersectionObserver(function(entries) {
+              // isIntersecting is true when element and viewport are overlapping
+              // isIntersecting is false when element and viewport don't overlap
+              if(entries[0].isIntersecting === true) {
+                if (isFetching === false && noMoreRows === false) {
+                  fetchNextPage();
+                }
+              }
+            }, { threshold: [0] });
+
+            Observer.observe(document.getElementById("nextButton"));
+
+            window.addEventListener('message', event => {
+              const scroller = document.getElementById("scroller");
+              const data = event.data;
+
+              switch (data.command) {
+                case 'rows':
+
+                  isFetching = false;
+
+                  if (scroller.columnDefinitions.length === 0) {
+                    scroller.columnDefinitions = Object.keys(data.rows[0]).map(col => ({
+                      title: col,
+                      columnDataKey: col,
+                    }));
+                  }
+
+                  if (scroller.rowsData.length > 0) {
+                    scroller.rowsData = [...scroller.rowsData, ...data.rows];
+                  } else {
+                    scroller.rowsData = data.rows;
+                  }
+
+                  console.log('row check');
+                  if (data.rows.length < limit) {
+                    console.log("No more rows");
+                    noMoreRows = true;
+                  }
+
+                  const nextButton = document.getElementById("nextButton");
+                  nextButton.innerText = noMoreRows ? 'End of data' : 'Fetching more...';
+                  break;
+
+                case 'fetch':
+                  scroller.columnDefinitions = [];
+                  scroller.rowsData = [];
+                  nextOffset = 0;
+                  fetchNextPage();
+                  break;
+              }
+            });
+          }
+
+          function fetchNextPage() {
+            isFetching = true;
+            vscode.postMessage({
+              query: basicSelect,
+              limit,
+              offset: nextOffset,
+            });
+
+            nextOffset += limit;
+          }
+        </script>
+      </head>
+      <body>
+        <vscode-data-grid id="scroller"></vscode-data-grid>
+        <vscode-divider></vscode-divider>
+        <p id="nextButton">Execute statement.</p>
+      </body>
+    </html>
+  `;
+}
+
+/**
+ * 
  * @param {object[]} rows 
  * @returns {string}
  */
