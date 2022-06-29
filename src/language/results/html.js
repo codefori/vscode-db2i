@@ -124,7 +124,9 @@ exports.generateScroller = (basicSelect) => {
                     scroller.rowsData = data.rows;
                   }
 
+                  console.log('row check');
                   if (data.rows.length < limit) {
+                    console.log("No more rows");
                     noMoreRows = true;
                   }
 

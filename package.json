@@ -131,13 +131,13 @@
       {
         "command": "vscode-db2i.generateSQL",
         "title": "Generate SQL",
-        "category": "Db2 for i",
-        "icon": "$(add)"
+        "category": "Db2 for i"
       },
       {
-        "command": "vscode-db2i.generateSelect",
-        "title": "Generate SELECT",
-        "category": "Db2 for i"
+        "command": "vscode-db2i.getResultSet",
+        "title": "View contents",
+        "category": "Db2 for i",
+        "icon": "$(output)"
       },
       {
         "command": "vscode-db2i.setCurrentSchema",
@@ -195,9 +195,9 @@
           "group": "db2@1"
         },
         {
-          "command": "vscode-db2i.generateSelect",
+          "command": "vscode-db2i.getResultSet",
           "when": "viewItem == table || viewItem == view || viewItem == alias",
-          "group": "db2@1"
+          "group": "inline"
         },
         {
           "command": "vscode-db2i.generateSQL",

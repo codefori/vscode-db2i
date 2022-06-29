@@ -113,137 +113,147 @@ exports.initialise = (context) => {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider),
 
-    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, async () => {
-      const instance = getInstance();
-      const config = instance.getConfig();
-      const content = instance.getContent();
-      const editor = vscode.window.activeTextEditor;
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, 
+      /**
+       * @param {StatementInfo} [options]
+       */
+      async (options) => {
+        const instance = getInstance();
+        const config = instance.getConfig();
+        const content = instance.getContent();
+        const editor = vscode.window.activeTextEditor;
 
-      if (editor.document.languageId === `sql`) {
-        const statement = this.parseStatement(editor);
+        if (options || (editor && editor.document.languageId === `sql`)) {
+          /** @type {StatementInfo} */
+          const statement = options || this.parseStatement(editor);
 
-        if (statement.content.trim().length > 0) {
-          try {
-            if (statement.type === `cl`) {
-              const commandResult = await vscode.commands.executeCommand(`code-for-ibmi.runCommand`, {
-                command: statement.content,
-                environment: `ile`
-              });
+          if (statement.open) {
+            const textDoc = await vscode.workspace.openTextDocument({language: `sql`, content: statement.content});
+            await vscode.window.showTextDocument(textDoc);
+          }
 
-              if (commandResult.code === 0 || commandResult.code === null) {
-                vscode.window.showInformationMessage(`Command executed successfuly.`);
-              } else {
-                vscode.window.showErrorMessage(`Command failed to run.`);
-              }
+          if (statement.content.trim().length > 0) {
+            try {
+              if (statement.type === `cl`) {
+                const commandResult = await vscode.commands.executeCommand(`code-for-ibmi.runCommand`, {
+                  command: statement.content,
+                  environment: `ile`
+                });
 
-              let output = ``;
-              if (commandResult.stderr.length > 0) output += `${commandResult.stderr}\n\n`;
-              if (commandResult.stdout.length > 0) output += `${commandResult.stdout}\n\n`;
-
-              const textDoc = await vscode.workspace.openTextDocument({language: `txt`, content: output});
-              await vscode.window.showTextDocument(textDoc, {
-                preserveFocus: true,
-                preview: true
-              });
-
-            } else {
-              if (statement.type === `statement` && this.isBasicStatement(statement.content)) {
-                // If it's a basic statement, we can let it scroll!
-                resultSetProvider.setScrolling(statement.content);
-
-              } else {
-                // Otherwise... it's a bit complicated.
-                statement.content = [
-                  `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
-                  statement.content
-                ].join(`;\n`);
-
-                if (statement.type === `statement`) {
-                  resultSetProvider.setLoadingText(`Executing statement...`);
+                if (commandResult.code === 0 || commandResult.code === null) {
+                  vscode.window.showInformationMessage(`Command executed successfuly.`);
+                } else {
+                  vscode.window.showErrorMessage(`Command failed to run.`);
                 }
 
-                const data = await content.runSQL(statement.content);
+                let output = ``;
+                if (commandResult.stderr.length > 0) output += `${commandResult.stderr}\n\n`;
+                if (commandResult.stdout.length > 0) output += `${commandResult.stdout}\n\n`;
 
-                if (data.length > 0) {
-                  switch (statement.type) {
-                  case `statement`:
-                    resultSetProvider.setResults(data);
-                    break;
+                const textDoc = await vscode.workspace.openTextDocument({language: `txt`, content: output});
+                await vscode.window.showTextDocument(textDoc, {
+                  preserveFocus: true,
+                  preview: true
+                });
 
-                  case `csv`:
-                  case `json`:
-                  case `sql`:
-                    let content = ``;
+              } else {
+                if (statement.type === `statement` && this.isBasicStatement(statement.content)) {
+                // If it's a basic statement, we can let it scroll!
+                  resultSetProvider.setScrolling(statement.content);
+
+                } else {
+                // Otherwise... it's a bit complicated.
+                  statement.content = [
+                    `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
+                    statement.content
+                  ].join(`;\n`);
+
+                  if (statement.type === `statement`) {
+                    resultSetProvider.setLoadingText(`Executing statement...`);
+                  }
+
+                  const data = await content.runSQL(statement.content);
+
+                  if (data.length > 0) {
                     switch (statement.type) {
-                    case `csv`: content = csv.stringify(data, {
-                      header: true,
-                      quoted_string: true,
-                    }); break;
-                    case `json`: content = JSON.stringify(data, null, 2); break;
+                    case `statement`:
+                      resultSetProvider.setResults(data);
+                      break;
 
-                    case `sql`: 
-                      const keys = Object.keys(data[0]);
+                    case `csv`:
+                    case `json`:
+                    case `sql`:
+                      let content = ``;
+                      switch (statement.type) {
+                      case `csv`: content = csv.stringify(data, {
+                        header: true,
+                        quoted_string: true,
+                      }); break;
+                      case `json`: content = JSON.stringify(data, null, 2); break;
 
-                      const insertStatement = [
-                        `insert into TABLE (`,
-                        `  ${keys.join(`, `)}`,
-                        `) values `,
-                        data.map(
-                          row => `  (${keys.map(key => {
-                            if (row[key] === null) return `null`;
-                            if (typeof row[key] === `string`) return `'${row[key].replace(/'/g, `''`)}'`;
-                            return row[key];
-                          }).join(`, `)})`
-                        ).join(`,\n`),
-                      ];
-                      content = insertStatement.join(`\n`); 
+                      case `sql`: 
+                        const keys = Object.keys(data[0]);
+
+                        const insertStatement = [
+                          `insert into TABLE (`,
+                          `  ${keys.join(`, `)}`,
+                          `) values `,
+                          data.map(
+                            row => `  (${keys.map(key => {
+                              if (row[key] === null) return `null`;
+                              if (typeof row[key] === `string`) return `'${row[key].replace(/'/g, `''`)}'`;
+                              return row[key];
+                            }).join(`, `)})`
+                          ).join(`,\n`),
+                        ];
+                        content = insertStatement.join(`\n`); 
+                        break;
+                      }
+
+                      const textDoc = await vscode.workspace.openTextDocument({language: statement.type, content});
+                      await vscode.window.showTextDocument(textDoc);
                       break;
                     }
 
-                    const textDoc = await vscode.workspace.openTextDocument({language: statement.type, content});
-                    await vscode.window.showTextDocument(textDoc);
-                    break;
-                  }
-
-                } else {
-                  if (statement.type === `statement`) {
-                    resultSetProvider.setError(`Query executed with no data returned.`);
                   } else {
-                    vscode.window.showInformationMessage(`Query executed with no data returned.`);
+                    if (statement.type === `statement`) {
+                      resultSetProvider.setError(`Query executed with no data returned.`);
+                    } else {
+                      vscode.window.showInformationMessage(`Query executed with no data returned.`);
+                    }
                   }
                 }
               }
-            }
 
-          } catch (e) {
-            let errorText;
-            if (typeof e === `string`) {
-              errorText = e.length > 0 ? e : `An error occurred when executing the statement.`;
-            } else {
-              errorText = e.message || `Error running SQL statement.`;
-            }
+            } catch (e) {
+              let errorText;
+              if (typeof e === `string`) {
+                errorText = e.length > 0 ? e : `An error occurred when executing the statement.`;
+              } else {
+                errorText = e.message || `Error running SQL statement.`;
+              }
 
-            if (statement.type === `statement`) {
-              resultSetProvider.setError(errorText);
-            } else {
-              vscode.window.showErrorMessage(errorText);
+              if (statement.type === `statement`) {
+                resultSetProvider.setError(errorText);
+              } else {
+                vscode.window.showErrorMessage(errorText);
+              }
             }
           }
         }
-      }
-    }),
+      }),
   )
 }
 
 exports.isBasicStatement = (statement) => {
   const basicStatement = statement.trim().toUpperCase();
 
-  return statement.startsWith(`SELECT`) && !statement.includes(`LIMIT`);
+  return basicStatement.startsWith(`SELECT`) && !basicStatement.includes(`LIMIT`);
 }
 
 /**
  * @param {vscode.TextEditor} editor
- * @returns {{type: "statement"|"cl"|"json"|"csv"|"sql", content: string}} Statement
+ * @returns {StatementInfo} Statement
  */
 exports.parseStatement = (editor) => {
   const document = editor.document;

@@ -107,11 +107,14 @@ module.exports = class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.generateSelect`, async (object) => {
+      vscode.commands.registerCommand(`vscode-db2i.getResultSet`, async (object) => {
         if (object && object instanceof SQLObject) {
-          const content = `SELECT * FROM ${object.schema}.${object.name} as a;`;
-          const textDoc = await vscode.workspace.openTextDocument({language: `sql`, content});
-          await vscode.window.showTextDocument(textDoc);
+          const content = `SELECT * FROM ${object.schema}.${object.name} as a`;
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            type: `statement`,
+            open: true,
+          });
         }
       }),
 
