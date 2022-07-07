@@ -51,13 +51,18 @@
       "properties": {
         "vscode-db2i.validator": {
           "type": "boolean",
-          "description": "Enable/disable the SQL validator",
+          "description": "Enable the SQL validator",
           "default": false
+        },
+        "vscode-db2i.scrollingResultSet": {
+          "type": "boolean",
+          "description": "Enable scrolling result sets for basic SELECT statements.",
+          "default": true
         },
         "vscode-db2i.pageSize": {
           "type": "number",
           "description": "Page size for Schema browser",
-          "default": 100
+          "default": 500
         }
       }
     },

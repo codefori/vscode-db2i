@@ -3,6 +3,7 @@ const vscode = require(`vscode`);
 const csv = require(`csv/sync`);
 
 const getInstance = require(`../../base`);
+const Configuration = require("../../configuration");
 const html = require(`./html`);
 
 class ResultSetPanelProvider {
@@ -157,7 +158,8 @@ exports.initialise = (context) => {
                 });
 
               } else {
-                if (statement.type === `statement` && this.isBasicStatement(statement.content)) {
+                const scrollingEnabled = Configuration.get(`scrollingResultSet`);
+                if (scrollingEnabled && statement.type === `statement` && this.isBasicStatement(statement.content)) {
                 // If it's a basic statement, we can let it scroll!
                   resultSetProvider.setScrolling(statement.content);
 
