@@ -3,7 +3,7 @@ const vscode = require(`vscode`);
 const csv = require(`csv/sync`);
 
 const getInstance = require(`../../base`);
-const Configuration = require("../../configuration");
+const Configuration = require(`../../configuration`);
 const html = require(`./html`);
 
 class ResultSetPanelProvider {
