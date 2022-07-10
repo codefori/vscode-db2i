@@ -119,14 +119,18 @@ exports.initialise = (context) => {
        * @param {StatementInfo} [options]
        */
       async (options) => {
+        // Options here can be a vscode.Uri when called from editor context.
+        // But that isn't valid here.
+        const optionsIsValid = (options && options.content !== undefined);
+
         const instance = getInstance();
         const config = instance.getConfig();
         const content = instance.getContent();
         const editor = vscode.window.activeTextEditor;
 
-        if (options || (editor && editor.document.languageId === `sql`)) {
+        if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
           /** @type {StatementInfo} */
-          const statement = options || this.parseStatement(editor);
+          const statement = (optionsIsValid ? options : this.parseStatement(editor));
 
           if (statement.open) {
             const textDoc = await vscode.workspace.openTextDocument({language: `sql`, content: statement.content});
