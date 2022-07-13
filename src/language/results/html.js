@@ -157,7 +157,7 @@ exports.generateScroller = (basicSelect) => {
         </script>
       </head>
       <body>
-        <vscode-data-grid id="scroller"></vscode-data-grid>
+        <vscode-data-grid id="scroller" style="min-width: max-content;"></vscode-data-grid>
         <vscode-divider></vscode-divider>
         <p id="nextButton">Execute statement.</p>
       </body>
@@ -213,7 +213,7 @@ exports.generateTable = (id, columns, rows) => {
   });
     
   let result = {
-    html: `<vscode-data-grid id="${id}"></vscode-data-grid>`,
+    html: `<vscode-data-grid id="${id}" style="min-width: max-content;"></vscode-data-grid>`,
     js: [
       `const ${id} = document.getElementById("${id}");`,
       `${id}.columnDefinitions = ${JSON.stringify(columns)};`,
