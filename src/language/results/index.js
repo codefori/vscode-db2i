@@ -254,7 +254,7 @@ exports.initialise = (context) => {
 exports.isBasicStatement = (statement) => {
   const basicStatement = statement.trim().toUpperCase();
 
-  return basicStatement.startsWith(`SELECT`) && !basicStatement.includes(`LIMIT`);
+  return basicStatement.startsWith(`SELECT`) && !basicStatement.includes(`LIMIT`) && !basicStatement.includes(`FETCH FIRST`);
 }
 
 /**
