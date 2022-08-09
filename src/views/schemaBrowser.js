@@ -280,7 +280,7 @@ const getSchemaItems = (schema) => {
     new SchemaItem(`Aliases`, `aliases`, schema, `symbol-reference`),
     //new SchemaItem(`Column Masks`, `masks`, schema),
     //new SchemaItem(`Constraints`, `constraints`, schema),
-    new SchemaItem(`Function`, `functions`, schema, `symbol-function`),
+    new SchemaItem(`Functions`, `functions`, schema, `symbol-function`),
     new SchemaItem(`Global Variables`, `variables`, schema, `symbol-variable`),
     new SchemaItem(`Indexes`, `indexes`, schema, `tag`),
     //new SchemaItem(`Journal Receivers`, `receivers`, schema),
