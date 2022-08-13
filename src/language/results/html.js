@@ -108,10 +108,9 @@ exports.generateScroller = (basicSelect) => {
 
               switch (data.command) {
                 case 'rows':
-
                   isFetching = false;
 
-                  if (scroller.columnDefinitions.length === 0) {
+                  if (data.rows.length > 0 && scroller.columnDefinitions.length === 0) {
                     scroller.columnDefinitions = Object.keys(data.rows[0]).map(col => ({
                       title: col,
                       columnDataKey: col,
@@ -131,7 +130,7 @@ exports.generateScroller = (basicSelect) => {
                   }
 
                   const nextButton = document.getElementById("nextButton");
-                  nextButton.innerText = noMoreRows ? 'End of data' : 'Fetching more...';
+                  nextButton.innerText = noMoreRows ? ('Loaded ' + scroller.rowsData.length + '. End of data') : ('Loaded ' + scroller.rowsData.length + '. Fetching more...');
                   break;
 
                 case 'fetch':
