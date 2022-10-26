@@ -74,7 +74,7 @@ exports.getLoadingHTML = () => {
  * @returns {string}
  */
 exports.generateScroller = (basicSelect) => {
-  return /*html*/ `
+  return /*html*/`
     <!DOCTYPE html>
     <html lang="en">
       <head>
