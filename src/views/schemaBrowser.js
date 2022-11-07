@@ -58,7 +58,7 @@ module.exports = class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.addSchemaToSchemaBrowser`, async () => {
         const config = instance.getConfig();
 
-        const schemas = config.get(`databaseBrowserList`) || [];
+        const schemas = config[`databaseBrowserList`] || [];
 
         const newSchema = await vscode.window.showInputBox({
           prompt: `Library to add to Database Browser`
@@ -66,7 +66,8 @@ module.exports = class schemaBrowser {
 
         if (newSchema && !schemas.includes(newSchema.toUpperCase())) {
           schemas.push(newSchema.toUpperCase());
-          await config.set(`databaseBrowserList`, schemas);
+          config[`databaseBrowserList`] = schemas;
+          await instance.setConfig(config);
           this.refresh();
         }
       }),
@@ -76,14 +77,14 @@ module.exports = class schemaBrowser {
           //Running from right click
           const config = instance.getConfig();
 
-          let schemas = config.get(`databaseBrowserList`);
+          let schemas = config[`databaseBrowserList`];
 
           let index = schemas.findIndex(file => file.toUpperCase() === node.schema)
           if (index >= 0) {
             schemas.splice(index, 1);
           }
 
-          await config.set(`databaseBrowserList`, schemas);
+          await instance.setConfig(config);
           this.refresh();
         }
       }),
@@ -126,7 +127,8 @@ module.exports = class schemaBrowser {
           const currentLibrary = config.currentLibrary.toUpperCase();
   
           if (schema && schema !== currentLibrary) {
-            await config.set(`currentLibrary`, schema);
+            config.currentLibrary = schema;
+            await instance.setConfig(config);
           }
 
           vscode.window.showInformationMessage(`Current schema set to ${schema}.`);
@@ -222,7 +224,7 @@ module.exports = class schemaBrowser {
       if (connection) {
         const config = instance.getConfig();
 
-        const libraries = config.get(`databaseBrowserList`) || [];
+        const libraries = config[`databaseBrowserList`] || [];
 
         for (let library of libraries) {
           items.push(new Schema(library));
