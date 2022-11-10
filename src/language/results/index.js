@@ -158,7 +158,7 @@ exports.initialise = (context) => {
                 const textDoc = await vscode.workspace.openTextDocument({language: `txt`, content: output});
                 await vscode.window.showTextDocument(textDoc, {
                   preserveFocus: true,
-                  preview: true
+                  viewColumn: vscode.ViewColumn.Beside
                 });
 
               } else {
