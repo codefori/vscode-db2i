@@ -6,6 +6,10 @@ const getInstance = require(`../../base`);
 const Configuration = require(`../../configuration`);
 const html = require(`./html`);
 
+function delay(t, v) {
+  return new Promise(resolve => setTimeout(resolve, t, v));
+}
+
 class ResultSetPanelProvider {
   constructor() {
     /** @type {vscode.WebviewView} */
@@ -56,6 +60,15 @@ class ResultSetPanelProvider {
     });
   }
 
+  async ensureActivation() {
+    let currentLoop = 0;
+    while (!this._view && currentLoop < 15) {
+      await this.focus();
+      await delay(100);
+      currentLoop += 1;
+    }
+  }
+
   async focus() {
     if (!this._view) {
       // Weird one. Kind of a hack. _view.show doesn't work yet because it's not initialized.
@@ -63,9 +76,9 @@ class ResultSetPanelProvider {
       // 1. calls resolveWebviewView
       // 2. sets this._view
       await vscode.commands.executeCommand(`vscode-db2i.resultset.focus`);
+    } else {
+      this._view.show(true);
     }
-    
-    this._view.show(true);
   }
 
   async setLoadingText(content) {
@@ -112,7 +125,9 @@ exports.initialise = (context) => {
   let resultSetProvider = new ResultSetPanelProvider();
 
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider),
+    vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider, {
+      webviewOptions: {retainContextWhenHidden: true},
+    }),
 
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, 
       /**
@@ -129,6 +144,8 @@ exports.initialise = (context) => {
         const editor = vscode.window.activeTextEditor;
 
         if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
+          await resultSetProvider.ensureActivation();
+          
           /** @type {StatementInfo} */
           const statement = (optionsIsValid ? options : this.parseStatement(editor));
 

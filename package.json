@@ -25,7 +25,8 @@
     "url": "https://github.com/halcyon-tech/vscode-db2i"
   },
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onLanguage:sql"
   ],
   "extensionDependencies": [
     "halcyontechltd.code-for-ibmi"
