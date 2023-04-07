@@ -1,8 +1,11 @@
-const vscode = require(`vscode`);
+import vscode from "vscode"
 
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
-const Statement = require(`./statement`);
+import Statement from "./statement";
+
+type SQLType = "tables"|"views"|"aliases"|"constraints"|"functions"|"variables"|"indexes"|"procedures"|"sequences"|"packages"|"triggers"|"types";
+type PageData = {filter?: string, offset?: number, limit?: number};
 
 const typeMap = {
   'tables': [`T`, `P`],
@@ -10,12 +13,8 @@ const typeMap = {
   'aliases': [`A`]
 };
 
-module.exports = class Database {
-  /**
-   * @param {"tables"|"views"|"aliases"|"constraints"|"functions"|"variables"|"indexes"|"procedures"|"sequences"|"packages"|"triggers"|"types"|string} type 
-   * @param {{filter?: string, offset?: number, limit?: number}} details
-   */
-  static async getObjects(schema, type, details = {}) {
+export default class Database {
+  static async getObjects(schema: string, type: SQLType, details: PageData = {}): Promise<BasicSQLObject[]> {
     const content = instance.getContent();
 
     schema = schema.toUpperCase();
@@ -128,14 +127,7 @@ module.exports = class Database {
     }));
   }
 
-  /**
-   * 
-   * @param {string} schema 
-   * @param {string} object 
-   * @param {"tables"|"views"|"aliases"|"constraints"|"functions"|"variables"|"indexes"|"procedures"|"sequences"|"packages"|"triggers"|"types"|string} type 
-   * @returns {Promise<string>}
-   */
-  static async generateSQL(schema, object, type) {
+  static async generateSQL(schema: string, object: string, type: SQLType): Promise<string> {
     const content = instance.getContent();
 
     schema = schema.toUpperCase();

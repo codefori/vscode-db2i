@@ -1,9 +1,9 @@
 
-const vscode = require(`vscode`);
+import vscode from "vscode"
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
-module.exports = class View {
-  static getColumns(schema, name) {
+export default class View {
+  static getColumns(schema: string, name: string): Promise<TableColumn[]> {
     const content = instance.getContent();
     
     return content.runSQL([

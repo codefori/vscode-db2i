@@ -1,14 +1,12 @@
 
-const vscode = require(`vscode`);
-const Schemas = require(`../database/schemas`);
+import vscode from "vscode"
+import Schemas from "../database/schemas";
 
-const Configuration = require(`../configuration`);
-
-const Store = require(`../language/store`);
-
-const Types = require(`./types`);
+import Configuration from "../configuration";
 
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
+
+import Types from "./types";
 
 const viewItem = {
   "tables": `table`,
@@ -37,7 +35,11 @@ const itemIcons = {
   "index": `list-tree`
 }
 
-module.exports = class schemaBrowser {
+export default class schemaBrowser {
+  emitter: vscode.EventEmitter<any | undefined | null | void>;
+  onDidChangeTreeData: vscode.Event<any | undefined | null | void>;
+  cache: {[key: string]: object[]};
+
   /**
    * @param {vscode.ExtensionContext} context
    */
@@ -45,13 +47,11 @@ module.exports = class schemaBrowser {
     this.emitter = new vscode.EventEmitter();
     this.onDidChangeTreeData = this.emitter.event;
 
-    /** @type {{[key: string]: object[]}} */
     this.cache = {};
 
     context.subscriptions.push(
       vscode.commands.registerCommand(`vscode-db2i.refreshSchemaBrowser`, async () => {
         this.cache = {};
-        Store.refresh();
         this.refresh();
       }),
 
@@ -138,7 +138,7 @@ module.exports = class schemaBrowser {
   }
 
   refresh() {
-    this.emitter.fire();
+    this.emitter.fire(undefined);
   }
 
   /**
@@ -148,7 +148,7 @@ module.exports = class schemaBrowser {
    * @param {boolean} [addRows] True when we need rows added
    */
   async fetchData(schema, type, addRows) {
-    const pageSize = Configuration.get(`pageSize`);
+    const pageSize = Number(Configuration.get(`pageSize`)) || 100;
     const key = `${schema}-${type}`;
     let offset;
 
@@ -191,11 +191,7 @@ module.exports = class schemaBrowser {
     return element;
   }
 
-  /**
-   * @param {Schema|SchemaItem|SQLObject} [element]
-   * @returns {Promise<vscode.TreeItem[]>};
-   */
-  async getChildren(element) {
+  async getChildren(element?: Schema|SchemaItem|SQLObject) {
     let items = [];
 
     if (element) {
@@ -241,7 +237,8 @@ module.exports = class schemaBrowser {
 
 
 class Schema extends vscode.TreeItem {
-  constructor(name) {
+  schema: string;
+  constructor(name: string) {
     super(name.toLowerCase(), vscode.TreeItemCollapsibleState.Collapsed);
 
     this.contextValue = `schema`;
@@ -251,7 +248,8 @@ class Schema extends vscode.TreeItem {
 }
 
 class SchemaItem extends vscode.TreeItem {
-  constructor(name, type, schema, icon) {
+  schema: string;
+  constructor(name: string, type: string, schema: string, icon: string) {
     super(name, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.contextValue = type;
@@ -261,7 +259,12 @@ class SchemaItem extends vscode.TreeItem {
 }
 
 class SQLObject extends vscode.TreeItem {
-  constructor(item) {
+  path: string;
+  schema: string;
+  name: string;
+  type: string;
+
+  constructor(item: BasicSQLObject) {
     const type = viewItem[item.type];
     super(item.name.toLowerCase(), Types[type] ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 

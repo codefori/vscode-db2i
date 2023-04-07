@@ -26,8 +26,21 @@ interface SQLParm {
   LONG_COMMENT?: string
 }
 
+type StatementType = "statement"|"json"|"csv"|"cl"|"sql";
+
 interface StatementInfo {
   content: string,
-  type: "statement"|"json"|"csv"|"cl"|"sql",
+  type: StatementType,
   open?: boolean
+}
+
+interface BasicSQLObject {
+  type: string;
+  schema: string;
+  name: string;
+  text: string;
+  basedOn: {
+    schema: string;
+    name: string;
+  }
 }

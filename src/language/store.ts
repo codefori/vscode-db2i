@@ -1,47 +1,48 @@
 
-const vscode = require(`vscode`);
+import vscode from "vscode"
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
-exports.data = {
-  /** @type {{[schema: string]: object[]}} */
+interface DataCache {
+  routines: {[schema: string]: Routine[]};
+  columns: {[schema: string]: TableColumn[]};
+  objects: {[schema: string]: SQLObjectBasic[]};
+}
+
+export let data: DataCache = {
   routines: {},
-  /** @type {{[path: string]: object[]}} */
   columns: {},
-  /** @type {{[schema: string]: object[]}} */
   objects: {}
 }
 
-exports.refresh = () => {
-  this.data.routines = {};
-  this.data.columns = {};
-  this.data.objects = {};
+export function refresh () {
+  data.routines = {};
+  data.columns = {};
+  data.objects = {};
 }
 
-exports.hasConnection = () => {
+export function hasConnection () {
   return instance.getConnection() !== undefined;
 }
 
-exports.routinesAvailable = async (schema) => {  schema = schema.toUpperCase();
-  if (this.data.routines[schema]) {
-    return this.data.routines[schema];
+export async function routinesAvailable (schema: string) {  
+  schema = schema.toUpperCase();
+  if (data.routines[schema]) {
+    return data.routines[schema];
   }
 
   // No waiting for the content to load
-  this.getRoutines(schema);
+  getRoutines(schema);
 
   return null;
 }
 
-/**
- * @param {string} schema 
- */
-exports.getRoutines = async (schema) => {
+export async function getRoutines (schema: string): Promise<Routine[]> {
   const content = instance.getContent();
 
   schema = schema.toUpperCase();
 
-  if (this.data.routines[schema]) {
-    return this.data.routines[schema];
+  if (data.routines[schema]) {
+    return data.routines[schema];
   }
   
   const routineStatement = [
@@ -58,7 +59,7 @@ exports.getRoutines = async (schema) => {
 
   const parms = await content.runSQL(parmStatement);
 
-  this.data.routines[schema] = routines.map(proc => {
+  data.routines[schema] = routines.map(proc => {
     return {
       schema: proc.PRETTY_SCHEMA,
       name: proc.PRETTY_NAME,
@@ -82,16 +83,10 @@ exports.getRoutines = async (schema) => {
     };
   });
 
-  return this.data.routines[schema];
+  return data.routines[schema];
 }
 
-/**
- * 
- * @param {string} schema 
- * @param {string} name 
- * @returns {Promise<TableColumn[]>}
- */
-exports.getColumns = async (schema, name) => {
+export async function getColumns (schema: string, name: string): Promise<TableColumn[]> {
   const content = instance.getContent();
 
   schema = schema.toUpperCase();
@@ -99,8 +94,8 @@ exports.getColumns = async (schema, name) => {
 
   const key = `${schema}.${name}`;
 
-  if (this.data.columns[key]) {
-    return this.data.columns[key];
+  if (data.columns[key]) {
+    return data.columns[key];
   }
 
   const columns = await content.runSQL([
@@ -109,18 +104,18 @@ exports.getColumns = async (schema, name) => {
     `ORDER BY ORDINAL_POSITION`
   ].join(` `));
   
-  this.data.columns[key] = columns;
+  data.columns[key] = columns;
 
-  return this.data.columns[key];
+  return data.columns[key];
 }
 
-exports.getObjects = async (schema) => {
+export async function getObjects (schema: string): Promise<SQLObjectBasic[]> {
   const content = instance.getContent();
 
   schema = schema.toUpperCase();
 
-  if (this.data.objects[schema]) {
-    return this.data.objects[schema];
+  if (data.objects[schema]) {
+    return data.objects[schema];
   }
 
   const objects = await content.runSQL([
@@ -128,7 +123,7 @@ exports.getObjects = async (schema) => {
     `WHERE TABLE_SCHEMA = '${schema}' and TABLE_TYPE in ('T', 'P', 'V')`,
   ].join(` `));
 
-  this.data.objects[schema] = objects;
+  data.objects[schema] = objects;
 
-  return this.data.objects[schema];
+  return data.objects[schema];
 }

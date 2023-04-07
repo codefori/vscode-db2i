@@ -1,12 +1,11 @@
 
-const vscode = require(`vscode`);
+import vscode from "vscode";
 
-module.exports = class Configuration {
+export default class Configuration {
   /**
    * Returns variable not specific to a host (e.g. a global config)
-   * @param {string} prop 
    */
-  static get(prop) {
+  static get(prop: string) {
     const globalData = vscode.workspace.getConfiguration(`vscode-db2i`);
     return globalData.get(prop);
   }

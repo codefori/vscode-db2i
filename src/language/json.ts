@@ -1,12 +1,9 @@
-const vscode = require(`vscode`);
 
-const Statement = require(`../database/statement`);
+import vscode from "vscode";
 
-/**
- * 
- * @param {vscode.ExtensionContext} context 
- */
-exports.initialise = (context) => {
+import Statement from "../database/statement";
+
+export async function initialise(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand(`vscode-db2i.pasteGenerator`, async () => {
       try {
@@ -28,15 +25,7 @@ exports.initialise = (context) => {
   )
 }
 
-exports.generateSQL = (jsonIn) => {
-  if (Array.isArray(jsonIn)) {
-    return generateArray(jsonIn);
-  } else {
-    return generateObject(jsonIn);
-  }
-}
-
-const generateArray = (elementIn) => {
+const generateArray = (elementIn: any) => {
   const firstValue = (Array.isArray(elementIn) ? elementIn[0] : elementIn) || ``;
   if (typeof firstValue === `object`) {
     return `(SELECT json_arrayagg(${generateObject(firstValue)}) from SYSIBM.SYSDUMMY1)`
@@ -45,7 +34,7 @@ const generateArray = (elementIn) => {
   }
 }
 
-const generateObject = (objIn) => {
+const generateObject = (objIn: any) => {
   const items = [];
 
   Object.keys(objIn).forEach((key) => {
@@ -74,4 +63,12 @@ const generateObject = (objIn) => {
   });
 
   return `json_object(${items.join(`, `)})`;
+}
+
+export function generateSQL(jsonIn: any) {
+  if (Array.isArray(jsonIn)) {
+    return generateArray(jsonIn);
+  } else {
+    return generateObject(jsonIn);
+  }
 }
