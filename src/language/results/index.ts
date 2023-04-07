@@ -145,7 +145,10 @@ export function initialise(context: vscode.ExtensionContext) {
           if (statement.content.trim().length > 0) {
             try {
               if (statement.type === `cl`) {
-                const commandResult = getInstance().getContent().ru
+                const commandResult = await getInstance().getConnection().runCommand({
+                  command: statement.content,
+                  environment: `ile`
+                })
 
                 if (commandResult.code === 0 || commandResult.code === null) {
                   vscode.window.showInformationMessage(`Command executed successfuly.`);
@@ -209,7 +212,7 @@ export function initialise(context: vscode.ExtensionContext) {
                           data.map(
                             row => `  (${keys.map(key => {
                               if (row[key] === null) return `null`;
-                              if (typeof row[key] === `string`) return `'${row[key].replace(/'/g, `''`)}'`;
+                              if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
                               return row[key];
                             }).join(`, `)})`
                           ).join(`,\n`),
