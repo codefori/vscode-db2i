@@ -1,6 +1,6 @@
 import vscode from "vscode"
 
-import csv from "csv/sync";
+import * as csv from "csv/sync";
 
 import Configuration from "../../configuration"
 import * as html from "./html";

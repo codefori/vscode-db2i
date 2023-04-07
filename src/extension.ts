@@ -4,7 +4,7 @@ import vscode from "vscode"
 import schemaBrowser from "./views/schemaBrowser";
 
 import * as JSONServices from "./language/json";
-import * as resultsProvider from "./language/results";
+import * as resultsProvider from "./views/results";
 
 import {loadBase} from "./base";
 
