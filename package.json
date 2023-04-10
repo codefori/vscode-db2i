@@ -99,6 +99,12 @@
           "name": "Schema Browser",
           "visibility": "visible",
           "when": "code-for-ibmi:connected == true"
+        },
+        {
+          "id": "exampleBrowser",
+          "name": "Examples",
+          "visibility": "collapsed",
+          "when": "code-for-ibmi:connected == true"
         }
       ]
     },

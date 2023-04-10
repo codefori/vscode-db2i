@@ -7,6 +7,7 @@ import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
 import {loadBase} from "./base";
+import { ExampleBrowser } from "./views/exampleBrowser";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -23,6 +24,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.registerTreeDataProvider(
       `schemaBrowser`,
       new schemaBrowser(context)
+    ),
+    vscode.window.registerTreeDataProvider(
+      `exampleBrowser`,
+      new ExampleBrowser(context)
     ),
   );
 
