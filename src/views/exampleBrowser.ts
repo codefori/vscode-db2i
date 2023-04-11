@@ -6,8 +6,8 @@ import { SQLExample, Examples } from "./examples";
 const openExampleCommand = `vscode-db2i.examples.open`;
 
 export class ExampleBrowser implements TreeDataProvider<any> {
-  emitter: EventEmitter<any | undefined | null | void>;
-  onDidChangeTreeData?: Event<any>;
+  private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
+  readonly onDidChangeTreeData: Event<TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
   
   private currentFilter: string|undefined;
 
@@ -40,9 +40,9 @@ export class ExampleBrowser implements TreeDataProvider<any> {
       })
     )
   }
-
+  
   refresh() {
-    this.emitter.fire(undefined);
+    this._onDidChangeTreeData.fire();
   }
 
   getTreeItem(element: any): TreeItem | Thenable<TreeItem> {
