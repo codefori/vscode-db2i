@@ -1,11 +1,16 @@
-import { workspace } from "vscode";
+import { EventEmitter, workspace } from "vscode";
 import { window } from "vscode";
 import { CancellationToken, Event, ExtensionContext, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands } from "vscode";
 import { SQLExample, Examples } from "./examples";
 
-const openExampleCommand = `vscode-db2i.openExample`;
+const openExampleCommand = `vscode-db2i.examples.open`;
 
 export class ExampleBrowser implements TreeDataProvider<any> {
+  emitter: EventEmitter<any | undefined | null | void>;
+  onDidChangeTreeData?: Event<any>;
+  
+  private currentFilter: string|undefined;
+
   constructor(context: ExtensionContext) {
     context.subscriptions.push(
       commands.registerCommand(openExampleCommand, (example: SQLExample) => {
@@ -17,29 +22,64 @@ export class ExampleBrowser implements TreeDataProvider<any> {
             window.showTextDocument(doc);
           });
         }
+      }),
+
+      commands.registerCommand(`vscode-db2i.examples.setFilter`, async () => {
+        this.currentFilter = await window.showInputBox({
+          title: `Example Filter`,
+          prompt: `Enter filter criteria`,
+          value: this.currentFilter,
+        });
+
+        this.refresh();
+      }),
+
+      commands.registerCommand(`vscode-db2i.examples.clearFilter`, async () => {
+        this.currentFilter = undefined;
+        this.refresh();
       })
     )
   }
 
-  onDidChangeTreeData?: Event<any>;
+  refresh() {
+    this.emitter.fire(undefined);
+  }
 
   getTreeItem(element: any): TreeItem | Thenable<TreeItem> {
     return element;
   }
 
   getChildren(element?: ExampleGroupItem): ProviderResult<any[]> {
-    if (element) {
-      return element.getChildren();
-    } else {
-      let items: ExampleGroupItem[] = [];
+    if (this.currentFilter) {
+      // If there is a filter, then show all examples that include this criteria
+      let items: SQLExampleItem[] = [];
+
+      const upperFilter = this.currentFilter.toUpperCase();
 
       for (const exampleName in Examples) {
         items.push(
-          new ExampleGroupItem(exampleName, Examples[exampleName])
+          ...Examples[exampleName]
+            .filter(example => example.name.toUpperCase().includes(upperFilter) || example.content.some(line => line.toUpperCase().includes(upperFilter)))
+            .map(example => new SQLExampleItem(example))
         )
       }
 
       return items;
+
+    } else {
+      if (element) {
+        return element.getChildren();
+      } else {
+        let items: ExampleGroupItem[] = [];
+
+        for (const exampleName in Examples) {
+          items.push(
+            new ExampleGroupItem(exampleName, Examples[exampleName])
+          )
+        }
+
+        return items;
+      }
     }
   }
 

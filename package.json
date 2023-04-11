@@ -166,6 +166,18 @@
         "title": "Run selected statement",
         "category": "Db2 for i",
         "icon": "$(notebook-execute)"
+      },
+      {
+        "command": "vscode-db2i.examples.setFilter",
+        "title": "Set filter",
+        "category": "Db2 for i (Examples)",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "vscode-db2i.examples.clearFilter",
+        "title": "Clear filter",
+        "category": "Db2 for i (Examples)",
+        "icon": "$(clear-all)"
       }
     ],
     "menus": {
@@ -198,6 +210,16 @@
           "command": "vscode-db2i.refreshSchemaBrowser",
           "group": "navigation",
           "when": "view == schemaBrowser"
+        },
+        {
+          "command": "vscode-db2i.examples.setFilter",
+          "group": "navigation",
+          "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.examples.clearFilter",
+          "group": "navigation",
+          "when": "view == exampleBrowser"
         }
       ],
       "view/item/context": [
