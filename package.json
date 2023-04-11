@@ -99,13 +99,19 @@
           "name": "Schema Browser",
           "visibility": "visible",
           "when": "code-for-ibmi:connected == true"
+        },
+        {
+          "id": "queryHistory",
+          "name": "Query History",
+          "visibility": "visible",
+          "when": "code-for-ibmi:connected == true"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "db2-explorer",
-        "contents": "No connection found. Connect to an IBM i first."
+        "view": "queryHistory",
+        "contents": "Query history will appear here."
       }
     ],
     "keybindings": [
@@ -160,9 +166,27 @@
         "title": "Run selected statement",
         "category": "Db2 for i",
         "icon": "$(notebook-execute)"
+      },
+      {
+        "command": "vscode-db2i.queryHistory.remove",
+        "title": "Remove query from history",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.queryHistory.clear",
+        "title": "Clear query history",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.queryHistory.remove",
+          "when": "never"
+        }        
+      ],
       "editor/context": [
         {
           "command": "vscode-db2i.pasteGenerator",
@@ -192,6 +216,11 @@
           "command": "vscode-db2i.refreshSchemaBrowser",
           "group": "navigation",
           "when": "view == schemaBrowser"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.clear",
+          "group": "navigation",
+          "when": "view == queryHistory"
         }
       ],
       "view/item/context": [
@@ -214,6 +243,11 @@
           "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
           "when": "view == schemaBrowser && viewItem == schema",
           "group": "db2@3"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.remove",
+          "when": "view == queryHistory && viewItem == query",
+          "group": "inline"
         }
       ]
     }

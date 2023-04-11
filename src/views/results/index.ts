@@ -235,6 +235,10 @@ export function initialise(context: vscode.ExtensionContext) {
                   }
                 }
               }
+              
+              if (statement.type === `statement`) {
+                vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement.content);
+              }
 
             } catch (e) {
               let errorText;

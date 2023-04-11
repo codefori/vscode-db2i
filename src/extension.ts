@@ -7,6 +7,8 @@ import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
 import {loadBase} from "./base";
+import { setupConfig } from "./config";
+import { queryHistory } from "./views/queryHistoryView";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -24,10 +26,16 @@ export function activate(context: vscode.ExtensionContext) {
       `schemaBrowser`,
       new schemaBrowser(context)
     ),
+    vscode.window.registerTreeDataProvider(
+      `queryHistory`,
+      new queryHistory(context)
+    ),
   );
 
   JSONServices.initialise(context);
   resultsProvider.initialise(context);
+
+  setupConfig(context);
 }
 
 // this method is called when your extension is deactivated
