@@ -174,7 +174,7 @@ export function initialise(context: vscode.ExtensionContext) {
 
                 } else {
                 // Otherwise... it's a bit complicated.
-                  statement.content = [
+                  const statementWithContext = [
                     `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
                     statement.content
                   ].join(`;\n`);
@@ -183,7 +183,7 @@ export function initialise(context: vscode.ExtensionContext) {
                     resultSetProvider.setLoadingText(`Executing statement...`);
                   }
 
-                  const data = await content.runSQL(statement.content);
+                  const data = await content.runSQL(statementWithContext);
 
                   if (data.length > 0) {
                     switch (statement.type) {
