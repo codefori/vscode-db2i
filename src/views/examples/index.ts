@@ -19,10 +19,7 @@ export const Examples: SQLExamplesList = {
       "name": "Create Schema",
       "content": [
         "CREATE SCHEMA schema1;"
-      ],
-      "requirements": {
-        7.3: 35
-      }
+      ]
     },
     {
       "name": "Drop Schema",
