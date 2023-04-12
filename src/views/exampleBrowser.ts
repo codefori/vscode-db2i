@@ -2,6 +2,8 @@ import { EventEmitter, workspace } from "vscode";
 import { window } from "vscode";
 import { CancellationToken, Event, ExtensionContext, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands } from "vscode";
 import { SQLExample, Examples } from "./examples";
+import { OSData, fetchSystemInfo } from "../config";
+import { getInstance } from "../base";
 
 const openExampleCommand = `vscode-db2i.examples.open`;
 
@@ -38,7 +40,15 @@ export class ExampleBrowser implements TreeDataProvider<any> {
         this.currentFilter = undefined;
         this.refresh();
       })
-    )
+    );
+
+    getInstance().onEvent(`connected`, () => {
+      // We need to fetch the system info
+      fetchSystemInfo().then(() => {
+        // Refresh the examples when we have it, so we only display certain examples
+        this.refresh();
+      })
+    }) 
   }
   
   refresh() {
@@ -59,6 +69,7 @@ export class ExampleBrowser implements TreeDataProvider<any> {
       for (const exampleName in Examples) {
         items.push(
           ...Examples[exampleName]
+            .filter(example => exampleWorksForOnOS(example))
             .filter(example => example.name.toUpperCase().includes(upperFilter) || example.content.some(line => line.toUpperCase().includes(upperFilter)))
             .map(example => new SQLExampleItem(example))
         )
@@ -101,7 +112,9 @@ class ExampleGroupItem extends TreeItem {
   }
 
   getChildren(): SQLExampleItem[] {
-    return this.group.map(example => new SQLExampleItem(example));
+    return this.group
+      .filter(example => exampleWorksForOnOS(example))
+      .map(example => new SQLExampleItem(example));
   }
 }
 
@@ -117,4 +130,19 @@ class SQLExampleItem extends TreeItem {
       arguments: [example]
     };
   }
+}
+
+function exampleWorksForOnOS(example: SQLExample): boolean {
+  if (OSData) {
+    const myOsVersion = OSData.version;
+
+    // If this example has specific system requirements defined..
+    if (example.requirements && example.requirements[myOsVersion]) {
+      if (OSData.db2Level < example.requirements[myOsVersion]) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }

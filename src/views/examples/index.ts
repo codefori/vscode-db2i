@@ -2,9 +2,15 @@ export interface SQLExamplesList {
   [group: string]: SQLExample[]
 }
 
+interface ExampleSystemRequirements {
+  // OS version: required db2 level
+  [osVersion: number]: number;
+}
+
 export interface SQLExample {
   name: string;
   content: string[];
+  requirements?: ExampleSystemRequirements;
 };
 
 export const Examples: SQLExamplesList = {
@@ -13,7 +19,10 @@ export const Examples: SQLExamplesList = {
       "name": "Create Schema",
       "content": [
         "CREATE SCHEMA schema1;"
-      ]
+      ],
+      "requirements": {
+        7.3: 35
+      }
     },
     {
       "name": "Drop Schema",
