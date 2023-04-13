@@ -1,30 +1,24 @@
-const vscode = require(`vscode`);
+import vscode from "vscode"
 
-const csv = require(`csv/sync`);
+import * as csv from "csv/sync";
 
-const getInstance = require(`../../base`);
-const Configuration = require(`../../configuration`);
-const html = require(`./html`);
+import Configuration from "../../configuration"
+import * as html from "./html";
+import { getInstance } from "../../base";
 
-function delay(t, v) {
+function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
 }
 
 class ResultSetPanelProvider {
+  _view: vscode.WebviewView;
+  loadingState: boolean;
   constructor() {
-    /** @type {vscode.WebviewView} */
     this._view = undefined;
-
     this.loadingState = false;
   }
 
-  /**
-   * 
-   * @param {vscode.WebviewView} webviewView 
-   * @param {vscode.WebviewViewResolveContext} context 
-   * @param {vscode.CancellationToken} _token 
-   */
-  resolveWebviewView(webviewView, context, _token) {
+  resolveWebviewView(webviewView: vscode.WebviewView, context: vscode.WebviewViewResolveContext, _token: vscode.CancellationToken) {
     this._view = webviewView;
 
     webviewView.webview.options = {
@@ -118,10 +112,7 @@ class ResultSetPanelProvider {
   }
 }
 
-/**
- * @param {vscode.ExtensionContext} context 
- */
-exports.initialise = (context) => {
+export function initialise(context: vscode.ExtensionContext) {
   let resultSetProvider = new ResultSetPanelProvider();
 
   context.subscriptions.push(
@@ -130,10 +121,7 @@ exports.initialise = (context) => {
     }),
 
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, 
-      /**
-       * @param {StatementInfo} [options]
-       */
-      async (options) => {
+      async (options: StatementInfo) => {
         // Options here can be a vscode.Uri when called from editor context.
         // But that isn't valid here.
         const optionsIsValid = (options && options.content !== undefined);
@@ -147,7 +135,7 @@ exports.initialise = (context) => {
           await resultSetProvider.ensureActivation();
           
           /** @type {StatementInfo} */
-          const statement = (optionsIsValid ? options : this.parseStatement(editor));
+          const statement = (optionsIsValid ? options : parseStatement(editor));
 
           if (statement.open) {
             const textDoc = await vscode.workspace.openTextDocument({language: `sql`, content: statement.content});
@@ -157,10 +145,10 @@ exports.initialise = (context) => {
           if (statement.content.trim().length > 0) {
             try {
               if (statement.type === `cl`) {
-                const commandResult = await vscode.commands.executeCommand(`code-for-ibmi.runCommand`, {
+                const commandResult = await getInstance().getConnection().runCommand({
                   command: statement.content,
                   environment: `ile`
-                });
+                })
 
                 if (commandResult.code === 0 || commandResult.code === null) {
                   vscode.window.showInformationMessage(`Command executed successfuly.`);
@@ -186,7 +174,7 @@ exports.initialise = (context) => {
 
                 } else {
                 // Otherwise... it's a bit complicated.
-                  statement.content = [
+                  const statementWithContext = [
                     `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
                     statement.content
                   ].join(`;\n`);
@@ -195,7 +183,7 @@ exports.initialise = (context) => {
                     resultSetProvider.setLoadingText(`Executing statement...`);
                   }
 
-                  const data = await content.runSQL(statement.content);
+                  const data = await content.runSQL(statementWithContext);
 
                   if (data.length > 0) {
                     switch (statement.type) {
@@ -224,7 +212,7 @@ exports.initialise = (context) => {
                           data.map(
                             row => `  (${keys.map(key => {
                               if (row[key] === null) return `null`;
-                              if (typeof row[key] === `string`) return `'${row[key].replace(/'/g, `''`)}'`;
+                              if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
                               return row[key];
                             }).join(`, `)})`
                           ).join(`,\n`),
@@ -247,6 +235,10 @@ exports.initialise = (context) => {
                   }
                 }
               }
+              
+              if (statement.type === `statement`) {
+                vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement.content);
+              }
 
             } catch (e) {
               let errorText;
@@ -268,25 +260,20 @@ exports.initialise = (context) => {
   )
 }
 
-exports.isBasicStatement = (statement) => {
+export function isBasicStatement(statement: string) {
   const basicStatement = statement.trim().toUpperCase();
 
   return basicStatement.startsWith(`SELECT`) && !basicStatement.includes(`LIMIT`) && !basicStatement.includes(`FETCH FIRST`);
 }
 
-/**
- * @param {vscode.TextEditor} editor
- * @returns {StatementInfo} Statement
- */
-exports.parseStatement = (editor) => {
+export function parseStatement(editor: vscode.TextEditor): StatementInfo {
   const document = editor.document;
   const eol = (document.eol === vscode.EndOfLine.LF ? `\n` : `\r\n`);
 
   let text = document.getText(editor.selection).trim();
   let content;
 
-  /** @type {"statement"|"cl"|"json"|"sql"} */
-  let type = `statement`;
+  let type: StatementType = `statement`;
 
   if (text.length > 0) {
     content = text;
@@ -353,7 +340,7 @@ exports.parseStatement = (editor) => {
   }
 
   return {
-    type,
+    type: type,
     content
   };
 }

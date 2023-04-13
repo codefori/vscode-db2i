@@ -1,14 +1,14 @@
 
-const vscode = require(`vscode`);
+import vscode from "vscode"
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
-module.exports = class Table {
+export default class Table {
   /**
    * @param {string} schema 
    * @param {string} name 
    * @returns {Promise<TableColumn[]>}
    */
-  static async getItems(schema, name) {
+  static async getItems(schema: string, name: string): Promise<TableColumn[]> {
     const content = instance.getContent();
 
     const sql = [

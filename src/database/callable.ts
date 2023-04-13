@@ -1,9 +1,9 @@
 
-const vscode = require(`vscode`);
+import vscode from "vscode"
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
-module.exports = class Callable {
-  static getParms(schema, name) {
+export default class Callable {
+  static getParms(schema: string, name: string): Promise<SQLParm[]> {
     const content = instance.getContent();
     
     return content.runSQL([

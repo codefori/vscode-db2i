@@ -1,3 +1,5 @@
+import { Webview } from "vscode";
+
 const WebToolkit = require(`@vscode/webview-ui-toolkit/dist/toolkit.min.js`);
 
 const head = /*html*/`
@@ -33,14 +35,14 @@ const head = /*html*/`
     }
   </style>`;
 
-exports.setLoadingText = (webview, text) => {
+export function setLoadingText(webview: Webview, text: string) {
   webview.postMessage({
     command: `loadingText`,
     text,
   });
 }
 
-exports.getLoadingHTML = () => {
+export function getLoadingHTML(): string {
   return /*html*/ `
     <!DOCTYPE html>
     <html lang="en">
@@ -68,12 +70,7 @@ exports.getLoadingHTML = () => {
   `;
 }
 
-/**
- * 
- * @param {string} basicSelect
- * @returns {string}
- */
-exports.generateScroller = (basicSelect) => {
+export function generateScroller(basicSelect: string): string {
   return /*html*/`
     <!DOCTYPE html>
     <html lang="en">
@@ -164,12 +161,7 @@ exports.generateScroller = (basicSelect) => {
   `;
 }
 
-/**
- * 
- * @param {object[]} rows 
- * @returns {string}
- */
-exports.generateResults = (rows) => {
+export function generateResults(rows: object[]): string {
   const columns = Object.keys(rows[0]).map(column => ({
     title: column,
     columnDataKey: column,
@@ -196,13 +188,9 @@ exports.generateResults = (rows) => {
   `;
 }
 
-/**
-   * 
-   * @param {{title: string, columnDataKey: string|number, transform?: (row: object) => string|number}[]} columns 
-   * @param {object[]} rows 
-   * @returns {{html: string, js: string}}
-   */
-exports.generateTable = (id, columns, rows) => {
+interface ColumnDetail {title: string, columnDataKey: string|number, transform?: (row: object) => string|number};
+
+export function generateTable(id: string, columns: ColumnDetail[], rows: any[]) {
   rows.forEach(row => {
     columns.forEach(column => {
       if (row[column.columnDataKey] && column.transform) {

@@ -1,25 +1,18 @@
 
-const vscode = require(`vscode`);
+import vscode from "vscode";
 
-const icons = {
-  IN: `arrow-left`,
-  OUT: `arrow-right`,
-  INOUT: `arrow-both`,
-}
+export default class ColumnTreeItem extends vscode.TreeItem {
+  schema: string;
+  table: string;
+  name: string;
 
-module.exports = class extends vscode.TreeItem {
-  /**
-   * @param {string} schema
-   * @param {string} table
-   * @param {SQLParm} data 
-   */
-  constructor(schema, table, data) {
-    super(data.PARAMETER_NAME.toLowerCase(), vscode.TreeItemCollapsibleState.None);
+  constructor(schema: string, table: string, data: TableColumn) {
+    super(data.COLUMN_NAME.toLowerCase(), vscode.TreeItemCollapsibleState.None);
 
-    this.contextValue = `parameter`;
+    this.contextValue = `column`;
     this.schema = schema;
     this.table = table;
-    this.name = data.PARAMETER_NAME;
+    this.name = data.COLUMN_NAME;
 
     let detail, length;
     if ([`DECIMAL`, `ZONED`].includes(data.DATA_TYPE)) {
@@ -31,15 +24,15 @@ module.exports = class extends vscode.TreeItem {
     }
 
     const descriptionParts = [
-      data.PARAMETER_MODE,
       detail,
+      data.IS_IDENTITY === `YES` ? `Identity` : ``,
       data.IS_NULLABLE === `Y` ? `nullable` : ``,
-      data.DEFAULT,
-      data.LONG_COMMENT,
+      data.HAS_DEFAULT === `Y` ? `${data.COLUMN_DEFAULT} def.` : ``,
+      data.COLUMN_TEXT,
     ]
 
     this.description = descriptionParts.filter(part => part && part !== ``).join(`, `);
 
-    this.iconPath = new vscode.ThemeIcon(icons[data.PARAMETER_MODE]);
+    this.iconPath = new vscode.ThemeIcon(data.CONSTRAINT_NAME ? `key` : `symbol-field`);
   }
 }
