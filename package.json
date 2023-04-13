@@ -36,15 +36,15 @@
     "snippets": [
       {
         "language": "sql",
-        "path": "src/language/snippets/scalars.code-snippets"
+        "path": "snippets/scalars.code-snippets"
       },
       {
         "language": "sql",
-        "path": "src/language/snippets/variables.code-snippets"
+        "path": "snippets/variables.code-snippets"
       },
       {
         "language": "sql",
-        "path": "src/language/snippets/aggregates.code-snippets"
+        "path": "snippets/aggregates.code-snippets"
       }
     ],
     "configuration": {
