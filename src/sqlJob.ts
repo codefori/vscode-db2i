@@ -11,6 +11,27 @@ interface ConnectionResult extends ServerResponse {
   job: string;
 }
 
+interface QueryMetaData {
+  column_count: number,
+  columns: ColumnMetaData[],
+  job: string
+}
+
+interface ColumnMetaData {
+  display_size: number;
+  label: string;
+  name: string;
+  type: string;
+}
+
+export type Rows = (string|number)[][];
+
+interface QueryResult extends ServerResponse {
+  metadata: QueryMetaData,
+  is_done: boolean;
+  data: Rows;
+}
+
 interface JDBCOptions {
   naming?: "system"|"sql",
   libraries?: string[]
@@ -37,9 +58,16 @@ export class SQLJob {
       this.isRunning = true;
       return new Promise((resolve, reject) => {
         this.channel.stdin.write(content + `\n`);
-        this.channel.stdout.once(`data`, (data: Buffer) => {
-          this.isRunning = false;
-          resolve(String(data));
+
+        let outString = ``;
+        this.channel.stdout.on(`data`, (data: Buffer) => {
+          const asString = String(data);
+          outString += asString;
+          if (outString.endsWith(`\n`)) {
+            this.isRunning = false;
+            this.channel.stdout.removeAllListeners(`data`);
+            resolve(outString);
+          }
         });
       });
     } else {
@@ -72,7 +100,7 @@ export class SQLJob {
     return JSON.parse(result);
   }
 
-  async query(sql: string){
+  async query(sql: string): Promise<Rows> {
     const connectionObject = {
       id: `boop`,
       type: `sql`,
@@ -81,8 +109,10 @@ export class SQLJob {
     }
 
     const result = await this.send(JSON.stringify(connectionObject));
+
+    const queryResult: QueryResult = JSON.parse(result);
     
-    return JSON.parse(result);
+    return queryResult.data;
   }
 
   async close() {

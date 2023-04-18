@@ -10,6 +10,7 @@ interface IBMiLevels {
 
 export let Config: ConnectionStorage;
 export let OSData: IBMiLevels|undefined;
+export let sqlJOB: SQLJob|undefined;
 
 export function setupConfig(context: ExtensionContext) {
   Config = new ConnectionStorage(context);
@@ -19,13 +20,13 @@ export function setupConfig(context: ExtensionContext) {
 
     Config.setConnectionName(instance.getConnection().currentConnectionName);
 
-    const job = new SQLJob();
+    sqlJOB = new SQLJob();
 
-    await job.connect({libraries: [`qiws`, `jesseg`], naming: `system`});
+    await sqlJOB.connect({libraries: [`qiws`, `jesseg`], naming: `system`});
 
-    await job.query(`select * from qcustcdt`);
+    // await sqlJOB.query(`select * from qcustcdt`);
 
-    await job.close();
+    // await sqlJOB.close();
   });
 }
 
