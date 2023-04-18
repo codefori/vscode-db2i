@@ -1,6 +1,7 @@
 import { ExtensionContext } from "vscode";
 import { ConnectionStorage } from "./Storage";
 import { getInstance } from "./base";
+import { SQLJob } from "./sqlJob";
 
 interface IBMiLevels {
   version: number;
@@ -17,6 +18,14 @@ export function setupConfig(context: ExtensionContext) {
     const instance = getInstance();
 
     Config.setConnectionName(instance.getConnection().currentConnectionName);
+
+    const job = new SQLJob();
+
+    await job.connect({libraries: [`qiws`, `jesseg`], naming: `system`});
+
+    await job.query(`select * from qcustcdt`);
+
+    await job.close();
   });
 }
 
