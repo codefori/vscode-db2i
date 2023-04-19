@@ -2,10 +2,12 @@ import vscode from "vscode";
 import { env } from "process";
 import { TestSuitesTreeProvider } from "./testCasesTree";
 import { getInstance } from "../base";
+import { ManagerSuite } from "./manager";
 import { JobsSuite } from "./jobs";
 
 const suites : TestSuite[] = [
-  JobsSuite
+  JobsSuite,
+  ManagerSuite
 ]
 
 export type TestSuite = {

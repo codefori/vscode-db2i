@@ -73,7 +73,7 @@ export class SQLJob {
     const connectResult: ConnectionResult = JSON.parse(result);
 
     if (connectResult.success !== true) {
-      throw new Error(connectResult.message || `Failed to connect to server.`);
+      throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 
     this.jobId = connectResult.job;
@@ -94,7 +94,7 @@ export class SQLJob {
     const queryResult: QueryResult = JSON.parse(result);
 
     if (queryResult.success !== true) {
-      throw new Error(queryResult.message || `Failed to connect to server.`);
+      throw new Error(queryResult.error || `Failed to run query (unknown error)`);
     }
     
     return queryResult.data;
@@ -108,6 +108,6 @@ export class SQLJob {
 
     this.send(JSON.stringify(exitObject));
 
-    this.channel.dispose();
+    this.channel.close();
   }
 }

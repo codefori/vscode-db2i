@@ -53,6 +53,7 @@ export class SQLJobManager {
   async endAll() {
     await Promise.all(this.jobs.map(current => current.job.close()));
     this.jobs = [];
+    this.selectedJob = -1;
   }
 
   async closeJob(index?: number) {
@@ -60,9 +61,13 @@ export class SQLJobManager {
       const selected: JobInfo = this.jobs[index];
       
       selected.job.close();
-      this.jobs = this.jobs.splice(index, 1);
+      this.jobs.splice(index, 1);
       this.selectedJob = this.selectedJob-1;
     }
+  }
+
+  getSelection(): JobInfo|undefined {
+    return this.jobs[this.selectedJob];
   }
 
   runSQL(query: string): Promise<Rows> {

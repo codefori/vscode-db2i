@@ -2,7 +2,7 @@
 export interface ServerResponse {
   id: string;
   success: boolean;
-  message?: string;
+  error?: string;
 }
 
 export interface ConnectionResult extends ServerResponse {
