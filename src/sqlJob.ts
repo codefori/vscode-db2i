@@ -5,6 +5,7 @@ const initCommand = `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -jar /h
 interface ServerResponse {
   id: string;
   success: boolean;
+  message?: string;
 }
 
 interface ConnectionResult extends ServerResponse {
@@ -24,7 +25,7 @@ interface ColumnMetaData {
   type: string;
 }
 
-export type Rows = (string|number)[][];
+export type Rows = {[column: string]: string|number|boolean}[];
 
 interface QueryResult extends ServerResponse {
   metadata: QueryMetaData,
@@ -71,7 +72,7 @@ export class SQLJob {
         });
       });
     } else {
-      // TODO: throw error?
+      throw new Error(`Statement is currently being executed.`);
     }
   }
 
