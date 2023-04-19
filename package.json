@@ -111,7 +111,12 @@
           "name": "Examples",
           "visibility": "collapsed",
           "when": "code-for-ibmi:connected == true"
-        }
+        },
+        {
+					"id": "testingView-db2i",
+					"name": "Test cases",
+					"when": "code-for-ibmi:connected && vscode-db2i:testing"
+				}
       ]
     },
     "viewsWelcome": [

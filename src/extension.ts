@@ -10,6 +10,7 @@ import {loadBase} from "./base";
 import { setupConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/exampleBrowser";
+import { initialise } from "./testing";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -41,6 +42,12 @@ export function activate(context: vscode.ExtensionContext) {
   resultsProvider.initialise(context);
 
   setupConfig(context);
+
+  console.log(`Developer environment: ${process.env.DEV}`);
+  if (process.env.DEV) {
+    // Run tests if not in production build
+    initialise(context);
+  }
 }
 
 // this method is called when your extension is deactivated

@@ -67,7 +67,7 @@ export class SQLJobManager {
 
   runSQL(query: string): Promise<Rows> {
     const selected = this.jobs[this.selectedJob]
-    if (selected) {
+    if (SQLJobManager.jobSupport && selected) {
       return selected.job.query(query);
 
     } else {

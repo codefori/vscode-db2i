@@ -6,15 +6,6 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Launch Tests",
-			"program": "${workspaceFolder}/tests/index.js",
-			"request": "launch",
-			"skipFiles": [
-				"<node_internals>/**"
-			],
-			"type": "pwa-node"
-		},
-		{
 			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
@@ -27,6 +18,21 @@
 			"preLaunchTask": "npm: webpack",
 			"sourceMaps": true
 		},
-
+		{
+			"name": "Launch Tests",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"outFiles": [
+				"${workspaceFolder}/dist/**/*.js"
+			],
+			"preLaunchTask": "npm: webpack",
+			"sourceMaps": true,
+			"env": {
+				"testing": "true"
+			}
+		},
 	]
 }
