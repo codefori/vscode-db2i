@@ -1,7 +1,7 @@
-import { ExtensionContext } from "vscode";
+import { ExtensionContext, window } from "vscode";
 import { ConnectionStorage } from "./Storage";
 import { getInstance } from "./base";
-import { SQLJob } from "./sqlJob";
+import { SQLJobManager } from "./connection/manager";
 
 interface IBMiLevels {
   version: number;
@@ -10,7 +10,7 @@ interface IBMiLevels {
 
 export let Config: ConnectionStorage;
 export let OSData: IBMiLevels|undefined;
-export let sqlJOB: SQLJob|undefined;
+export let JobManager: SQLJobManager = new SQLJobManager();
 
 export function setupConfig(context: ExtensionContext) {
   Config = new ConnectionStorage(context);
@@ -20,17 +20,21 @@ export function setupConfig(context: ExtensionContext) {
 
     Config.setConnectionName(instance.getConnection().currentConnectionName);
 
-    sqlJOB = new SQLJob();
+    const backendSupport = await SQLJobManager.hasBackendServer();
 
-    await sqlJOB.connect({libraries: [`qiws`, `jesseg`], naming: `system`});
+    if (backendSupport) {
+      JobManager.newJob();
+    } else {
+      window.showInformationMessage(`Db2 for IBM i extension requires a backend to run SQL statements in a stateful manner.`);
+    }
+  });
 
-    // await sqlJOB.query(`select * from qcustcdt`);
-
-    // await sqlJOB.close();
+  getInstance().onEvent(`disconnected`, async () => {
+    JobManager.closeJob();
   });
 }
 
-export async  function fetchSystemInfo() {
+export async function fetchSystemInfo() {
   const instance = getInstance();
   const content = instance.getContent();
 

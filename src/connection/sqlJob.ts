@@ -1,47 +1,20 @@
-import { getInstance } from "./base";
+import { getInstance } from "../base";
+import { JDBCOptions, ConnectionResult, Rows, QueryResult } from "./types";
 
-const initCommand = `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -jar /home/LINUX/srv.jar`;
 
-interface ServerResponse {
-  id: string;
-  success: boolean;
-  message?: string;
-}
+export const ExecutablePath = `$HOME/.vscode/srv.jar`;
 
-interface ConnectionResult extends ServerResponse {
-  job: string;
-}
-
-interface QueryMetaData {
-  column_count: number,
-  columns: ColumnMetaData[],
-  job: string
-}
-
-interface ColumnMetaData {
-  display_size: number;
-  label: string;
-  name: string;
-  type: string;
-}
-
-export type Rows = {[column: string]: string|number|boolean}[];
-
-interface QueryResult extends ServerResponse {
-  metadata: QueryMetaData,
-  is_done: boolean;
-  data: Rows;
-}
-
-interface JDBCOptions {
-  naming?: "system"|"sql",
-  libraries?: string[]
-}
+const initCommand = `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -jar ${ExecutablePath}`;
 
 export class SQLJob {
   private channel: any;
   private isRunning: boolean = false;
-  constructor() {}
+  
+  jobId: string|undefined;
+  options: JDBCOptions;
+  constructor(options: JDBCOptions = {}) {
+    this.options = options;
+  }
 
   private static async getChannel() {
     const instance = getInstance();
@@ -62,8 +35,7 @@ export class SQLJob {
 
         let outString = ``;
         this.channel.stdout.on(`data`, (data: Buffer) => {
-          const asString = String(data);
-          outString += asString;
+          outString += String(data);
           if (outString.endsWith(`\n`)) {
             this.isRunning = false;
             this.channel.stdout.removeAllListeners(`data`);
@@ -76,16 +48,16 @@ export class SQLJob {
     }
   }
 
-  async connect(options: JDBCOptions = {}): Promise<ConnectionResult> {
+  async connect(): Promise<ConnectionResult> {
     this.channel = await SQLJob.getChannel();
 
     const props = Object
-      .keys(options)
+      .keys(this.options)
       .map(prop => {
-        if (Array.isArray(options[prop])) {
-          return `${prop}=${(options[prop] as string[]).join(`,`)}`;
+        if (Array.isArray(this.options[prop])) {
+          return `${prop}=${(this.options[prop] as string[]).join(`,`)}`;
         } else {
-          return `${prop}=${options[prop]}`;
+          return `${prop}=${this.options[prop]}`;
         }
       })
       .join(`;`)
@@ -97,8 +69,16 @@ export class SQLJob {
     }
 
     const result = await this.send(JSON.stringify(connectionObject));
+
+    const connectResult: ConnectionResult = JSON.parse(result);
+
+    if (connectResult.success !== true) {
+      throw new Error(connectResult.message || `Failed to connect to server.`);
+    }
+
+    this.jobId = connectResult.job;
     
-    return JSON.parse(result);
+    return connectResult;
   }
 
   async query(sql: string): Promise<Rows> {
@@ -112,6 +92,10 @@ export class SQLJob {
     const result = await this.send(JSON.stringify(connectionObject));
 
     const queryResult: QueryResult = JSON.parse(result);
+
+    if (queryResult.success !== true) {
+      throw new Error(queryResult.message || `Failed to connect to server.`);
+    }
     
     return queryResult.data;
   }
@@ -122,7 +106,7 @@ export class SQLJob {
       type: `exit`
     };
 
-    await this.send(JSON.stringify(exitObject));
+    this.send(JSON.stringify(exitObject));
 
     this.channel.dispose();
   }

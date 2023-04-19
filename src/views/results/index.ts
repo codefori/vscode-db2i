@@ -5,7 +5,7 @@ import * as csv from "csv/sync";
 import Configuration from "../../configuration"
 import * as html from "./html";
 import { getInstance } from "../../base";
-import { sqlJOB } from "../../config";
+import { JobManager } from "../../config";
 
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
@@ -38,7 +38,7 @@ class ResultSetPanelProvider {
 
         let data = [];
         try {
-          data = await sqlJOB.query(statement);
+          data = await JobManager.runSQL(statement);
         } catch (e) {
           this.setError(e.message);
           data = [];
@@ -177,7 +177,7 @@ export function initialise(context: vscode.ExtensionContext) {
                     resultSetProvider.setLoadingText(`Executing statement...`);
                   }
 
-                  const data = await sqlJOB.query(statement.content);
+                  const data = await JobManager.runSQL(statement.content);
 
                   if (data.length > 0) {
                     switch (statement.type) {
