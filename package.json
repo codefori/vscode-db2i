@@ -113,6 +113,11 @@
           "when": "code-for-ibmi:connected == true"
         },
         {
+					"id": "jobManager",
+					"name": "SQL Job Manager",
+					"when": "code-for-ibmi:connected && vscode-db2i:jobManager"
+				},
+        {
 					"id": "testingView-db2i",
 					"name": "Test cases",
 					"when": "code-for-ibmi:connected && vscode-db2i:testing"
@@ -123,6 +128,10 @@
       {
         "view": "queryHistory",
         "contents": "Query history will appear here."
+      },
+      {
+        "view": "jobManager",
+        "contents": "The SQL Job Manager allows you to manager multiple jobs, in which can have their own connection settings, that you can run SQL statements in.\n\nWant to run statements in a single, reusable job? \n[Start SQL job](command:vscode-db2i.jobManager.newJob)"
       }
     ],
     "keybindings": [
@@ -201,12 +210,34 @@
         "title": "Clear filter",
         "category": "Db2 for i (Examples)",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.newJob",
+        "title": "New SQL Job",
+        "category": "Db2 for i",
+        "icon": "$(database)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.closeJob",
+        "title": "Close SQL Job",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.endAll",
+        "title": "Close all SQL Jobs",
+        "category": "Db2 for i",
+        "icon": "$(clear-all)"
       }
     ],
     "menus": {
       "commandPalette": [
         {
           "command": "vscode-db2i.queryHistory.remove",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.closeJob",
           "when": "never"
         }
       ],
@@ -254,6 +285,16 @@
           "command": "vscode-db2i.examples.clearFilter",
           "group": "navigation",
           "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newJob",
+          "group": "navigation",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.endAll",
+          "group": "navigation",
+          "when": "view == jobManager"
         }
       ],
       "view/item/context": [
@@ -280,6 +321,11 @@
         {
           "command": "vscode-db2i.queryHistory.remove",
           "when": "view == queryHistory && viewItem == query",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.closeJob",
+          "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
         }
       ]

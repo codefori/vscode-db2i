@@ -2,7 +2,7 @@ import { getInstance } from "../base";
 import { ExecutablePath, SQLJob } from "./sqlJob";
 import { Rows } from "./types";
 
-interface JobInfo {
+export interface JobInfo {
   name: string;
   job: SQLJob;
 }
@@ -66,8 +66,21 @@ export class SQLJobManager {
     }
   }
 
+  closeJobByName(name: string) {
+    const id = this.jobs.findIndex(info => info.name);
+    return this.closeJob(id);
+  }
+
   getSelection(): JobInfo|undefined {
     return this.jobs[this.selectedJob];
+  }
+
+  setSelection(selectedName: string): boolean {
+    const jobExists = this.jobs.findIndex(info => info.name === selectedName);
+
+    this.selectedJob = jobExists;
+
+    return (this.selectedJob > 0);
   }
 
   runSQL(query: string): Promise<Rows> {

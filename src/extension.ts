@@ -11,6 +11,7 @@ import { setupConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/exampleBrowser";
 import { initialise } from "./testing";
+import { JobManagerView } from "./views/jobManagerView";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -24,6 +25,10 @@ export function activate(context: vscode.ExtensionContext) {
   loadBase();
 
   context.subscriptions.push(
+    vscode.window.registerTreeDataProvider(
+      `jobManager`,
+      new JobManagerView(context)
+    ),
     vscode.window.registerTreeDataProvider(
       `schemaBrowser`,
       new schemaBrowser(context)

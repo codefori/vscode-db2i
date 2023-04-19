@@ -1,4 +1,4 @@
-import { ExtensionContext, window } from "vscode";
+import { ExtensionContext, commands, window } from "vscode";
 import { ConnectionStorage } from "./Storage";
 import { getInstance } from "./base";
 import { SQLJobManager } from "./connection/manager";
@@ -22,9 +22,9 @@ export function setupConfig(context: ExtensionContext) {
 
     const backendSupport = await SQLJobManager.hasBackendServer();
 
-    if (backendSupport) {
-      JobManager.newJob();
-    } else {
+    commands.executeCommand(`setContext`, `vscode-db2i:jobManager`, backendSupport);
+
+    if (!backendSupport) {
       window.showInformationMessage(`Db2 for IBM i extension requires a backend to run SQL statements in a stateful manner.`);
     }
   });
