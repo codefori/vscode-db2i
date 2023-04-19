@@ -17,7 +17,7 @@ export const ManagerSuite: TestSuite = {
       await JobManager.endAll();
     }},
 
-    {name: `Test adding job`, test: async () => {
+    {name: `Adding a job`, test: async () => {
       // Ensure we have a blank manager first
       assert.strictEqual(JobManager.jobs.length, 0);
       assert.strictEqual(JobManager.selectedJob, -1);
@@ -43,7 +43,7 @@ export const ManagerSuite: TestSuite = {
       assert.strictEqual(badSelected, undefined);
     }},
 
-    {name: `Testing end all`, test: async () => {
+    {name: `End all jobs`, test: async () => {
       // Ensure we have a blank manager first
       assert.strictEqual(JobManager.jobs.length, 0);
       assert.strictEqual(JobManager.selectedJob, -1);
@@ -54,6 +54,33 @@ export const ManagerSuite: TestSuite = {
       // Check the job exists
       assert.strictEqual(JobManager.jobs.length, 2);
       assert.strictEqual(JobManager.selectedJob, 1);
+      
+      // End the jobs
+      await JobManager.endAll();
+      assert.strictEqual(JobManager.jobs.length, 0);
+      assert.strictEqual(JobManager.selectedJob, -1);
+    }},
+
+    {name: `runSQL method`, test: async () => {
+      // Ensure we have a blank manager first
+      assert.strictEqual(JobManager.jobs.length, 0);
+      assert.strictEqual(JobManager.selectedJob, -1);
+
+      const query = `select * from qiws.qcustcdt`;
+
+      // Run query with no jobs should still work, using the standard API
+      const rowsA = await JobManager.runSQL(query);
+      assert.notStrictEqual(rowsA.length, 0);
+
+      await JobManager.newJob();
+
+      // Check the job exists
+      assert.strictEqual(JobManager.jobs.length, 1);
+      assert.strictEqual(JobManager.selectedJob, 0);
+
+      // Run query will run the statement using the selected job
+      const rowsB = await JobManager.runSQL(query);
+      assert.notStrictEqual(rowsB.length, 0);
       
       // End the jobs
       await JobManager.endAll();

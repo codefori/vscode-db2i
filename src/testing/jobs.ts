@@ -91,5 +91,35 @@ export const JobsSuite: TestSuite = {
 
       assert.deepStrictEqual(rowsA, rowsB);
     }},
+
+    {name: `Performance measuring`, test: async () => {
+      const instance = getInstance();
+      const content = instance.getContent();
+
+      const newJob = new SQLJob({naming: `sql`});
+      await newJob.connect();
+
+      const query = `select * from qiws.qcustcdt`;
+
+      console.log(`Using: ${query}`);
+
+      const ns = performance.now();
+      await newJob.query(query);
+      await newJob.query(query);
+      await newJob.query(query);
+      const ne = performance.now();
+
+      console.log(`New query method took ${ne - ns} milliseconds.`);
+
+      newJob.close();
+
+      const os = performance.now();
+      await content.runSQL(query);
+      await content.runSQL(query);
+      await content.runSQL(query);
+      const oe = performance.now();
+
+      console.log(`Old query method took ${oe - os} milliseconds.`);
+    }},
   ]
 }
