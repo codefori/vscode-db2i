@@ -234,6 +234,13 @@
         "title": "Close all SQL Jobs",
         "category": "Db2 for i",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editJobProps",
+        "title": "Edit connection properties",
+        "category": "Db2 for i",
+        "icon": "$(edit)"
+
       }
     ],
     "menus": {
@@ -244,6 +251,10 @@
         },
         {
           "command": "vscode-db2i.jobManager.closeJob",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editJobProps",
           "when": "never"
         }
       ],
@@ -336,6 +347,11 @@
         },
         {
           "command": "vscode-db2i.jobManager.closeJob",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editJobProps",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
         }

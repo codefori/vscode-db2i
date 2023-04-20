@@ -11,7 +11,7 @@ import { setupConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/exampleBrowser";
 import { initialise } from "./testing";
-import { JobManagerView } from "./views/jobManagerView";
+import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { ServerComponent } from "./connection/serverComponent";
 
 // this method is called when your extension is activated

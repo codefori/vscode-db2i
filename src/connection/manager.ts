@@ -69,6 +69,10 @@ export class SQLJobManager {
     return this.jobs[this.selectedJob];
   }
 
+  getJob(name: string): JobInfo|undefined {
+    return this.jobs.find(info => info.name);
+  }
+
   setSelection(selectedName: string): boolean {
     const jobExists = this.jobs.findIndex(info => info.name === selectedName);
 

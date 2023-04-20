@@ -81,8 +81,8 @@ export class SQLJob {
     const connectResult: ConnectionResult = JSON.parse(result);
 
     if (connectResult.success !== true) {
-      this.status = JobStatus.NotStarted;
       this.dispose();
+      this.status = JobStatus.NotStarted;
       throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 

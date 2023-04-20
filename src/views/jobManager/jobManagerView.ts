@@ -1,7 +1,8 @@
 import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, window, workspace } from "vscode";
 import { TreeDataProvider } from "vscode";
-import { Config, JobManager } from "../config";
-import { JobInfo } from "../connection/manager";
+import { Config, JobManager } from "../../config";
+import { JobInfo } from "../../connection/manager";
+import { editJobUi } from "./editJob";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -26,11 +27,32 @@ export class JobManagerView implements TreeDataProvider<any> {
         this.refresh();
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.closeJob`, async (node?: SQLJobItem) => {
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.editJobProps`, async (node?: SQLJobItem) => {
         if (node) {
           const id = node.label as string;
-          await JobManager.closeJobByName(id);
-          this.refresh();
+          const selected = await JobManager.getJob(id);
+
+          editJobUi(selected.job.options, selected.name).then(newOptions => {
+            if (newOptions) {
+              window.withProgress({location: ProgressLocation.Window}, async (progress) => {
+                progress.report({message: `Ending current job`});
+
+                await selected.job.close();
+
+                progress.report({message: `Starting new job`});
+
+                selected.job.options = newOptions;
+                
+                try {
+                  await selected.job.connect();
+                } catch (e) {
+                  window.showErrorMessage(`Failed to start new job with updated properties.`);
+                }
+
+                this.refresh();
+              })
+            }
+          })
         }
       }),
 
