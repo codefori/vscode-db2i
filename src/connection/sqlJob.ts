@@ -2,15 +2,19 @@ import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult } from "./types";
 
+export enum JobStatus {
+  NotStarted,
+  Ready,
+  Busy,
+  Ended
+}
+
 export class SQLJob {
   private channel: any;
-  private isRunning: boolean = false;
-  
+  private status: JobStatus = JobStatus.NotStarted;
+
   jobId: string|undefined;
-  options: JDBCOptions;
-  constructor(options: JDBCOptions = {}) {
-    this.options = options;
-  }
+  constructor(public options: JDBCOptions = {}) {}
 
   private static async getChannel() {
     const instance = getInstance();
@@ -24,8 +28,8 @@ export class SQLJob {
   }
 
   private async send(content: string): Promise<string> {
-    if (!this.isRunning) {
-      this.isRunning = true;
+    if (this.status === JobStatus.Ready) {
+      this.status = JobStatus.Busy;
       ServerComponent.writeOutput(content);
       return new Promise((resolve, reject) => {
         this.channel.stdin.write(content + `\n`);
@@ -34,7 +38,7 @@ export class SQLJob {
         this.channel.stdout.on(`data`, (data: Buffer) => {
           outString += String(data);
           if (outString.endsWith(`\n`)) {
-            this.isRunning = false;
+            this.status = JobStatus.Ready;
             this.channel.stdout.removeAllListeners(`data`);
             ServerComponent.writeOutput(outString);
             resolve(outString);
@@ -42,12 +46,14 @@ export class SQLJob {
         });
       });
     } else {
-      throw new Error(`Statement is currently being executed.`);
+      throw new Error(`Job is currently busy.`);
     }
   }
 
   async connect(): Promise<ConnectionResult> {
     this.channel = await SQLJob.getChannel();
+
+    this.status = JobStatus.Ready;
 
     const props = Object
       .keys(this.options)
@@ -71,10 +77,21 @@ export class SQLJob {
     const connectResult: ConnectionResult = JSON.parse(result);
 
     if (connectResult.success !== true) {
+      this.status = JobStatus.NotStarted;
+      this.dispose();
       throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 
+    this.channel.on(`error`, () => {
+      this.dispose();
+    })
+
+    this.channel.on(`close`, () => {
+      this.dispose();
+    })
+
     this.jobId = connectResult.job;
+    this.status = JobStatus.Ready;
     
     return connectResult;
   }
@@ -106,6 +123,11 @@ export class SQLJob {
 
     this.send(JSON.stringify(exitObject));
 
+    this.dispose();
+  }
+
+  dispose() {
     this.channel.close();
+    this.status = JobStatus.Ended;
   }
 }
