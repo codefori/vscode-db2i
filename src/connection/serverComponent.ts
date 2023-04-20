@@ -37,7 +37,7 @@ export class ServerComponent {
     return;
   }
 
-  static async hasBackendServer(): Promise<boolean> {
+  static async initialise(): Promise<boolean> {
     const instance = getInstance();
     const connection = instance.getConnection();
 
@@ -47,10 +47,15 @@ export class ServerComponent {
 
     this.installed = (exists.code === 0);
 
+    this.checkForUpdate();
+
     return this.installed;
   }
 
-  static async installNewVersion() {
+  /**
+   * Returns whether server component is installed.
+   */
+  private static async checkForUpdate() {
     const instance = getInstance();
     const connection = instance.getConnection();
 
@@ -66,53 +71,56 @@ export class ServerComponent {
         }
       });
 
-      console.log(result);
       const newAsset = result.data.assets.find(asset => asset.name.endsWith(`.jar`));
 
       if (newAsset) {
         const basename = newAsset.name;
-        const currentlyInstalled = Config.getServerComponentName();
+        const lastInstalledName = Config.getServerComponentName();
 
-        if (currentlyInstalled !== basename) {
-          // This means we're currently running a different version, 
-          // or maybe not at all (currentlyInstalled can be undefined)
+        if (lastInstalledName !== basename || this.installed === false) {
+          const updateQuestion = await window.showInformationMessage(`An update to the database server component is available: ${basename}`, `Update`);
 
-          // First, we need their home directory
-          const commandResult = await connection.sendCommand({
-            command: `echo ${ExecutablePathDir}`
-          });
+          if (updateQuestion === `Update`) {
+            // This means we're currently running a different version, 
+            // or maybe not at all (currentlyInstalled can be undefined)
 
-          if (commandResult.code === 0 && commandResult.stderr === ``) {
-            const remotePath = path.posix.join(commandResult.stdout, basename)
-
-            // Next, download the new version to our local device
-            const requestOptions = octokit.request.endpoint("GET /repos/:owner/:repo/releases/assets/:asset_id", {
-              headers: {
-                Accept: "application/octet-stream"
-              },
-              owner,
-              repo,
-              asset_id: newAsset.id
+            // First, we need their home directory
+            const commandResult = await connection.sendCommand({
+              command: `echo ${ExecutablePathDir}`
             });
 
-            console.log(requestOptions);
+            if (commandResult.code === 0 && commandResult.stderr === ``) {
+              const remotePath = path.posix.join(commandResult.stdout, basename)
 
-            const tempFile = path.join(os.tmpdir(), basename);
+              // Next, download the new version to our local device
+              const requestOptions = octokit.request.endpoint("GET /repos/:owner/:repo/releases/assets/:asset_id", {
+                headers: {
+                  Accept: "application/octet-stream"
+                },
+                owner,
+                repo,
+                asset_id: newAsset.id
+              });
 
-            await downloadFile(requestOptions.url, tempFile);
+              console.log(requestOptions);
 
-            await connection.uploadFiles([{local: tempFile, remote: remotePath}]);
+              const tempFile = path.join(os.tmpdir(), basename);
 
-            await Config.setServerComponentName(basename);
+              await downloadFile(requestOptions.url, tempFile);
 
-            window.showInformationMessage(`Db2 for IBM i extension requires you to disconnect for an update to take place. You can reconnect after..`, `Do it`).then(result => {
-              if (result === `Do it`) {
-                commands.executeCommand(`code-for-ibmi.disconnect`);
-              }
-            })
+              await connection.uploadFiles([{local: tempFile, remote: remotePath}]);
 
-          } else {
-            window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`);
+              await Config.setServerComponentName(basename);
+
+              window.showInformationMessage(`Db2 for IBM i extension requires you to disconnect for an update to take place. You can reconnect after..`, `Do it`).then(result => {
+                if (result === `Do it`) {
+                  commands.executeCommand(`code-for-ibmi.disconnect`);
+                }
+              })
+              
+            } else {
+              window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`);
+            }
           }
 
         } else {
@@ -123,9 +131,11 @@ export class ServerComponent {
         // Uh oh. A release was made by there's no jar file??
       }
     } catch (e) {
-      window.showErrorMessage(`Something went really wrong during the update process!`);
+      window.showErrorMessage(`Something went really wrong during the update process! ${e.message}`);
       console.log(e);
     }
+
+    return this.installed;
   }
 }
 

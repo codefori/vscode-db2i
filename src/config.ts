@@ -21,11 +21,10 @@ export function setupConfig(context: ExtensionContext) {
 
     Config.setConnectionName(instance.getConnection().currentConnectionName);
 
-    const backendSupport = await ServerComponent.hasBackendServer();
+    const backendSupport = await ServerComponent.initialise();
 
+    SQLJobManager.jobSupport = backendSupport;
     commands.executeCommand(`setContext`, `vscode-db2i:jobManager`, backendSupport);
-
-    ServerComponent.installNewVersion();
   });
 
   getInstance().onEvent(`disconnected`, async () => {
