@@ -3,10 +3,10 @@ import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult } from "./types";
 
 export enum JobStatus {
-  NotStarted,
-  Ready,
-  Busy,
-  Ended
+  NotStarted = "notStarted",
+  Ready = "ready",
+  Busy = "busy",
+  Ended = "ended"
 }
 
 export class SQLJob {
@@ -48,6 +48,10 @@ export class SQLJob {
     } else {
       throw new Error(`Job is currently busy.`);
     }
+  }
+
+  getStatus() {
+    return this.status;
   }
 
   async connect(): Promise<ConnectionResult> {

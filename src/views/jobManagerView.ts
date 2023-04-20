@@ -57,7 +57,9 @@ export class JobManagerView implements TreeDataProvider<any> {
   }
 
   async getChildren(): Promise<SQLJobItem[]> {
-    return JobManager.jobs.map((info, index) => new SQLJobItem(info, index === JobManager.selectedJob));
+    return JobManager
+      .getRunningJobs()
+      .map((info, index) => new SQLJobItem(info, index === JobManager.selectedJob));
   }
 }
 

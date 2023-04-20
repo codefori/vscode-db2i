@@ -1,6 +1,6 @@
 import assert from "assert";
 import { TestSuite } from ".";
-import { SQLJob } from "../connection/sqlJob";
+import { JobStatus, SQLJob } from "../connection/sqlJob";
 import { getInstance } from "../base";
 import { ServerComponent } from "../connection/serverComponent";
 
@@ -17,13 +17,19 @@ export const JobsSuite: TestSuite = {
     {name: `Creating a job`, test: async () => {
       const newJob = new SQLJob();
 
+      assert.strictEqual(newJob.getStatus(), JobStatus.NotStarted);
+
       assert.strictEqual(newJob.id, undefined);
 
       await newJob.connect();
 
+      assert.strictEqual(newJob.getStatus(), JobStatus.Ready);
+
       assert.notStrictEqual(newJob.id, undefined);
 
       await newJob.close();
+
+      assert.strictEqual(newJob.getStatus(), JobStatus.Ended);
     }},
 
     {name: `Jobs have different job IDs`, test: async () => {

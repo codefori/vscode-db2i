@@ -2,6 +2,7 @@ import assert from "assert";
 import { TestSuite } from ".";
 import { JobManager } from "../config";
 import { ServerComponent } from "../connection/serverComponent";
+import { JobStatus } from "../connection/sqlJob";
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,
@@ -16,24 +17,26 @@ export const ManagerSuite: TestSuite = {
 
     {name: `Adding a job`, test: async () => {
       // Ensure we have a blank manager first
-      assert.strictEqual(JobManager.jobs.length, 0);
+      await JobManager.endAll();
+      assert.strictEqual(JobManager.getRunningJobs().length, 0);
       assert.strictEqual(JobManager.selectedJob, -1);
 
       // Add a new job
       await JobManager.newJob();
 
       // Check the job exists
-      assert.strictEqual(JobManager.jobs.length, 1);
+      assert.strictEqual(JobManager.getRunningJobs().length, 1);
       assert.strictEqual(JobManager.selectedJob, 0);
       
       // Check the job is really real
       const selected = JobManager.getSelection();
       assert.notStrictEqual(selected, undefined);
       assert.notStrictEqual(selected.job.id, undefined);
+      assert.strictEqual(selected.job.getStatus(), JobStatus.Ready);
       
       // Close the job and see things go away
       JobManager.closeJob(JobManager.selectedJob);
-      assert.strictEqual(JobManager.jobs.length, 0);
+      assert.strictEqual(JobManager.getRunningJobs().length, 0);
       assert.strictEqual(JobManager.selectedJob, -1);
       
       const badSelected = JobManager.getSelection();
@@ -42,25 +45,27 @@ export const ManagerSuite: TestSuite = {
 
     {name: `End all jobs`, test: async () => {
       // Ensure we have a blank manager first
-      assert.strictEqual(JobManager.jobs.length, 0);
+      await JobManager.endAll();
+      assert.strictEqual(JobManager.getRunningJobs().length, 0);
       assert.strictEqual(JobManager.selectedJob, -1);
 
       await JobManager.newJob();
       await JobManager.newJob();
 
       // Check the job exists
-      assert.strictEqual(JobManager.jobs.length, 2);
+      assert.strictEqual(JobManager.getRunningJobs().length, 2);
       assert.strictEqual(JobManager.selectedJob, 1);
       
       // End the jobs
       await JobManager.endAll();
-      assert.strictEqual(JobManager.jobs.length, 0);
+      assert.strictEqual(JobManager.getRunningJobs().length, 0);
       assert.strictEqual(JobManager.selectedJob, -1);
     }},
 
     {name: `runSQL method`, test: async () => {
       // Ensure we have a blank manager first
-      assert.strictEqual(JobManager.jobs.length, 0);
+      await JobManager.endAll();
+      assert.strictEqual(JobManager.getRunningJobs().length, 0);
       assert.strictEqual(JobManager.selectedJob, -1);
 
       const query = `select * from qiws.qcustcdt`;
@@ -72,7 +77,7 @@ export const ManagerSuite: TestSuite = {
       await JobManager.newJob();
 
       // Check the job exists
-      assert.strictEqual(JobManager.jobs.length, 1);
+      assert.strictEqual(JobManager.getRunningJobs().length, 1);
       assert.strictEqual(JobManager.selectedJob, 0);
 
       // Run query will run the statement using the selected job
@@ -81,7 +86,7 @@ export const ManagerSuite: TestSuite = {
       
       // End the jobs
       await JobManager.endAll();
-      assert.strictEqual(JobManager.jobs.length, 0);
+      assert.strictEqual(JobManager.getRunningJobs().length, 0);
       assert.strictEqual(JobManager.selectedJob, -1);
     }},
   ]

@@ -1,5 +1,5 @@
 import { getInstance } from "../base";
-import { SQLJob } from "./sqlJob";
+import { JobStatus, SQLJob } from "./sqlJob";
 import { Rows } from "./types";
 
 export interface JobInfo {
@@ -10,8 +10,9 @@ export interface JobInfo {
 export class SQLJobManager {
   static jobSupport: boolean = false;
 
+  private totalJobs = 0;
+  private jobs: JobInfo[] = [];
   selectedJob: number = -1;
-  jobs: JobInfo[] = [];
 
   constructor() {}
 
@@ -25,8 +26,10 @@ export class SQLJobManager {
       try {
         await newJob.connect();
 
+        this.totalJobs += 1;
+
         this.jobs.push({
-          name: `New job ${this.jobs.length}`,
+          name: `New job ${this.totalJobs}`,
           job: newJob
         });
 
@@ -35,6 +38,10 @@ export class SQLJobManager {
         throw e;
       }
     }
+  }
+
+  getRunningJobs() {
+    return this.jobs.filter(info => [JobStatus.Ready, JobStatus.Busy].includes(info.job.getStatus()));
   }
 
   async endAll() {
