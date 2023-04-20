@@ -143,6 +143,12 @@
     ],
     "commands": [
       {
+        "command": "vscode-db2i.openSqlDocument",
+        "title": "Open SQL document",
+        "category": "Db2 for i",
+        "icon": "$(new-file)"
+      },
+      {
         "command": "vscode-db2i.refreshSchemaBrowser",
         "title": "Refresh Schema Browser",
         "category": "Db2 for i",
@@ -285,6 +291,11 @@
           "command": "vscode-db2i.examples.clearFilter",
           "group": "navigation",
           "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.openSqlDocument",
+          "group": "navigation",
+          "when": "view == jobManager"
         },
         {
           "command": "vscode-db2i.jobManager.newJob",
