@@ -166,7 +166,7 @@ export function initialise(context: vscode.ExtensionContext) {
 
               } else {
                 const scrollingEnabled = Configuration.get(`scrollingResultSet`);
-                if (scrollingEnabled && statement.type === `statement` && this.isBasicStatement(statement.content)) {
+                if (scrollingEnabled && statement.type === `statement` && isBasicStatement(statement.content)) {
                 // If it's a basic statement, we can let it scroll!
                   resultSetProvider.setScrolling(statement.content);
 
