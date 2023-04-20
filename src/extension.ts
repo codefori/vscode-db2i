@@ -12,6 +12,7 @@ import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/exampleBrowser";
 import { initialise } from "./testing";
 import { JobManagerView } from "./views/jobManagerView";
+import { ServerComponent } from "./connection/serverComponent";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed

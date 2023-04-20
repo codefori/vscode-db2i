@@ -1,10 +1,6 @@
 import { getInstance } from "../base";
+import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult } from "./types";
-
-
-export const ExecutablePath = `$HOME/.vscode/srv.jar`;
-
-const initCommand = `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -jar ${ExecutablePath}`;
 
 export class SQLJob {
   private channel: any;
@@ -20,7 +16,7 @@ export class SQLJob {
     const instance = getInstance();
     const connection = instance.getConnection();
     return new Promise((resolve, reject) => {
-      connection.client.connection.exec(initCommand, {}, (err: any, stream: any) => {
+      connection.client.connection.exec(ServerComponent.getInitCommand(), {}, (err: any, stream: any) => {
         if (err) reject(err);
         resolve(stream);
       })

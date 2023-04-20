@@ -1,5 +1,5 @@
 import { getInstance } from "../base";
-import { ExecutablePath, SQLJob } from "./sqlJob";
+import { SQLJob } from "./sqlJob";
 import { Rows } from "./types";
 
 export interface JobInfo {
@@ -14,19 +14,6 @@ export class SQLJobManager {
   jobs: JobInfo[] = [];
 
   constructor() {}
-
-  static async hasBackendServer(): Promise<boolean> {
-    const instance = getInstance();
-    const connection = instance.getConnection();
-
-    const exists = await connection.sendCommand({
-      command: `ls ${ExecutablePath}`
-    });
-
-    SQLJobManager.jobSupport = (exists.code === 0);
-
-    return SQLJobManager.jobSupport;
-  }
 
   async newJob(predefinedJob?: SQLJob) {
     if (SQLJobManager.jobSupport) {

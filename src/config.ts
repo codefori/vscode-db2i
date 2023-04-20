@@ -2,6 +2,7 @@ import { ExtensionContext, commands, window } from "vscode";
 import { ConnectionStorage } from "./Storage";
 import { getInstance } from "./base";
 import { SQLJobManager } from "./connection/manager";
+import { ServerComponent } from "./connection/serverComponent";
 
 interface IBMiLevels {
   version: number;
@@ -20,13 +21,11 @@ export function setupConfig(context: ExtensionContext) {
 
     Config.setConnectionName(instance.getConnection().currentConnectionName);
 
-    const backendSupport = await SQLJobManager.hasBackendServer();
+    const backendSupport = await ServerComponent.hasBackendServer();
 
     commands.executeCommand(`setContext`, `vscode-db2i:jobManager`, backendSupport);
 
-    if (!backendSupport) {
-      window.showInformationMessage(`Db2 for IBM i extension requires a backend to run SQL statements in a stateful manner.`);
-    }
+    ServerComponent.installNewVersion();
   });
 
   getInstance().onEvent(`disconnected`, async () => {

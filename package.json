@@ -113,15 +113,15 @@
           "when": "code-for-ibmi:connected == true"
         },
         {
-					"id": "jobManager",
-					"name": "SQL Job Manager",
-					"when": "code-for-ibmi:connected && vscode-db2i:jobManager"
-				},
+          "id": "jobManager",
+          "name": "SQL Job Manager",
+          "when": "code-for-ibmi:connected && vscode-db2i:jobManager"
+        },
         {
-					"id": "testingView-db2i",
-					"name": "Test cases",
-					"when": "code-for-ibmi:connected && vscode-db2i:testing"
-				}
+          "id": "testingView-db2i",
+          "name": "Test cases",
+          "when": "code-for-ibmi:connected && vscode-db2i:testing"
+        }
       ]
     },
     "viewsWelcome": [
@@ -357,6 +357,8 @@
   "dependencies": {
     "@vscode/webview-ui-toolkit": "^1.0.0",
     "csv": "^6.1.3",
+    "node-fetch": "^3.3.1",
+    "octokit": "^2.0.14",
     "sql-formatter": "^4.0.2"
   }
 }
