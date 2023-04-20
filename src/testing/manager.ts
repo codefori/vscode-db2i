@@ -29,7 +29,7 @@ export const ManagerSuite: TestSuite = {
       // Check the job is really real
       const selected = JobManager.getSelection();
       assert.notStrictEqual(selected, undefined);
-      assert.notStrictEqual(selected.job.jobId, undefined);
+      assert.notStrictEqual(selected.job.id, undefined);
       
       // Close the job and see things go away
       JobManager.closeJob(JobManager.selectedJob);

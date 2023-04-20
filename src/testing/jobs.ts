@@ -17,11 +17,11 @@ export const JobsSuite: TestSuite = {
     {name: `Creating a job`, test: async () => {
       const newJob = new SQLJob();
 
-      assert.strictEqual(newJob.jobId, undefined);
+      assert.strictEqual(newJob.id, undefined);
 
       await newJob.connect();
 
-      assert.notStrictEqual(newJob.jobId, undefined);
+      assert.notStrictEqual(newJob.id, undefined);
 
       await newJob.close();
     }},
@@ -33,7 +33,7 @@ export const JobsSuite: TestSuite = {
       await jobA.connect();
       await jobB.connect();
 
-      assert.notStrictEqual(jobA.jobId, jobB.jobId);
+      assert.notStrictEqual(jobA.id, jobB.id);
 
       await jobA.close();
       await jobB.close();

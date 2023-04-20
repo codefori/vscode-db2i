@@ -13,7 +13,7 @@ export class SQLJob {
   private channel: any;
   private status: JobStatus = JobStatus.NotStarted;
 
-  jobId: string|undefined;
+  id: string|undefined;
   constructor(public options: JDBCOptions = {}) {}
 
   private static async getChannel() {
@@ -90,7 +90,7 @@ export class SQLJob {
       this.dispose();
     })
 
-    this.jobId = connectResult.job;
+    this.id = connectResult.job;
     this.status = JobStatus.Ready;
     
     return connectResult;

@@ -66,7 +66,7 @@ class SQLJobItem extends vscode.TreeItem {
     super(jobInfo.name, TreeItemCollapsibleState.None);
 
     this.contextValue = `sqlJob`;
-    this.description = jobInfo.job.jobId;
+    this.description = jobInfo.job.id;
 
     this.command = {
       command: selectJobCommand,
