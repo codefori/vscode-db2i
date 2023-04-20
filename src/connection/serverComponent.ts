@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 
 import { Config } from "../config";
 import path from "path";
-import { commands, window } from "vscode";
+import { OutputChannel, commands, window } from "vscode";
 
 import { writeFile } from "fs/promises";
 import os from "os";
@@ -15,7 +15,22 @@ const octokit = new Octokit();
 const ExecutablePathDir = `$HOME/.vscode/`;
 
 export class ServerComponent {
+  static outputChannel: OutputChannel;
   static installed: boolean = false;
+
+  static initOutputChannel() {
+    if (!this.outputChannel) {
+      this.outputChannel = window.createOutputChannel(`Db2 for i Server Component`, `json`);
+    }
+
+    return this.outputChannel;
+  }
+
+  static writeOutput(jsonString: string) {
+    if (this.outputChannel) {
+      this.outputChannel.appendLine(jsonString);
+    }
+  }
 
   static getInitCommand(): string|undefined {
     const path = this.getComponentPath();
@@ -102,11 +117,7 @@ export class ServerComponent {
 
               await Config.setServerComponentName(basename);
 
-              window.showInformationMessage(`Db2 for IBM i extension requires you to disconnect for an update to take place. You can reconnect after..`, `Do it`).then(result => {
-                if (result === `Do it`) {
-                  commands.executeCommand(`code-for-ibmi.disconnect`);
-                }
-              })
+              window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
               
             } else {
               window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`);

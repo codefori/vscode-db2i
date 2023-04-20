@@ -16,7 +16,7 @@ export class SQLJob {
     const instance = getInstance();
     const connection = instance.getConnection();
     return new Promise((resolve, reject) => {
-      connection.client.connection.exec(ServerComponent.getInitCommand(), {}, (err: any, stream: any) => {
+      connection.client.connection.exec(ServerComponent.getInitCommand() + ` && exit`, {}, (err: any, stream: any) => {
         if (err) reject(err);
         resolve(stream);
       })
@@ -26,6 +26,7 @@ export class SQLJob {
   private async send(content: string): Promise<string> {
     if (!this.isRunning) {
       this.isRunning = true;
+      ServerComponent.writeOutput(content);
       return new Promise((resolve, reject) => {
         this.channel.stdin.write(content + `\n`);
 
@@ -35,6 +36,7 @@ export class SQLJob {
           if (outString.endsWith(`\n`)) {
             this.isRunning = false;
             this.channel.stdout.removeAllListeners(`data`);
+            ServerComponent.writeOutput(outString);
             resolve(outString);
           }
         });

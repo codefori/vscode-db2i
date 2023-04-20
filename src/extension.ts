@@ -26,6 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
   loadBase();
 
   context.subscriptions.push(
+    ServerComponent.initOutputChannel(),
     vscode.window.registerTreeDataProvider(
       `jobManager`,
       new JobManagerView(context)
