@@ -167,7 +167,7 @@ export function generateResults(rows: object[]): string {
     columnDataKey: column,
   }));
 
-  const inlineData = this.generateTable(`results`, columns, rows);
+  const inlineData = generateTable(`results`, columns, rows);
 
   return /*html*/ `
     <!DOCTYPE html>
