@@ -1,16 +1,13 @@
 import assert from "assert";
 import { TestSuite } from ".";
-import { commands } from "vscode";
 import { JobManager } from "../config";
-import { SQLJobManager } from "../connection/manager";
-import { SQLJob } from "../connection/sqlJob";
-import { getInstance } from "../base";
+import { ServerComponent } from "../connection/serverComponent";
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,
   tests: [
     {name: `Backend check`, test: async () => {
-      const backendInstalled = await SQLJobManager.hasBackendServer();
+      const backendInstalled = await ServerComponent.initialise(false);
   
       // To run these tests, we need the backend server. If this test fails. Don't bother
       assert.strictEqual(backendInstalled, true);
