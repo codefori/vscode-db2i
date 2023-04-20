@@ -74,7 +74,7 @@ export class SQLJobManager {
 
     this.selectedJob = jobExists;
 
-    return (this.selectedJob > 0);
+    return (this.selectedJob >= 0);
   }
 
   runSQL(query: string): Promise<Rows> {

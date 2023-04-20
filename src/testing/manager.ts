@@ -89,5 +89,29 @@ export const ManagerSuite: TestSuite = {
       assert.strictEqual(JobManager.getRunningJobs().length, 0);
       assert.strictEqual(JobManager.selectedJob, -1);
     }},
+
+    {name: `Set selected by name`, test: async () => {
+      // Ensure we have a blank manager first
+      await JobManager.endAll();
+      assert.strictEqual(JobManager.getRunningJobs().length, 0);
+      assert.strictEqual(JobManager.selectedJob, -1);
+
+      await JobManager.newJob();
+      await JobManager.newJob();
+
+      const runningJobs = JobManager.getRunningJobs();
+
+      // Check the job exists
+      assert.strictEqual(runningJobs.length, 2);
+
+      // Returns false due to bad name
+      assert.strictEqual(JobManager.setSelection(`badName`), false);
+
+      assert.strictEqual(JobManager.setSelection(runningJobs[0].name), true);
+
+      assert.strictEqual(JobManager.getSelection().name, runningJobs[0].name);
+
+      await JobManager.endAll();
+    }},
   ]
 }
