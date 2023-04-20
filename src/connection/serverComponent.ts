@@ -37,7 +37,7 @@ export class ServerComponent {
     return;
   }
 
-  static async initialise(): Promise<boolean> {
+  static async initialise(withUpdate = true): Promise<boolean> {
     const instance = getInstance();
     const connection = instance.getConnection();
 
@@ -47,7 +47,8 @@ export class ServerComponent {
 
     this.installed = (exists.code === 0);
 
-    this.checkForUpdate();
+    if (withUpdate)
+      this.checkForUpdate();
 
     return this.installed;
   }
@@ -74,6 +75,7 @@ export class ServerComponent {
       const newAsset = result.data.assets.find(asset => asset.name.endsWith(`.jar`));
 
       if (newAsset) {
+        const url = newAsset.browser_download_url;
         const basename = newAsset.name;
         const lastInstalledName = Config.getServerComponentName();
 
@@ -92,21 +94,9 @@ export class ServerComponent {
             if (commandResult.code === 0 && commandResult.stderr === ``) {
               const remotePath = path.posix.join(commandResult.stdout, basename)
 
-              // Next, download the new version to our local device
-              const requestOptions = octokit.request.endpoint("GET /repos/:owner/:repo/releases/assets/:asset_id", {
-                headers: {
-                  Accept: "application/octet-stream"
-                },
-                owner,
-                repo,
-                asset_id: newAsset.id
-              });
-
-              console.log(requestOptions);
-
               const tempFile = path.join(os.tmpdir(), basename);
 
-              await downloadFile(requestOptions.url, tempFile);
+              await downloadFile(url, tempFile);
 
               await connection.uploadFiles([{local: tempFile, remote: remotePath}]);
 
