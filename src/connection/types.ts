@@ -12,7 +12,7 @@ export interface ConnectionResult extends ServerResponse {
 export interface QueryResult extends ServerResponse {
   metadata: QueryMetaData,
   is_done: boolean;
-  data: Rows;
+  data: any;
 }
 
 export interface QueryMetaData {

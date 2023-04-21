@@ -246,6 +246,12 @@
         "title": "Copy job ID",
         "category": "Db2 for i",
         "icon": "$(keyboard)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.viewJobLog",
+        "title": "View job log",
+        "category": "Db2 for i",
+        "icon": "$(info)"
       }
     ],
     "menus": {
@@ -260,6 +266,14 @@
         },
         {
           "command": "vscode-db2i.jobManager.editJobProps",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.copyJobId",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.viewJobLog",
           "when": "never"
         }
       ],
@@ -362,6 +376,11 @@
         },
         {
           "command": "vscode-db2i.jobManager.copyJobId",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.viewJobLog",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
         }

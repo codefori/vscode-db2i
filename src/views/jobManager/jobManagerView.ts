@@ -3,6 +3,7 @@ import { TreeDataProvider } from "vscode";
 import { Config, JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { editJobUi } from "./editJob";
+import { displayJobLog } from "./jobLog";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -32,6 +33,17 @@ export class JobManagerView implements TreeDataProvider<any> {
           const id = node.label as string;
           await JobManager.closeJobByName(id);
           this.refresh();
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.viewJobLog`, async (node?: SQLJobItem) => {
+        if (node) {
+          const id = node.label as string;
+          const selected = await JobManager.getJob(id);
+
+          if (selected) {
+            displayJobLog(selected);
+          }
         }
       }),
 

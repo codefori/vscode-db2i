@@ -100,7 +100,7 @@ export class SQLJob {
     return connectResult;
   }
 
-  async query(sql: string): Promise<Rows> {
+  async query<T>(sql: string): Promise<T[]> {
     const connectionObject = {
       id: `boop`,
       type: `sql`,
