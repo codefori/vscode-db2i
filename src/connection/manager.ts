@@ -75,7 +75,7 @@ export class SQLJobManager {
   }
 
   getJob(name: string): JobInfo|undefined {
-    return this.jobs.find(info => info.name);
+    return this.jobs.find(info => info.name === name);
   }
 
   setSelection(selectedName: string): boolean {
