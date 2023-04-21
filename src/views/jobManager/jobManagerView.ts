@@ -27,6 +27,14 @@ export class JobManagerView implements TreeDataProvider<any> {
         this.refresh();
       }),
 
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.closeJob`, async (node?: SQLJobItem) => {
+        if (node) {
+          const id = node.label as string;
+          await JobManager.closeJobByName(id);
+          this.refresh();
+        }
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.jobManager.editJobProps`, async (node?: SQLJobItem) => {
         if (node) {
           const id = node.label as string;
