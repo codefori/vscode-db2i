@@ -21,7 +21,12 @@ export class SQLJobManager {
       const instance = getInstance();
       const config = instance.getConfig();
 
-      const newJob = predefinedJob || (new SQLJob({libraries: [config.currentLibrary, ...config.libraryList], naming: `system`}));
+      const newJob = predefinedJob || (new SQLJob({
+        libraries: [config.currentLibrary, ...config.libraryList], 
+        naming: `system`, 
+        "full open": false, 
+        "transaction isolation": "none"
+      }));
 
       try {
         await newJob.connect();

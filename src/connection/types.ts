@@ -31,6 +31,8 @@ export interface ColumnMetaData {
 export type Rows = {[column: string]: string|number|boolean}[];
 
 export interface JDBCOptions {
-  naming?: "system"|"sql",
-  libraries?: string[]
+  naming?: "system"|"sql";
+  libraries?: string[];
+  "full open"?: boolean;
+  "transaction isolation"?: "none" | "read uncommitted"| "read committed"| "repeatable read"| "serializable"
 }
