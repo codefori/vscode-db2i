@@ -131,7 +131,7 @@
       },
       {
         "view": "jobManager",
-        "contents": "The SQL Job Manager allows you to manager multiple jobs, in which can have their own connection settings, that you can run SQL statements in.\n\nWant to run statements in a single, reusable job? \n[Start SQL job](command:vscode-db2i.jobManager.newJob)"
+        "contents": "The SQL Job Manager allows you to manage multiple jobs and can each have their own connection settings, that you can run SQL statements in.\n\nUntil you have an SQL job running, all user run SQL statements will run in a new jobs.\n\nWant to run statements in a single, reusable job? \n[Start SQL job](command:vscode-db2i.jobManager.newJob)"
       }
     ],
     "keybindings": [
@@ -240,7 +240,12 @@
         "title": "Edit connection properties",
         "category": "Db2 for i",
         "icon": "$(edit)"
-
+      },
+      {
+        "command": "vscode-db2i.jobManager.copyJobId",
+        "title": "Copy job ID",
+        "category": "Db2 for i",
+        "icon": "$(keyboard)"
       }
     ],
     "menus": {
@@ -352,6 +357,11 @@
         },
         {
           "command": "vscode-db2i.jobManager.editJobProps",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.copyJobId",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
         }

@@ -1,4 +1,4 @@
-import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, window, workspace } from "vscode";
+import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, env, window, workspace } from "vscode";
 import { TreeDataProvider } from "vscode";
 import { Config, JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
@@ -32,6 +32,18 @@ export class JobManagerView implements TreeDataProvider<any> {
           const id = node.label as string;
           await JobManager.closeJobByName(id);
           this.refresh();
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.copyJobId`, async (node?: SQLJobItem) => {
+        if (node) {
+          const id = node.label as string;
+          const selected = await JobManager.getJob(id);
+
+          if (selected) {
+            await env.clipboard.writeText(selected.job.id);
+            window.showInformationMessage(`Copied ${selected.job.id} to clipboard.`);
+          }
         }
       }),
 
