@@ -151,7 +151,7 @@ export function initialise(context: vscode.ExtensionContext) {
                 })
 
                 if (commandResult.code === 0 || commandResult.code === null) {
-                  vscode.window.showInformationMessage(`Command executed successfuly.`);
+                  vscode.window.showInformationMessage(`Command executed successfully.`);
                 } else {
                   vscode.window.showErrorMessage(`Command failed to run.`);
                 }
