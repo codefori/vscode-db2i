@@ -31,8 +31,29 @@ export interface ColumnMetaData {
 export type Rows = {[column: string]: string|number|boolean}[];
 
 export interface JDBCOptions {
+  // Format properties
   naming?: "system"|"sql";
-  libraries?: string[];
+
+  // Other properties
   "full open"?: boolean;
-  "transaction isolation"?: "none" | "read uncommitted"| "read committed"| "repeatable read"| "serializable"
+  
+  // System Properties
+  libraries?: string[];
+  "auto commit"?: "true" | "false";
+  "concurrent access resolution"?: "1" | "2" | "3";
+  "cursor hold"?: "true" | "false";
+  "cursor sensitivity"?: "asensitive" | "insensitive" | "sensitive";
+  "database name"?: string;
+  "decfloat rounding mode"?: "half even" | "half up" | "down" | "ceiling" | "floor" | "up" | "half down";
+  "maximum precision"?: "31" | "63";
+  "maximum scale"?: string;
+  "minimum divide scale"?: "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+  "package ccsid"?: "1200" | "13488" | "system";
+  "transaction isolation"?: "none" | "read uncommitted"| "read committed"| "repeatable read"| "serializable";
+  "translate hex"?: "character" | "binary";
+  "true autocommit"?: "true" | "false";
+  "XA loosely coupled support"?: "0" | "1";
+
+
+
 }
