@@ -142,13 +142,20 @@ export default class schemaBrowser {
   }
 
   /**
+   * @returns {Number};
+   */
+  getPageSize() {
+    return Number(Configuration.get(`pageSize`)) || 100;
+  }
+
+  /**
    * 
    * @param {string} schema 
    * @param {string} type
    * @param {boolean} [addRows] True when we need rows added
    */
   async fetchData(schema, type, addRows) {
-    const pageSize = Number(Configuration.get(`pageSize`)) || 100;
+    const pageSize = this.getPageSize();
     const key = `${schema}-${type}`;
     let offset;
 
@@ -205,7 +212,10 @@ export default class schemaBrowser {
         items = await this.fetchData(element.schema, contextValue, false);
 
         // @ts-ignore
-        items.push(moreButton(element.schema, contextValue));
+        // Only include more button if there is more to add
+        if (items.length >= this.getPageSize()) {
+          items.push(moreButton(element.schema, contextValue));
+        }
       } else
       if (element instanceof SQLObject) {
         const type = element.type;
