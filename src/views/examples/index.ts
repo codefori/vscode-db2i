@@ -5352,5 +5352,432 @@ export const Examples: SQLExamplesList = {
         "    "
       ]
     }
+  ],
+  "Geospatial Analytics": [
+    {
+      "name": "ST_Area",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a polygon column and insert several polygons that represent different New York City Parks",
+        "CREATE TABLE sample_parks (park_name VARCHAR(50), geometry QSYS2.ST_POLYGON);",
+        "INSERT INTO sample_parks (park_name, geometry) VALUES",
+        "  ('Central Park', QSYS2.ST_POLYGON('polygon((-73.9817 40.7682, -73.9581 40.8005, -73.9495 40.7968, -73.9732 40.7644, -73.9817 40.7682))')),",
+        "  ('Washington Square Park', QSYS2.ST_POLYGON('polygon((-73.9995 40.7310, -73.9986 40.7321, -73.9957 40.7307, -73.9966 40.7297, -73.9995 40.7310))'));",
+        "",
+        "-- Find the area of each New York City Park in square meters",
+        "SELECT park_name, ",
+        "       QSYS2.ST_AREA(geometry) as area_square_meters, ",
+        "       QSYS2.ST_AREA(geometry) * 0.000247 as area_acres",
+        " FROM sample_parks;"
+      ]
+    },
+    {
+      "name": "ST_AsBinary",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a polygon column and insert several polygons that represent different New York City Parks",
+        "CREATE TABLE sample_parks (park_name VARCHAR(50), geometry QSYS2.ST_POLYGON);",
+        "INSERT INTO sample_parks (park_name, geometry) VALUES",
+        "  ('Central Park', QSYS2.ST_POLYGON('polygon((-73.9817 40.7682, -73.9581 40.8005, -73.9495 40.7968, -73.9732 40.7644, -73.9817 40.7682))')),",
+        "  ('Washington Square Park', QSYS2.ST_POLYGON('polygon((-73.9995 40.7310, -73.9986 40.7321, -73.9957 40.7307, -73.9966 40.7297, -73.9995 40.7310))'));",
+        " ",
+        "-- Find the area of each New York City Park in square meters",
+        "SELECT park_name, ",
+        "       QSYS2.ST_AREA(geometry) as area_square_meters, ",
+        "       QSYS2.ST_AREA(geometry) * 0.000247 as area_acres",
+        " FROM sample_parks;"
+      ]
+    },
+    {
+      "name": "ST_AsText",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a geometry column and insert the geometries of various New York City landmarks",
+        "CREATE TABLE sample_geometries(location_name VARCHAR(50), geo QSYS2.ST_GEOMETRY);",
+        "INSERT INTO sample_geometries VALUES",
+        " ('Empire State Building', QSYS2.ST_POINT('point(-73.9854 40.7488)')),",
+        " ('Brooklyn Bridge', QSYS2.ST_LINESTRING('linestring (-73.9993 40.7081,-73.9937 40.7035)')),",
+        " ('Central Park', QSYS2.ST_POLYGON('polygon((-73.9817 40.7682, -73.9581 40.8005, -73.9495 40.7968, -73.9732 40.7644, -73.9817 40.7682))'));",
+        "",
+        "-- Convert the geometry back into readable text",
+        "SELECT location_name, QSYS2.ST_ASTEXT(geo) AS geometry",
+        "  FROM sample_geometries;"
+      ]
+    },
+    {
+      "name": "ST_Buffer",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "",
+        "-- Create a new geometry that is a 1 kilometer buffer around a polygon",
+        "VALUES QSYS2.ST_ASTEXT(QSYS2.ST_BUFFER(QSYS2.ST_POLYGON('polygon((-73.9995 40.7310, -73.9986 40.7321, -73.9957 40.7307, -73.9966 40.7297, -73.9995 40.7310))'), 1000));"
+      ]
+    },
+    {
+      "name": "ST_Contains",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a point column and insert various New York City landmarks",
+        "CREATE TABLE sample_points(location_name VARCHAR(50), point QSYS2.ST_POINT);",
+        "INSERT INTO sample_points VALUES",
+        " ('Empire State Building', QSYS2.ST_POINT(-73.9854, 40.7488)),",
+        " ('Central Park Castle', QSYS2.ST_POINT(-73.9753, 40.7703)),",
+        " ('Chrysler Building', QSYS2.ST_POINT(-73.9755, 40.7516)),",
+        " ('Belvidere Castle', QSYS2.ST_POINT(-73.9690, 40.7797));",
+        "",
+        "-- Create a polygon variable ",
+        "-- Set the variables default value to the polygon the defines the boundary for New York City's Central Park",
+        "CREATE VARIABLE central_park_geometry QSYS2.ST_POLYGON DEFAULT(QSYS2.ST_POLYGON('polygon((-73.9817 40.7682, -73.9581 40.8005, -73.9495 40.7968, -73.9732 40.7644, -73.9817 40.7682))'));",
+        "",
+        "-- Query to find out if Central Park contains any New York City landmarks in the table ",
+        "SELECT location_name, QSYS2.ST_CONTAINS(central_park_geometry, point) AS central_park_contains",
+        "  FROM sample_points;",
+        "  "
+      ]
+    },
+    {
+      "name": "ST_Covers",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a polygon column and insert several example polygons that define the boundaries of different parks in New York City",
+        "DROP TABLE sample_parks;",
+        "CREATE TABLE sample_parks (park_name VARCHAR(50), park_geometry QSYS2.ST_POLYGON);",
+        "INSERT INTO sample_parks (park_name, park_geometry) VALUES",
+        "  ('Central Park', QSYS2.ST_POLYGON('polygon((-73.9817 40.7682, -73.9581 40.8005, -73.9495 40.7968, -73.9732 40.7644, -73.9817 40.7682))')),",
+        "  ('Washington Square Park', QSYS2.ST_POLYGON('polygon((-73.9995 40.7310, -73.9986 40.7321, -73.9957 40.7307, -73.9966 40.7297, -73.9995 40.7310))'));",
+        "",
+        "-- Create a ST_Polygon variable and set the default value to the polygon that defines the boundary of the Central Park Tennis Center",
+        "CREATE VARIABLE central_park_tennis_center QSYS2.ST_POLYGON;",
+        "SET central_park_tennis_center = QSYS2.ST_POLYGON('polygon((-73.9631 40.7900, -73.9610 40.7903, -73.9609 40.7897, -73.9630 40.7894))');",
+        "",
+        "-- Query to find if one of the parks fully covers the Tennis Center",
+        "SELECT park_name, QSYS2.ST_COVERS(park_geometry, central_park_tennis_center) AS covers",
+        "  FROM sample_parks;"
+      ]
+    },
+    {
+      "name": "ST_Crosses",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a polygon column and insert several example polygons that define the boundaries of different parks in New York City",
+        "CREATE TABLE sample_parks (park_name VARCHAR(50), park_geometry QSYS2.ST_POLYGON);",
+        "INSERT INTO sample_parks (park_name, park_geometry) VALUES",
+        "  ('Central Park', QSYS2.ST_POLYGON('polygon((-73.9817 40.7682, -73.9581 40.8005, -73.9495 40.7968, -73.9732 40.7644, -73.9817 40.7682))')),",
+        "  ('Washington Square Park', QSYS2.ST_POLYGON('polygon((-73.9995 40.7310, -73.9986 40.7321, -73.9957 40.7307, -73.9966 40.7297, -73.9995 40.7310))'));",
+        "",
+        "-- Create a linestring that defines the path of a street and set it to 97th Street in New York City",
+        "CREATE VARIABLE sample_street QSYS2.ST_LINESTRING;",
+        "SET sample_street = QSYS2.ST_LINESTRING('linestring(-73.9743 40.7966, -73.9436 40.7837)');",
+        "",
+        "-- Query to find if the street crosses one of the parks",
+        "SELECT park_name, QSYS2.ST_CROSSES(sample_street, park_geometry) AS covers",
+        "  FROM sample_parks;"
+      ]
+    },
+    {
+      "name": "ST_Difference",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Find the difference between two disjoint polygons.",
+        "VALUES QSYS2.ST_ASTEXT(",
+        "   QSYS2.ST_DIFFERENCE(QSYS2.ST_POLYGON('polygon((10 10, 20 10, 20 20, 10 20, 10 10))'),",
+        "                       QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))')));",
+        "                       ",
+        "-- Find the difference between two intersecting polygons.",
+        "VALUES QSYS2.ST_ASTEXT(",
+        "   QSYS2.ST_DIFFERENCE(QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))'),",
+        "                       QSYS2.ST_POLYGON('polygon((40 40, 60 40, 60 60, 40 60, 40 40))')));"
+      ]
+    },
+    {
+      "name": "ST_Disjoint",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Determine if two polygons are disjoint",
+        "VALUES QSYS2.ST_DISJOINT(QSYS2.ST_POLYGON('polygon((10 10, 20 10, 20 20, 10 20, 10 10))'),",
+        "                         QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))'));",
+        "                       ",
+        "-- Determine if two polygons are disjoint",
+        "VALUES QSYS2.ST_DISJOINT(QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))'),",
+        "                         QSYS2.ST_POLYGON('polygon((40 40, 60 40, 60 60, 40 60, 40 40))'));"
+      ]
+    },
+    {
+      "name": "ST_Distance",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a point column and insert into it different geometries ",
+        "-- that represent points of interest in New York City",
+        "CREATE TABLE sample_points(location_name VARCHAR(50), location_point QSYS2.ST_POINT);",
+        "INSERT INTO sample_points VALUES",
+        " ('Empire State Building', QSYS2.ST_POINT(-73.9854, 40.7488)),",
+        " ('Chrysler Building', QSYS2.ST_POINT(-73.9755, 40.7516)),",
+        " ('Rockefeller Center', QSYS2.ST_POINT(-73.9787, 40.7587));",
+        "",
+        "-- Create a table with a polygon column and insert several example polygons that define the boundaries of different parks in New York City",
+        "CREATE TABLE sample_parks (park_name VARCHAR(50), park_geometry QSYS2.ST_POLYGON);",
+        "INSERT INTO sample_parks (park_name, park_geometry) VALUES",
+        "  ('Central Park', QSYS2.ST_POLYGON('polygon((-73.9817 40.7682, -73.9581 40.8005, -73.9495 40.7968, -73.9732 40.7644, -73.9817 40.7682))')),",
+        "  ('Washington Square Park', QSYS2.ST_POLYGON('polygon((-73.9995 40.7310, -73.9986 40.7321, -73.9957 40.7307, -73.9966 40.7297, -73.9995 40.7310))'));",
+        "",
+        "-- Find the distance from Washington Square Park to different points of interest in New York City",
+        "SELECT location_name, QSYS2.ST_DISTANCE(location_point, park_geometry) as distance_meters",
+        "  FROM sample_points, sample_parks",
+        "  WHERE park_name = 'Washington Square Park';"
+      ]
+    },
+    {
+      "name": "ST_GeometryType",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table and insert a variety of different geometries into it",
+        "CREATE TABLE sample_geometries (id INTEGER, geometry QSYS2.ST_GEOMETRY);",
+        "INSERT INTO sample_geometries(id, geometry) VALUES",
+        "  (7101, QSYS2.ST_GEOMETRY('point(1 2)')),",
+        "  (7102, QSYS2.ST_GEOMETRY('linestring(33 2, 34 3, 35 6)')),",
+        "  (7103, QSYS2.ST_GEOMETRY('polygon((3 3, 4 6, 5 3, 3 3))')),",
+        "  (7104, QSYS2.ST_GEOMETRY('multipoint((1 2), (4 3))')),",
+        "  (7105, QSYS2.ST_GEOMETRY('multilinestring((10 10, 20 20),(-10 -10, -20 -20))')),",
+        "  (7106, QSYS2.ST_GEOMETRY('multipolygon(((10 10, 10 20, 20 20, 20 15, 10 10)),((60 60, 70 70, 80 60, 60 60 )))')),",
+        "  (7107, QSYS2.ST_GEOMETRY('GeometryCollection(POINT (10 10), POINT (30 30), LINESTRING (15 15, 20 20))'));",
+        "",
+        "-- Find the type of each geometry in the table",
+        "SELECT id, QSYS2.ST_GEOMETRYTYPE(geometry) AS geometry_type",
+        "  FROM sample_geometries;"
+      ]
+    },
+    {
+      "name": "ST_Intersection",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Find the intersection of two overlapping polygons",
+        "VALUES QSYS2.ST_ASTEXT(",
+        "  QSYS2.ST_INTERSECTION(QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))'),",
+        "                        QSYS2.ST_POLYGON('polygon((40 40, 60 40, 60 60, 40 60, 40 40))')));",
+        "",
+        "-- Find the intersection of two disjoint polygons",
+        "VALUES QSYS2.ST_ASTEXT(",
+        "  QSYS2.ST_INTERSECTION(QSYS2.ST_POLYGON('polygon((10 10, 20 10, 20 20, 10 20, 10 10))'),",
+        "                        QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))')));"
+      ]
+    },
+    {
+      "name": "ST_Intersects",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Determine if two polygons intersect",
+        "VALUES ",
+        "  QSYS2.ST_INTERSECTS(QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))'),",
+        "                      QSYS2.ST_POLYGON('polygon((40 40, 60 40, 60 60, 40 60, 40 40))'));",
+        "",
+        "-- Determine if two polygons intersect",
+        "VALUES",
+        "  QSYS2.ST_INTERSECTS(QSYS2.ST_POLYGON('polygon((10 10, 20 10, 20 20, 10 20, 10 10))'),",
+        "                      QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))'));"
+      ]
+    },
+    {
+      "name": "ST_IsSimple",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a geometry column and insert different geometries",
+        "DROP TABLE sample_geometries;",
+        "CREATE TABLE sample_geometries (id INTEGER, geometry QSYS2.ST_GEOMETRY);",
+        "INSERT INTO sample_geometries VALUES",
+        " (1, QSYS2.ST_GEOMETRY('point EMPTY')),",
+        " (2, QSYS2.ST_POINT('point (21 33)')),",
+        " (3, QSYS2.ST_MULTIPOINT('multipoint((10 10), (20 20), (30 30))')),",
+        " (4, QSYS2.ST_MULTIPOINT('multipoint((10 10), (20 20), (30 30), (20 20))')),",
+        " (5, QSYS2.ST_LINESTRING('linestring(60 60, 70 60, 70 70)')),",
+        " (6, QSYS2.ST_LINESTRING('linestring(20 20, 30 30, 30 20, 20 30)')),",
+        " (7, QSYS2.ST_POLYGON('polygon((40 40, 50 40, 50 50, 40 40))'));",
+        "",
+        "-- Determine if the geometries in the table are simple or not",
+        "SELECT id,",
+        "    CASE QSYS2.ST_ISSIMPLE(geometry)",
+        "      WHEN 0 THEN 'Geometry is not simple'",
+        "      WHEN 1 THEN 'Geometry is simple'",
+        "    END AS simple",
+        "  FROM sample_geometries;"
+      ]
+    },
+    {
+      "name": "ST_IsValid",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a geometry column and insert different geometries into it",
+        "-- Insert one invalid row that does not use a function to construct a geometry",
+        "CREATE TABLE sample_geometries (id INTEGER, geometry QSYS2.ST_GEOMETRY);",
+        "INSERT INTO sample_geometries VALUES",
+        "  (1, QSYS2.ST_GEOMETRY('point EMPTY')),",
+        "  (2, QSYS2.ST_POLYGON('polygon((40 20, 90 20, 90 50, 40 50, 40 20))')),",
+        "  (3, QSYS2.ST_MULTIPOINT('multipoint((10 10), (50 10), (10 30))')),",
+        "  (4, QSYS2.ST_LINESTRING('linestring (10 10, 20 10)')),",
+        "  (5, CAST('point(10 20)' AS BLOB(2G)));",
+        "",
+        "-- Determine if any of the rows are invalid",
+        "SELECT id, QSYS2.ST_ISVALID(geometry) Is_Valid",
+        "  FROM sample_geometries;"
+      ]
+    },
+    {
+      "name": "ST_MaxX, ST_MaxY, ST_MinX, ST_MinY",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a polygon column and insert several polygons that represent different New York City Parks",
+        "DROP TABLE sample_parks;",
+        "CREATE TABLE sample_parks (park_name VARCHAR(50), geometry QSYS2.ST_POLYGON);",
+        "INSERT INTO sample_parks (park_name, geometry) VALUES",
+        "  ('Central Park', QSYS2.ST_POLYGON('polygon((-73.9817 40.7682, -73.9581 40.8005, -73.9495 40.7968, -73.9732 40.7644, -73.9817 40.7682))')),",
+        "  ('Washington Square Park', QSYS2.ST_POLYGON('polygon((-73.9995 40.7310, -73.9986 40.7321, -73.9957 40.7307, -73.9966 40.7297, -73.9995 40.7310))'));",
+        "",
+        "-- Find the maximum and minimum x and y coordinate for various New York City parks",
+        "SELECT park_name, ",
+        "       QSYS2.ST_MAXX(geometry) AS max_x,",
+        "       QSYS2.ST_MAXY(geometry) AS max_y,",
+        "       QSYS2.ST_MINX(geometry) AS min_x,",
+        "       QSYS2.ST_MINY(geometry) AS min_y",
+        " FROM sample_parks;"
+      ]
+    },
+    {
+      "name": "ST_NumPoints",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a geometry column and insert sample geometries of different types",
+        "DROP TABLE sample_geometries;",
+        "CREATE TABLE sample_geometries (id VARCHAR(18), geometry QSYS2.ST_GEOMETRY);",
+        "INSERT INTO sample_geometries (id, geometry)",
+        "  VALUES (1, QSYS2.ST_POINT('point (44 14)')),",
+        "         (2, QSYS2.ST_LINESTRING('linestring (0 0, 20 20)')),",
+        "         (3, QSYS2.ST_POLYGON('polygon((0 0, 0 40, 40 40, 40 0, 0 0))')),",
+        "         (4, QSYS2.ST_MULTIPOINT('multipoint((0 0), (10 20), (15 20), (30 30))')),",
+        "         (5, QSYS2.ST_MULTILINESTRING('MultiLineString((10 10, 20 20), (15 15, 30 15))')),",
+        "         (6, QSYS2.ST_MULTIPOLYGON('MultiPolygon(((10 10, 10 20, 20 20, 20 15, 10 10)),",
+        "                                                 ((60 60, 70 70, 80 60, 60 60 )))'));",
+        "",
+        "-- Find how many points each geometries has",
+        "SELECT id, QSYS2.ST_GEOMETRYTYPE(geometry) AS spatial_type, ",
+        "       QSYS2.ST_NUMPOINTS (geometry) AS num_points",
+        "  FROM sample_geometries;"
+      ]
+    },
+    {
+      "name": "ST_Overlap",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Determine if two polygons overlap",
+        "VALUES QSYS2.ST_OVERLAPS(QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))'),",
+        "                         QSYS2.ST_POLYGON('polygon((40 40, 60 40, 60 60, 40 60, 40 40))'));",
+        "",
+        "-- Determine if two polygons overlap (polygons are disjoint)",
+        "VALUES QSYS2.ST_OVERLAPS(QSYS2.ST_POLYGON('polygon((10 10, 20 10, 20 20, 10 20, 10 10))'),",
+        "                         QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))'));",
+        "                       ",
+        "-- Determine if two polygons overlap (polygons are the same)",
+        "VALUES QSYS2.ST_OVERLAPS(QSYS2.ST_POLYGON('polygon((10 10, 20 10, 20 20, 10 20, 10 10))'),",
+        "                         QSYS2.ST_POLYGON('polygon((10 10, 20 10, 20 20, 10 20, 10 10))'));"
+      ]
+    },
+    {
+      "name": "ST_Point",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- This example shows how to create a table with a ST_POINT column, insert into the table, ",
+        "-- and query the table.",
+        "",
+        "CREATE TABLE NATIONAL_PARKS",
+        "  (ID INT,",
+        "   NAME VARCHAR(30),",
+        "   LOCATION QSYS2.ST_POINT);",
+        "",
+        "-- The point at the center of Yosemite National Park in the USA, using (longitude, latitude)",
+        "INSERT INTO NATIONAL_PARKS VALUES ",
+        "  (101, 'Yosemite National Park', QSYS2.ST_POINT(-119.539, 37.865));",
+        "  ",
+        "-- A point at the center of Yellowstone National Park in the USA, using Well-Known Text (WKT)",
+        "INSERT INTO NATIONAL_PARKS VALUES",
+        "  (201, 'Yellowstone National Park', QSYS2.ST_POINT('point (-110.40 44.45)'));",
+        "",
+        "-- The center of the Grand Canyon in the USA, using WKT",
+        "INSERT INTO NATIONAL_PARKS VALUES",
+        "  (301, 'Grand Canyon National Park', QSYS2.ST_POINT('point (-112.1129 36.1213)'));",
+        "",
+        "-- Query the table, converting the ST_POINT value into a readable text format",
+        "SELECT ID, NAME, QSYS2.ST_ASTEXT(LOCATION)",
+        "  FROM NATIONAL_PARKS;"
+      ]
+    },
+    {
+      "name": "ST_Touches",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Determine if two linestrings touch",
+        "VALUES QSYS2.ST_TOUCHES(QSYS2.ST_LINESTRING('linestring(0 0, 1 1)'),",
+        "                        QSYS2.ST_LINESTRING('linestring(1 1, 2 2)'));",
+        "                        ",
+        "-- Determine if a linestring and polygon touch",
+        "VALUES QSYS2.ST_TOUCHES(QSYS2.ST_LINESTRING('linestring(0 0, 5 5)'),",
+        "                        QSYS2.ST_POLYGON('polygon((1 1, 1 2, 2 2, 2 1, 1 1))'));"
+      ]
+    },
+    {
+      "name": "ST_Union",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Get the union of two intersecting polygons",
+        "VALUES QSYS2.ST_ASTEXT(",
+        "  QSYS2.ST_UNION(QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))'),",
+        "                 QSYS2.ST_POLYGON('polygon((40 40, 60 40, 60 60, 40 60, 40 40))')));",
+        "",
+        "-- Get the union of two disjoint polygons",
+        "VALUES QSYS2.ST_ASTEXT(",
+        "  QSYS2.ST_UNION(QSYS2.ST_POLYGON('polygon((10 10, 20 10, 20 20, 10 20, 10 10))'),",
+        "                 QSYS2.ST_POLYGON('polygon((30 30, 50 30, 50 50, 30 50, 30 30))')));"
+      ]
+    },
+    {
+      "name": "ST_Within",
+      "content": [
+        "-- minvrm:  v7r4m0",
+        "",
+        "-- Create a table with a polygon column and insert several example polygons that define the boundaries of different parks in New York City",
+        "DROP TABLE sample_parks;",
+        "CREATE TABLE sample_parks (park_name VARCHAR(50), park_geometry QSYS2.ST_POLYGON);",
+        "INSERT INTO sample_parks (park_name, park_geometry) VALUES",
+        "  ('Central Park', QSYS2.ST_POLYGON('polygon((-73.9817 40.7682, -73.9581 40.8005, -73.9495 40.7968, -73.9732 40.7644, -73.9817 40.7682))')),",
+        "  ('Washington Square Park', QSYS2.ST_POLYGON('polygon((-73.9995 40.7310, -73.9986 40.7321, -73.9957 40.7307, -73.9966 40.7297, -73.9995 40.7310))'));",
+        "",
+        "-- Create a ST_Polygon variable ",
+        "-- Set the value to the polygon that defines the boundary of the Central Park Tennis Center",
+        "CREATE VARIABLE central_park_tennis_center QSYS2.ST_POLYGON;",
+        "SET central_park_tennis_center = QSYS2.ST_POLYGON('polygon((-73.9631 40.7900, -73.9610 40.7903, -73.9609 40.7897, -73.9630 40.7894))');",
+        "",
+        "-- Query to find if the Tennis Center is fully within one of the parks",
+        "SELECT park_name, QSYS2.ST_WITHIN(central_park_tennis_center, park_geometry) AS within",
+        "  FROM sample_parks;"
+      ]
+    }
   ]
 }
