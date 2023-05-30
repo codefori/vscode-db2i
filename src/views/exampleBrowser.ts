@@ -1,4 +1,4 @@
-import { EventEmitter, workspace } from "vscode";
+import { EventEmitter, MarkdownString, workspace } from "vscode";
 import { window } from "vscode";
 import { CancellationToken, Event, ExtensionContext, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands } from "vscode";
 import { SQLExample, Examples } from "./examples";
@@ -97,11 +97,6 @@ export class ExampleBrowser implements TreeDataProvider<any> {
   getParent?(element: any) {
     throw new Error("Method not implemented.");
   }
-
-  resolveTreeItem?(item: TreeItem, element: any, token: CancellationToken): ProviderResult<TreeItem> {
-    throw new Error("Method not implemented.");
-  }
-
 }
 
 class ExampleGroupItem extends TreeItem {
@@ -123,6 +118,8 @@ class SQLExampleItem extends TreeItem {
     super(example.name, TreeItemCollapsibleState.None);
 
     this.iconPath = new ThemeIcon(`file`);
+
+    this.tooltip = new MarkdownString(['```sql', example.content.join(`\n`), '```'].join(`\n`));
 
     this.command = {
       command: openExampleCommand,
