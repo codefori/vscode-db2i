@@ -1,6 +1,8 @@
 
 import vscode from "vscode"
 import Schemas from "../database/schemas";
+import { getInstance } from "../base";
+import { fetchSystemInfo } from "../config";
 
 import Configuration from "../configuration";
 
@@ -135,6 +137,13 @@ export default class schemaBrowser {
         }
       })
     )
+
+    getInstance().onEvent(`connected`, () => {
+      fetchSystemInfo().then(() => {
+        this.cache = {};
+        this.refresh();
+      })
+    });
   }
 
   refresh() {
