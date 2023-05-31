@@ -137,10 +137,8 @@ export default class schemaBrowser {
     )
 
     getInstance().onEvent(`connected`, () => {
-      fetchSystemInfo().then(() => {
-        this.cache = {};
-        this.refresh();
-      })
+      this.cache = {};
+      this.refresh();
     });
   }
 
