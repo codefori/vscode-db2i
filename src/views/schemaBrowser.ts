@@ -6,8 +6,6 @@ import { fetchSystemInfo } from "../config";
 
 import Configuration from "../configuration";
 
-const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
-
 import Types from "./types";
 
 const viewItem = {
@@ -58,7 +56,7 @@ export default class schemaBrowser {
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.addSchemaToSchemaBrowser`, async () => {
-        const config = instance.getConfig();
+        const config = getInstance().getConfig();
 
         const schemas = config[`databaseBrowserList`] || [];
 
@@ -69,7 +67,7 @@ export default class schemaBrowser {
         if (newSchema && !schemas.includes(newSchema.toUpperCase())) {
           schemas.push(newSchema.toUpperCase());
           config[`databaseBrowserList`] = schemas;
-          await instance.setConfig(config);
+          await getInstance().setConfig(config);
           this.refresh();
         }
       }),
@@ -77,7 +75,7 @@ export default class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.removeSchemaFromSchemaBrowser`, async (node) => {
         if (node) {
           //Running from right click
-          const config = instance.getConfig();
+          const config = getInstance().getConfig();
 
           let schemas = config[`databaseBrowserList`];
 
@@ -86,7 +84,7 @@ export default class schemaBrowser {
             schemas.splice(index, 1);
           }
 
-          await instance.setConfig(config);
+          await getInstance().setConfig(config);
           this.refresh();
         }
       }),
@@ -125,12 +123,12 @@ export default class schemaBrowser {
         if (node && node.contextValue === `schema`) {
           const schema = node.schema.toUpperCase();
 
-          const config = instance.getConfig();
+          const config = getInstance().getConfig();
           const currentLibrary = config.currentLibrary.toUpperCase();
   
           if (schema && schema !== currentLibrary) {
             config.currentLibrary = schema;
-            await instance.setConfig(config);
+            await getInstance().setConfig(config);
           }
 
           vscode.window.showInformationMessage(`Current schema set to ${schema}.`);
@@ -240,9 +238,9 @@ export default class schemaBrowser {
       }
 
     } else {
-      const connection = instance.getConnection();
+      const connection = getInstance().getConnection();
       if (connection) {
-        const config = instance.getConfig();
+        const config = getInstance().getConfig();
 
         const libraries = config[`databaseBrowserList`] || [];
 
