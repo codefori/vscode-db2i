@@ -142,18 +142,26 @@ export default class schemaBrowser {
   }
 
   /**
+   * @returns {Number};
+   */
+  getPageSize() {
+    return Number(Configuration.get(`pageSize`)) || 100;
+  }
+
+  /**
    * 
    * @param {string} schema 
    * @param {string} type
    * @param {boolean} [addRows] True when we need rows added
    */
   async fetchData(schema, type, addRows) {
-    const pageSize = Number(Configuration.get(`pageSize`)) || 100;
+    const pageSize = this.getPageSize() + 1; //Get 1 extra item to see if we need to add a more button 
     const key = `${schema}-${type}`;
     let offset;
 
     if (addRows || this.cache[key] === undefined) {
       if (this.cache[key]) {
+        this.cache[key].pop(); //Remove more button
         offset = this.cache[key].length;
       } else {
         offset = 0;
@@ -165,11 +173,21 @@ export default class schemaBrowser {
       });
 
       if (data.length > 0) {
+        let more = false;
+        if (data.length == pageSize) {
+          more = true;
+          data.pop(); //Remove the extra item
+        }
+
         const items = data.map(item => new SQLObject(item));
         if (this.cache[key]) {
           this.cache[key].push(...items);
         } else {
           this.cache[key] = items;
+        }
+
+        if (more) {
+          this.cache[key].push(moreButton(schema, type));
         }
       } else {
         vscode.window.showInformationMessage(`No items to load.`);
@@ -203,9 +221,6 @@ export default class schemaBrowser {
       } else
       if (element instanceof SchemaItem) {
         items = await this.fetchData(element.schema, contextValue, false);
-
-        // @ts-ignore
-        items.push(moreButton(element.schema, contextValue));
       } else
       if (element instanceof SQLObject) {
         const type = element.type;
