@@ -108,6 +108,24 @@ export default class schemaBrowser {
         }
       }),
 
+      vscode.commands.registerCommand(`vscode-db2i.deleteObject`, async (object) => {
+        if (object) {
+          try {
+            const content = `DROP ${object.type} IF EXISTS ${object.schema}.${object.name}`;
+            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+              content,
+              type: `statement`,
+              open: false,
+            });
+            
+            this.cache = {};
+            this.refresh();
+          } catch (e) {
+            vscode.window.showErrorMessage(e);
+          }
+        }
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.getResultSet`, async (object) => {
         if (object && object instanceof SQLObject) {
           const content = `SELECT * FROM ${object.schema}.${object.name} as a`;
