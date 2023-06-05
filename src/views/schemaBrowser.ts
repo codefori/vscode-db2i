@@ -108,20 +108,151 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.deleteObject`, async (object) => {
+      vscode.commands.registerCommand(`vscode-db2i.getRelatedObjects`, async (object: SQLObject) => {
         if (object) {
           try {
-            const content = `DROP ${object.type} IF EXISTS ${object.schema}.${object.name}`;
+            const content = `SELECT SQL_OBJECT_TYPE, SCHEMA_NAME, SQL_NAME, LIBRARY_NAME,
+              SYSTEM_NAME, OBJECT_OWNER, LONG_COMMENT, OBJECT_TEXT, LAST_ALTERED 
+              FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${object.schema}', '${object.name}')) ORDER BY SQL_NAME`;
             vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
               content,
               type: `statement`,
               open: false,
             });
-            
-            this.cache = {};
-            this.refresh();
           } catch (e) {
             vscode.window.showErrorMessage(e);
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.getIndexes`, async (object: SQLObject) => {
+        if (object) {
+          try {
+            // Maybe choose/rename which columns to get?
+            const content = `SELECT * FROM QSYS2.SYSINDEXSTAT WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}'`;
+            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+              content,
+              type: `statement`,
+              open: false,
+            });
+          } catch (e) {
+            vscode.window.showErrorMessage(e);
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.deleteObject`, async (object: SQLObject) => {
+        if (object) {
+          const result = await vscode.window.showWarningMessage(`Are you sure you want to delete ${object.name}?`, 'Yes', 'Cancel');
+          if(result === 'Yes') {
+            try {
+              const query = `DROP ${object.type} IF EXISTS ${object.path}`;
+              await getInstance().getContent().runSQL(query);
+              
+              this.cache = {};
+              this.refresh();
+            } catch (e) {
+              vscode.window.showErrorMessage(e);
+            }
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.renameObject`, async (object: SQLObject) => {
+        if (object) {
+          const name = await vscode.window.showInputBox({
+            title: "New File",
+            prompt: "Enter new name",
+          });
+
+          if (name != "") {
+            try {
+              const command = `RNMOBJ OBJ(${object.schema}/${object.name}) OBJTYPE(*FILE) NEWOBJ(${name})`;
+              
+              const commandResult = await getInstance().getConnection().runCommand({
+                command: command,
+                environment: `ile`
+              });
+  
+              if (commandResult.code !== 0) {
+                vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+              }
+            } catch (e) {
+              vscode.window.showErrorMessage(e);
+            }
+
+            this.cache = {};
+            this.refresh();
+          } else {
+            vscode.window.showErrorMessage("Name cannot be blank.");
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.clearData`, async (object: SQLObject) => {
+        if (object) {
+          const result = await vscode.window.showWarningMessage(`Are you sure you want to clear ${object.name}?`, 'Yes', 'Cancel');
+          if(result === 'Yes') {
+            try {
+              const command = `CLRPFM ${object.schema}/${object.name}`;
+              
+              const commandResult = await getInstance().getConnection().runCommand({
+                command: command,
+                environment: `ile`
+              });
+
+              if (commandResult.code !== 0) {
+                vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+              }
+            } catch (e) {
+              vscode.window.showErrorMessage(e);
+            }
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.copyData`, async (object: SQLObject) => {
+        if (object) {
+          const schema = await vscode.window.showInputBox({
+            title: "Library",
+            prompt: "Enter new schema",
+          });
+          
+          const name = await vscode.window.showInputBox({
+            title: "To File",
+            prompt: "Enter new name",
+          });
+
+          const records = await vscode.window.showQuickPick(["*NONE", "*ADD", "*REPLACE", "*UPDADD"], {
+            title: "Replace or add records",
+            canPickMany: false
+          })
+
+          const create = await vscode.window.showQuickPick(["*NO", "*YES"], {
+            title: "Create file",
+            canPickMany: false
+          })
+
+          if (schema != "" && name != "") {
+            try {
+              const command = `CPYF FROMFILE(${object.schema}/${object.name}) TOFILE(${schema}/${name}) MBROPT(${records}) CRTFILE(${create})`;
+              
+              const commandResult = await getInstance().getConnection().runCommand({
+                command: command,
+                environment: `ile`
+              });
+
+              if (commandResult.code !== 0) {
+                vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+              }
+
+              this.cache = {};
+              this.refresh();
+            } catch (e) {
+              vscode.window.showErrorMessage(e);
+            }
+          } else {
+            vscode.window.showErrorMessage("Schema and Name cannot be blank.");
           }
         }
       }),

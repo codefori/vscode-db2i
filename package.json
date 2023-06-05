@@ -153,8 +153,33 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.getRelatedObjects",
+        "title": "Get Related Objects",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.getIndexes",
+        "title": "Get Indexes",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.clearData",
+        "title": "Clear...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.copyData",
+        "title": "Copy data...",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.deleteObject",
-        "title": "Delete",
+        "title": "Delete...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.renameObject",
+        "title": "Rename...",
         "category": "Db2 for i"
       },
       {
@@ -279,9 +304,34 @@
           "group": "db2@3"
         },
         {
+          "command": "vscode-db2i.getRelatedObjects",
+          "when": "viewItem == table",
+          "group": "db2workWith@1"
+        },
+        {
+          "command": "vscode-db2i.getIndexes",
+          "when": "viewItem == table",
+          "group": "db2workWith@2"
+        },
+        {
+          "command": "vscode-db2i.clearData",
+          "when": "viewItem == table",
+          "group": "db2data@1"
+        },
+        {
+          "command": "vscode-db2i.copyData",
+          "when": "viewItem == table || viewItem == view",
+          "group": "db2data@2"
+        },
+        {
           "command": "vscode-db2i.deleteObject",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
-          "group": "db2@4"
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == type",
+          "group": "db2data@3"
+        },
+        {
+          "command": "vscode-db2i.renameObject",
+          "when": "viewItem == table || viewItem == view || viewItem == index",
+          "group": "db2data@4"
         },
         {
           "command": "vscode-db2i.queryHistory.remove",
