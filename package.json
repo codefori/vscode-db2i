@@ -183,6 +183,16 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.advisedIndexes",
+        "title": "Advised Indexes",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.clearAdvisedIndexes",
+        "title": "Clear All Advised Indexes...",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.getResultSet",
         "title": "View contents",
         "category": "Db2 for i",
@@ -332,6 +342,16 @@
           "command": "vscode-db2i.renameObject",
           "when": "viewItem == table || viewItem == view || viewItem == index",
           "group": "db2data@4"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes",
+          "when": "viewItem == table",
+          "group": "db2idxAdv@1"
+        },
+        {
+          "command": "vscode-db2i.clearAdvisedIndexes",
+          "when": "viewItem == table",
+          "group": "db2idxAdv@2"
         },
         {
           "command": "vscode-db2i.queryHistory.remove",

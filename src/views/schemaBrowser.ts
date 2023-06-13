@@ -141,6 +141,36 @@ export default class schemaBrowser {
         }
       }),
 
+      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject) => {
+        if (object) {
+          try {
+            // Maybe choose/rename which columns to get?
+            const content = `SELECT * FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}'`;
+            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+              content,
+              type: `statement`,
+              open: false,
+            });
+          } catch (e) {
+            vscode.window.showErrorMessage(e);
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.clearAdvisedIndexes`, async (object: SQLObject) => {
+        if (object) {
+          const result = await vscode.window.showWarningMessage(`Are you sure you want to clear all of the advised index rows from the Index Advisor for ${object.name}?`, 'Yes', 'Cancel');
+          if(result === 'Yes') {
+            try {
+              const query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}'`;
+              await getInstance().getContent().runSQL(query);
+            } catch (e) {
+              vscode.window.showErrorMessage(e);
+            }
+          }
+        }
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.deleteObject`, async (object: SQLObject) => {
         if (object) {
           const result = await vscode.window.showWarningMessage(`Are you sure you want to delete ${object.name}?`, 'Yes', 'Cancel');
