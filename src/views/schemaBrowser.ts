@@ -1,7 +1,7 @@
 
 import vscode from "vscode"
 import Schemas from "../database/schemas";
-import { getInstance } from "../base";
+import { getInstance, loadBase } from "../base";
 import { fetchSystemInfo } from "../config";
 
 import Configuration from "../configuration";
@@ -159,7 +159,10 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.clearAdvisedIndexes`, async (object: SQLObject) => {
         if (object) {
-          const result = await vscode.window.showWarningMessage(`Are you sure you want to clear all of the advised index rows from the Index Advisor for ${object.name}?`, 'Yes', 'Cancel');
+          const result = await vscode.window.showWarningMessage(`Are you sure you want to clear all of the advised index rows from the Index Advisor for ${object.name}?`,  {
+            modal: true,
+          }, 'No', 'Yes');
+          
           if(result === 'Yes') {
             try {
               const query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}'`;
@@ -173,7 +176,10 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.deleteObject`, async (object: SQLObject) => {
         if (object) {
-          const result = await vscode.window.showWarningMessage(`Are you sure you want to delete ${object.name}?`, 'Yes', 'Cancel');
+          const result = await vscode.window.showWarningMessage(`Are you sure you want to delete ${object.name}?`, {
+            modal: true,
+          }, 'No', 'Yes');
+
           if(result === 'Yes') {
             try {
               const query = `DROP ${object.type} IF EXISTS ${object.path}`;
@@ -221,7 +227,10 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.clearData`, async (object: SQLObject) => {
         if (object) {
-          const result = await vscode.window.showWarningMessage(`Are you sure you want to clear ${object.name}?`, 'Yes', 'Cancel');
+          const result = await vscode.window.showWarningMessage(`Are you sure you want to clear ${object.name}?`, {
+            modal: true,
+          }, 'No', 'Yes');
+
           if(result === 'Yes') {
             try {
               const command = `CLRPFM ${object.schema}/${object.name}`;
@@ -243,46 +252,53 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.copyData`, async (object: SQLObject) => {
         if (object) {
-          const schema = await vscode.window.showInputBox({
-            title: "Library",
-            prompt: "Enter new schema",
-          });
+          const base = loadBase();
+          const page = await base.customUI()
+            .addInput('file', 'To File')
+            .addInput('library', 'Library')
+            .addSelect('replace', 'Replace or add records', [
+              {text: '*NONE', description: '*NONE', value: '*NONE'},
+              {text: '*ADD', description: '*ADD', value: '*ADD'},
+              {text: '*REPLACE', description: '*REPLACE', value: '*REPLACE'},
+              {text: '*UPDADD', description: '*UPDADD', value: '*UPDADD'},
+            ])
+            .addSelect('create', 'Create file', [
+              {text: '*NO', description: '*NO', value: '*NO'},
+              {text: '*YES', description: '*YES', value: '*YES'},
+            ])
+            .addButtons(
+              {id: 'copy', label:'Copy'},
+              {id: 'cancel', label:'Cancel'}
+            )
+            .loadPage<any>('Copy File');
           
-          const name = await vscode.window.showInputBox({
-            title: "To File",
-            prompt: "Enter new name",
-          });
+          if(page && page.data) {
+            const data = page.data;
+            page.panel.dispose();
 
-          const records = await vscode.window.showQuickPick(["*NONE", "*ADD", "*REPLACE", "*UPDADD"], {
-            title: "Replace or add records",
-            canPickMany: false
-          })
-
-          const create = await vscode.window.showQuickPick(["*NO", "*YES"], {
-            title: "Create file",
-            canPickMany: false
-          })
-
-          if (schema != "" && name != "") {
-            try {
-              const command = `CPYF FROMFILE(${object.schema}/${object.name}) TOFILE(${schema}/${name}) MBROPT(${records}) CRTFILE(${create})`;
-              
-              const commandResult = await getInstance().getConnection().runCommand({
-                command: command,
-                environment: `ile`
-              });
-
-              if (commandResult.code !== 0) {
-                vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+            if (data.buttons == 'copy') {
+              if (data.library != "" && data.file != "") {
+                try {
+                  const command = `CPYF FROMFILE(${object.schema}/${object.name}) TOFILE(${data.library}/${data.file}) MBROPT(${data.replace}) CRTFILE(${data.create})`;
+                  
+                  const commandResult = await getInstance().getConnection().runCommand({
+                    command: command,
+                    environment: `ile`
+                  });
+    
+                  if (commandResult.code !== 0) {
+                    vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+                  }
+    
+                  this.cache = {};
+                  this.refresh();
+                } catch (e) {
+                  vscode.window.showErrorMessage(e);
+                }
+              } else {
+                vscode.window.showErrorMessage("Schema and Name cannot be blank.");
               }
-
-              this.cache = {};
-              this.refresh();
-            } catch (e) {
-              vscode.window.showErrorMessage(e);
             }
-          } else {
-            vscode.window.showErrorMessage("Schema and Name cannot be blank.");
           }
         }
       }),
