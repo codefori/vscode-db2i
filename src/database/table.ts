@@ -1,5 +1,7 @@
 
 import vscode from "vscode"
+import { getInstance } from "../base";
+
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
 export default class Table {
@@ -35,5 +37,68 @@ export default class Table {
     ].join(` `);
 
     return content.runSQL(sql);
+  }
+
+  static getRelatedObjects(schema: string, name: string): void {
+    const content = `SELECT SQL_OBJECT_TYPE, SCHEMA_NAME, SQL_NAME, LIBRARY_NAME,
+              SYSTEM_NAME, OBJECT_OWNER, LONG_COMMENT, OBJECT_TEXT, LAST_ALTERED 
+              FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${schema}', '${name}')) ORDER BY SQL_NAME`;
+    
+    vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+      content,
+      type: `statement`,
+      open: false,
+    });
+  }
+
+  static getIndexes(schema: string, name: string): void {
+    // Maybe choose/rename which columns to get?
+    const content = `SELECT * FROM QSYS2.SYSINDEXSTAT WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
+    vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+      content,
+      type: `statement`,
+      open: false,
+    });
+  }
+
+  static getAdvisedIndexes(schema: string, name: string): void {
+    // Maybe choose/rename which columns to get?
+    const content = `SELECT * FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
+    vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+      content,
+      type: `statement`,
+      open: false,
+    });
+  }
+
+  static async clearAdvisedIndexes(schema: string, name: string): Promise<void> {
+    const query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
+    await getInstance().getContent().runSQL(query);
+  }
+
+  static async clearFile(schema: string, name: string): Promise<void> {
+    const command = `CLRPFM ${schema}/${name}`;
+              
+    const commandResult = await getInstance().getConnection().runCommand({
+      command: command,
+      environment: `ile`
+    });
+
+    if (commandResult.code !== 0) {
+      vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+    }
+  }
+
+  static async copyFile(schema: string, name: string, toLib: string, toFile: string, replace: string, create: string): Promise<void> {
+    const command = `CPYF FROMFILE(${schema}/${name}) TOFILE(${toLib}/${toFile}) MBROPT(${replace}) CRTFILE(${create})`;
+                  
+    const commandResult = await getInstance().getConnection().runCommand({
+      command: command,
+      environment: `ile`
+    });
+
+    if (commandResult.code !== 0) {
+      vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+    }
   }
 }

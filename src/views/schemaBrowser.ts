@@ -1,6 +1,7 @@
 
 import vscode from "vscode"
 import Schemas from "../database/schemas";
+import Table from "../database/table";
 import { getInstance, loadBase } from "../base";
 import { fetchSystemInfo } from "../config";
 
@@ -111,14 +112,7 @@ export default class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.getRelatedObjects`, async (object: SQLObject) => {
         if (object) {
           try {
-            const content = `SELECT SQL_OBJECT_TYPE, SCHEMA_NAME, SQL_NAME, LIBRARY_NAME,
-              SYSTEM_NAME, OBJECT_OWNER, LONG_COMMENT, OBJECT_TEXT, LAST_ALTERED 
-              FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${object.schema}', '${object.name}')) ORDER BY SQL_NAME`;
-            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-              content,
-              type: `statement`,
-              open: false,
-            });
+            Table.getRelatedObjects(object.schema, object.name);
           } catch (e) {
             vscode.window.showErrorMessage(e);
           }
@@ -128,29 +122,17 @@ export default class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.getIndexes`, async (object: SQLObject) => {
         if (object) {
           try {
-            // Maybe choose/rename which columns to get?
-            const content = `SELECT * FROM QSYS2.SYSINDEXSTAT WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}'`;
-            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-              content,
-              type: `statement`,
-              open: false,
-            });
+            Table.getIndexes(object.schema, object.name);
           } catch (e) {
             vscode.window.showErrorMessage(e);
           }
         }
       }),
-
-      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject) => {
+      
+      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject) => { //table
         if (object) {
           try {
-            // Maybe choose/rename which columns to get?
-            const content = `SELECT * FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}'`;
-            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-              content,
-              type: `statement`,
-              open: false,
-            });
+            Table.getAdvisedIndexes(object.schema, object.name);
           } catch (e) {
             vscode.window.showErrorMessage(e);
           }
@@ -165,8 +147,7 @@ export default class schemaBrowser {
           
           if(result === 'Yes') {
             try {
-              const query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}'`;
-              await getInstance().getContent().runSQL(query);
+              Table.clearAdvisedIndexes(object.schema, object.name);
             } catch (e) {
               vscode.window.showErrorMessage(e);
             }
@@ -182,8 +163,7 @@ export default class schemaBrowser {
 
           if(result === 'Yes') {
             try {
-              const query = `DROP ${object.type} IF EXISTS ${object.path}`;
-              await getInstance().getContent().runSQL(query);
+              await Schemas.deleteObject(object.path, object.type);
               
               this.cache = {};
               this.refresh();
@@ -203,28 +183,19 @@ export default class schemaBrowser {
 
           if (name != "") {
             try {
-              const command = `RNMOBJ OBJ(${object.schema}/${object.name}) OBJTYPE(*FILE) NEWOBJ(${name})`;
+              await Schemas.renameObject(object.schema, object.name, name);
               
-              const commandResult = await getInstance().getConnection().runCommand({
-                command: command,
-                environment: `ile`
-              });
-  
-              if (commandResult.code !== 0) {
-                vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
-              }
+              this.cache = {};
+              this.refresh();
             } catch (e) {
               vscode.window.showErrorMessage(e);
             }
-
-            this.cache = {};
-            this.refresh();
           } else {
             vscode.window.showErrorMessage("Name cannot be blank.");
           }
         }
       }),
-
+      
       vscode.commands.registerCommand(`vscode-db2i.clearData`, async (object: SQLObject) => {
         if (object) {
           const result = await vscode.window.showWarningMessage(`Are you sure you want to clear ${object.name}?`, {
@@ -233,16 +204,7 @@ export default class schemaBrowser {
 
           if(result === 'Yes') {
             try {
-              const command = `CLRPFM ${object.schema}/${object.name}`;
-              
-              const commandResult = await getInstance().getConnection().runCommand({
-                command: command,
-                environment: `ile`
-              });
-
-              if (commandResult.code !== 0) {
-                vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
-              }
+              Table.clearFile(object.schema, object.name);
             } catch (e) {
               vscode.window.showErrorMessage(e);
             }
@@ -279,16 +241,7 @@ export default class schemaBrowser {
             if (data.buttons == 'copy') {
               if (data.library != "" && data.file != "") {
                 try {
-                  const command = `CPYF FROMFILE(${object.schema}/${object.name}) TOFILE(${data.library}/${data.file}) MBROPT(${data.replace}) CRTFILE(${data.create})`;
-                  
-                  const commandResult = await getInstance().getConnection().runCommand({
-                    command: command,
-                    environment: `ile`
-                  });
-    
-                  if (commandResult.code !== 0) {
-                    vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
-                  }
+                  await Table.copyFile(object.schema, object.name, data.library, data.file, data.replace, data.create);
     
                   this.cache = {};
                   this.refresh();

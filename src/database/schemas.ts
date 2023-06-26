@@ -1,4 +1,5 @@
 import vscode from "vscode"
+import { getInstance } from "../base";
 
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
@@ -141,5 +142,23 @@ export default class Database {
     const formatted = Statement.format(generatedStatement);
 
     return formatted;
+  }
+  
+  static async deleteObject(objectPath: string, type: string): Promise<void> {
+    const query = `DROP ${type} IF EXISTS ${objectPath}`;
+    await getInstance().getContent().runSQL(query);
+  }
+  
+  static async renameObject(schema: string, oldName: string, newName: string): Promise<void> {
+    const command = `RNMOBJ OBJ(${schema}/${oldName}) OBJTYPE(*FILE) NEWOBJ(${newName})`;
+              
+    const commandResult = await getInstance().getConnection().runCommand({
+      command: command,
+      environment: `ile`
+    });
+
+    if (commandResult.code !== 0) {
+      vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+    }
   }
 }
