@@ -31,7 +31,8 @@ type StatementType = "statement"|"json"|"csv"|"cl"|"sql";
 interface StatementInfo {
   content: string,
   type: StatementType,
-  open?: boolean
+  open?: boolean,
+  history?: boolean
 }
 
 interface BasicSQLObject {
