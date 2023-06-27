@@ -85,7 +85,7 @@ export default class Table {
     });
 
     if (commandResult.code !== 0) {
-      vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+      throw new Error(commandResult.stderr);
     }
   }
 
@@ -98,7 +98,7 @@ export default class Table {
     });
 
     if (commandResult.code !== 0) {
-      vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+      throw new Error(commandResult.stderr);
     }
   }
 }

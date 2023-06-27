@@ -158,7 +158,7 @@ export default class Database {
     });
 
     if (commandResult.code !== 0) {
-      vscode.window.showErrorMessage(`Command failed to run: ${commandResult.stderr}`);
+      throw new Error(commandResult.stderr);
     }
   }
 }

@@ -104,7 +104,7 @@ export default class schemaBrowser {
             const textDoc = await vscode.workspace.openTextDocument({language: `sql`, content});
             await vscode.window.showTextDocument(textDoc);
           } catch (e) {
-            vscode.window.showErrorMessage(e);
+            vscode.window.showErrorMessage(e.message);
           }
         }
       }),
@@ -114,7 +114,7 @@ export default class schemaBrowser {
           try {
             Table.getRelatedObjects(object.schema, object.name);
           } catch (e) {
-            vscode.window.showErrorMessage(e);
+            vscode.window.showErrorMessage(e.message);
           }
         }
       }),
@@ -124,7 +124,7 @@ export default class schemaBrowser {
           try {
             Table.getIndexes(object.schema, object.name);
           } catch (e) {
-            vscode.window.showErrorMessage(e);
+            vscode.window.showErrorMessage(e.message);
           }
         }
       }),
@@ -134,7 +134,7 @@ export default class schemaBrowser {
           try {
             Table.getAdvisedIndexes(object.schema, object.name);
           } catch (e) {
-            vscode.window.showErrorMessage(e);
+            vscode.window.showErrorMessage(e.message);
           }
         }
       }),
@@ -149,7 +149,7 @@ export default class schemaBrowser {
             try {
               Table.clearAdvisedIndexes(object.schema, object.name);
             } catch (e) {
-              vscode.window.showErrorMessage(e);
+              vscode.window.showErrorMessage(e.message);
             }
           }
         }
@@ -168,7 +168,7 @@ export default class schemaBrowser {
               this.cache = {};
               this.refresh();
             } catch (e) {
-              vscode.window.showErrorMessage(e);
+              vscode.window.showErrorMessage(e.message);
             }
           }
         }
@@ -188,7 +188,7 @@ export default class schemaBrowser {
               this.cache = {};
               this.refresh();
             } catch (e) {
-              vscode.window.showErrorMessage(e);
+              vscode.window.showErrorMessage(e.message);
             }
           } else {
             vscode.window.showErrorMessage("Name cannot be blank.");
@@ -206,7 +206,7 @@ export default class schemaBrowser {
             try {
               Table.clearFile(object.schema, object.name);
             } catch (e) {
-              vscode.window.showErrorMessage(e);
+              vscode.window.showErrorMessage(e.message);
             }
           }
         }
@@ -246,7 +246,7 @@ export default class schemaBrowser {
                   this.cache = {};
                   this.refresh();
                 } catch (e) {
-                  vscode.window.showErrorMessage(e);
+                  vscode.window.showErrorMessage(e.message);
                 }
               } else {
                 vscode.window.showErrorMessage("Schema and Name cannot be blank.");
