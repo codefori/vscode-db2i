@@ -32,7 +32,7 @@ export type Rows = {[column: string]: string|number|boolean}[];
 
 export interface JDBCOptions {
   // Format properties
-  naming?: "system" | "sql";
+  "naming"?: "system" | "sql";
   "date format"?:
     | "mdy"
     | "dmy"
@@ -49,14 +49,14 @@ export interface JDBCOptions {
 
   // Other properties
   "full open"?: boolean;
-  access?: "all" | "read call" | "read only";
+  "access"?: "all" | "read call" | "read only";
   "autocommit exception"?: "true" | "false";
   "bidi string type"?: "4" | "5" | "6" | "7" | "8" | "9" | "10" | "11";
   "bidi implicit reordering"?: "true" | "false";
   "bidi numeric ordering"?: "true" | "false";
   "data truncation"?: "true" | "false";
-  driver?: "toolbox" | "native";
-  errors?: "full" | "basic";
+  "driver"?: "toolbox" | "native";
+  "errors"?: "full" | "basic";
   "extended metadata"?: "true" | "false";
   "hold input locators"?: "true" | "false";
   "hold statements"?: "true" | "false";
@@ -66,9 +66,9 @@ export interface JDBCOptions {
   "key ring password"?: string;
   "metadata source"?: "0" | "1";
   "proxy server"?: string;
-  remarks?: "sql" | "system";
+  "remarks"?: "sql" | "system";
   "secondary URL"?: string;
-  secure?: "true" | "false";
+  "secure"?: "true" | "false";
   "server trace"?: "0" | "2" | "4" | "8" | "16" | "32" | "64";
   "thread used"?: "true" | "false";
   "toolbox trace"?:
@@ -85,12 +85,12 @@ export interface JDBCOptions {
     | "proxy"
     | "thread"
     | "information";
-  trace?: "true" | "false";
+  "trace"?: "true" | "false";
   "translate binary"?: "true" | "false";
   "translate boolean"?: "true" | "false";
 
   // System Properties
-  libraries?: string[];
+  "libraries"?: string[];
   "auto commit"?: "true" | "false";
   "concurrent access resolution"?: "1" | "2" | "3";
   "cursor hold"?: "true" | "false";
@@ -137,14 +137,14 @@ export interface JDBCOptions {
   "lazy close"?: "true" | "false";
   "lob threshold"?: string;
   "maximum blocked input rows"?: string;
-  package?: string;
+  "package"?: string;
   "package add"?: "true" | "false";
   "package cache"?: "true" | "false";
   "package criteria"?: "default" | "select";
   "package error"?: "exception" | "warning" | "none";
   "package library"?: string;
-  prefetch?: "true" | "false";
-  qaqqinilib?: string;
+  "prefetch"?: "true" | "false";
+  "qaqqinilib"?: string;
   "query optimize goal"?: "0" | "1" | "2";
   "query timeout mechanism"?: "qqrytimlmt" | "cancel";
   "query storage limit"?: string;
@@ -153,7 +153,7 @@ export interface JDBCOptions {
   "vairiable field compression"?: "true" | "false";
 
   // Sort Properties
-  sort?: "hex" | "language" | "table";
+  "sort"?: "hex" | "language" | "table";
   "sort language"?: string;
   "sort table"?: string;
   "sort weight"?: "shared" | "unique";
