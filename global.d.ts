@@ -39,8 +39,22 @@ interface BasicSQLObject {
   schema: string;
   name: string;
   text: string;
+  system: {
+    schema: string;
+    name: string;
+  }
   basedOn: {
     schema: string;
     name: string;
   }
+}
+
+interface CPYFOptions {
+  toLib: string;
+  toFile: string;
+  fromMbr: string;
+  toMbr: string;
+  mbrOpt: string;
+  crtFile: string;
+  outFmt: string
 }

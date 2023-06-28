@@ -89,8 +89,12 @@ export default class Table {
     }
   }
 
-  static async copyFile(schema: string, name: string, toLib: string, toFile: string, replace: string, create: string): Promise<void> {
-    const command = `CPYF FROMFILE(${schema}/${name}) TOFILE(${toLib}/${toFile}) MBROPT(${replace}) CRTFILE(${create})`;
+  static async copyFile(schema: string, name: string, options: CPYFOptions): Promise<void> {
+    const command = [
+      `CPYF FROMFILE(${schema}/${name}) TOFILE(${options.toLib}/${options.toFile})`,
+      `FROMMBR(${options.fromMbr}) TOMBR(${options.toMbr}) MBROPT(${options.mbrOpt})`,
+      `CRTFILE(${options.crtFile}) OUTFMT(${options.outFmt})`
+    ].join(` `);
                   
     const commandResult = await getInstance().getConnection().runCommand({
       command: command,

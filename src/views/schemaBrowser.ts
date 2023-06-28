@@ -216,7 +216,7 @@ export default class schemaBrowser {
                 location: vscode.ProgressLocation.Notification,
                 title: `Clearing ${object.name}...`
               }, async () => {
-                await Table.clearFile(object.schema, object.name);
+                await Table.clearFile(object.system.schema, object.system.name);
               });
 
               vscode.window.showInformationMessage(`${object.name} cleared`);
@@ -231,17 +231,27 @@ export default class schemaBrowser {
         if (object) {
           const base = loadBase();
           const page = await base.customUI()
-            .addInput('file', 'To File')
-            .addInput('library', 'Library')
-            .addSelect('replace', 'Replace or add records', [
+            .addInput('toFile', 'To File')
+            .addInput('toLib', 'Library')
+            .addInput('fromMbr', 'From member', 'Name, generic*, *FIRST, *ALL', {
+              default: '*FIRST'
+            })
+            .addInput('toMbr', 'To member or label', 'Name, *FIRST, *FROMMBR, *ALL', {
+              default: '*FIRST'
+            })
+            .addSelect('mbrOpt', 'Replace or add records', [
               {text: '*NONE', description: '*NONE', value: '*NONE'},
               {text: '*ADD', description: '*ADD', value: '*ADD'},
               {text: '*REPLACE', description: '*REPLACE', value: '*REPLACE'},
               {text: '*UPDADD', description: '*UPDADD', value: '*UPDADD'},
             ])
-            .addSelect('create', 'Create file', [
+            .addSelect('crtFile', 'Create file', [
               {text: '*NO', description: '*NO', value: '*NO'},
               {text: '*YES', description: '*YES', value: '*YES'},
+            ])
+            .addSelect('outFmt', 'Print format', [
+              {text: '*CHAR', description: '*CHAR', value: '*CHAR'},
+              {text: '*HEX', description: '*HEX', value: '*HEX'},
             ])
             .addButtons(
               {id: 'copy', label:'Copy'},
@@ -260,7 +270,7 @@ export default class schemaBrowser {
                     location: vscode.ProgressLocation.Notification,
                     title: `Copying ${object.name}...`
                   }, async () => {
-                    await Table.copyFile(object.schema, object.name, data.library, data.file, data.replace, data.create);
+                    await Table.copyFile(object.system.schema, object.system.name, data);
                   });
     
                   vscode.window.showInformationMessage(`Table copied`);
@@ -452,6 +462,10 @@ class SQLObject extends vscode.TreeItem {
   schema: string;
   name: string;
   type: string;
+  system: {
+    schema: string;
+    name: string;
+  }
 
   constructor(item: BasicSQLObject) {
     const type = viewItem[item.type];
@@ -461,6 +475,7 @@ class SQLObject extends vscode.TreeItem {
     this.path = `${item.schema}.${item.name}`;
     this.schema = item.schema;
     this.name = item.name;
+    this.system = item.system;
     this.type = type;
     this.description = item.text;
 
