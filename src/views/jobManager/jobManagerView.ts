@@ -1,4 +1,4 @@
-import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, env, window, workspace } from "vscode";
+import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, env, window, workspace } from "vscode";
 import { TreeDataProvider } from "vscode";
 import { Config, JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
@@ -100,6 +100,10 @@ export class JobManagerView implements TreeDataProvider<any> {
         this.refresh();
       }),
     )
+  }
+
+  static setVisable(visable: boolean) {
+    commands.executeCommand(`setContext`, `vscode-db2i:jobManager`, visable);
   }
 
   refresh() {

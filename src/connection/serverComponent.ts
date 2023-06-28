@@ -9,6 +9,7 @@ import { OutputChannel, commands, window } from "vscode";
 
 import { writeFile } from "fs/promises";
 import os from "os";
+import { JobManagerView } from "../views/jobManager/jobManagerView";
 
 const octokit = new Octokit();
 
@@ -118,6 +119,7 @@ export class ServerComponent {
               await Config.setServerComponentName(basename);
 
               window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
+              JobManagerView.setVisable(true);
               
             } else {
               window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`);

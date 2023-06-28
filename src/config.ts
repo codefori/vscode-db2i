@@ -3,6 +3,7 @@ import { ConnectionStorage } from "./Storage";
 import { getInstance } from "./base";
 import { SQLJobManager } from "./connection/manager";
 import { ServerComponent } from "./connection/serverComponent";
+import { JobManagerView } from "./views/jobManager/jobManagerView";
 
 interface IBMiLevels {
   version: number;
@@ -24,7 +25,7 @@ export function setupConfig(context: ExtensionContext) {
     const backendSupport = await ServerComponent.initialise();
 
     SQLJobManager.jobSupport = backendSupport;
-    commands.executeCommand(`setContext`, `vscode-db2i:jobManager`, backendSupport);
+    JobManagerView.setVisable(true);
   });
 
   getInstance().onEvent(`disconnected`, async () => {
