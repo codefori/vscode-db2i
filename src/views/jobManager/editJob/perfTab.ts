@@ -6,7 +6,6 @@ export default function getPerfTab(options: JDBCOptions) {
   const tab = base.customUI();
 
   tab
-    .addHeading(`Performance Properties`, 2)
     .addParagraph(
       `Performance properties are attributes that include caching, data conversion, data compression, and prefetching that affect performance.`
     )

@@ -38,7 +38,6 @@ export default function getOtherTab(options: JDBCOptions) {
 
   tab
     // Other properties --------------------------------------------------------------------------------------------------
-    .addHeading(`Other Properties`, 2)
     .addParagraph(
       `Other properties are those properties not easily categorized. These properties determine which JDBC driver is used, and specify options related to level of database access, bidirectional string type, data truncation and so on.`
     )

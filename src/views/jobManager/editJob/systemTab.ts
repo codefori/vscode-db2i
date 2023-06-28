@@ -29,7 +29,6 @@ export default function getSystemTab(options: JDBCOptions) {
 
   tab
     // System properties -------------------------------------------------------------------------------------------------
-    .addHeading(`System Properties`, 2)
     .addParagraph(
       `System properties specify attributes that govern transactions, libraries, and databases.`
     )

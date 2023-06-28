@@ -32,7 +32,7 @@ export type Rows = {[column: string]: string|number|boolean}[];
 
 export interface JDBCOptions {
   // Format properties
-  "naming"?: "system" | "sql";
+  "naming"?: "sql" | "system";
   "date format"?:
     | "mdy"
     | "dmy"

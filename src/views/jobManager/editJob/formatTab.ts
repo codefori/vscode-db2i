@@ -7,7 +7,6 @@ export default function getFormatTab(options: JDBCOptions) {
 
   tab
     // Format Properties -------------------------------------------------------------------------------------------------
-    .addHeading(`Format Properties`, 2)
     .addParagraph(
       `Format properties specify date and time formats, date and decimal separators, and table naming conventions used within SQL statements.`
     )
@@ -148,13 +147,13 @@ export default function getFormatTab(options: JDBCOptions) {
         {
           value: `sql`,
           text: `as in schema.table`,
-          description: `SQL naming`,
+          description: `sql`,
           selected: options["naming"] === `sql`,
         },
         {
           value: `system`,
           text: `as in schema/table`,
-          description: `System naming`,
+          description: `system`,
           selected: options["naming"] === `system`,
         },
       ],

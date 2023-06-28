@@ -6,7 +6,6 @@ export default function getSortTab(options: JDBCOptions) {
   const tab = base.customUI();
 
   tab
-    .addHeading(`Sort Properties`)
     .addParagraph(
       `Sort properties specify how the system performs stores and performs sorts.`
     )

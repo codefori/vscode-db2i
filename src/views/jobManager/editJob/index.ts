@@ -29,11 +29,11 @@ export async function editJobUi(
   const sortPropsTab = getSortTab(options);
 
   let tabs: ComplexTab[] = [
-    { label: `System Properties`, fields: syspropsTab.fields },
-    { label: `Format Properties`, fields: formatpropsTab.fields },
-    { label: `Performance Properties`, fields: performancepropsTab.fields },
-    { label: `Sort Properties`, fields: sortPropsTab.fields },
-    { label: `Other Properties`, fields: otherpropsTab.fields },
+    { label: `System`, fields: syspropsTab.fields },
+    { label: `Format`, fields: formatpropsTab.fields },
+    { label: `Performance`, fields: performancepropsTab.fields },
+    { label: `Sort`, fields: sortPropsTab.fields },
+    { label: `Other`, fields: otherpropsTab.fields },
   ];
 
   ui.addComplexTabs(tabs).addButtons(
@@ -42,7 +42,7 @@ export async function editJobUi(
   );
 
   const page = await ui.loadPage<{ [key: string]: string }>(
-    jobName || `Edit job options`
+    `Edit ${jobName} options`
   );
 
   if (page && page.data) {
