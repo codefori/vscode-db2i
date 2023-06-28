@@ -163,8 +163,14 @@ export default class schemaBrowser {
 
           if(result === 'Yes') {
             try {
-              await Schemas.deleteObject(object.path, object.type);
-              
+              await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Deleting ${object.name}...`
+              }, async () => {
+                await Schemas.deleteObject(object.path, object.type);
+              });
+
+              vscode.window.showInformationMessage(`${object.name} deleted`);
               this.cache = {};
               this.refresh();
             } catch (e) {
@@ -191,7 +197,7 @@ export default class schemaBrowser {
               vscode.window.showErrorMessage(e.message);
             }
           } else {
-            vscode.window.showErrorMessage("Name cannot be blank.");
+            vscode.window.showErrorMessage(`Name cannot be blank`);
           }
         }
       }),
@@ -204,7 +210,14 @@ export default class schemaBrowser {
 
           if(result === 'Yes') {
             try {
-              Table.clearFile(object.schema, object.name);
+              await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Clearing ${object.name}...`
+              }, async () => {
+                await Table.clearFile(object.schema, object.name);
+              });
+
+              vscode.window.showInformationMessage(`${object.name} cleared`);
             } catch (e) {
               vscode.window.showErrorMessage(e.message);
             }
@@ -241,8 +254,14 @@ export default class schemaBrowser {
             if (data.buttons == 'copy') {
               if (data.library != "" && data.file != "") {
                 try {
-                  await Table.copyFile(object.schema, object.name, data.library, data.file, data.replace, data.create);
+                  await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Copying ${object.name}...`
+                  }, async () => {
+                    await Table.copyFile(object.schema, object.name, data.library, data.file, data.replace, data.create);
+                  });
     
+                  vscode.window.showInformationMessage(`Table copied`);
                   this.cache = {};
                   this.refresh();
                 } catch (e) {

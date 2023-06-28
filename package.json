@@ -169,7 +169,7 @@
       },
       {
         "command": "vscode-db2i.copyData",
-        "title": "Copy data...",
+        "title": "Copy Data...",
         "category": "Db2 for i"
       },
       {
