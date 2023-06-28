@@ -187,14 +187,16 @@ export default class schemaBrowser {
             prompt: "Enter new name",
           });
 
-          if (name != "") {
-            try {
-              await Schemas.renameObject(object.schema, object.name, name);
-              
-              this.cache = {};
-              this.refresh();
-            } catch (e) {
-              vscode.window.showErrorMessage(e.message);
+          if (name !== "") {
+            if (name) {
+              try {
+                await Schemas.renameObject(object.schema, object.name, name, object.type);
+                
+                this.cache = {};
+                this.refresh();
+              } catch (e) {
+                vscode.window.showErrorMessage(e.message);
+              }
             }
           } else {
             vscode.window.showErrorMessage(`Name cannot be blank`);

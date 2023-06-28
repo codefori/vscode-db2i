@@ -149,16 +149,8 @@ export default class Database {
     await getInstance().getContent().runSQL(query);
   }
   
-  static async renameObject(schema: string, oldName: string, newName: string): Promise<void> {
-    const command = `RNMOBJ OBJ(${schema}/${oldName}) OBJTYPE(*FILE) NEWOBJ(${newName})`;
-              
-    const commandResult = await getInstance().getConnection().runCommand({
-      command: command,
-      environment: `ile`
-    });
-
-    if (commandResult.code !== 0) {
-      throw new Error(commandResult.stderr);
-    }
+  static async renameObject(schema: string, oldName: string, newName: string, type: string): Promise<void> {
+    const query = `RENAME ${type === 'view' ? 'table' : type} ${schema}.${oldName} TO ${newName}`;
+    await getInstance().getContent().runSQL(query);
   }
 }
