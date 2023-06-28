@@ -144,8 +144,8 @@ export default class Database {
     return formatted;
   }
   
-  static async deleteObject(objectPath: string, type: string): Promise<void> {
-    const query = `DROP ${type} IF EXISTS ${objectPath}`;
+  static async deleteObject(schema: string, name:string, type: string): Promise<void> {
+    const query = `DROP ${type} IF EXISTS ${schema}.${name}`;
     await getInstance().getContent().runSQL(query);
   }
   

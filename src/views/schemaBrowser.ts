@@ -147,7 +147,7 @@ export default class schemaBrowser {
           
           if(result === 'Yes') {
             try {
-              Table.clearAdvisedIndexes(object.schema, object.name);
+              await Table.clearAdvisedIndexes(object.schema, object.name);
             } catch (e) {
               vscode.window.showErrorMessage(e.message);
             }
@@ -167,7 +167,7 @@ export default class schemaBrowser {
                 location: vscode.ProgressLocation.Notification,
                 title: `Deleting ${object.name}...`
               }, async () => {
-                await Schemas.deleteObject(object.path, object.type);
+                await Schemas.deleteObject(object.schema, object.name, object.type);
               });
 
               vscode.window.showInformationMessage(`${object.name} deleted`);

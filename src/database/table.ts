@@ -40,9 +40,9 @@ export default class Table {
   }
 
   static getRelatedObjects(schema: string, name: string): void {
-    const content = `SELECT SQL_OBJECT_TYPE, SCHEMA_NAME, SQL_NAME, LIBRARY_NAME,
-              SYSTEM_NAME, OBJECT_OWNER, LONG_COMMENT, OBJECT_TEXT, LAST_ALTERED 
-              FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${schema}', '${name}')) ORDER BY SQL_NAME`;
+    const content = `SELECT SQL_NAME, SYSTEM_NAME, SCHEMA_NAME, LIBRARY_NAME, SQL_OBJECT_TYPE, 
+              OBJECT_OWNER, LAST_ALTERED, OBJECT_TEXT, LONG_COMMENT 
+              FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${schema}', '${name}')) ORDER BY SQL_OBJECT_TYPE, SQL_NAME`;
     
     vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
       content,
@@ -63,7 +63,7 @@ export default class Table {
 
   static getAdvisedIndexes(schema: string, name: string): void {
     // Maybe choose/rename which columns to get?
-    const content = `SELECT * FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
+    const content = `SELECT * FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}' ORDER BY TIMES_ADVISED DESC`;
     vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
       content,
       type: `statement`,
