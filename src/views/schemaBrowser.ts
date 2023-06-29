@@ -189,8 +189,9 @@ export default class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.renameObject`, async (object: SQLObject) => {
         if (object) {
           const name = await vscode.window.showInputBox({
-            title: "New File",
+            title: "New Name",
             prompt: "Enter new name",
+            value: object.name
           });
 
           if (name !== "") {
@@ -269,7 +270,7 @@ export default class schemaBrowser {
               {id: 'copy', label:'Copy'},
               {id: 'cancel', label:'Cancel'}
             )
-            .loadPage<any>('Copy File');
+            .loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
           
           if(page && page.data) {
             const data = page.data;
