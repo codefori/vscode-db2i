@@ -141,25 +141,6 @@ export default function getFormatTab(options: JDBCOptions) {
       `Specifies the decimal separator used in numeric literals within SQL statements.`
     )
     .addSelect(
-      `naming`,
-      `Naming`,
-      [
-        {
-          value: `sql`,
-          text: `as in schema.table`,
-          description: `sql`,
-          selected: options["naming"] === `sql`,
-        },
-        {
-          value: `system`,
-          text: `as in schema/table`,
-          description: `system`,
-          selected: options["naming"] === `system`,
-        },
-      ],
-      `Specifies the naming convention used when referring to tables.`
-    )
-    .addSelect(
       `time format`,
       `Time format`,
       [
