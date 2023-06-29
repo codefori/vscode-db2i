@@ -86,10 +86,10 @@ export class SQLJobManager {
     return (this.selectedJob >= 0);
   }
 
-  runSQL(query: string): Promise<Rows> {
+  runSQL<T>(query: string): Promise<T[]> {
     const selected = this.jobs[this.selectedJob]
     if (SQLJobManager.jobSupport && selected) {
-      return selected.job.query(query);
+      return selected.job.query(query) as Promise<T[]>;
 
     } else {
       const instance = getInstance();
@@ -100,7 +100,7 @@ export class SQLJobManager {
         `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
         query
       ].join(`;\n`);
-      return content.runSQL(queryContext);
+      return content.runSQL(queryContext) as Promise<T[]>;
     }
   }
 }
