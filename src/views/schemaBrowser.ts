@@ -190,8 +190,14 @@ export default class schemaBrowser {
           if (name !== "") {
             if (name) {
               try {
-                await Schemas.renameObject(object.schema, object.name, name, object.type);
+                await vscode.window.withProgress({
+                  location: vscode.ProgressLocation.Notification,
+                  title: `Renaming ${object.name}...`
+                }, async () => {
+                  await Schemas.renameObject(object.schema, object.name, name, object.type);
+                });
                 
+                vscode.window.showInformationMessage(`Renamed ${object.name} to ${name}`);
                 this.cache = {};
                 this.refresh();
               } catch (e) {
