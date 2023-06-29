@@ -12,7 +12,7 @@ interface IBMiLevels {
 
 export let Config: ConnectionStorage;
 export let OSData: IBMiLevels|undefined;
-export let JobManager: SQLJobManager = new SQLJobManager();
+export let JobManager: SQLJobManager;
 
 export function setupConfig(context: ExtensionContext) {
   Config = new ConnectionStorage(context);
@@ -24,12 +24,14 @@ export function setupConfig(context: ExtensionContext) {
 
     const backendSupport = await ServerComponent.initialise();
 
+    JobManager = new SQLJobManager()
+
     SQLJobManager.jobSupport = backendSupport;
     JobManagerView.setVisable(true);
   });
 
   getInstance().onEvent(`disconnected`, async () => {
-    JobManager.closeJob();
+    
   });
 }
 

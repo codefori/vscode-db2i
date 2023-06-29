@@ -14,6 +14,10 @@ export class JobManagerView implements TreeDataProvider<any> {
 
   constructor(context: vscode.ExtensionContext) {
     context.subscriptions.push(
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.refresh`, async () => {
+        this.refresh();
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async () => {
 
         await window.withProgress({location: ProgressLocation.Window}, async (progress) => {
@@ -103,7 +107,11 @@ export class JobManagerView implements TreeDataProvider<any> {
   }
 
   static setVisable(visable: boolean) {
-    commands.executeCommand(`setContext`, `vscode-db2i:jobManager`, visable);
+    commands.executeCommand(`setContext`, `vscode-db2i:jobManager`, visable).then(() => {
+      if (visable) {
+        commands.executeCommand(`vscode-db2i.jobManager.refresh`);
+      }
+    });
   }
 
   refresh() {
