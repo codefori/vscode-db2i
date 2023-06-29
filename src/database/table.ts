@@ -39,41 +39,9 @@ export default class Table {
     return content.runSQL(sql);
   }
 
-  static getRelatedObjects(schema: string, name: string): void {
-    const content = `SELECT SQL_NAME, SYSTEM_NAME, SCHEMA_NAME, LIBRARY_NAME, SQL_OBJECT_TYPE, 
-              OBJECT_OWNER, LAST_ALTERED, OBJECT_TEXT, LONG_COMMENT 
-              FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${schema}', '${name}')) ORDER BY SQL_OBJECT_TYPE, SQL_NAME`;
-    
-    vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-      content,
-      type: `statement`,
-      open: false,
-    });
-  }
-
-  static getIndexes(schema: string, name: string): void {
-    // Maybe choose/rename which columns to get?
-    const content = `SELECT * FROM QSYS2.SYSINDEXSTAT WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
-    vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-      content,
-      type: `statement`,
-      open: false,
-    });
-  }
-
-  static getAdvisedIndexes(schema: string, name: string): void {
-    // Maybe choose/rename which columns to get?
-    const content = `SELECT * FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}' ORDER BY TIMES_ADVISED DESC`;
-    vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-      content,
-      type: `statement`,
-      open: false,
-    });
-  }
-
-  static async clearAdvisedIndexes(schema: string, name: string): Promise<void> {
+  static clearAdvisedIndexes(schema: string, name: string) {
     const query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
-    await getInstance().getContent().runSQL(query);
+    return getInstance().getContent().runSQL(query);
   }
 
   static async clearFile(schema: string, name: string): Promise<void> {

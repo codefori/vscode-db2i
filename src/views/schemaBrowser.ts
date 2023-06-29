@@ -111,31 +111,37 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getRelatedObjects`, async (object: SQLObject) => {
         if (object) {
-          try {
-            Table.getRelatedObjects(object.schema, object.name);
-          } catch (e) {
-            vscode.window.showErrorMessage(e.message);
-          }
+          const content = `SELECT SQL_NAME, SYSTEM_NAME, SCHEMA_NAME, LIBRARY_NAME, SQL_OBJECT_TYPE, 
+          OBJECT_OWNER, LAST_ALTERED, OBJECT_TEXT, LONG_COMMENT 
+          FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${object.schema}', '${object.name}')) ORDER BY SQL_OBJECT_TYPE, SQL_NAME`;
+
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            type: `statement`,
+            open: false,
+          });
         }
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.getIndexes`, async (object: SQLObject) => {
         if (object) {
-          try {
-            Table.getIndexes(object.schema, object.name);
-          } catch (e) {
-            vscode.window.showErrorMessage(e.message);
-          }
+          const content = `SELECT * FROM QSYS2.SYSINDEXSTAT WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}'`;
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            type: `statement`,
+            open: false,
+          });
         }
       }),
       
       vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject) => { //table
         if (object) {
-          try {
-            Table.getAdvisedIndexes(object.schema, object.name);
-          } catch (e) {
-            vscode.window.showErrorMessage(e.message);
-          }
+          const content = `SELECT * FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}' ORDER BY TIMES_ADVISED DESC`;
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            type: `statement`,
+            open: false,
+          });
         }
       }),
 
