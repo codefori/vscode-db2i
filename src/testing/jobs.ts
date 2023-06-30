@@ -12,6 +12,8 @@ export const JobsSuite: TestSuite = {
   
       // To run these tests, we need the backend server. If this test fails. Don't bother
       assert.strictEqual(backendInstalled, true);
+
+      console.log(`Starting command: ${ServerComponent.getInitCommand()}`);
     }},
 
     {name: `Creating a job`, test: async () => {
@@ -76,6 +78,20 @@ export const JobsSuite: TestSuite = {
 
       const rows = await newJob.query(`select * from qcustcdt`);
       assert.notStrictEqual(rows.length, 0);
+
+      newJob.close();
+    }},
+
+    {name: `Binding parameters`, test: async () => {
+      let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
+      await newJob.connect();
+
+      try {
+        const rows = await newJob.query(`select * from qcustcdt where cusnum = ? and zipcod = ?`, [938485, 30545]);
+        assert.strictEqual(rows.length, 1);
+      } catch (e) {
+        assert.fail(`Should not have errored.`);
+      }
 
       newJob.close();
     }},

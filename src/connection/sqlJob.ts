@@ -100,15 +100,17 @@ export class SQLJob {
     return connectResult;
   }
 
-  async query<T>(sql: string): Promise<T[]> {
-    const connectionObject = {
-      id: `boop`,
-      type: `sql`,
-      sql
-      // TODO: rows support?
-    }
+  async query<T>(sql: string, parameters?: (number|string)[]): Promise<T[]> {
+    const hasParms = (parameters && parameters.length > 0);
 
-    const result = await this.send(JSON.stringify(connectionObject));
+    const queryObject = {
+      id: `boop`,
+      type: hasParms ? `prepare_sql_execute` : `sql`,
+      sql,
+      parameters: hasParms ? parameters : undefined
+    };
+
+    const result = await this.send(JSON.stringify(queryObject));
 
     const queryResult: QueryResult = JSON.parse(result);
 
