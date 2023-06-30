@@ -1,3 +1,4 @@
+import { Server } from "http";
 
 export interface ServerResponse {
   id: string;
@@ -8,11 +9,23 @@ export interface ServerResponse {
 export interface ConnectionResult extends ServerResponse {
   job: string;
 }
+export interface VersionCheckResult extends ServerResponse {
+  build_date: string;
+  version: string;
+}
 
 export interface QueryResult extends ServerResponse {
   metadata: QueryMetaData,
   is_done: boolean;
   data: any;
+}
+
+export interface JobLogEntry {
+  MESSAGE_ID: string;
+  MESSAGE_TEXT: string;
+}
+export interface CLCommandResult extends ServerResponse {
+  joblog: JobLogEntry[];
 }
 
 export interface QueryMetaData {

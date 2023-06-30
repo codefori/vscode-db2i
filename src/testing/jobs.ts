@@ -16,6 +16,61 @@ export const JobsSuite: TestSuite = {
       console.log(`Starting command: ${ServerComponent.getInitCommand()}`);
     }},
 
+    {name: `Backend version check`, test: async () => {
+      const backendInstalled = await ServerComponent.initialise(false);
+  
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      let ver = await newJob.getVersion();
+      console.log(`backend version: `+ver.version);
+      console.log(`backend build date: `+ver.build_date);
+      assert.notEqual(ver.version, ``);
+      assert.notEqual(ver.build_date, ``);
+      assert.ok(`backend build date: `+ver.build_date);
+      newJob.close();
+    }},
+    {name: `CL Command (success)`, test: async () => {
+      const backendInstalled = await ServerComponent.initialise(false);
+  
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVSNAKES)  CRTFILE(*YES) `);
+      assert.equal(clRes.success, true);
+      assert.notEqual(0, clRes.joblog.length);
+      let CPF2880: boolean = false;
+      console.log(JSON.stringify(clRes));
+      for (let joblogEntry of clRes.joblog) {
+        if (joblogEntry.MESSAGE_ID === "CPF2880") {
+          CPF2880 = true;
+          break;
+        }
+      }
+      assert.equal(CPF2880, true);
+      newJob.close();
+    }},
+    {name: `CL Command (error)`, test: async () => {
+      const backendInstalled = await ServerComponent.initialise(false);
+
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVDB2) MBROPT(*UPDADD) CRTFILE(*YES) `);
+      console.log(JSON.stringify(clRes));
+      assert.equal(clRes.success, false);
+      let CPD2825: boolean = false;
+      console.log(JSON.stringify(clRes));
+      for (let joblogEntry of clRes.joblog) {
+        if (joblogEntry.MESSAGE_ID === "CPD2825") {
+          CPD2825 = true;
+          break;
+        }
+      }
+      assert.equal(CPD2825, true);
+      newJob.close();
+    }},
+
     {name: `Creating a job`, test: async () => {
       const newJob = new SQLJob();
 

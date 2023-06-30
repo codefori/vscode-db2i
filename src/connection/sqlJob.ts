@@ -1,6 +1,7 @@
+import { CommandResult } from "@halcyontech/vscode-ibmi-types";
 import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
-import { JDBCOptions, ConnectionResult, Rows, QueryResult } from "./types";
+import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult } from "./types";
 
 export enum JobStatus {
   NotStarted = "notStarted",
@@ -10,6 +11,7 @@ export enum JobStatus {
 }
 
 export class SQLJob {
+ 
   private channel: any;
   private status: JobStatus = JobStatus.NotStarted;
 
@@ -119,6 +121,34 @@ export class SQLJob {
     }
     
     return queryResult.data;
+  }
+  async getVersion<T>(): Promise<VersionCheckResult> {
+    const verObj = {
+      id: `boop`,
+      type: `getversion`
+    };
+
+    const result = await this.send(JSON.stringify(verObj));
+
+    const version: VersionCheckResult = JSON.parse(result);
+
+    if (version.success !== true) {
+      throw new Error(version.error || `Failed to get version from packaned`);
+    }
+    
+    return version;
+  }
+  async clcommand<T>(cmd: string): Promise<CLCommandResult> {
+    const cmdObj = {
+      id: `boop`,
+      type: `cl`,
+      cmd: cmd
+    };
+    let hmm = JSON.stringify(cmdObj);
+    const result = await this.send(JSON.stringify(cmdObj));
+
+    const commandResult: CLCommandResult = JSON.parse(result);
+    return commandResult;
   }
 
   async close() {
