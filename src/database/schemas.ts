@@ -1,4 +1,5 @@
 import vscode from "vscode"
+import { getInstance } from "../base";
 
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
@@ -26,7 +27,7 @@ export default class Database {
     case `views`:
     case `aliases`:
       objects = await content.runSQL([
-        `select TABLE_NAME as NAME, TABLE_TEXT as TEXT, BASE_TABLE_SCHEMA as BASE_SCHEMA, BASE_TABLE_NAME as BASE_OBJ from QSYS2.SYSTABLES`,
+        `select TABLE_NAME as NAME, TABLE_TEXT as TEXT, BASE_TABLE_SCHEMA as BASE_SCHEMA, BASE_TABLE_NAME as BASE_OBJ, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA from QSYS2.SYSTABLES`,
         `where TABLE_SCHEMA = '${schema}' and TABLE_TYPE in (${typeMap[type].map(item => `'${item}'`).join(`, `)}) ${details.filter ? `and TABLE_NAME like '%${details.filter}%'`: ``}`,
         `order by TABLE_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
@@ -35,7 +36,7 @@ export default class Database {
 
     case `constraints`:
       objects = await content.runSQL([
-        `select CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ from QSYS2.SYSCST`,
+        `select CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA from QSYS2.SYSCST`,
         `where CONSTRAINT_SCHEMA = '${schema}' ${details.filter ? `and CONSTRAINT_NAME like '%${details.filter}%'`: ``}`,
         `order by CONSTRAINT_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
@@ -53,7 +54,7 @@ export default class Database {
 
     case `variables`:
       objects = await content.runSQL([
-        `select VARIABLE_NAME as NAME, VARIABLE_TEXT as TEXT from QSYS2.SYSVARIABLES`,
+        `select VARIABLE_NAME as NAME, VARIABLE_TEXT as TEXT, SYSTEM_VAR_NAME as SYS_NAME, SYSTEM_VAR_SCHEMA as SYS_SCHEMA from QSYS2.SYSVARIABLES`,
         `where VARIABLE_SCHEMA = '${schema}' ${details.filter ? `and VARIABLE_NAME like '%${details.filter}%'`: ``}`,
         `order by VARIABLE_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
@@ -62,7 +63,7 @@ export default class Database {
 
     case `indexes`:
       objects = await content.runSQL([
-        `select INDEX_NAME as NAME, INDEX_TEXT as TEXT, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ from QSYS2.SYSINDEXES`,
+        `select INDEX_NAME as NAME, INDEX_TEXT as TEXT, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ, SYSTEM_INDEX_NAME as SYS_NAME, SYSTEM_INDEX_SCHEMA as SYS_SCHEMA from QSYS2.SYSINDEXES`,
         `where INDEX_SCHEMA = '${schema}' ${details.filter ? `and INDEX_NAME like '%${details.filter}%'`: ``}`,
         `order by INDEX_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
@@ -80,7 +81,7 @@ export default class Database {
 
     case `sequences`:
       objects = await content.runSQL([
-        `select SEQUENCE_NAME as NAME, SEQUENCE_TEXT as TEXT from QSYS2.SYSSEQUENCES`,
+        `select SEQUENCE_NAME as NAME, SEQUENCE_TEXT as TEXT, SYSTEM_SEQ_NAME as SYS_NAME, SYSTEM_SEQ_SCHEMA as SYS_SCHEMA from QSYS2.SYSSEQUENCES`,
         `where SEQUENCE_SCHEMA = '${schema}' ${details.filter ? `and SEQUENCE_NAME like '%${details.filter}%'`: ``}`,
         `order by SEQUENCE_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
@@ -107,7 +108,7 @@ export default class Database {
 
     case `types`:
       objects = await content.runSQL([
-        `select USER_DEFINED_TYPE_NAME as NAME, TYPE_TEXT as TEXT from QSYS2.SYSTYPES`,
+        `select USER_DEFINED_TYPE_NAME as NAME, TYPE_TEXT as TEXT, SYSTEM_TYPE_NAME as SYS_NAME, SYSTEM_TYPE_SCHEMA as SYS_SCHEMA from QSYS2.SYSTYPES`,
         `where USER_DEFINED_TYPE_SCHEMA = '${schema}' ${details.filter ? `and USER_DEFINED_TYPE_NAME like '%${details.filter}%'`: ``}`,
         `order by USER_DEFINED_TYPE_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
@@ -120,6 +121,10 @@ export default class Database {
       schema,
       name: table.NAME,
       text: table.TEXT,
+      system: {
+        schema: table.SYS_SCHEMA,
+        name: table.SYS_NAME,
+      },
       basedOn: {
         schema: table.BASE_SCHEMA,
         name: table.BASE_OBJ
@@ -141,5 +146,15 @@ export default class Database {
     const formatted = Statement.format(generatedStatement);
 
     return formatted;
+  }
+  
+  static async deleteObject(schema: string, name:string, type: string): Promise<void> {
+    const query = `DROP ${type} IF EXISTS ${schema}.${name}`;
+    await getInstance().getContent().runSQL(query);
+  }
+  
+  static async renameObject(schema: string, oldName: string, newName: string, type: string): Promise<void> {
+    const query = `RENAME ${type === 'view' ? 'table' : type} ${schema}.${oldName} TO ${newName}`;
+    await getInstance().getContent().runSQL(query);
   }
 }
