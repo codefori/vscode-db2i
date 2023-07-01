@@ -30,6 +30,30 @@ export const JobsSuite: TestSuite = {
       assert.ok(`backend build date: `+ver.build_date);
       newJob.close();
     }},
+    
+    {name: `Paging query`, test: async () => {
+      let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
+      await newJob.connect();
+
+      let correlation_id = `Dig through the ditches and burn through the witches, I slam in the back of my Dragula`;
+      let rowsAtATime = 4;
+      let qry = await newJob.pagingQuery(correlation_id,`select * from QIWS.QCUSTCDT`, rowsAtATime);
+      assert.equal(qry.success, true);
+      assert.equal(qry.data.length, 4);
+      assert.equal(qry.is_done,false);
+
+      while(!qry.is_done) {
+        qry = await newJob.pagingQueryMoreData(correlation_id,rowsAtATime);
+        if(qry.is_done) {
+          assert.equal(qry.data.length <= rowsAtATime, true);
+        }else {
+          assert.equal(qry.data.length,rowsAtATime);
+        }
+      }
+
+      newJob.close();
+    }},
+
     {name: `CL Command (success)`, test: async () => {
       const backendInstalled = await ServerComponent.initialise(false);
   

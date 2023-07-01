@@ -17,7 +17,7 @@ export interface VersionCheckResult extends ServerResponse {
 export interface QueryResult extends ServerResponse {
   metadata: QueryMetaData,
   is_done: boolean;
-  data: any;
+  data: any[];
 }
 
 export interface JobLogEntry {

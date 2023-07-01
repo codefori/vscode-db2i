@@ -122,6 +122,45 @@ export class SQLJob {
     
     return queryResult.data;
   }
+
+  
+  async pagingQuery<T>(correlation_id: string, sql: string, rowsToFetch?:number): Promise<QueryResult> {
+
+    const queryObject = {
+      id: correlation_id,
+      type: `sql`,
+      sql,
+      rows: rowsToFetch? rowsToFetch:1000
+    };
+
+    const result = await this.send(JSON.stringify(queryObject));
+
+    const queryResult: QueryResult = JSON.parse(result);
+
+    if (queryResult.success !== true) {
+      throw new Error(queryResult.error || `Failed to run query (unknown error)`);
+    }
+    return queryResult;
+  }
+  async pagingQueryMoreData<T>(correlation_id: string, rowsToFetch?:number): Promise<QueryResult> {
+
+    const queryObject = {
+      id: `boop`,
+      cont_id: correlation_id,
+      type: `sqlmore`,
+      rows: rowsToFetch? rowsToFetch:1000
+    };
+
+    const result = await this.send(JSON.stringify(queryObject));
+
+    const queryResult: QueryResult = JSON.parse(result);
+
+    if (queryResult.success !== true) {
+      throw new Error(queryResult.error || `Failed to run query (unknown error)`);
+    }
+    return queryResult;
+  }
+
   async getVersion<T>(): Promise<VersionCheckResult> {
     const verObj = {
       id: `boop`,
