@@ -2,6 +2,7 @@ import { CommandResult } from "@halcyontech/vscode-ibmi-types";
 import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult } from "./types";
+import { Query } from "./query";
 
 export enum JobStatus {
   NotStarted = "notStarted",
@@ -29,7 +30,7 @@ export class SQLJob {
     })
   }
 
-  private async send(content: string): Promise<string> {
+  async send(content: string): Promise<string> {
     if (this.status === JobStatus.Ready) {
       this.status = JobStatus.Busy;
       ServerComponent.writeOutput(content);
@@ -102,63 +103,8 @@ export class SQLJob {
     return connectResult;
   }
 
-  async query<T>(sql: string, parameters?: (number | string)[]): Promise<T[]> {
-    const hasParms = (parameters && parameters.length > 0);
-
-    const queryObject = {
-      id: `boop`,
-      type: hasParms ? `prepare_sql_execute` : `sql`,
-      sql,
-      parameters: hasParms ? parameters : undefined
-    };
-
-    const result = await this.send(JSON.stringify(queryObject));
-
-    const queryResult: QueryResult = JSON.parse(result);
-
-    if (queryResult.success !== true) {
-      throw new Error(queryResult.error || `Failed to run query (unknown error)`);
-    }
-
-    return queryResult.data;
-  }
-
-
-  async pagingQuery(correlation_id: string, sql: string, rowsToFetch: number = 1000): Promise<QueryResult> {
-
-    const queryObject = {
-      id: correlation_id,
-      type: `sql`,
-      sql,
-      rows: rowsToFetch
-    };
-
-    const result = await this.send(JSON.stringify(queryObject));
-
-    const queryResult: QueryResult = JSON.parse(result);
-
-    if (queryResult.success !== true) {
-      throw new Error(queryResult.error || `Failed to run query (unknown error)`);
-    }
-    return queryResult;
-  }
-  async pagingQueryMoreData(correlation_id: string, rowsToFetch: number = 1000): Promise<QueryResult> {
-
-    const queryObject = {
-      id: `boop`,
-      cont_id: correlation_id,
-      type: `sqlmore`,
-      rows: rowsToFetch
-    };
-
-    const result = await this.send(JSON.stringify(queryObject));
-
-    const queryResult: QueryResult = JSON.parse(result);
-
-    if (queryResult.success !== true) {
-      throw new Error(queryResult.error || `Failed to run query (unknown error)`);
-    }
-    return queryResult;
+  query<T>(sql: string, parms: any[] = undefined): Query<T> {
+    return new Query(this, sql, parms)
   }
 
   async getVersion(): Promise<VersionCheckResult> {

@@ -14,10 +14,10 @@ export interface VersionCheckResult extends ServerResponse {
   version: string;
 }
 
-export interface QueryResult extends ServerResponse {
+export interface QueryResult<T> extends ServerResponse {
   metadata: QueryMetaData,
   is_done: boolean;
-  data: any[];
+  data: T[];
 }
 
 export interface JobLogEntry {

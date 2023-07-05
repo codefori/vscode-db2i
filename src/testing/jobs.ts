@@ -35,19 +35,19 @@ export const JobsSuite: TestSuite = {
       let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
       await newJob.connect();
 
-      let correlation_id = `Dig through the ditches and burn through the witches, I slam in the back of my Dragula`;
       let rowsAtATime = 4;
-      let qry = await newJob.pagingQuery(correlation_id,`select * from QIWS.QCUSTCDT`, rowsAtATime);
-      assert.equal(qry.success, true);
-      assert.equal(qry.data.length, 4);
-      assert.equal(qry.is_done,false);
+      let qry = newJob.query(`select * from QIWS.QCUSTCDT`);
+      let qryResults = await qry.run(rowsAtATime);
+      assert.equal(qryResults.success, true);
+      assert.equal(qryResults.data.length, 4);
+      assert.equal(qryResults.is_done,false);
 
-      while(!qry.is_done) {
-        qry = await newJob.pagingQueryMoreData(correlation_id,rowsAtATime);
-        if(qry.is_done) {
-          assert.equal(qry.data.length <= rowsAtATime, true);
+      while(!qryResults.is_done) {
+        qryResults = await qry.fetchMore(rowsAtATime);
+        if(qryResults.is_done) {
+          assert.equal(qryResults.data.length <= rowsAtATime, true);
         }else {
-          assert.equal(qry.data.length,rowsAtATime);
+          assert.equal(qryResults.data.length,rowsAtATime);
         }
       }
 
@@ -130,13 +130,10 @@ export const JobsSuite: TestSuite = {
       const newJob = new SQLJob();
 
       await newJob.connect();
-
-      const resultA = await newJob.query(`values (job_name, current_timestamp)`);
-      const resultB = await newJob.query(`values (job_name, current_timestamp)`);
-
-      assert.strictEqual(resultA[0][`00001`], resultB[0][`00001`]);
-
-      newJob.close();
+      Promise.all([newJob.query(`values (job_name, current_timestamp)`).run(), await newJob.query(`values (job_name, current_timestamp)`).run()]).then((values) => {
+        assert.strictEqual(values[0].data[0][`00001`], values[1].data[0][`00001`]);
+        newJob.close();
+      });
     }},
 
     {name: `Library list is used`, test: async () => {
@@ -144,7 +141,7 @@ export const JobsSuite: TestSuite = {
       await newJob.connect();
 
       try {
-        await newJob.query(`select * from qcustcdt`);
+        await newJob.query(`select * from qcustcdt`).run();
         assert.fail(`Query should not have worked. Library list issue`);
       } catch (e) {
         assert.notStrictEqual(e.message, undefined);
@@ -155,8 +152,8 @@ export const JobsSuite: TestSuite = {
       newJob = new SQLJob({libraries: [`QSYS`, `QIWS`], naming: `system`});
       await newJob.connect();
 
-      const rows = await newJob.query(`select * from qcustcdt`);
-      assert.notStrictEqual(rows.length, 0);
+      const rows = await newJob.query(`select * from qcustcdt`).run();
+      assert.notStrictEqual(rows.data.length, 0);
 
       newJob.close();
     }},
@@ -166,8 +163,8 @@ export const JobsSuite: TestSuite = {
       await newJob.connect();
 
       try {
-        const rows = await newJob.query(`select * from qcustcdt where cusnum = ? and zipcod = ?`, [938485, 30545]);
-        assert.strictEqual(rows.length, 1);
+        const rows = await newJob.query(`select * from qcustcdt where cusnum = ? and zipcod = ?`, [938485, 30545]).run();
+        assert.strictEqual(rows.data.length, 1);
       } catch (e) {
         assert.fail(`Should not have errored.`);
       }
@@ -183,12 +180,12 @@ export const JobsSuite: TestSuite = {
       await newJob.connect();
 
       const query = `select * from qiws.qcustcdt`;
-      const rowsA = await newJob.query(query);
+      const rowsA = await newJob.query(query).run();
       const rowsB = await content.runSQL(query);
 
       newJob.close();
 
-      assert.deepStrictEqual(rowsA, rowsB);
+      assert.deepStrictEqual(rowsA.data, rowsB);
     }},
 
     {name: `Performance measuring`, test: async () => {
@@ -203,9 +200,9 @@ export const JobsSuite: TestSuite = {
       console.log(`Using: ${query}`);
 
       const ns = performance.now();
-      await newJob.query(query);
-      await newJob.query(query);
-      await newJob.query(query);
+      await newJob.query(query).run();
+      await newJob.query(query).run();
+      await newJob.query(query).run();
       const ne = performance.now();
 
       console.log(`New query method took ${ne - ns} milliseconds.`);
@@ -219,6 +216,7 @@ export const JobsSuite: TestSuite = {
       const oe = performance.now();
 
       console.log(`Old query method took ${oe - os} milliseconds.`);
+      assert.equal((ne - ns) < (oe - os), true);
     }},
   ]
 }
