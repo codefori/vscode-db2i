@@ -130,10 +130,13 @@ export const JobsSuite: TestSuite = {
       const newJob = new SQLJob();
 
       await newJob.connect();
-      Promise.all([newJob.query(`values (job_name, current_timestamp)`).run(), await newJob.query(`values (job_name, current_timestamp)`).run()]).then((values) => {
-        assert.strictEqual(values[0].data[0][`00001`], values[1].data[0][`00001`]);
-        newJob.close();
-      });
+
+      const resultA = await newJob.query(`values (job_name, current_timestamp)`).run();
+      const resultB = await newJob.query(`values (job_name, current_timestamp)`).run();
+
+      assert.strictEqual(resultA.data[0][`00001`], resultB.data[0][`00001`]);
+
+      newJob.close();
     }},
 
     {name: `Library list is used`, test: async () => {
