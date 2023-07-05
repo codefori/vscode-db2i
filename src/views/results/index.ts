@@ -149,7 +149,7 @@ export function initialise(context: vscode.ExtensionContext) {
                 })
 
                 if (commandResult.code === 0 || commandResult.code === null) {
-                  vscode.window.showInformationMessage(`Command executed successfuly.`);
+                  vscode.window.showInformationMessage(`Command executed successfully.`);
                 } else {
                   vscode.window.showErrorMessage(`Command failed to run.`);
                 }
@@ -230,7 +230,7 @@ export function initialise(context: vscode.ExtensionContext) {
                 }
               }
               
-              if (statement.type === `statement`) {
+              if (statement.type === `statement` && statement.history !== false) {
                 vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement.content);
               }
 

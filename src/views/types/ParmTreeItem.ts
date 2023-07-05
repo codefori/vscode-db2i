@@ -2,8 +2,8 @@
 import vscode from "vscode";
 
 const icons = {
-  IN: `arrow-left`,
-  OUT: `arrow-right`,
+  IN: `arrow-right`,
+  OUT: `arrow-left`,
   INOUT: `arrow-both`,
 }
 

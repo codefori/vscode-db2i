@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "preview": true,
   "engines": {
     "vscode": "^1.70.0"
@@ -138,7 +138,8 @@
       {
         "command": "vscode-db2i.runEditorStatement",
         "key": "ctrl+r",
-        "mac": "cmd+r"
+        "mac": "cmd+r",
+        "when": "editorLangId == sql"
       }
     ],
     "commands": [
@@ -169,6 +170,46 @@
       {
         "command": "vscode-db2i.generateSQL",
         "title": "Generate SQL",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.getRelatedObjects",
+        "title": "Get Related Objects",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.getIndexes",
+        "title": "Get Indexes",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.clearData",
+        "title": "Clear...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.copyData",
+        "title": "Copy Data...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.deleteObject",
+        "title": "Delete...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.renameObject",
+        "title": "Rename...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.advisedIndexes",
+        "title": "Advised Indexes",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.clearAdvisedIndexes",
+        "title": "Clear All Advised Indexes...",
         "category": "Db2 for i"
       },
       {
@@ -358,6 +399,46 @@
           "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
           "when": "view == schemaBrowser && viewItem == schema",
           "group": "db2@3"
+        },
+        {
+          "command": "vscode-db2i.getRelatedObjects",
+          "when": "viewItem == table",
+          "group": "db2workWith@1"
+        },
+        {
+          "command": "vscode-db2i.getIndexes",
+          "when": "viewItem == table",
+          "group": "db2workWith@2"
+        },
+        {
+          "command": "vscode-db2i.clearData",
+          "when": "viewItem == table",
+          "group": "db2data@1"
+        },
+        {
+          "command": "vscode-db2i.copyData",
+          "when": "viewItem == table || viewItem == view",
+          "group": "db2data@2"
+        },
+        {
+          "command": "vscode-db2i.deleteObject",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "group": "db2data@3"
+        },
+        {
+          "command": "vscode-db2i.renameObject",
+          "when": "viewItem == table || viewItem == view || viewItem == index",
+          "group": "db2data@4"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes",
+          "when": "viewItem == table",
+          "group": "db2idxAdv@1"
+        },
+        {
+          "command": "vscode-db2i.clearAdvisedIndexes",
+          "when": "viewItem == table",
+          "group": "db2idxAdv@2"
         },
         {
           "command": "vscode-db2i.queryHistory.remove",

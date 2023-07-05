@@ -10,7 +10,7 @@ export async function initialise(context: vscode.ExtensionContext) {
         const clipboard_content = await vscode.env.clipboard.readText(); 
         const parsedData = JSON.parse(clipboard_content);
 
-        const sql = exports.generateSQL(parsedData);
+        const sql = generateSQL(parsedData);
         const formatted = Statement.format(sql);
 
         if (vscode.window.activeTextEditor) {
