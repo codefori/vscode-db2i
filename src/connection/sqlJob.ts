@@ -11,11 +11,11 @@ export enum JobStatus {
 }
 
 export class SQLJob {
- 
+
   private channel: any;
   private status: JobStatus = JobStatus.NotStarted;
 
-  id: string|undefined;
+  id: string | undefined;
   constructor(public options: JDBCOptions = {}) {}
 
   private static async getChannel() {
@@ -98,11 +98,11 @@ export class SQLJob {
 
     this.id = connectResult.job;
     this.status = JobStatus.Ready;
-    
+
     return connectResult;
   }
 
-  async query<T>(sql: string, parameters?: (number|string)[]): Promise<T[]> {
+  async query<T>(sql: string, parameters?: (number | string)[]): Promise<T[]> {
     const hasParms = (parameters && parameters.length > 0);
 
     const queryObject = {
@@ -119,18 +119,18 @@ export class SQLJob {
     if (queryResult.success !== true) {
       throw new Error(queryResult.error || `Failed to run query (unknown error)`);
     }
-    
+
     return queryResult.data;
   }
 
-  
-  async pagingQuery<T>(correlation_id: string, sql: string, rowsToFetch?:number): Promise<QueryResult> {
+
+  async pagingQuery(correlation_id: string, sql: string, rowsToFetch: number = 1000): Promise<QueryResult> {
 
     const queryObject = {
       id: correlation_id,
       type: `sql`,
       sql,
-      rows: rowsToFetch? rowsToFetch:1000
+      rows: rowsToFetch
     };
 
     const result = await this.send(JSON.stringify(queryObject));
@@ -142,13 +142,13 @@ export class SQLJob {
     }
     return queryResult;
   }
-  async pagingQueryMoreData<T>(correlation_id: string, rowsToFetch?:number): Promise<QueryResult> {
+  async pagingQueryMoreData(correlation_id: string, rowsToFetch: number = 1000): Promise<QueryResult> {
 
     const queryObject = {
       id: `boop`,
       cont_id: correlation_id,
       type: `sqlmore`,
-      rows: rowsToFetch? rowsToFetch:1000
+      rows: rowsToFetch
     };
 
     const result = await this.send(JSON.stringify(queryObject));
@@ -161,7 +161,7 @@ export class SQLJob {
     return queryResult;
   }
 
-  async getVersion<T>(): Promise<VersionCheckResult> {
+  async getVersion(): Promise<VersionCheckResult> {
     const verObj = {
       id: `boop`,
       type: `getversion`
@@ -172,18 +172,17 @@ export class SQLJob {
     const version: VersionCheckResult = JSON.parse(result);
 
     if (version.success !== true) {
-      throw new Error(version.error || `Failed to get version from packaned`);
+      throw new Error(version.error || `Failed to get version from backend`);
     }
-    
+
     return version;
   }
-  async clcommand<T>(cmd: string): Promise<CLCommandResult> {
+  async clcommand(cmd: string): Promise<CLCommandResult> {
     const cmdObj = {
       id: `boop`,
       type: `cl`,
       cmd: cmd
     };
-    let hmm = JSON.stringify(cmdObj);
     const result = await this.send(JSON.stringify(cmdObj));
 
     const commandResult: CLCommandResult = JSON.parse(result);
