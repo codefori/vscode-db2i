@@ -99,6 +99,11 @@ class ResultSetPanelProvider {
   async setScrolling(basicSelect) {
     await this.focus();
 
+    // The webview doesn't reload if we feed it the same 
+    // initial HTML. Likely the backend doing some
+    // webview caching. First, we set it to the loading screen,
+    // then we update to the scroller.
+    this._view.webview.html = html.getLoadingHTML();
     this._view.webview.html = html.generateScroller(basicSelect);
 
     this._view.webview.postMessage({
