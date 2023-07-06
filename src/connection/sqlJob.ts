@@ -103,8 +103,8 @@ export class SQLJob {
     return connectResult;
   }
 
-  query<T>(sql: string, parms: any[] = undefined): Query<T> {
-    return new Query(this, sql, parms)
+  query<T>(isCL, sql: string, parms: any[] = undefined): Query<T> {
+    return new Query(this, isCL, sql, parms)
   }
 
   async getVersion(): Promise<VersionCheckResult> {

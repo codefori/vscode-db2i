@@ -1,6 +1,7 @@
 import { getInstance } from "../base";
+import { Query } from "./query";
 import { JobStatus, SQLJob } from "./sqlJob";
-import { Rows } from "./types";
+import { QueryResult, Rows } from "./types";
 
 export interface JobInfo {
   name: string;
@@ -86,11 +87,11 @@ export class SQLJobManager {
     return (this.selectedJob >= 0);
   }
 
-  runSQL<T>(query: string): Promise<T[]> {
+  async runSQL<T>(query: string): Promise<T[]> {
     const selected = this.jobs[this.selectedJob]
     if (SQLJobManager.jobSupport && selected) {
-      return selected.job.query(query) as Promise<T[]>;
-
+      let results = await selected.job.query<T>(false, query).run();
+      return results.data;
     } else {
       const instance = getInstance();
       const config = instance.getConfig();
@@ -100,7 +101,16 @@ export class SQLJobManager {
         `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
         query
       ].join(`;\n`);
+      
       return content.runSQL(queryContext) as Promise<T[]>;
+    }
+  }
+  getPagingStatement<T>(isCL: boolean, query: string): Query<T> {
+    const selected = this.jobs[this.selectedJob]
+    if (SQLJobManager.jobSupport && selected) {
+      return selected.job.query<T>(isCL, query);
+    } else {
+      throw new Error(`Active SQL job is required. Please spin one up first.`);
     }
   }
 }
