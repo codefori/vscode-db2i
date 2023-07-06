@@ -123,16 +123,8 @@ export class SQLJob {
 
     return version;
   }
-  async clcommand(cmd: string): Promise<CLCommandResult> {
-    const cmdObj = {
-      id: `boop`,
-      type: `cl`,
-      cmd: cmd
-    };
-    const result = await this.send(JSON.stringify(cmdObj));
-
-    const commandResult: CLCommandResult = JSON.parse(result);
-    return commandResult;
+  clcommand(cmd: string): Query<any> {
+    return new Query(this, true, cmd);
   }
 
   async close() {
