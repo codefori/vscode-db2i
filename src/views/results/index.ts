@@ -6,7 +6,7 @@ import Configuration from "../../configuration"
 import * as html from "./html";
 import { getInstance } from "../../base";
 import { JobManager } from "../../config";
-import { Query } from "../../connection/query";
+import { Query, QueryState } from "../../connection/query";
 
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
@@ -42,7 +42,7 @@ class ResultSetPanelProvider {
             let query = await JobManager.getPagingStatement(message.isCL, message.query);
             queryObject = query;
           }
-          let queryResults = await queryObject.run();
+          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore(): await queryObject.run();
           data = queryResults.data;
           this._view.webview.postMessage({
             command: `rows`,

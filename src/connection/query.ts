@@ -1,6 +1,11 @@
 import { SQLJob } from "./sqlJob";
 import { CLCommandResult, JobLogEntry, QueryResult, ServerResponse } from "./types";
-
+export enum QueryState {
+  NOT_YET_RUN = 1,
+  RUN_MORE_DATA_AVAILABLE = 2,
+  RUN_DONE = 3,
+  ERROR = 4
+}
 export class Query<T> {
 
   private static id_ctr: number = 43;
@@ -8,10 +13,11 @@ export class Query<T> {
   private correlationId: string;
   private sql: string;
   private isPrepared: boolean = false;
-  private hasBeenRunAlready: boolean = false;
   private parameters: any[];
   private rowsToFetch: number = 100;
   private isCLCommand: boolean;
+  private state: QueryState = QueryState.NOT_YET_RUN;
+
   constructor(private job: SQLJob, private isCL: boolean, private query: string, private parms: any[] = undefined) {
     this.job = job;
     this.isPrepared = (undefined !== parms);
@@ -24,8 +30,11 @@ export class Query<T> {
     return (undefined === id || '' === id) ? undefined : Query.globalQueryList.find(query => query.correlationId === id);
   }
   public async run(rowsToFetch: number = this.rowsToFetch): Promise<QueryResult<T>> {
-    if (this.hasBeenRunAlready) {
+    switch (this.state) {
+    case QueryState.RUN_MORE_DATA_AVAILABLE:
       throw new Error('Statement has already been run');
+    case QueryState.RUN_DONE:
+      throw new Error('Statement has already been fully run');
     }
     let queryObject;
     if (this.isCLCommand) {
@@ -45,16 +54,24 @@ export class Query<T> {
     }
     this.rowsToFetch = rowsToFetch;
     let result = await this.job.send(JSON.stringify(queryObject));
-    this.hasBeenRunAlready = true;
     let queryResult: QueryResult<T> = JSON.parse(result);
 
+    this.state = queryResult.is_done? QueryState.RUN_DONE: QueryState.RUN_MORE_DATA_AVAILABLE;
+
     if (queryResult.success !== true && !this.isCLCommand) {
+      this.state = QueryState.ERROR;
       throw new Error(queryResult.error || `Failed to run query (unknown error)`);
     }
     this.correlationId = queryResult.id;
     return queryResult;
   }
   public async fetchMore(rowsToFetch: number = this.rowsToFetch): Promise<QueryResult<T>> {
+    switch (this.state) {
+    case QueryState.NOT_YET_RUN:
+      throw new Error('Statement has not yet been run');
+    case QueryState.RUN_DONE:
+      throw new Error('Statement has already been fully run');
+    }
     let queryObject = {
       id: `` + (++Query.id_ctr),
       cont_id: this.correlationId,
@@ -67,13 +84,21 @@ export class Query<T> {
     let result = await this.job.send(JSON.stringify(queryObject));
 
     let queryResult: QueryResult<T> = JSON.parse(result);
+    this.state = queryResult.is_done? QueryState.RUN_DONE: QueryState.RUN_MORE_DATA_AVAILABLE;
 
     if (queryResult.success !== true) {
+      this.state = QueryState.ERROR;
       throw new Error(queryResult.error || `Failed to run query (unknown error)`);
     }
     return queryResult;
   }
+  public async close() {
+    this.state = QueryState.RUN_DONE;
+  }
   public getId(): string {
     return this.correlationId;
+  }
+  public getState(): QueryState {
+    return this.state;
   }
 }
