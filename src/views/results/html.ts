@@ -64,7 +64,7 @@ export function getLoadingHTML(): string {
         <p id="loadingText">Loading..</p>
         <section class="loading">
           <p><vscode-progress-ring></vscode-progress-ring></p>
-        </div>
+        </section>
       </body>
     </html>
   `;
@@ -127,7 +127,8 @@ export function generateScroller(basicSelect: string): string {
                   }
 
                   const nextButton = document.getElementById("nextButton");
-                  nextButton.innerText = noMoreRows ? ('Loaded ' + scroller.rowsData.length + '. End of data') : ('Loaded ' + scroller.rowsData.length + '. Fetching more...');
+                  const textValue = noMoreRows ? ('Loaded ' + scroller.rowsData.length + '. End of data') : ('Loaded ' + scroller.rowsData.length + '. Fetching more...');
+                  nextButton.innerHTML = '<p>' + textValue + '</p>';
                   break;
 
                 case 'fetch':
@@ -155,7 +156,11 @@ export function generateScroller(basicSelect: string): string {
       <body>
         <vscode-data-grid id="scroller" style="min-width: max-content;"></vscode-data-grid>
         <vscode-divider></vscode-divider>
-        <p id="nextButton">Execute statement.</p>
+        <div id="nextButton">
+          <div class="loading">
+            <p><vscode-progress-ring></vscode-progress-ring></p>
+          </div>
+        </div>
       </body>
     </html>
   `;
