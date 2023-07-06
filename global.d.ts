@@ -31,7 +31,8 @@ type StatementType = "statement"|"json"|"csv"|"cl"|"sql";
 interface StatementInfo {
   content: string,
   type: StatementType,
-  open?: boolean
+  open?: boolean,
+  history?: boolean
 }
 
 interface BasicSQLObject {
@@ -39,8 +40,22 @@ interface BasicSQLObject {
   schema: string;
   name: string;
   text: string;
+  system: {
+    schema: string;
+    name: string;
+  }
   basedOn: {
     schema: string;
     name: string;
   }
+}
+
+interface CPYFOptions {
+  toLib: string;
+  toFile: string;
+  fromMbr: string;
+  toMbr: string;
+  mbrOpt: string;
+  crtFile: string;
+  outFmt: string
 }
