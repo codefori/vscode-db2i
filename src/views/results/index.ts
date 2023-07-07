@@ -6,7 +6,6 @@ import Configuration from "../../configuration"
 import * as html from "./html";
 import { getInstance } from "../../base";
 import { JobManager } from "../../config";
-import { Query, QueryState } from "../../connection/query";
 
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
@@ -30,36 +29,25 @@ class ResultSetPanelProvider {
 
     webviewView.webview.html = html.getLoadingHTML();
     this._view.webview.onDidReceiveMessage(async (message) => {
-      if (message.query) {
+      if (message.query && message.limit && message.offset >= 0) {
         const instance = await getInstance();
         const content = instance.getContent();
         const config = instance.getConfig();
+
+        const statement = `${message.query} LIMIT ${message.limit} OFFSET ${message.offset}`;
+
         let data = [];
-
-        let queryObject = Query.byId(message.queryId);
         try {
-          if (undefined === queryObject) {
-            let query = await JobManager.getPagingStatement(message.isCL, message.query);
-            queryObject = query;
-          }
-          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore(): await queryObject.run();
-          data = queryResults.data;
-          this._view.webview.postMessage({
-            command: `rows`,
-            rows: queryResults.data,
-            queryId: queryObject.getId(),
-            isDone: queryResults.is_done
-          });
-
+          data = await JobManager.runSQL(statement);
         } catch (e) {
           this.setError(e.message);
-          this._view.webview.postMessage({
-            command: `rows`,
-            rows: [],
-            queryId: queryObject.getId(),
-            isDone: true
-          });
+          data = [];
         }
+
+        this._view.webview.postMessage({
+          command: `rows`,
+          rows: data,
+        });
       }
     });
   }
@@ -106,10 +94,10 @@ class ResultSetPanelProvider {
     this._view.webview.html = content;
   }
 
-  async setScrolling(basicSelect, isCL = false) {
+  async setScrolling(basicSelect) {
     await this.focus();
 
-    this._view.webview.html = html.generateScroller(basicSelect, isCL);
+    this._view.webview.html = html.generateScroller(basicSelect);
 
     this._view.webview.postMessage({
       command: `fetch`
@@ -127,10 +115,10 @@ export function initialise(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider, {
-      webviewOptions: { retainContextWhenHidden: true },
+      webviewOptions: {retainContextWhenHidden: true},
     }),
 
-    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`,
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, 
       async (options: StatementInfo) => {
         // Options here can be a vscode.Uri when called from editor context.
         // But that isn't valid here.
@@ -143,27 +131,47 @@ export function initialise(context: vscode.ExtensionContext) {
 
         if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
           await resultSetProvider.ensureActivation();
-
+          
           /** @type {StatementInfo} */
           const statement = (optionsIsValid ? options : parseStatement(editor));
 
           if (statement.open) {
-            const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content: statement.content });
+            const textDoc = await vscode.workspace.openTextDocument({language: `sql`, content: statement.content});
             await vscode.window.showTextDocument(textDoc);
           }
 
           if (statement.content.trim().length > 0) {
             try {
               if (statement.type === `cl`) {
-                resultSetProvider.setScrolling(statement.content, true);
+                const commandResult = await getInstance().getConnection().runCommand({
+                  command: statement.content,
+                  environment: `ile`
+                })
+
+                if (commandResult.code === 0 || commandResult.code === null) {
+                  vscode.window.showInformationMessage(`Command executed successfully.`);
+                } else {
+                  vscode.window.showErrorMessage(`Command failed to run.`);
+                }
+
+                let output = ``;
+                if (commandResult.stderr.length > 0) output += `${commandResult.stderr}\n\n`;
+                if (commandResult.stdout.length > 0) output += `${commandResult.stdout}\n\n`;
+
+                const textDoc = await vscode.workspace.openTextDocument({language: `txt`, content: output});
+                await vscode.window.showTextDocument(textDoc, {
+                  preserveFocus: true,
+                  viewColumn: vscode.ViewColumn.Beside
+                });
+
               } else {
                 const scrollingEnabled = Configuration.get(`scrollingResultSet`);
                 if (scrollingEnabled && statement.type === `statement` && isBasicStatement(statement.content)) {
-                  // If it's a basic statement, we can let it scroll!
+                // If it's a basic statement, we can let it scroll!
                   resultSetProvider.setScrolling(statement.content);
 
                 } else {
-                  // Otherwise... it's a bit complicated.
+                // Otherwise... it's a bit complicated.
 
                   if (statement.type === `statement`) {
                     resultSetProvider.setLoadingText(`Executing statement...`);
@@ -188,7 +196,7 @@ export function initialise(context: vscode.ExtensionContext) {
                       }); break;
                       case `json`: content = JSON.stringify(data, null, 2); break;
 
-                      case `sql`:
+                      case `sql`: 
                         const keys = Object.keys(data[0]);
 
                         const insertStatement = [
@@ -203,11 +211,11 @@ export function initialise(context: vscode.ExtensionContext) {
                             }).join(`, `)})`
                           ).join(`,\n`),
                         ];
-                        content = insertStatement.join(`\n`);
+                        content = insertStatement.join(`\n`); 
                         break;
                       }
 
-                      const textDoc = await vscode.workspace.openTextDocument({ language: statement.type, content });
+                      const textDoc = await vscode.workspace.openTextDocument({language: statement.type, content});
                       await vscode.window.showTextDocument(textDoc);
                       break;
                     }
@@ -221,6 +229,7 @@ export function initialise(context: vscode.ExtensionContext) {
                   }
                 }
               }
+              
               if (statement.type === `statement` && statement.history !== false) {
                 vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement.content);
               }
@@ -285,7 +294,7 @@ export function parseStatement(editor: vscode.TextEditor): StatementInfo {
             text: text.substring(start, end)
           });
 
-          start = end + 1;
+          start = end+1;
         }
         break;
       }
@@ -309,12 +318,12 @@ export function parseStatement(editor: vscode.TextEditor): StatementInfo {
 
     lines.forEach((line, startIndex) => {
       if (type !== `statement`) return;
-
+      
       [`cl`, `json`, `csv`, `sql`].forEach(mode => {
         if (line.trim().toLowerCase().startsWith(mode + `:`)) {
           lines = lines.slice(startIndex);
           lines[0] = lines[0].substring(mode.length + 1).trim();
-
+    
           content = lines.join(` `);
 
           //@ts-ignore We know the type.

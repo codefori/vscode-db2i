@@ -36,7 +36,7 @@ export function getLoadingHTML(): string {
   `;
 }
 
-export function generateScroller(basicSelect: string, isCL: boolean): string {
+export function generateScroller(basicSelect: string): string {
   return /*html*/`
     <!DOCTYPE html>
     <html lang="en">
@@ -45,8 +45,9 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
         <script>
           const vscode = acquireVsCodeApi();
           const basicSelect = ${JSON.stringify(basicSelect)};
-          let myQueryId = '';
+          const limit = 50;
 
+          let nextOffset = 0;
           let noMoreRows = false;
           let isFetching = false;
 
@@ -71,8 +72,6 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
               switch (data.command) {
                 case 'rows':
                   isFetching = false;
-                  myQueryId = data.queryId;
-                  noMoreRows = data.isDone;
 
                   if (data.rows.length > 0 && scroller.columnDefinitions.length === 0) {
                     scroller.columnDefinitions = Object.keys(data.rows[0]).map(col => ({
@@ -87,6 +86,12 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                     scroller.rowsData = data.rows;
                   }
 
+                  console.log('row check');
+                  if (data.rows.length < limit) {
+                    console.log("No more rows");
+                    noMoreRows = true;
+                  }
+
                   const nextButton = document.getElementById("nextButton");
                   nextButton.innerText = noMoreRows ? ('Loaded ' + scroller.rowsData.length + '. End of data') : ('Loaded ' + scroller.rowsData.length + '. Fetching more...');
                   break;
@@ -94,6 +99,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                 case 'fetch':
                   scroller.columnDefinitions = [];
                   scroller.rowsData = [];
+                  nextOffset = 0;
                   fetchNextPage();
                   break;
               }
@@ -104,9 +110,11 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             isFetching = true;
             vscode.postMessage({
               query: basicSelect,
-              isCL: ${isCL},
-              queryId: myQueryId
+              limit,
+              offset: nextOffset,
             });
+
+            nextOffset += limit;
           }
         </script>
       </head>
