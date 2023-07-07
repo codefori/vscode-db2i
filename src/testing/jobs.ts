@@ -3,6 +3,7 @@ import { TestSuite } from ".";
 import { JobStatus, SQLJob } from "../connection/sqlJob";
 import { getInstance } from "../base";
 import { ServerComponent } from "../connection/serverComponent";
+import { ServerTraceDest, ServerTraceLevel } from "../connection/types";
 
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
@@ -28,6 +29,22 @@ export const JobsSuite: TestSuite = {
       assert.notEqual(ver.version, ``);
       assert.notEqual(ver.build_date, ``);
       assert.ok(`backend build date: `+ver.build_date);
+      newJob.close();
+    }},
+    
+    {name: `Backend set trace options and retrieve`, test: async () => {
+      const backendInstalled = await ServerComponent.initialise(false);
+  
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      let rpy = await newJob.setTraceConfig(ServerTraceDest.IN_MEM, ServerTraceLevel.DATASTREAM);
+      assert.equal(rpy.success, true);
+      assert.equal(rpy.tracedest, ServerTraceDest.IN_MEM);
+      assert.equal(rpy.tracelevel, ServerTraceLevel.DATASTREAM);
+      let trace = await newJob.getTraceData();
+      assert.notEqual(``, trace.tracedata);
+      console.log(trace.tracedata);
       newJob.close();
     }},
     

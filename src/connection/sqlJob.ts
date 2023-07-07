@@ -1,7 +1,7 @@
 import { CommandResult } from "@halcyontech/vscode-ibmi-types";
 import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
-import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult } from "./types";
+import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult } from "./types";
 import { Query } from "./query";
 
 export enum JobStatus {
@@ -123,6 +123,39 @@ export class SQLJob {
 
     return version;
   }
+  async getTraceData(): Promise<GetTraceDataResult> {
+    const tracedataReqObj = {
+      id: `boop`,
+      type: `gettracedata`
+    };
+
+    const result = await this.send(JSON.stringify(tracedataReqObj));
+
+    const rpy: GetTraceDataResult = JSON.parse(result);
+
+    if (rpy.success !== true) {
+      throw new Error(rpy.error || `Failed to get trace data from backend`);
+    }
+    return rpy;
+  }
+  async setTraceConfig(dest: ServerTraceDest, level: ServerTraceLevel): Promise<SetConfigResult> {
+    const reqObj = {
+      id: `boop`,
+      type: `setconfig`,
+      tracedest: dest,
+      tracelevel: level
+    };
+
+    const result = await this.send(JSON.stringify(reqObj));
+
+    const rpy: SetConfigResult = JSON.parse(result);
+
+    if (rpy.success !== true) {
+      throw new Error(rpy.error || `Failed to set trace options on backend`);
+    }
+    return rpy;
+  }
+
   clcommand(cmd: string): Query<any> {
     return new Query(this, true, cmd);
   }

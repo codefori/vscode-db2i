@@ -14,6 +14,25 @@ export interface VersionCheckResult extends ServerResponse {
   version: string;
 }
 
+export interface GetTraceDataResult extends ServerResponse {
+  tracedata: string
+}
+
+export enum ServerTraceLevel {
+  OFF = "OFF", // off
+  ON = "ON", // all except datastream
+  ERRORS = "ERRORS", // errors only
+  DATASTREAM = "DATASTREAM" // all including datastream 
+}
+export enum ServerTraceDest {
+  FILE = "FILE", 
+  IN_MEM = "IN_MEM"
+}
+export interface SetConfigResult extends ServerResponse {
+  tracedest: ServerTraceDest,
+  tracelevel: ServerTraceLevel
+}
+
 export interface QueryResult<T> extends ServerResponse {
   metadata: QueryMetaData,
   is_done: boolean;
