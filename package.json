@@ -145,7 +145,7 @@
     "commands": [
       {
         "command": "vscode-db2i.openSqlDocument",
-        "title": "Open SQL document",
+        "title": "Open SQL Document",
         "category": "Db2 for i",
         "icon": "$(new-file)"
       },
