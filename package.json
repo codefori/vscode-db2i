@@ -290,7 +290,7 @@
       },
       {
         "command": "vscode-db2i.jobManager.viewJobLog",
-        "title": "View job log",
+        "title": "View Job Log",
         "category": "Db2 for i",
         "icon": "$(info)"
       }
