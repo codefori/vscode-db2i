@@ -16,7 +16,7 @@ test('Function and block test', () => {
 
   const tokens = tokeniser.tokenise(`select * from table(func()) x`);
 
-  expect(tokens.length).toBe(6);
+  expect(tokens.length).toBe(10);
   expect(tokens[3].type).toBe(`function`);
 });
 
@@ -25,7 +25,7 @@ test('Comment test', () => {
 
   const tokens = tokeniser.tokenise(`select * from table(func()) x -- Hello world`);
 
-  expect(tokens.length).toBe(6);
+  expect(tokens.length).toBe(10);
 });
 
 test('New line (\\n) and comments test', () => {

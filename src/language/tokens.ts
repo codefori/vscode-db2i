@@ -9,8 +9,24 @@ interface Matcher {
   becomes: string;
 };
 
+export const NameTypes = [`word`, `sqlName`];
+
 export default class SQLTokeniser {
   matchers: Matcher[] = [
+    {
+      name: `CLAUSE`,
+      match: [{ type: `word`, match: (value: string) => {
+        return [`WHERE`, `HAVING`, `GROUP`, `LIMIT`, `OFFSET`, `ORDER`].includes(value.toUpperCase());
+      } }],
+      becomes: `clause`,
+    },
+    {
+      name: `AS`,
+      match: [{ type: `word`, match: (value: string) => {
+        return value.toUpperCase() === `AS`;
+      } }],
+      becomes: `as`,
+    },
     {
       name: `SQLNAME`,
       match: [{ type: `doublequote` }, { type: `word` }, { type: `doublequote` }],
@@ -122,7 +138,7 @@ export default class SQLTokeniser {
     }
 
     result = this.fixStatement(result);
-    result = SQLTokeniser.createBlocks(result);
+    // result = SQLTokeniser.createBlocks(result);
     result = SQLTokeniser.findScalars(result);
 
     return result;
@@ -215,7 +231,7 @@ export default class SQLTokeniser {
     for (let i = 0; i < tokens.length; i++) {
       switch (tokens[i].type) {
         case `word`:
-          if (tokens[i + 1] && tokens[i + 1].type === `block`) {
+          if (tokens[i + 1] && tokens[i + 1].type === `openbracket`) {
             tokens[i].type = `function`
           }
           break;
