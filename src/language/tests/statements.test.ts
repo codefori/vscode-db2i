@@ -26,7 +26,7 @@ test('Two statements, one end', () => {
 
   expect(document.statements.length).toBe(2);
   expect(document.statements[0].tokens.length).toBe(4);
-  expect(document.statements[1].tokens.length).toBe(7);
+  expect(document.statements[1].tokens.length).toBe(6);
 });
 
 test('Two statements, both end', () => {
@@ -37,7 +37,7 @@ test('Two statements, both end', () => {
 
   expect(document.statements.length).toBe(2);
   expect(document.statements[0].tokens.length).toBe(4);
-  expect(document.statements[1].tokens.length).toBe(7);
+  expect(document.statements[1].tokens.length).toBe(6);
 });
 
 test('Two statements, both end, with comments', () => {
@@ -48,5 +48,21 @@ test('Two statements, both end, with comments', () => {
 
   expect(document.statements.length).toBe(2);
   expect(document.statements[0].tokens.length).toBe(4);
-  expect(document.statements[1].tokens.length).toBe(7);
+  expect(document.statements[1].tokens.length).toBe(6);
+});
+
+test('Two statements, both end, with comments, trimmed', () => {
+  const document = new Document([
+    ``,
+    `select * from sample; --Yep`,
+    ``,
+    ``,
+    `select a from b.b; -- Nope`,
+    ``,
+    ``
+  ].join(`\n`));
+
+  expect(document.statements.length).toBe(2);
+  expect(document.statements[0].tokens.length).toBe(4);
+  expect(document.statements[1].tokens.length).toBe(6);
 });

@@ -11,7 +11,35 @@ export default class Document {
     this.parseStatements(tokeniser.tokenise(content));
   }
 
-  parseStatements(tokens: Token[]) {
+  private addStatement(tokens: Token[]) {
+    if (tokens.length > 0) {
+      let realFirstToken = tokens.findIndex(t => t.type !== `newline`);
+      if (realFirstToken < 0) realFirstToken = 0;
+
+      let realLastToken = 0;
+
+      for (let i = tokens.length - 1; i >= 0; i--) {
+        if (tokens[i].type !== `newline`) {
+          realLastToken = i + 1;
+          break;
+        }
+      }
+
+      tokens = tokens.slice(realFirstToken, realLastToken);
+
+      if (tokens.length > 0) {
+        this.statements.push(new Statement(
+          tokens,
+          {
+            start: tokens[0].range.start,
+            end: tokens[tokens.length - 1].range.end
+          }
+        ));
+      }
+    }
+  }
+
+  private parseStatements(tokens: Token[]) {
     let statementStart = 0;
 
     for (let i = 0; i < tokens.length; i++) {
@@ -19,46 +47,29 @@ export default class Document {
         case `semicolon`:
           const statementTokens = tokens.slice(statementStart, i);
 
-          if (statementTokens.length > 0) {
-            this.statements.push(new Statement(
-              statementTokens,
-              {
-                start: statementTokens[0].range.start,
-                end: statementTokens[statementTokens.length-1].range.end
-              }
-            ));
-          }
+          this.addStatement(statementTokens);
 
-          statementStart = i+1;
+          statementStart = i + 1;
           break;
       }
     }
 
     const lastStatementTokens = tokens.slice(statementStart, tokens.length);
-
-    if (lastStatementTokens.length > 0) {
-      this.statements.push(new Statement(
-        lastStatementTokens,
-        {
-          start: lastStatementTokens[0].range.start,
-          end: lastStatementTokens[lastStatementTokens.length-1].range.end
-        }
-      ));
-    }
+    this.addStatement(lastStatementTokens);
   }
 
   getStatementByOffset(offset: number) {
     return this.statements.find((statement, i) => {
-      const end = (this.statements[i+1] ? this.statements[i+1].range.start : statement.range.end);
-      return (offset >= statement.range.start && offset < end) || (i === (this.statements.length-1) && offset >= end);
+      const end = (this.statements[i + 1] ? this.statements[i + 1].range.start : statement.range.end);
+      return (offset >= statement.range.start && offset < end) || (i === (this.statements.length - 1) && offset >= end);
     })
   }
 
-	getTokenByOffset(offset: number): Token|undefined {
-		const statement = this.getStatementByOffset(offset);
+  getTokenByOffset(offset: number): Token | undefined {
+    const statement = this.getStatementByOffset(offset);
 
-		if (statement) {
-			return statement.getTokenByOffset(offset);
-		}
-	}
+    if (statement) {
+      return statement.getTokenByOffset(offset);
+    }
+  }
 }
