@@ -278,7 +278,7 @@
       },
       {
         "command": "vscode-db2i.jobManager.editJobProps",
-        "title": "Edit connection properties",
+        "title": "Edit Connection Properties",
         "category": "Db2 for i",
         "icon": "$(edit)"
       },
