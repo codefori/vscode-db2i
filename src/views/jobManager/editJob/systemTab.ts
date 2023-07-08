@@ -176,7 +176,7 @@ export default function getSystemTab(options: JDBCOptions) {
           selected: options["decfloat rounding mode"] === `half down`,
         },
       ],
-      `Specifies the rounding mode to use when working with decfloat data type. Note, this property is ignored when connecting to systems running IBM i V5R4 and earlier.`
+      `Specifies the rounding mode to use when working with decfloat data type.`
     )
     .addSelect(
       `maximum precision`,
