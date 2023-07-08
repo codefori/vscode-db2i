@@ -22,7 +22,7 @@ export class JobManagerView implements TreeDataProvider<any> {
 
         await window.withProgress({location: ProgressLocation.Window}, async (progress) => {
           try {
-            progress.report({message: `Spinning up SQL job..`});
+            progress.report({message: `Spinning up SQL job...`});
             await JobManager.newJob();
           } catch (e) {
             window.showErrorMessage(e.message);
