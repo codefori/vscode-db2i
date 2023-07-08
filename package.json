@@ -131,7 +131,7 @@
       },
       {
         "view": "jobManager",
-        "contents": "The SQL Job Manager allows you to manage multiple jobs and can each have their own connection settings, that you can run SQL statements in.\n\nUntil you have an SQL job running, all user run SQL statements will run in a new jobs.\n\nWant to run statements in a single, reusable job? \n[Start SQL job](command:vscode-db2i.jobManager.newJob)"
+        "contents": "The SQL Job Manager allows you to provision one or more jobs for running SQL statements, each with its own connection settings.\n\nUsing managed jobs reduces the use of system resources, improves performance, and maintains  state across subsequent SQL statements.\n\nYou can run SQL statements without starting a job, just be aware that every statement you run requires a temporary, single-use job to be started on your behalf. \n[New SQL job](command:vscode-db2i.jobManager.newJob)"
       }
     ],
     "keybindings": [
