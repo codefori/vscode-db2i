@@ -272,7 +272,7 @@
       },
       {
         "command": "vscode-db2i.jobManager.endAll",
-        "title": "Close all SQL Jobs",
+        "title": "Close All SQL Jobs",
         "category": "Db2 for i",
         "icon": "$(clear-all)"
       },
