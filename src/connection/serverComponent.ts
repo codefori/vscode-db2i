@@ -119,7 +119,7 @@ export class ServerComponent {
               await Config.setServerComponentName(basename);
 
               window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
-              JobManagerView.setVisable(true);
+              JobManagerView.setVisible(true);
               
             } else {
               window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`);

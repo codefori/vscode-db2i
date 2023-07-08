@@ -25,7 +25,7 @@ export function setupConfig(context: ExtensionContext) {
     const backendSupport = await ServerComponent.initialise();
 
     SQLJobManager.jobSupport = backendSupport;
-    JobManagerView.setVisable(true);
+    JobManagerView.setVisible(true);
   });
 
   getInstance().onEvent(`disconnected`, async () => {

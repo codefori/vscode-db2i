@@ -106,9 +106,9 @@ export class JobManagerView implements TreeDataProvider<any> {
     )
   }
 
-  static setVisable(visable: boolean) {
-    commands.executeCommand(`setContext`, `vscode-db2i:jobManager`, visable).then(() => {
-      if (visable) {
+  static setVisible(visible: boolean) {
+    commands.executeCommand(`setContext`, `vscode-db2i:jobManager`, visible).then(() => {
+      if (visible) {
         commands.executeCommand(`vscode-db2i.jobManager.refresh`);
       }
     });
