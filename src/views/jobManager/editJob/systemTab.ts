@@ -381,7 +381,7 @@ export default function getSystemTab(options: JDBCOptions) {
           selected: options["XA loosely coupled support"] === `1`,
         },
       ],
-      `Specifies whether lock sharing is allowed for loosely coupled transaction branches. Note, this property is ignored when connecting to systems running to IBM i V5R3 and earlier. This option can be set to 0 to indicate to not share locks or 1 to share locks.`
+      `Specifies whether lock sharing is allowed for loosely coupled transaction branches. This option can be set to 0 to indicate to not share locks or 1 to share locks.`
     )
     .addInput(
       `maximum scale`,
