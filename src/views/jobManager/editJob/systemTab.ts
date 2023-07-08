@@ -55,7 +55,7 @@ export default function getSystemTab(options: JDBCOptions) {
           selected: options["auto commit"] === `false`,
         },
       ],
-      `Specifies whether auto-commit mode is the default connection mode for new connections. Calling AS400JDBCConnection.setAutoCommit(boolean) will override this property on a per-connection basis. Note that, in order to use transaction isolation levels other than *NONE when using auto-commit mode, the property "true autocommit" needs to be set to true.`
+      `Specifies whether auto-commit mode is the default connection mode for new connections. Note that, in order to use transaction isolation levels other than *NONE when using auto-commit mode, the property "true autocommit" needs to be set to true.`
     )
     .addSelect(
       `concurrent access resolution`,
