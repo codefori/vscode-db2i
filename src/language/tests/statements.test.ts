@@ -376,4 +376,38 @@ describe(`Object references`, () => {
     expect(refsA[0].object.name).toBe(`talks`);
     expect(refsA[0].object.schema).toBeUndefined();
   });
+
+  test(`CALL: simple unqualified`, () => {
+    const content = [
+      `call create_Sql_sample('MYNEWSCHEMA');`
+    ].join(`\r\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+
+    const talksStatement = document.statements[0];
+
+    const refsA = talksStatement.getObjectReferences();
+    expect(refsA.length).toBe(1);
+    expect(refsA[0].object.name).toBe(`create_Sql_sample`);
+    expect(refsA[0].object.schema).toBeUndefined();
+  });
+
+  test(`CALL: simple qualified`, () => {
+    const content = [
+      `call "QSYS".create_Sql_sample('MYNEWSCHEMA');`
+    ].join(`\r\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+
+    const talksStatement = document.statements[0];
+
+    const refsA = talksStatement.getObjectReferences();
+    expect(refsA.length).toBe(1);
+    expect(refsA[0].object.name).toBe(`create_Sql_sample`);
+    expect(refsA[0].object.schema).toBe(`"QSYS"`);
+  });
 });
