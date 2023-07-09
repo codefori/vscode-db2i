@@ -57,14 +57,17 @@ export async function editJobUi(
           case `libraries`:
             options.libraries = page.data[key].split(`,`).map((v) => v.trim());
             break;
-          case `full open`:
-            options["full open"] = page.data[key] === `true`;
-            break;
           case `buttons`:
             // Do nothing with buttons
             break;
+            
           default:
-            options[key] = page.data[key];
+            // Handle of true/false values back into boolean types
+            switch (page.data[key]) {
+              case `true`: options[key] = true; break;
+              case `false`: options[key] = false; break;
+              default: options[key] = page.data[key]; break;
+            }
         }
       }
 
