@@ -411,3 +411,39 @@ describe(`Object references`, () => {
     expect(refsA[0].object.schema).toBe(`"QSYS"`);
   });
 });
+
+describe(`Offset reference tests`, () => {
+  test(`Writing select`, () => {
+    const document = new Document(`select * from sample.;`);
+
+    expect(document.statements.length).toBe(1);
+  
+    const statement = document.statements[0];
+  
+    const ref = statement.getReferenceByOffset(21);
+    console.log(ref);
+    expect(ref).toBeDefined();
+    expect(ref.object.schema).toBe(`sample`);
+    expect(ref.object.name).toBeUndefined();
+  });
+
+  test(`Writing select, invalid middle`, () => {
+    const document = new Document(`select b. from department b;`);
+
+    expect(document.statements.length).toBe(1);
+  
+    const statement = document.statements[0];
+
+    const objs = statement.getObjectReferences();
+    expect(objs.length).toBe(1);
+    expect(objs[0].object.schema).toBeUndefined();
+    expect(objs[0].object.name).toBe(`department`);
+    expect(objs[0].alias).toBe(`b`);
+  
+    const ref = statement.getReferenceByOffset(9);
+    console.log(ref);
+    expect(ref).toBeDefined();
+    expect(ref.object.schema).toBe(`b`);
+    expect(ref.object.name).toBeUndefined();
+  });
+})

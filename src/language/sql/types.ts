@@ -13,7 +13,7 @@ export interface Token {
 
 export interface QualifiedObject {
   schema?: string;
-  name: string;
+  name?: string;
 }
 
 export interface ObjectRef {

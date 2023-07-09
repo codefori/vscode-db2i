@@ -58,6 +58,45 @@ export default class Statement {
 		return blockSearch(this.tokens);
 	}
 
+	getReferenceByOffset(offset: number) {
+		let i = this.tokens.findIndex(token => offset >= token.range.start && offset <= token.range.end);
+
+		let currentType;
+		let prevMustBe: "dot"|"name";
+
+		// Reset to end
+		if (i >= 0) {
+			currentType = this.tokens[i].type;
+			if (currentType === `dot`) prevMustBe = `name`;
+			else if (NameTypes.includes(currentType)) prevMustBe = `dot`;
+		} else {
+			i = this.tokens.length-1;
+			prevMustBe = `name`;
+		}
+
+		while (i >= 0 && this.tokens[i-1]) {
+			i--;
+			currentType = this.tokens[i].type;
+
+			switch (prevMustBe) {
+				case `dot`:
+					if (currentType === `dot`) {
+						prevMustBe = `name`;
+					} else {
+						return this.getRefAtToken(i+1);
+					}
+					break;
+				case `name`:
+					if (NameTypes.includes(currentType)) {
+						prevMustBe = `dot`;
+					} else {
+						return this.getRefAtToken(i+1);
+					}
+					break;
+			}
+		}
+	}
+
 	getObjectReferences(): ObjectRef[] {
 		let list: ObjectRef[] = [];
 
@@ -80,7 +119,7 @@ export default class Statement {
 			case StatementType.Delete:
 				// SELECT
 				for (let i = 0; i < this.tokens.length; i++) {
-					if (tokenIs(this.tokens[i], `word`, `FROM`) || tokenIs(this.tokens[i], `join`)) {
+					if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `join`)) {
 						doAdd(this.getRefAtToken(i+1));
 					}
 				}
@@ -92,28 +131,35 @@ export default class Statement {
 
 	private getRefAtToken(i: number): ObjectRef|undefined {
 		let sqlObj: ObjectRef;
+
 		let nameIndex = i;
+		let nameToken;
 
 		if (this.tokens[i] && NameTypes.includes(this.tokens[i].type)) {
+			nameIndex = i;
+			nameToken = this.tokens[nameIndex];
+
 			sqlObj = {
 				object: {
 					name: this.tokens[i].value
 				}
 			}
 
-			if (this.tokens[i+2] && (tokenIs(this.tokens[i+1], `dot`) || tokenIs(this.tokens[i+1], `forwardslash`)) && NameTypes.includes(this.tokens[i+2].type)) {
+			if (tokenIs(this.tokens[i+1], `dot`) || tokenIs(this.tokens[i+1], `forwardslash`)) {
 				nameIndex = i+2;
+				nameToken = this.tokens[nameIndex];
+
 				sqlObj = {
 					object: {
 						schema: this.tokens[i].value,
-						name: this.tokens[i+2].value
+						name: nameToken && NameTypes.includes(nameToken.type) ? nameToken.value : undefined
 					}
 				};
 
 			}
 
 			// If the next token is not a clause.. we might have the alias
-			if (this.tokens[nameIndex+1]) {
+			if (nameToken && this.tokens[nameIndex+1]) {
 				if (this.tokens[nameIndex+1].type === `keyword`) {
 					sqlObj.alias = this.tokens[nameIndex+2].value;
 				} else
