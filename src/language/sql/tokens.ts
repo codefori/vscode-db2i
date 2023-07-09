@@ -40,11 +40,11 @@ export default class SQLTokeniser {
       becomes: `join`,
     },
     {
-      name: `AS`,
+      name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return value.toUpperCase() === `AS`;
+        return [`AS`, `OR`, `REPLACE`].includes(value.toUpperCase());
       } }],
-      becomes: `as`,
+      becomes: `keyword`,
     },
     {
       name: `SQLNAME`,
