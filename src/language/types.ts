@@ -12,6 +12,11 @@ export interface Token {
 }
 
 export interface QualifiedObject {
-  library?: string;
+  schema?: string;
   name: string;
+}
+
+export interface ObjectRef {
+  object: QualifiedObject;
+  alias?: string;
 }
