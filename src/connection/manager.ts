@@ -25,7 +25,9 @@ export class SQLJobManager {
         libraries: [config.currentLibrary, ...config.libraryList], 
         naming: `system`, 
         "full open": false, 
-        "transaction isolation": "none"
+        "transaction isolation": "none",
+        "query optimize goal": "1",
+        "block size": "512"
       }));
 
       try {
