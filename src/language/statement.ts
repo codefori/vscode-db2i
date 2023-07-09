@@ -66,12 +66,6 @@ export default class Statement {
 				// CALL X()
 				doAdd(this.getRefAtToken(1));
 				break;
-			case StatementType.Delete:
-				// DELETE FROM
-				if (tokenIs(this.tokens[1], `word`, `FROM`)) {
-					doAdd(this.getRefAtToken(2));
-				}
-				break;
 			case StatementType.Insert:
 				// INSERT INTO
 				if (tokenIs(this.tokens[1], `word`, `INTO`)) {
@@ -79,6 +73,7 @@ export default class Statement {
 				}
 				break;
 			case StatementType.Select:
+			case StatementType.Delete:
 				// SELECT
 				for (let i = 0; i < this.tokens.length; i++) {
 					if (tokenIs(this.tokens[i], `word`, `FROM`) || tokenIs(this.tokens[i], `join`)) {

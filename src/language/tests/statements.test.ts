@@ -334,4 +334,46 @@ describe(`File refs`, () => {
     expect(proj.object.schema).toBeUndefined;
     expect(proj.alias).toBe(`b`);
   });
+
+  test(`INSERT: simple inserts`, () => {
+    const content = [
+      `insert into talks (user, content) values ('LINUX', 'Hello world, my talk birdtalk'), ('LINUX', 'This is another thing I did #hi');`,
+      `insert into "myschema".hashtags (tag, base_talk) values('#hi', 2);`,
+    ].join(`\r\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(2);
+
+    const talksStatement = document.statements[0];
+    const hashtagsStatement = document.statements[1];
+
+    const refsA = talksStatement.getObjectReferences();
+    expect(refsA.length).toBe(1);
+    expect(refsA[0].object.name).toBe(`talks`);
+    expect(refsA[0].object.schema).toBeUndefined();
+
+
+    const refsB = hashtagsStatement.getObjectReferences();
+    expect(refsB.length).toBe(1);
+    expect(refsB[0].object.name).toBe(`hashtags`);
+    expect(refsB[0].object.schema).toBe(`"myschema"`);
+  });
+
+  test(`DELETE: simple delete`, () => {
+    const content = [
+      `delete from talks where id > 2;`
+    ].join(`\r\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+
+    const talksStatement = document.statements[0];
+
+    const refsA = talksStatement.getObjectReferences();
+    expect(refsA.length).toBe(1);
+    expect(refsA[0].object.name).toBe(`talks`);
+    expect(refsA[0].object.schema).toBeUndefined();
+  });
 });

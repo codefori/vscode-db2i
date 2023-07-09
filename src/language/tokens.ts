@@ -165,7 +165,7 @@ export default class SQLTokeniser {
 
     result = this.fixStatement(result);
     // result = SQLTokeniser.createBlocks(result);
-    result = SQLTokeniser.findScalars(result);
+    // result = SQLTokeniser.findScalars(result);
 
     return result;
   }
