@@ -67,7 +67,7 @@ describe(`Basic statements`, () => {
   });
 });
 
-describe(`File refs`, () => {
+describe(`Object references`, () => {
   test('SELECT: Simple unqualified object', () => {
     const document = new Document(`select * from sample;`);
   
