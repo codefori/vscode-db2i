@@ -308,6 +308,13 @@ export default function getPerfTab(options: JDBCOptions) {
         selected: options["query timeout mechanism"] === `qqrytimlmt`,
       },
     ])
+    .addInput(
+      `query storage limit`,
+      `Query storage limit`,
+      `Specifies the query storage limit to be used when statements in a connection are executed. Valid values are -1 to 2147352578 megabytes. Note, this property is ignored when connecting to systems running IBM i V5R4 and earlier.
+    You must have *JOBCTL special authority to use query storage limit with Version 6 Release 1 of IBM i.`,
+      { default: options["query storage limit"] || `-1` }
+    )
     // TODO: the followng two properties use a system default value, which is not supported by the current version of the driver:
     // .addInput(`recieve buffer size`, `Recieve buffer size`, `	Specifies the buffer size used to receive data through the socket connection between the front-end driver and the IBM i system.
     //   NOTE: This does not specify the actual receive buffer size. It is only used as a hint by the underlying socket code.`, {default: options["recieve buffer size"] || ``})
@@ -327,14 +334,7 @@ export default function getPerfTab(options: JDBCOptions) {
         description: `False`,
         selected: options["variable field compression"] === `false`,
       },
-    ])
-    .addInput(
-      `query storage limit`,
-      `Query storage limit`,
-      `Specifies the query storage limit to be used when statements in a connection are executed. Valid values are -1 to 2147352578 megabytes. Note, this property is ignored when connecting to systems running IBM i V5R4 and earlier.
-    You must have *JOBCTL special authority to use query storage limit with Version 6 Release 1 of IBM i.`,
-      { default: options["query storage limit"] || `-1` }
-    );
+    ]);
 
   return tab;
 }
