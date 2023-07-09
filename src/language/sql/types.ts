@@ -1,4 +1,30 @@
 
+export enum StatementType {
+	Unknown,
+	Create,
+	Insert,
+	Select,
+	Update,
+	Delete,
+	Declare,
+	Drop,
+	End,
+	Call
+}
+
+export const StatementTypeWord = {
+	'CREATE': StatementType.Create,
+	'SELECT': StatementType.Select,
+	'WITH': StatementType.Select,
+	'INSERT': StatementType.Insert,
+	'UPDATE': StatementType.Update,
+	'DELETE': StatementType.Delete,
+	'DECLARE': StatementType.Declare,
+	'DROP': StatementType.Drop,
+	'END': StatementType.End,
+	'CALL': StatementType.Call
+};
+
 export interface IRange {
   start: number;
   end: number;

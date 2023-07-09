@@ -1,39 +1,17 @@
 import SQLTokeniser, { NameTypes } from "./tokens";
-import { IRange, ObjectRef, QualifiedObject, Token } from "./types";
-
-export enum StatementType {
-	Unknown,
-	Create,
-	Insert,
-	Select,
-	Update,
-	Delete,
-	Drop,
-	Call
-}
-
-const StatementTypeWord = {
-	'CREATE': StatementType.Create,
-	'SELECT': StatementType.Select,
-	'WITH': StatementType.Select,
-	'INSERT': StatementType.Insert,
-	'UPDATE': StatementType.Update,
-	'DELETE': StatementType.Delete,
-	'DROP': StatementType.Drop,
-	'CALL': StatementType.Call
-};
+import { IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
 
 const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 	return (token && token.type === type && (value ? token.value?.toUpperCase() === value : true));
 }
 
 export default class Statement {
-	private type: StatementType = StatementType.Unknown;
+	public type: StatementType = StatementType.Unknown;
 
   constructor(public tokens: Token[], public range: IRange) {
 		const first = tokens[0];
 
-		if (first && first.type === `word`) {
+		if (tokenIs(first, `statementType`) || tokenIs(first, `keyword`, `END`)) {
 			const wordValue = first.value?.toUpperCase();
 
 			this.type = StatementTypeWord[wordValue];
@@ -176,4 +154,23 @@ export default class Statement {
 
 		return sqlObj;
 	}
+
+	static trimTokens(tokens: Token[]) {
+    if (tokens.length > 0) {
+      let realFirstToken = tokens.findIndex(t => t.type !== `newline`);
+      if (realFirstToken < 0) realFirstToken = 0;
+
+      let realLastToken = 0;
+
+      for (let i = tokens.length - 1; i >= 0; i--) {
+        if (tokens[i].type !== `newline`) {
+          realLastToken = i + 1;
+          break;
+        }
+      }
+
+      tokens = tokens.slice(realFirstToken, realLastToken);
+    }
+    return tokens;
+  }
 }

@@ -1,6 +1,6 @@
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-import { IRange, Token } from "./types";
+import { IRange, StatementType, StatementTypeWord, Token } from "./types";
 
 export default class Document {
   statements: Statement[];
@@ -13,19 +13,7 @@ export default class Document {
 
   private addStatement(tokens: Token[]) {
     if (tokens.length > 0) {
-      let realFirstToken = tokens.findIndex(t => t.type !== `newline`);
-      if (realFirstToken < 0) realFirstToken = 0;
-
-      let realLastToken = 0;
-
-      for (let i = tokens.length - 1; i >= 0; i--) {
-        if (tokens[i].type !== `newline`) {
-          realLastToken = i + 1;
-          break;
-        }
-      }
-
-      tokens = tokens.slice(realFirstToken, realLastToken);
+      tokens = Statement.trimTokens(tokens);
 
       if (tokens.length > 0) {
         this.statements.push(new Statement(
@@ -40,6 +28,7 @@ export default class Document {
   }
 
   private parseStatements(tokens: Token[]) {
+    let currentStatementType: StatementType = StatementType.Unknown;
     let statementStart = 0;
 
     for (let i = 0; i < tokens.length; i++) {
@@ -50,6 +39,26 @@ export default class Document {
           this.addStatement(statementTokens);
 
           statementStart = i + 1;
+          break;
+
+        case `statementType`:
+          currentStatementType = StatementTypeWord[tokens[i].value?.toUpperCase()];
+          break;
+
+        case `keyword`:
+          switch (tokens[i].value?.toUpperCase()) {
+            case `BEGIN`:
+              const statementTokens = tokens.slice(statementStart, i);
+              this.addStatement(statementTokens);
+              statementStart = i + 1;
+              break;
+            case `END`:
+              // We ignore the END statement keyword when it's solo.
+              if (statementStart === i && (tokens[i] === undefined || tokens[i].type === `semicolon`)) {
+                statementStart = i + 1;
+              }
+              break;
+          }
           break;
       }
     }

@@ -1,6 +1,7 @@
 import { assert, describe, expect, test } from 'vitest'
 import SQLTokeniser from '../tokens'
 import Document from '../document';
+import { StatementType } from '../types';
 
 describe(`Basic statements`, () => {
   test('One statement, no end', () => {
@@ -466,4 +467,108 @@ describe(`Offset reference tests`, () => {
     expect(ref.object.schema).toBe(`b`);
     expect(ref.object.name).toBeUndefined();
   });
-})
+});
+
+describe(`PL body tests`, () => {
+  test(`CREATE PROCEDURE: with body`, () => {
+    const lines = [
+      `CREATE PROCEDURE MEDIAN_RESULT_SET (OUT medianSalary DECIMAL(7,2))`,
+      `LANGUAGE SQL `,
+      `DYNAMIC RESULT SETS 1`,
+      `BEGIN `,
+      `  DECLARE v_numRecords INTEGER DEFAULT 1;`,
+      `  DECLARE v_counter INTEGER DEFAULT 0;`,
+      `  DECLARE c1 CURSOR FOR `,
+      `    SELECT salary `,
+      `        FROM staff `,
+      `        ORDER BY salary;`,
+      `  DECLARE c2 CURSOR WITH RETURN FOR `,
+      `    SELECT name, job, salary `,
+      `        FROM staff `,
+      `        WHERE salary > medianSalary`,
+      `        ORDER BY salary;`,
+      `  DECLARE EXIT HANDLER FOR NOT FOUND`,
+      `    SET medianSalary = 6666; `,
+      `  SET medianSalary = 0;`,
+      `  SELECT COUNT(*) INTO v_numRecords FROM STAFF;`,
+      `  OPEN c1;`,
+      `  WHILE v_counter < (v_numRecords / 2 + 1) `,
+      `    DO FETCH c1 INTO medianSalary;`,
+      `    SET v_counter = v_counter + 1;`,
+      `  END WHILE;`,
+      `  CLOSE c1;`,
+      `  OPEN c2;`,
+      `END`,
+    ].join(`\r\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+
+    const medianResultSetProc = statements[0];
+    expect(medianResultSetProc.type).toBe(StatementType.Create);
+
+    const numRecordsDeclare = statements[1];
+    expect(numRecordsDeclare.type).toBe(StatementType.Declare);
+
+    const endStatement = statements[statements.length-1];
+    expect(endStatement.type).toBe(StatementType.End);
+
+    const endStatements = statements.filter(stmt => stmt.type === StatementType.End);
+    expect(endStatements.length).toBe(2);
+
+    // END WHILE
+    expect(endStatements[0].tokens.length).toBe(2);
+
+    // END
+    expect(endStatements[1].tokens.length).toBe(1);
+  });
+
+  test(`CREATE PROCEDURE followed by CALL statement`, () => {
+    const lines = [
+      `CREATE PROCEDURE MEDIAN_RESULT_SET (OUT medianSalary DECIMAL(7,2))`,
+      `LANGUAGE SQL `,
+      `DYNAMIC RESULT SETS 1`,
+      `BEGIN `,
+      `  DECLARE v_numRecords INTEGER DEFAULT 1;`,
+      `  DECLARE v_counter INTEGER DEFAULT 0;`,
+      `  DECLARE c1 CURSOR FOR `,
+      `    SELECT salary `,
+      `        FROM staff `,
+      `        ORDER BY salary;`,
+      `  DECLARE c2 CURSOR WITH RETURN FOR `,
+      `    SELECT name, job, salary `,
+      `        FROM staff `,
+      `        WHERE salary > medianSalary`,
+      `        ORDER BY salary;`,
+      `  DECLARE EXIT HANDLER FOR NOT FOUND`,
+      `    SET medianSalary = 6666; `,
+      `  SET medianSalary = 0;`,
+      `  SELECT COUNT(*) INTO v_numRecords FROM STAFF;`,
+      `  OPEN c1;`,
+      `  WHILE v_counter < (v_numRecords / 2 + 1) `,
+      `    DO FETCH c1 INTO medianSalary;`,
+      `    SET v_counter = v_counter + 1;`,
+      `  END WHILE;`,
+      `  CLOSE c1;`,
+      `  OPEN c2;`,
+      `END;`,
+      ``,
+      `CALL MEDIAN_RESULT_SET(12345.55);`,
+    ].join(`\r\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+
+    const medianResultSetProc = statements[0];
+    expect(medianResultSetProc.type).toBe(StatementType.Create);
+
+    const numRecordsDeclare = statements[1];
+    expect(numRecordsDeclare.type).toBe(StatementType.Declare);
+
+    const endStatement = statements[statements.length-2];
+    expect(endStatement.type).toBe(StatementType.End);
+
+    const callStatement = statements[statements.length-1];
+    expect(callStatement.type).toBe(StatementType.Call);
+  });
+});

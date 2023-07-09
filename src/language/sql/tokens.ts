@@ -14,6 +14,13 @@ export const NameTypes = [`word`, `sqlName`, `function`];
 export default class SQLTokeniser {
   matchers: Matcher[] = [
     {
+      name: `STATEMENTTYPE`,
+      match: [{ type: `word`, match: (value: string) => {
+        return [`CREATE`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`].includes(value.toUpperCase());
+      } }],
+      becomes: `statementType`,
+    },
+    {
       name: `CLAUSE`,
       match: [{ type: `word`, match: (value: string) => {
         return [`WHERE`, `HAVING`, `GROUP`, `LIMIT`, `OFFSET`, `ORDER`].includes(value.toUpperCase());
@@ -42,7 +49,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `OR`, `REPLACE`, `FROM`, `INTO`].includes(value.toUpperCase());
+        return [`AS`, `OR`, `REPLACE`, `FROM`, `INTO`, `BEGIN`, `END`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },
