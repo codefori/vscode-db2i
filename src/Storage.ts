@@ -1,7 +1,6 @@
 import vscode from 'vscode';
 
 const QUERIES_KEY = `queries`;
-const SERVERCOMPONENT_KEY = `serverVersion`
 
 export type QueryList = string[];
 
@@ -44,14 +43,6 @@ export class ConnectionStorage extends Storage {
 
   protected getStorageKey(key: string): string {
     return `${this.connectionName}.${key}`;
-  }
-
-  getServerComponentName(): string|undefined {
-    return this.get<string>(SERVERCOMPONENT_KEY);
-  }
-
-  setServerComponentName(name: string) {
-    return this.set(SERVERCOMPONENT_KEY, name);
   }
 
   getPastQueries() {

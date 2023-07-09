@@ -11,12 +11,14 @@ export class queryHistory implements TreeDataProvider<any> {
   constructor(context: vscode.ExtensionContext) {
     context.subscriptions.push(
       vscode.commands.registerCommand(openSqlDocumentCommand, (query: string = ``) => {
-        workspace.openTextDocument({
-          language: `sql`,
-          content: (typeof query === `string` ? query : ``)
-        }).then(doc => {
-          window.showTextDocument(doc);
-        });
+        if (query) {
+          workspace.openTextDocument({
+            language: `sql`,
+            content: query
+          }).then(doc => {
+            window.showTextDocument(doc);
+          });
+        }
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.queryHistory.prepend`, async (newQuery?: string) => {

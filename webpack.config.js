@@ -3,18 +3,6 @@
 'use strict';
 
 const path = require(`path`);
-const webpack = require(`webpack`);
-
-const npm_runner = process.env[`npm_lifecycle_script`];
-const isProduction = (npm_runner && npm_runner.includes(`production`));
-
-console.log(`Is production build: ${isProduction}`);
-
-let exclude = undefined;
-
-if (isProduction) {
-  exclude = path.resolve(__dirname, `src`, `testing`)
-}
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -28,11 +16,6 @@ const config = {
     libraryTarget: `commonjs2`,
     devtoolModuleFilenameTemplate: `../[resource-path]`,
   },
-  plugins: [
-    new webpack.DefinePlugin({
-      'process.env.DEV': JSON.stringify(!isProduction),
-    })
-  ],
   devtool: `source-map`,
   externals: {
     vscode: `commonjs vscode` // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
@@ -56,11 +39,7 @@ const config = {
             loader: `esbuild-loader`
           }
         ]
-      },
-      {
-        test: /\.ts$/,
-        exclude
-      },
+      }
     ]
   }
 };

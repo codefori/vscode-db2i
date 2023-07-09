@@ -1,7 +1,8 @@
 
 import vscode from "vscode"
-import { JobManager } from "../config";
 import { getInstance } from "../base";
+
+const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
 export default class Table {
   /**
@@ -10,6 +11,8 @@ export default class Table {
    * @returns {Promise<TableColumn[]>}
    */
   static async getItems(schema: string, name: string): Promise<TableColumn[]> {
+    const content = instance.getContent();
+
     const sql = [
       `SELECT `,
       `  column.COLUMN_NAME,`,
@@ -33,7 +36,7 @@ export default class Table {
       `ORDER BY column.ORDINAL_POSITION`,
     ].join(` `);
 
-    return JobManager.runSQL(sql);
+    return content.runSQL(sql);
   }
 
   static clearAdvisedIndexes(schema: string, name: string) {
