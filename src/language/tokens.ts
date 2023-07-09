@@ -9,7 +9,7 @@ interface Matcher {
   becomes: string;
 };
 
-export const NameTypes = [`word`, `sqlName`];
+export const NameTypes = [`word`, `sqlName`, `function`];
 
 export default class SQLTokeniser {
   matchers: Matcher[] = [
@@ -220,7 +220,7 @@ export default class SQLTokeniser {
     return tokens;
   }
 
-  private static createBlocks(tokens: Token[]) {
+  static createBlocks(tokens: Token[]) {
     let start = 0;
     let level = 0;
 
@@ -253,7 +253,7 @@ export default class SQLTokeniser {
     return tokens;
   }
 
-  private static findScalars(tokens: Token[]) {
+  static findScalars(tokens: Token[]) {
     for (let i = 0; i < tokens.length; i++) {
       switch (tokens[i].type) {
         case `word`:

@@ -1,4 +1,4 @@
-import { NameTypes } from "./tokens";
+import SQLTokeniser, { NameTypes } from "./tokens";
 import { IRange, ObjectRef, QualifiedObject, Token } from "./types";
 
 export enum StatementType {
@@ -37,6 +37,10 @@ export default class Statement {
 			const wordValue = first.value?.toUpperCase();
 
 			this.type = StatementTypeWord[wordValue];
+		}
+
+		if (this.type !== StatementType.Create) {
+			this.tokens = SQLTokeniser.findScalars(this.tokens);
 		}
 	}
 
