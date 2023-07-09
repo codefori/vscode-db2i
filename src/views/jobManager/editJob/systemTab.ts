@@ -101,31 +101,31 @@ export default function getSystemTab(options: JDBCOptions) {
       ],
       `	Specifies whether to hold the cursor across transactions. If this property is set to "true", cursors are not closed when a transaction is committed. All resources acquired during the unit of work are held, but locks on specific rows and objects implicitly acquired during the unit of work are released.`
     )
-    .addSelect(
-      `cursor sensitivity`,
-      `Cursor sensitivity`,
-      [
-        {
-          value: `asensitive`,
-          description: `Asensitive`,
-          text: `asensitive`,
-          selected: options["cursor sensitivity"] === `asensitive`,
-        },
-        {
-          value: `insensitive`,
-          description: `Insensitive`,
-          text: `insensitive`,
-          selected: options["cursor sensitivity"] === `insensitive`,
-        },
-        {
-          value: `sensitive`,
-          description: `Sensitive`,
-          text: `sensitive`,
-          selected: options["cursor sensitivity"] === `sensitive`,
-        },
-      ],
-      formatDescription(autoCommitText)
-    )
+    // .addSelect(
+    //   `cursor sensitivity`,
+    //   `Cursor sensitivity`,
+    //   [
+    //     {
+    //       value: `asensitive`,
+    //       description: `Asensitive`,
+    //       text: `asensitive`,
+    //       selected: options["cursor sensitivity"] === `asensitive`,
+    //     },
+    //     {
+    //       value: `insensitive`,
+    //       description: `Insensitive`,
+    //       text: `insensitive`,
+    //       selected: options["cursor sensitivity"] === `insensitive`,
+    //     },
+    //     {
+    //       value: `sensitive`,
+    //       description: `Sensitive`,
+    //       text: `sensitive`,
+    //       selected: options["cursor sensitivity"] === `sensitive`,
+    //     },
+    //   ],
+    //   formatDescription(autoCommitText)
+    // )
     .addInput(`database name`, `Database name`, formatDescription(dbNameText), {
       default: options["database name"],
     })
