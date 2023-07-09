@@ -17,8 +17,9 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Backend version check`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
-  
+      // To run these tests, we need the backend server. If this test fails. Don't bother
+      assert.strictEqual(ServerComponent.installed, true);
+
       let newJob = new SQLJob();
       await newJob.connect();
 
@@ -32,6 +33,8 @@ export const JobsSuite: TestSuite = {
     }},
     
     {name: `Paging query`, test: async () => {
+      assert.strictEqual(ServerComponent.installed, true);
+
       let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
       await newJob.connect();
 
@@ -55,17 +58,17 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `CL Command (success)`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
-  
+      assert.strictEqual(ServerComponent.installed, true);
+
       let newJob = new SQLJob();
       await newJob.connect();
 
       let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVSNAKES)  CRTFILE(*YES) `);
       assert.equal(clRes.success, true);
-      assert.notEqual(0, clRes.joblog.length);
+      assert.notEqual(0, clRes.data.length);
       let CPF2880: boolean = false;
       console.log(JSON.stringify(clRes));
-      for (let joblogEntry of clRes.joblog) {
+      for (let joblogEntry of clRes.data) {
         if (joblogEntry.MESSAGE_ID === "CPF2880") {
           CPF2880 = true;
           break;
@@ -75,7 +78,7 @@ export const JobsSuite: TestSuite = {
       newJob.close();
     }},
     {name: `CL Command (error)`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      assert.strictEqual(ServerComponent.installed, true);
 
       let newJob = new SQLJob();
       await newJob.connect();
@@ -85,7 +88,7 @@ export const JobsSuite: TestSuite = {
       assert.equal(clRes.success, false);
       let CPD2825: boolean = false;
       console.log(JSON.stringify(clRes));
-      for (let joblogEntry of clRes.joblog) {
+      for (let joblogEntry of clRes.data) {
         if (joblogEntry.MESSAGE_ID === "CPD2825") {
           CPD2825 = true;
           break;
@@ -96,6 +99,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Creating a job`, test: async () => {
+      assert.strictEqual(ServerComponent.installed, true);
+      
       const newJob = new SQLJob();
 
       assert.strictEqual(newJob.getStatus(), JobStatus.NotStarted);
@@ -114,6 +119,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Jobs have different job IDs`, test: async () => {
+      assert.strictEqual(ServerComponent.installed, true);
+      
       const jobA = new SQLJob();
       const jobB = new SQLJob();
 
@@ -127,6 +134,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Job can run many queries`, test: async () => {
+      assert.strictEqual(ServerComponent.installed, true);
+      
       const newJob = new SQLJob();
 
       await newJob.connect();
@@ -140,6 +149,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Library list is used`, test: async () => {
+      assert.strictEqual(ServerComponent.installed, true);
+      
       let newJob = new SQLJob({libraries: [`QSYS`, `SYSTOOLS`], naming: `system`});
       await newJob.connect();
 
@@ -162,6 +173,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Binding parameters`, test: async () => {
+      assert.strictEqual(ServerComponent.installed, true);
+      
       let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
       await newJob.connect();
 
@@ -176,6 +189,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Ensure API compatability`, test: async () => {
+      assert.strictEqual(ServerComponent.installed, true);
+      
       const instance = getInstance();
       const content = instance.getContent();
 
@@ -192,6 +207,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Performance measuring`, test: async () => {
+      assert.strictEqual(ServerComponent.installed, true);
+      
       const instance = getInstance();
       const content = instance.getContent();
 

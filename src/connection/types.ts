@@ -25,7 +25,7 @@ export interface JobLogEntry {
   MESSAGE_TEXT: string;
 }
 export interface CLCommandResult extends ServerResponse {
-  joblog: JobLogEntry[];
+  data: JobLogEntry[];
 }
 
 export interface QueryMetaData {
