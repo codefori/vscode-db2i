@@ -443,7 +443,6 @@ describe(`Offset reference tests`, () => {
     const statement = document.statements[0];
   
     const ref = statement.getReferenceByOffset(21);
-    console.log(ref);
     expect(ref).toBeDefined();
     expect(ref.object.schema).toBe(`sample`);
     expect(ref.object.name).toBeUndefined();
@@ -463,7 +462,6 @@ describe(`Offset reference tests`, () => {
     expect(objs[0].alias).toBe(`b`);
   
     const ref = statement.getReferenceByOffset(9);
-    console.log(ref);
     expect(ref).toBeDefined();
     expect(ref.object.schema).toBe(`b`);
     expect(ref.object.name).toBeUndefined();
