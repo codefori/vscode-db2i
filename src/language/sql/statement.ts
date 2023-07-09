@@ -128,15 +128,18 @@ export default class Statement {
 		let sqlObj: ObjectRef;
 
 		let nameIndex = i;
-		let nameToken;
+		let nameToken = this.tokens[i];
 
-		if (this.tokens[i] && NameTypes.includes(this.tokens[i].type)) {
+		let endIndex = i;
+
+		if (nameToken && NameTypes.includes(this.tokens[i].type)) {
 			nameIndex = i;
-			nameToken = this.tokens[nameIndex];
+			endIndex = i;
 
 			sqlObj = {
+				tokens: [],
 				object: {
-					name: this.tokens[i].value
+					name: nameToken.value
 				}
 			}
 
@@ -144,7 +147,10 @@ export default class Statement {
 				nameIndex = i+2;
 				nameToken = this.tokens[nameIndex];
 
+				endIndex = nameToken ? nameIndex : i+1;
+
 				sqlObj = {
+					tokens: [],
 					object: {
 						schema: this.tokens[i].value,
 						name: nameToken && NameTypes.includes(nameToken.type) ? nameToken.value : undefined
@@ -156,12 +162,16 @@ export default class Statement {
 			// If the next token is not a clause.. we might have the alias
 			if (nameToken && this.tokens[nameIndex+1]) {
 				if (this.tokens[nameIndex+1].type === `keyword`) {
+					endIndex = nameIndex+2;
 					sqlObj.alias = this.tokens[nameIndex+2].value;
 				} else
 				if (tokenIs(this.tokens[nameIndex+1], `word`)) {
+					endIndex = nameIndex+1;
 					sqlObj.alias = this.tokens[nameIndex+1].value;
 				}
 			}
+
+			sqlObj.tokens = this.tokens.slice(i, endIndex+1);
 		};
 
 		return sqlObj;

@@ -80,6 +80,7 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(1);
 
     const obj = refs[0];
+    expect(obj.tokens.length).toBe(1);
     expect(obj.object.name).toBe(`sample`);
     expect(obj.object.schema).toBeUndefined();
     expect(obj.alias).toBeUndefined();
@@ -97,6 +98,7 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(1);
 
     const obj = refs[0];
+    expect(obj.tokens.length).toBe(3);
     expect(obj.object.name).toBe(`sample`);
     expect(obj.object.schema).toBe(`myschema`);
     expect(obj.alias).toBeUndefined();
@@ -114,6 +116,7 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(1);
 
     const obj = refs[0];
+    expect(obj.tokens.length).toBe(5);
     expect(obj.object.name).toBe(`sample`);
     expect(obj.object.schema).toBe(`myschema`);
     expect(obj.alias).toBe(`a`)
@@ -131,6 +134,7 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(1);
 
     const obj = refs[0];
+    expect(obj.tokens.length).toBe(2);
     expect(obj.object.name).toBe(`sample`);
     expect(obj.object.schema).toBeUndefined();
     expect(obj.alias).toBe(`a`)
@@ -148,6 +152,7 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(1);
 
     const obj = refs[0];
+    expect(obj.tokens.length).toBe(4);
     expect(obj.object.name).toBe(`sample`);
     expect(obj.object.schema).toBe(`myschema`);
     expect(obj.alias).toBe(`a`)
@@ -165,6 +170,7 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(1);
 
     const obj = refs[0];
+    expect(obj.tokens.length).toBe(5);
     expect(obj.object.name).toBe(`sample`);
     expect(obj.object.schema).toBe(`myschema`);
     expect(obj.alias).toBe(`a`)
@@ -188,11 +194,13 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(2);
 
     const emp = refs[0];
+    expect(emp.tokens.length).toBe(3);
     expect(emp.object.name).toBe(`EMPLOYEE`);
     expect(emp.object.schema).toBe(`CORPDATA`);
     expect(emp.alias).toBeUndefined();
 
     const proj = refs[1];
+    expect(proj.tokens.length).toBe(3);
     expect(proj.object.name).toBe(`PROJECT`);
     expect(proj.object.schema).toBe(`CORPDATA`);
     expect(proj.alias).toBeUndefined();
@@ -216,11 +224,13 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(2);
 
     const emp = refs[0];
+    expect(emp.tokens.length).toBe(3);
     expect(emp.object.name).toBe(`EMPLOYEE`);
     expect(emp.object.schema).toBe(`CORPDATA`);
     expect(emp.alias).toBeUndefined();
 
     const proj = refs[1];
+    expect(proj.tokens.length).toBe(3);
     expect(proj.object.name).toBe(`PROJECT`);
     expect(proj.object.schema).toBe(`CORPDATA`);
     expect(proj.alias).toBeUndefined();
@@ -244,11 +254,13 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(2);
 
     const proj = refs[0];
+    expect(proj.tokens.length).toBe(3);
     expect(proj.object.name).toBe(`PROJECT`);
     expect(proj.object.schema).toBe(`CORPDATA`);
     expect(proj.alias).toBeUndefined();
 
     const emp = refs[1];
+    expect(emp.tokens.length).toBe(3);
     expect(emp.object.name).toBe(`EMPLOYEE`);
     expect(emp.object.schema).toBe(`CORPDATA`);
     expect(emp.alias).toBeUndefined();
@@ -272,11 +284,13 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(2);
 
     const emp = refs[0];
+    expect(emp.tokens.length).toBe(3);
     expect(emp.object.name).toBe(`EMPLOYEE`);
     expect(emp.object.schema).toBe(`CORPDATA`);
     expect(emp.alias).toBeUndefined();
 
     const proj = refs[1];
+    expect(proj.tokens.length).toBe(1);
     expect(proj.object.name).toBe(`PROJECT`);
     expect(proj.object.schema).toBeUndefined();
     expect(proj.alias).toBeUndefined();
@@ -297,11 +311,13 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(2);
 
     const A = refs[0];
+    expect(A.tokens.length).toBe(1);
     expect(A.object.name).toBe(`A`);
     expect(A.object.schema).toBeUndefined;
     expect(A.alias).toBeUndefined();
 
     const B = refs[1];
+    expect(B.tokens.length).toBe(1);
     expect(B.object.name).toBe(`B`);
     expect(B.object.schema).toBeUndefined();
     expect(B.alias).toBeUndefined();
@@ -325,11 +341,13 @@ describe(`Object references`, () => {
     expect(refs.length).toBe(2);
 
     const emp = refs[0];
+    expect(emp.tokens.length).toBe(3);
     expect(emp.object.name).toBe(`EMPLOYEE`);
     expect(emp.object.schema).toBeUndefined;
     expect(emp.alias).toBe(`A`);
 
     const proj = refs[1];
+    expect(proj.tokens.length).toBe(2);
     expect(proj.object.name).toBe(`PROJECT`);
     expect(proj.object.schema).toBeUndefined;
     expect(proj.alias).toBe(`b`);
@@ -350,12 +368,13 @@ describe(`Object references`, () => {
 
     const refsA = talksStatement.getObjectReferences();
     expect(refsA.length).toBe(1);
+    expect(refsA[0].tokens.length).toBe(1);
     expect(refsA[0].object.name).toBe(`talks`);
     expect(refsA[0].object.schema).toBeUndefined();
 
-
     const refsB = hashtagsStatement.getObjectReferences();
     expect(refsB.length).toBe(1);
+    expect(refsB[0].tokens.length).toBe(3);
     expect(refsB[0].object.name).toBe(`hashtags`);
     expect(refsB[0].object.schema).toBe(`"myschema"`);
   });
@@ -373,6 +392,7 @@ describe(`Object references`, () => {
 
     const refsA = talksStatement.getObjectReferences();
     expect(refsA.length).toBe(1);
+    expect(refsA[0].tokens.length).toBe(1);
     expect(refsA[0].object.name).toBe(`talks`);
     expect(refsA[0].object.schema).toBeUndefined();
   });
@@ -390,6 +410,7 @@ describe(`Object references`, () => {
 
     const refsA = talksStatement.getObjectReferences();
     expect(refsA.length).toBe(1);
+    expect(refsA[0].tokens.length).toBe(1);
     expect(refsA[0].object.name).toBe(`create_Sql_sample`);
     expect(refsA[0].object.schema).toBeUndefined();
   });
@@ -407,6 +428,7 @@ describe(`Object references`, () => {
 
     const refsA = talksStatement.getObjectReferences();
     expect(refsA.length).toBe(1);
+    expect(refsA[0].tokens.length).toBe(3);
     expect(refsA[0].object.name).toBe(`create_Sql_sample`);
     expect(refsA[0].object.schema).toBe(`"QSYS"`);
   });

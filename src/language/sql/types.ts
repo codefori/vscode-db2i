@@ -17,6 +17,7 @@ export interface QualifiedObject {
 }
 
 export interface ObjectRef {
+  tokens: Token[],
   object: QualifiedObject;
   alias?: string;
 }
