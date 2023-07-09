@@ -293,7 +293,7 @@ export default function getPerfTab(options: JDBCOptions) {
         description: `2`,
         selected: options["query optimize goal"] === `2`,
       },
-    ])
+    ], `Specifies the goal the system should use with optimization of queries. This setting corresponds with the system's QAQQINI option called OPTIMIZATION_GOAL.`)
     .addSelect(`query timeout mechanism`, `Query timeout mechanism`, [
       {
         value: `cancel`,
