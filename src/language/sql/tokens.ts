@@ -42,7 +42,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `OR`, `REPLACE`, `FROM`].includes(value.toUpperCase());
+        return [`AS`, `OR`, `REPLACE`, `FROM`, `INTO`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },

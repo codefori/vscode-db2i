@@ -110,16 +110,11 @@ export default class Statement {
 				doAdd(this.getRefAtToken(1));
 				break;
 			case StatementType.Insert:
-				// INSERT INTO
-				if (tokenIs(this.tokens[1], `word`, `INTO`)) {
-					doAdd(this.getRefAtToken(2));
-				}
-				break;
 			case StatementType.Select:
 			case StatementType.Delete:
 				// SELECT
 				for (let i = 0; i < this.tokens.length; i++) {
-					if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `join`)) {
+					if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`)) {
 						doAdd(this.getRefAtToken(i+1));
 					}
 				}
