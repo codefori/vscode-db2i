@@ -119,7 +119,7 @@ export default function getFormatTab(options: JDBCOptions) {
           selected: options["date separator"] === `b`,
         },
       ],
-      `	Specifies the date separator used in date literals within SQL statements. This property has no effect unless the "date format" property is set to "julian", "mdy", "dmy" or "ymd".`
+      `Specifies the date separator used in date literals within SQL statements. This property has no effect unless the "date format" property is set to "julian", "mdy", "dmy" or "ymd".`
     )
     .addSelect(
       `decimal separator`,
