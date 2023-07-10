@@ -47,6 +47,15 @@ export const JobsSuite: TestSuite = {
       console.log(trace.tracedata);
       newJob.close();
     }},
+
+    {name: `Backend retrieve trace data without turning on trace`, test: async () => {
+      const backendInstalled = await ServerComponent.initialise(false);
+      let newJob = new SQLJob();
+      await newJob.connect();
+      let trace = await newJob.getTraceData();
+      assert.equal(``, trace.tracedata);
+      newJob.close();
+    }},
     
     {name: `Paging query`, test: async () => {
       let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
