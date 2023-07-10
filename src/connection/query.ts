@@ -1,5 +1,5 @@
 import { SQLJob } from "./sqlJob";
-import { CLCommandResult, JobLogEntry, QueryResult, ServerResponse } from "./types";
+import { CLCommandResult, JobLogEntry, QueryOptions, QueryResult, ServerResponse } from "./types";
 export enum QueryState {
   NOT_YET_RUN = 1,
   RUN_MORE_DATA_AVAILABLE = 2,
@@ -18,12 +18,12 @@ export class Query<T> {
   private isCLCommand: boolean;
   private state: QueryState = QueryState.NOT_YET_RUN;
 
-  constructor(private job: SQLJob, private isCL: boolean, private query: string, private parms: any[] = undefined) {
+  constructor(private job: SQLJob, query: string, opts: QueryOptions = {isClCommand: false, parameters: undefined}) {
     this.job = job;
-    this.isPrepared = (undefined !== parms);
-    this.parameters = parms;
+    this.isPrepared = (undefined !== opts.parameters);
+    this.parameters = opts.parameters;
     this.sql = query;
-    this.isCLCommand = isCL;
+    this.isCLCommand = opts.isClCommand;
     Query.globalQueryList.push(this);
   }
   public static byId(id: string) {

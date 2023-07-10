@@ -53,7 +53,7 @@ export const JobsSuite: TestSuite = {
       await newJob.connect();
 
       let rowsAtATime = 4;
-      let qry = newJob.query(false, `select * from QIWS.QCUSTCDT`);
+      let qry = newJob.query(`select * from QIWS.QCUSTCDT`);
       let qryResults = await qry.run(rowsAtATime);
       assert.equal(qryResults.success, true);
       assert.equal(qryResults.data.length, 4);
@@ -148,8 +148,8 @@ export const JobsSuite: TestSuite = {
 
       await newJob.connect();
 
-      const resultA = await newJob.query(false, `values (job_name, current_timestamp)`).run();
-      const resultB = await newJob.query(false, `values (job_name, current_timestamp)`).run();
+      const resultA = await newJob.query(`values (job_name, current_timestamp)`).run();
+      const resultB = await newJob.query(`values (job_name, current_timestamp)`).run();
 
       assert.strictEqual(resultA.data[0][`00001`], resultB.data[0][`00001`]);
 
@@ -161,7 +161,7 @@ export const JobsSuite: TestSuite = {
       await newJob.connect();
 
       try {
-        await newJob.query(false, `select * from qcustcdt`).run();
+        await newJob.query(`select * from qcustcdt`).run();
         assert.fail(`Query should not have worked. Library list issue`);
       } catch (e) {
         assert.notStrictEqual(e.message, undefined);
@@ -172,7 +172,7 @@ export const JobsSuite: TestSuite = {
       newJob = new SQLJob({libraries: [`QSYS`, `QIWS`], naming: `system`});
       await newJob.connect();
 
-      const rows = await newJob.query(false, `select * from qcustcdt`).run();
+      const rows = await newJob.query(`select * from qcustcdt`).run();
       assert.notStrictEqual(rows.data.length, 0);
 
       newJob.close();
@@ -183,7 +183,7 @@ export const JobsSuite: TestSuite = {
       await newJob.connect();
 
       try {
-        const rows = await newJob.query(false, `select * from qcustcdt where cusnum = ? and zipcod = ?`, [938485, 30545]).run();
+        const rows = await newJob.query(`select * from qcustcdt where cusnum = ? and zipcod = ?`, {isClCommand: false, parameters: [938485, 30545]}).run();
         assert.strictEqual(rows.data.length, 1);
       } catch (e) {
         assert.fail(`Should not have errored.`);
@@ -200,7 +200,7 @@ export const JobsSuite: TestSuite = {
       await newJob.connect();
 
       const query = `select * from qiws.qcustcdt`;
-      const rowsA = await newJob.query(false, query).run();
+      const rowsA = await newJob.query(query).run();
       const rowsB = await content.runSQL(query);
 
       newJob.close();
@@ -220,9 +220,9 @@ export const JobsSuite: TestSuite = {
       console.log(`Using: ${query}`);
 
       const ns = performance.now();
-      await newJob.query(false, query).run();
-      await newJob.query(false, query).run();
-      await newJob.query(false, query).run();
+      await newJob.query(query).run();
+      await newJob.query(query).run();
+      await newJob.query(query).run();
       const ne = performance.now();
 
       console.log(`New query method took ${ne - ns} milliseconds.`);

@@ -1,7 +1,7 @@
 import { getInstance } from "../base";
 import { Query } from "./query";
 import { JobStatus, SQLJob } from "./sqlJob";
-import { QueryResult, Rows } from "./types";
+import { QueryOptions, QueryResult, Rows } from "./types";
 
 export interface JobInfo {
   name: string;
@@ -93,7 +93,7 @@ export class SQLJobManager {
       // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
       // int. This is the largest number available without overflow
       let rowsToFetch = 2147483647;
-      let results = await selected.job.query<T>(false, query).run(rowsToFetch);
+      let results = await selected.job.query<T>(query).run(rowsToFetch);
       return results.data;
     } else {
       const instance = getInstance();
@@ -108,10 +108,10 @@ export class SQLJobManager {
       return content.runSQL(queryContext) as Promise<T[]>;
     }
   }
-  getPagingStatement<T>(isCL: boolean, query: string): Query<T> {
+  getPagingStatement<T>(query: string, opts?: QueryOptions): Query<T> {
     const selected = this.jobs[this.selectedJob]
     if (SQLJobManager.jobSupport && selected) {
-      return selected.job.query<T>(isCL, query);
+      return selected.job.query<T>(query, opts);
     } else {
       throw new Error(`Active SQL job is required. Please spin one up first.`);
     }

@@ -1,7 +1,7 @@
 import { CommandResult } from "@halcyontech/vscode-ibmi-types";
 import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
-import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult } from "./types";
+import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions } from "./types";
 import { Query } from "./query";
 
 export enum JobStatus {
@@ -102,9 +102,8 @@ export class SQLJob {
 
     return connectResult;
   }
-
-  query<T>(isCL, sql: string, parms: any[] = undefined): Query<T> {
-    return new Query(this, isCL, sql, parms)
+  query<T>(sql: string, opts?: QueryOptions): Query<T> {
+    return new Query(this, sql, opts)
   }
 
   async getVersion(): Promise<VersionCheckResult> {
@@ -157,7 +156,7 @@ export class SQLJob {
   }
 
   clcommand(cmd: string): Query<any> {
-    return new Query(this, true, cmd);
+    return new Query(this, cmd, {isClCommand: true})
   }
 
   async close() {
