@@ -103,7 +103,7 @@ export class SQLJob {
     return connectResult;
   }
   query<T>(sql: string, opts?: QueryOptions): Query<T> {
-    return new Query(this, sql, opts)
+    return new Query(this, sql, opts);
   }
 
   async getVersion(): Promise<VersionCheckResult> {
