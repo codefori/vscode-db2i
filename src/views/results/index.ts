@@ -5,6 +5,7 @@ import * as csv from "csv/sync";
 import Configuration from "../../configuration"
 import * as html from "./html";
 import { getInstance } from "../../base";
+import { JobManager } from "../../config";
 
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
@@ -33,14 +34,11 @@ class ResultSetPanelProvider {
         const content = instance.getContent();
         const config = instance.getConfig();
 
-        const statement = [
-          `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
-          `${message.query} LIMIT ${message.limit} OFFSET ${message.offset}`,
-        ].join(`;\n`);
+        const statement = `${message.query} LIMIT ${message.limit} OFFSET ${message.offset}`;
 
         let data = [];
         try {
-          data = await content.runSQL(statement);
+          data = await JobManager.runSQL(statement);
         } catch (e) {
           this.setError(e.message);
           data = [];
@@ -179,16 +177,12 @@ export function initialise(context: vscode.ExtensionContext) {
 
                 } else {
                 // Otherwise... it's a bit complicated.
-                  const statementWithContext = [
-                    `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
-                    statement.content
-                  ].join(`;\n`);
 
                   if (statement.type === `statement`) {
                     resultSetProvider.setLoadingText(`Executing statement...`);
                   }
 
-                  const data = await content.runSQL(statementWithContext);
+                  const data = await JobManager.runSQL(statement.content);
 
                   if (data.length > 0) {
                     switch (statement.type) {
