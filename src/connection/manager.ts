@@ -91,9 +91,9 @@ export class SQLJobManager {
     const selected = this.jobs[this.selectedJob]
     if (SQLJobManager.jobSupport && selected) {
       // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
-      // int. This is the largest number available without overflow
-      let rowsToFetch = 2147483647;
-      let results = await selected.job.query<T>(query).run(rowsToFetch);
+      // int. This is the largest number available without overflow (Integer.MAX_VALUE)
+      const rowsToFetch = 2147483647;
+      const results = await selected.job.query<T>(query).run(rowsToFetch);
       return results.data;
     } else {
       const instance = getInstance();
