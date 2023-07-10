@@ -1,6 +1,9 @@
-import { ExtensionContext } from "vscode";
+import { ExtensionContext, commands, window } from "vscode";
 import { ConnectionStorage } from "./Storage";
 import { getInstance } from "./base";
+import { SQLJobManager } from "./connection/manager";
+import { ServerComponent } from "./connection/serverComponent";
+import { JobManagerView } from "./views/jobManager/jobManagerView";
 
 interface IBMiLevels {
   version: number;
@@ -9,6 +12,7 @@ interface IBMiLevels {
 
 export let Config: ConnectionStorage;
 export let OSData: IBMiLevels|undefined;
+export let JobManager: SQLJobManager = new SQLJobManager();
 
 export function setupConfig(context: ExtensionContext) {
   Config = new ConnectionStorage(context);
@@ -17,10 +21,19 @@ export function setupConfig(context: ExtensionContext) {
     const instance = getInstance();
 
     Config.setConnectionName(instance.getConnection().currentConnectionName);
+
+    const backendSupport = await ServerComponent.initialise();
+
+    SQLJobManager.jobSupport = backendSupport;
+    JobManagerView.setVisible(true);
+  });
+
+  getInstance().onEvent(`disconnected`, async () => {
+    await JobManager.endAll();
   });
 }
 
-export async  function fetchSystemInfo() {
+export async function fetchSystemInfo() {
   const instance = getInstance();
   const content = instance.getContent();
 

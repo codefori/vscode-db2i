@@ -111,6 +111,16 @@
           "name": "Examples",
           "visibility": "collapsed",
           "when": "code-for-ibmi:connected == true"
+        },
+        {
+          "id": "jobManager",
+          "name": "SQL Job Manager",
+          "when": "code-for-ibmi:connected && vscode-db2i:jobManager"
+        },
+        {
+          "id": "testingView-db2i",
+          "name": "Test cases",
+          "when": "code-for-ibmi:connected && vscode-db2i:testing"
         }
       ]
     },
@@ -118,6 +128,10 @@
       {
         "view": "queryHistory",
         "contents": "Query history will appear here."
+      },
+      {
+        "view": "jobManager",
+        "contents": "The SQL Job Manager allows you to provision one or more jobs for running SQL statements, each with its own connection settings.\n\nUsing managed jobs reduces the use of system resources, improves performance, and maintains  state across subsequent SQL statements.\n\nYou can run SQL statements without starting a job, just be aware that every statement you run requires a temporary, single-use job to be started on your behalf. \n[New SQL job](command:vscode-db2i.jobManager.newJob)"
       }
     ],
     "keybindings": [
@@ -129,6 +143,12 @@
       }
     ],
     "commands": [
+      {
+        "command": "vscode-db2i.openSqlDocument",
+        "title": "Open SQL Document",
+        "category": "Db2 for i",
+        "icon": "$(new-file)"
+      },
       {
         "command": "vscode-db2i.refreshSchemaBrowser",
         "title": "Refresh Schema Browser",
@@ -237,12 +257,64 @@
         "title": "Clear filter",
         "category": "Db2 for i (Examples)",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.newJob",
+        "title": "New SQL Job",
+        "category": "Db2 for i",
+        "icon": "$(database)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.closeJob",
+        "title": "Close SQL Job",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.endAll",
+        "title": "Close All SQL Jobs",
+        "category": "Db2 for i",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editJobProps",
+        "title": "Edit Connection Properties",
+        "category": "Db2 for i",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.copyJobId",
+        "title": "Copy Job ID",
+        "category": "Db2 for i",
+        "icon": "$(keyboard)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.viewJobLog",
+        "title": "View Job Log",
+        "category": "Db2 for i",
+        "icon": "$(info)"
       }
     ],
     "menus": {
       "commandPalette": [
         {
           "command": "vscode-db2i.queryHistory.remove",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.closeJob",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editJobProps",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.copyJobId",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.viewJobLog",
           "when": "never"
         }
       ],
@@ -290,6 +362,21 @@
           "command": "vscode-db2i.examples.clearFilter",
           "group": "navigation",
           "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.openSqlDocument",
+          "group": "navigation",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newJob",
+          "group": "navigation",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.endAll",
+          "group": "navigation",
+          "when": "view == jobManager"
         }
       ],
       "view/item/context": [
@@ -357,6 +444,26 @@
           "command": "vscode-db2i.queryHistory.remove",
           "when": "view == queryHistory && viewItem == query",
           "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.closeJob",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editJobProps",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.copyJobId",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.viewJobLog",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
         }
       ]
     }
@@ -386,8 +493,10 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
-    "@vscode/webview-ui-toolkit": "^1.0.0",
+    "@vscode/webview-ui-toolkit": "^1.2.0",
     "csv": "^6.1.3",
+    "node-fetch": "^3.3.1",
+    "octokit": "^2.0.14",
     "sql-formatter": "^4.0.2"
   }
 }

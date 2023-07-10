@@ -1,12 +1,10 @@
 
 import vscode from "vscode"
-const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
+import { JobManager } from "../config";
 
 export default class View {
   static getColumns(schema: string, name: string): Promise<TableColumn[]> {
-    const content = instance.getContent();
-    
-    return content.runSQL([
+    return JobManager.runSQL([
       `SELECT * FROM QSYS2.SYSCOLUMNS`,
       `WHERE TABLE_SCHEMA = '${schema.toUpperCase()}' AND TABLE_NAME = '${name.toUpperCase()}'`,
       `ORDER BY ORDINAL_POSITION`
