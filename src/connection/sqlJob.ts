@@ -1,7 +1,8 @@
 import { CommandResult } from "@halcyontech/vscode-ibmi-types";
 import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
-import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult } from "./types";
+import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions } from "./types";
+import { Query } from "./query";
 
 export enum JobStatus {
   NotStarted = "notStarted",
@@ -29,7 +30,7 @@ export class SQLJob {
     })
   }
 
-  private async send(content: string): Promise<string> {
+  async send(content: string): Promise<string> {
     if (this.status === JobStatus.Ready) {
       this.status = JobStatus.Busy;
       ServerComponent.writeOutput(content);
@@ -101,64 +102,8 @@ export class SQLJob {
 
     return connectResult;
   }
-
-  async query<T>(sql: string, parameters?: (number | string)[]): Promise<T[]> {
-    const hasParms = (parameters && parameters.length > 0);
-
-    const queryObject = {
-      id: `boop`,
-      type: hasParms ? `prepare_sql_execute` : `sql`,
-      sql,
-      parameters: hasParms ? parameters : undefined
-    };
-
-    const result = await this.send(JSON.stringify(queryObject));
-
-    const queryResult: QueryResult = JSON.parse(result);
-
-    if (queryResult.success !== true) {
-      throw new Error(queryResult.error || `Failed to run query (unknown error)`);
-    }
-
-    return queryResult.data;
-  }
-
-
-  async pagingQuery(correlation_id: string, sql: string, rowsToFetch: number = 1000): Promise<QueryResult> {
-
-    const queryObject = {
-      id: correlation_id,
-      type: `sql`,
-      sql,
-      rows: rowsToFetch
-    };
-
-    const result = await this.send(JSON.stringify(queryObject));
-
-    const queryResult: QueryResult = JSON.parse(result);
-
-    if (queryResult.success !== true) {
-      throw new Error(queryResult.error || `Failed to run query (unknown error)`);
-    }
-    return queryResult;
-  }
-  async pagingQueryMoreData(correlation_id: string, rowsToFetch: number = 1000): Promise<QueryResult> {
-
-    const queryObject = {
-      id: `boop`,
-      cont_id: correlation_id,
-      type: `sqlmore`,
-      rows: rowsToFetch
-    };
-
-    const result = await this.send(JSON.stringify(queryObject));
-
-    const queryResult: QueryResult = JSON.parse(result);
-
-    if (queryResult.success !== true) {
-      throw new Error(queryResult.error || `Failed to run query (unknown error)`);
-    }
-    return queryResult;
+  query<T>(sql: string, opts?: QueryOptions): Query<T> {
+    return new Query(this, sql, opts);
   }
 
   async getVersion(): Promise<VersionCheckResult> {
@@ -177,16 +122,42 @@ export class SQLJob {
 
     return version;
   }
-  async clcommand(cmd: string): Promise<CLCommandResult> {
-    const cmdObj = {
+  async getTraceData(): Promise<GetTraceDataResult> {
+    const tracedataReqObj = {
       id: `boop`,
-      type: `cl`,
-      cmd: cmd
+      type: `gettracedata`
     };
-    const result = await this.send(JSON.stringify(cmdObj));
 
-    const commandResult: CLCommandResult = JSON.parse(result);
-    return commandResult;
+    const result = await this.send(JSON.stringify(tracedataReqObj));
+
+    const rpy: GetTraceDataResult = JSON.parse(result);
+
+    if (rpy.success !== true) {
+      throw new Error(rpy.error || `Failed to get trace data from backend`);
+    }
+    return rpy;
+  }
+  //TODO: add/modify this API to allow manipulation of JTOpen tracing, and add tests
+  async setTraceConfig(dest: ServerTraceDest, level: ServerTraceLevel): Promise<SetConfigResult> {
+    const reqObj = {
+      id: `boop`,
+      type: `setconfig`,
+      tracedest: dest,
+      tracelevel: level
+    };
+
+    const result = await this.send(JSON.stringify(reqObj));
+
+    const rpy: SetConfigResult = JSON.parse(result);
+
+    if (rpy.success !== true) {
+      throw new Error(rpy.error || `Failed to set trace options on backend`);
+    }
+    return rpy;
+  }
+
+  clcommand(cmd: string): Query<any> {
+    return new Query(this, cmd, {isClCommand: true})
   }
 
   async close() {
