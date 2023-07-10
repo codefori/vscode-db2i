@@ -66,6 +66,7 @@ export class Query<T> {
     return queryResult;
   }
   public async fetchMore(rowsToFetch: number = this.rowsToFetch): Promise<QueryResult<T>> {
+    //TODO: verify that the SQL job hasn't changed
     switch (this.state) {
     case QueryState.NOT_YET_RUN:
       throw new Error('Statement has not yet been run');

@@ -137,6 +137,7 @@ export class SQLJob {
     }
     return rpy;
   }
+  //TODO: add/modify this API to allow manipulation of JTOpen tracing, and add tests
   async setTraceConfig(dest: ServerTraceDest, level: ServerTraceLevel): Promise<SetConfigResult> {
     const reqObj = {
       id: `boop`,
