@@ -90,7 +90,10 @@ export class SQLJobManager {
   async runSQL<T>(query: string): Promise<T[]> {
     const selected = this.jobs[this.selectedJob]
     if (SQLJobManager.jobSupport && selected) {
-      let results = await selected.job.query<T>(false, query).run();
+      // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
+      // int. This is the largest number available without overflow
+      let rowsToFetch = 2147483647;
+      let results = await selected.job.query<T>(false, query).run(rowsToFetch);
       return results.data;
     } else {
       const instance = getInstance();
