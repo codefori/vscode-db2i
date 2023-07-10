@@ -10,6 +10,7 @@ import {loadBase} from "./base";
 import { setupConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/exampleBrowser";
+import { languageInit } from "./language";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -23,6 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
   loadBase();
 
   context.subscriptions.push(
+    ...languageInit(),
     vscode.window.registerTreeDataProvider(
       `schemaBrowser`,
       new schemaBrowser(context)
