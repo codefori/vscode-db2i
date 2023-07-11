@@ -138,9 +138,11 @@ export default class Database {
     schema = Statement.noQuotes(Statement.delimName(schema));
     object = Statement.noQuotes(Statement.delimName(object));
 
-    // TODO: fix?
+    // Remove plural and convert to uppercase. Needs work
+    let validType: string = type.substring(0, type.length-1).toUpperCase();
+
     const lines = await JobManager.runSQL<{SRCDTA: string}>([
-      `CALL QSYS2.GENERATE_SQL('${object}', '${schema}', '${type}', CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
+      `CALL QSYS2.GENERATE_SQL('${object}', '${schema}', '${validType}', CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
     ].join(` `));
 
     const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);

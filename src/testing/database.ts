@@ -36,6 +36,14 @@ export const DatabaseSuite: TestSuite = {
       const objects = await Database.getObjects(sqlSchema, `tables`);
 
       assert.notStrictEqual(objects.length, 0);
-    }}
+    }},
+
+    {name: `Generate SQL, system names`, test: async () => {
+      const objects = await Database.getObjects(systemLibrary, `tables`);
+      assert.notStrictEqual(objects.length, 0);
+
+      const result = await Database.generateSQL(systemLibrary, objects[0].name, `tables`);
+      assert.notStrictEqual(result, ``);
+    }},
   ]
 }
