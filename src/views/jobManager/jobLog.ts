@@ -12,11 +12,11 @@ interface JobLogMessage {
 }
 
 export async function displayJobLog(selected: JobInfo) {
-  const jobLogRows = await selected.job.query<JobLogMessage>(`select * from table(qsys2.joblog_info('*')) a`);
+  const jobLogRows = await selected.job.query<JobLogMessage>(`select * from table(qsys2.joblog_info('*')) a`).run();
 
-  if (jobLogRows.length > 0) {
+  if (jobLogRows.data.length > 0) {
     const panel = window.createWebviewPanel(`tab`, selected.job.id, {viewColumn: ViewColumn.Active}, {enableScripts: true});
-    panel.webview.html = generatePage(jobLogRows);
+    panel.webview.html = generatePage(jobLogRows.data);
     panel.reveal();
   } else {
     window.showInformationMessage(`No messages in job log for ${selected.job.id}`);
