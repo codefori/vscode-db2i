@@ -135,8 +135,8 @@ export default class Database {
   static async generateSQL(schema: string, object: string, type: SQLType): Promise<string> {
     const content = instance.getContent();
 
-    schema = Statement.delimName(schema);
-    object = Statement.delimName(object);
+    schema = Statement.noQuotes(Statement.delimName(schema));
+    object = Statement.noQuotes(Statement.delimName(object));
 
     // TODO: fix?
     const lines = await JobManager.runSQL<{SRCDTA: string}>([

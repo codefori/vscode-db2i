@@ -6,8 +6,8 @@ const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`
 
 export default class Callable {
   static getParms(schema: string, name: string): Promise<SQLParm[]> {
-    schema = Statement.delimName(schema);
-    name = Statement.delimName(name);
+    schema = Statement.noQuotes(Statement.delimName(schema));
+    name = Statement.noQuotes(Statement.delimName(name));
 
     return JobManager.runSQL<SQLParm>([
       `SELECT * FROM QSYS2.SYSPARMS`,

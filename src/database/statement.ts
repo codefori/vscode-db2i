@@ -10,10 +10,10 @@ export default class Statement {
   }
 
   static delimName(name: string) {
-    if (name.startsWith(`"`) && name.endsWith(`"`)) name = name.substring(1, name.length-1);
+    if (name.startsWith(`"`) && name.endsWith(`"`)) return name;
     if (name.includes(` `)) return `"${name}"`;
     if (name.length <= 10) return name.toUpperCase();
-    else if (name !== name.toUpperCase()) return `"${name}"`
+    else if (name !== name.toUpperCase()) return name.toUpperCase()
     else return name;
   }
 
