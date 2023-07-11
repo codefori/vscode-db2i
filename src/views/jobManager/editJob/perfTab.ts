@@ -17,13 +17,13 @@ export default function getPerfTab(options: JDBCOptions) {
           value: `true`,
           text: `Use big decimal`,
           description: `True`,
-          selected: options["big decimal"] === `true`,
+          selected: options["big decimal"] === true,
         },
         {
           value: `false`,
           text: `Do not use big decimal`,
           description: `False`,
-          selected: options["big decimal"] === `false`,
+          selected: options["big decimal"] === false,
         },
       ],
       `Specifies whether an intermediate java.math.BigDecimal object is used for packed and zoned decimal conversions. If this property is set to "true", 
@@ -118,13 +118,13 @@ export default function getPerfTab(options: JDBCOptions) {
           value: `true`,
           text: `Use data compression`,
           description: `True`,
-          selected: options["data compression"] === `true`,
+          selected: options["data compression"] === true,
         },
         {
           value: `false`,
           text: `Do not use data compression`,
           description: `False`,
-          selected: options["data compression"] === `false`,
+          selected: options["data compression"] === false,
         },
       ],
       `Specifies whether result set data is compressed. If this property is set to "true", then result set data is compressed. If this property is set to "false", then result set data is not compressed. Data compression may improve performance when retrieving large result sets.`
@@ -137,13 +137,13 @@ export default function getPerfTab(options: JDBCOptions) {
           value: `false`,
           text: `Do not use extended dynamic`,
           description: `False`,
-          selected: options["extended dynamic"] === `false`,
+          selected: options["extended dynamic"] === false,
         },
         {
           value: `true`,
           text: `Use extended dynamic`,
           description: `True`,
-          selected: options["extended dynamic"] === `true`,
+          selected: options["extended dynamic"] === true,
         },
       ],
       `Specifies whether to use extended dynamic support. Extended dynamic support provides a mechanism for caching dynamic SQL statements on the system. The first time a particular SQL statement is prepared, it is stored in a SQL package on the system. If the package does not exist, it is automatically created. On subsequent prepares of the same SQL statement, the system can skip a significant part of the processing by using information stored in the SQL package. If this is set to "true", then a package name must be set using the "package" property.`
@@ -156,13 +156,13 @@ export default function getPerfTab(options: JDBCOptions) {
           value: `false`,
           text: `Do not use lazy close`,
           description: `False`,
-          selected: options["lazy close"] === `false`,
+          selected: options["lazy close"] === false,
         },
         {
           value: `true`,
           text: `Use lazy close`,
           description: `True`,
-          selected: options["lazy close"] === `true`,
+          selected: options["lazy close"] === true,
         },
       ],
       `Specifies whether to delay closing cursors until subsequent requests. This will increase overall performance by reducing the total number of requests.`
@@ -191,13 +191,13 @@ export default function getPerfTab(options: JDBCOptions) {
         value: `true`,
         text: `Add to package`,
         description: `True`,
-        selected: options["package add"] === `true`,
+        selected: options["package add"] === true,
       },
       {
         value: `false`,
         text: `Do not add to package`,
         description: `False`,
-        selected: options["package add"] === `false`,
+        selected: options["package add"] === false,
       },
     ])
     .addSelect(`package cache`, `Package cache`, [
@@ -205,13 +205,13 @@ export default function getPerfTab(options: JDBCOptions) {
         value: `false`,
         text: `Do not use package cache`,
         description: `False`,
-        selected: options["package cache"] === `false`,
+        selected: options["package cache"] === false,
       },
       {
         value: `true`,
         text: `Use package cache`,
         description: `True`,
-        selected: options["package cache"] === `true`,
+        selected: options["package cache"] === true,
       },
     ])
     .addSelect(`package criteria`, `Package criteria`, [
@@ -259,13 +259,13 @@ export default function getPerfTab(options: JDBCOptions) {
         value: `true`,
         text: `Use prefetch`,
         description: `True`,
-        selected: options["prefetch"] === `true`,
+        selected: options["prefetch"] === true,
       },
       {
         value: `false`,
         text: `Do not use prefetch`,
         description: `False`,
-        selected: options["prefetch"] === `false`,
+        selected: options["prefetch"] === false,
       },
     ])
     .addInput(
@@ -326,13 +326,13 @@ export default function getPerfTab(options: JDBCOptions) {
         value: `true`,
         text: `Use variable field compression`,
         description: `True`,
-        selected: options["variable field compression"] === `true`,
+        selected: options["variable field compression"] === true,
       },
       {
         value: `false`,
         text: `Do not use variable field compression`,
         description: `False`,
-        selected: options["variable field compression"] === `false`,
+        selected: options["variable field compression"] === false,
       },
     ]);
 

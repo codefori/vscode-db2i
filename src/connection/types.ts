@@ -90,27 +90,27 @@ export interface JDBCOptions {
   // Other properties
   "full open"?: boolean;
   "access"?: "all" | "read call" | "read only";
-  "autocommit exception"?: "true" | "false";
+  "autocommit exception"?: boolean;
   "bidi string type"?: "4" | "5" | "6" | "7" | "8" | "9" | "10" | "11";
-  "bidi implicit reordering"?: "true" | "false";
-  "bidi numeric ordering"?: "true" | "false";
-  "data truncation"?: "true" | "false";
+  "bidi implicit reordering"?: boolean;
+  "bidi numeric ordering"?: boolean;
+  "data truncation"?: boolean;
   "driver"?: "toolbox" | "native";
   "errors"?: "full" | "basic";
-  "extended metadata"?: "true" | "false";
-  "hold input locators"?: "true" | "false";
-  "hold statements"?: "true" | "false";
+  "extended metadata"?: boolean;
+  "hold input locators"?: boolean;
+  "hold statements"?: boolean;
   "ignore warnings"?: string;
-  "keep alive"?: "true" | "false";
+  "keep alive"?: boolean;
   "key ring name"?: string;
   "key ring password"?: string;
   "metadata source"?: "0" | "1";
   "proxy server"?: string;
   "remarks"?: "sql" | "system";
   "secondary URL"?: string;
-  "secure"?: "true" | "false";
+  "secure"?: boolean;
   "server trace"?: "0" | "2" | "4" | "8" | "16" | "32" | "64";
-  "thread used"?: "true" | "false";
+  "thread used"?: boolean;
   "toolbox trace"?:
     | ""
     | "none"
@@ -125,15 +125,15 @@ export interface JDBCOptions {
     | "proxy"
     | "thread"
     | "information";
-  "trace"?: "true" | "false";
-  "translate binary"?: "true" | "false";
-  "translate boolean"?: "true" | "false";
+  "trace"?: boolean;
+  "translate binary"?: boolean;
+  "translate boolean"?: boolean;
 
   // System Properties
   "libraries"?: string[];
-  "auto commit"?: "true" | "false";
+  "auto commit"?: boolean;
   "concurrent access resolution"?: "1" | "2" | "3";
-  "cursor hold"?: "true" | "false";
+  "cursor hold"?: boolean;
   "cursor sensitivity"?: "asensitive" | "insensitive" | "sensitive";
   "database name"?: string;
   "decfloat rounding mode"?:
@@ -165,32 +165,32 @@ export interface JDBCOptions {
     | "repeatable read"
     | "serializable";
   "translate hex"?: "character" | "binary";
-  "true autocommit"?: "true" | "false";
+  "true autocommit"?: boolean;
   "XA loosely coupled support"?: "0" | "1";
 
   // Performance Properties
-  "big decimal"?: "true" | "false";
+  "big decimal"?: boolean;
   "block criteria"?: "0" | "1" | "2";
   "block size"?: "0" | "8" | "16" | "32" | "64" | "128" | "256" | "512";
-  "data compression"?: "true" | "false";
-  "extended dynamic"?: "true" | "false";
-  "lazy close"?: "true" | "false";
+  "data compression"?: boolean;
+  "extended dynamic"?: boolean;
+  "lazy close"?: boolean;
   "lob threshold"?: string;
   "maximum blocked input rows"?: string;
   "package"?: string;
-  "package add"?: "true" | "false";
-  "package cache"?: "true" | "false";
+  "package add"?: boolean;
+  "package cache"?: boolean;
   "package criteria"?: "default" | "select";
   "package error"?: "exception" | "warning" | "none";
   "package library"?: string;
-  "prefetch"?: "true" | "false";
+  "prefetch"?: boolean;
   "qaqqinilib"?: string;
   "query optimize goal"?: "0" | "1" | "2";
   "query timeout mechanism"?: "qqrytimlmt" | "cancel";
   "query storage limit"?: string;
   "receive buffer size"?: string;
   "send buffer size"?: string;
-  "vairiable field compression"?: "true" | "false";
+  "vairiable field compression"?: boolean;
 
   // Sort Properties
   "sort"?: "hex" | "language" | "table";
