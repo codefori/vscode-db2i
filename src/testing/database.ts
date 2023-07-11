@@ -5,6 +5,7 @@ import { ServerComponent } from "../connection/serverComponent";
 import { JobStatus } from "../connection/sqlJob";
 import Database from "../database/schemas";
 import Statement from "../database/statement";
+import Callable from "../database/callable";
 
 const systemLibrary = `sample`;
 const sqlSchema = `"TestDelimiters"`;
@@ -44,6 +45,14 @@ export const DatabaseSuite: TestSuite = {
 
       const result = await Database.generateSQL(systemLibrary, objects[0].name, `tables`);
       assert.notStrictEqual(result, ``);
+    }},
+
+    {name: `Get parms`, test: async () => {
+      const qsys = Statement.delimName(`qsys`);
+      const createSqlSample = Statement.delimName(`create_sql_sample`);
+
+      const parms = await Callable.getParms(qsys, createSqlSample);
+      assert.notStrictEqual(parms.length, 0);
     }},
   ]
 }
