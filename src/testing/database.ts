@@ -67,7 +67,7 @@ export const DatabaseSuite: TestSuite = {
       assert.strictEqual(withSpace, `"my object"`);
 
       const longName = Statement.delimName(`create_sql_sample`);
-      assert.strictEqual(longName, `CREATE_SQL_SAMPLE`);
+      assert.strictEqual(longName, `"create_sql_sample"`);
     }},
 
     {name: `Get tables, system name`, test: async () => {
@@ -92,7 +92,7 @@ export const DatabaseSuite: TestSuite = {
 
     {name: `Get parms`, test: async () => {
       const qsys = Statement.delimName(`qsys`);
-      const createSqlSample = Statement.delimName(`create_sql_sample`);
+      const createSqlSample = Statement.delimName(`CREATE_SQL_SAMPLE`);
 
       const parms = await Callable.getParms(qsys, createSqlSample);
       assert.notStrictEqual(parms.length, 0);

@@ -13,8 +13,7 @@ export default class Statement {
     if (name.startsWith(`"`) && name.endsWith(`"`)) return name;
     if (name.includes(` `)) return `"${name}"`;
     if (name.length <= 10) return name.toUpperCase();
-    else if (name !== name.toUpperCase()) return name.toUpperCase()
-    else return name;
+    else return `"${name}"`;
   }
 
   static noQuotes(name: string) {
