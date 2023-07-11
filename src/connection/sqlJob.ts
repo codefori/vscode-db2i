@@ -157,9 +157,12 @@ export class SQLJob {
   }
 
   clcommand(cmd: string): Query<any> {
-    return new Query(this, cmd, {isClCommand: true})
+    return new Query(this, cmd, { isClCommand: true })
   }
 
+  getJobLog(): Promise<QueryResult<JobLogEntry>> {
+    return this.query<JobLogEntry>(`select * from table(qsys2.joblog_info('*')) a`).run();
+  }
   async close() {
     const exitObject = {
       id: `boop`,
