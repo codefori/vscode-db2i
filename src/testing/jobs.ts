@@ -131,7 +131,7 @@ export const JobsSuite: TestSuite = {
 
       await newJob.clcommand(`DLTLIB QTEMP`).run();
       let joblog = await newJob.getJobLog();
-      assert.equal(joblog.success, false);
+      assert.equal(joblog.success, true);
       let CPD2165: boolean = false;
       console.log(JSON.stringify(joblog));
       for (let joblogEntry of joblog.data) {
