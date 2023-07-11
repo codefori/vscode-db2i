@@ -121,6 +121,29 @@ export const JobsSuite: TestSuite = {
       newJob.close();
     }},
 
+    {name: `Retrieve job log`, test: async () => {
+      const backendInstalled = await ServerComponent.initialise(false);
+
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      
+
+      await newJob.clcommand(`DLTLIB QTEMP`).run();
+      let joblog = await newJob.getJobLog();
+      assert.equal(joblog.success, false);
+      let CPD2165: boolean = false;
+      console.log(JSON.stringify(joblog));
+      for (let joblogEntry of joblog.data) {
+        if (joblogEntry.MESSAGE_ID === "CPD2165") {
+          CPD2165 = true;
+          break;
+        }
+      }
+      assert.equal(CPD2165, true);
+      newJob.close();
+    }},
+
     {name: `Creating a job`, test: async () => {
       const newJob = new SQLJob();
 
