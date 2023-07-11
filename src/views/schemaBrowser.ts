@@ -451,7 +451,7 @@ export default class schemaBrowser {
 class Schema extends vscode.TreeItem {
   schema: string;
   constructor(name: string) {
-    super(name.toLowerCase(), vscode.TreeItemCollapsibleState.Collapsed);
+    super(name, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.contextValue = `schema`;
     this.schema = name;

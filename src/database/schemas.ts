@@ -17,7 +17,7 @@ const typeMap = {
 
 export default class Database {
   static async getObjects(schema: string, type: SQLType, details: PageData = {}): Promise<BasicSQLObject[]> {
-    schema = schema.toUpperCase();
+    schema = Statement.delimName(schema);
 
     let objects;
 
@@ -134,7 +134,8 @@ export default class Database {
   static async generateSQL(schema: string, object: string, type: SQLType): Promise<string> {
     const content = instance.getContent();
 
-    schema = schema.toUpperCase();
+    schema = Statement.delimName(schema);
+    object = Statement.delimName(object);
 
     // TODO: fix?
     const lines = await JobManager.runSQL<{SRCDTA: string}>([
