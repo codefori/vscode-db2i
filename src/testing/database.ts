@@ -5,6 +5,8 @@ import Database from "../database/schemas";
 import Statement from "../database/statement";
 import Callable from "../database/callable";
 import { getInstance } from "../base";
+import Table from "../database/table";
+import View from "../database/view";
 
 const systemLibrary = `sample`;
 const sqlSchema = `"TestDelimiters"`;
@@ -82,11 +84,51 @@ export const DatabaseSuite: TestSuite = {
       assert.notStrictEqual(objects.length, 0);
     }},
 
+    {name: `Get columns, system name`, test: async () => {
+      const objects = await Database.getObjects(systemLibrary, `tables`);
+      assert.notStrictEqual(objects.length, 0);
+
+      const cols = await Table.getItems(systemLibrary, objects[0].name);
+      assert.notStrictEqual(cols.length, 0);
+    }},
+
+    {name: `Get columns, sqlSchema name`, test: async () => {
+      const objects = await Database.getObjects(sqlSchema, `tables`);
+      assert.notStrictEqual(objects.length, 0);
+
+      const cols = await Table.getItems(sqlSchema, objects[0].name);
+      assert.notStrictEqual(cols.length, 0);
+    }},
+
+    {name: `Get view columns, system name`, test: async () => {
+      const objects = await Database.getObjects(systemLibrary, `views`);
+      assert.notStrictEqual(objects.length, 0);
+
+      const cols = await View.getColumns(systemLibrary, objects[0].name);
+      assert.notStrictEqual(cols.length, 0);
+    }},
+
+    {name: `Get view columns, sqlSchema name`, test: async () => {
+      const objects = await Database.getObjects(sqlSchema, `views`);
+      assert.notStrictEqual(objects.length, 0);
+
+      const cols = await View.getColumns(sqlSchema, objects[0].name);
+      assert.notStrictEqual(cols.length, 0);
+    }},
+
     {name: `Generate SQL, system names`, test: async () => {
       const objects = await Database.getObjects(systemLibrary, `tables`);
       assert.notStrictEqual(objects.length, 0);
 
       const result = await Database.generateSQL(systemLibrary, objects[0].name, `tables`);
+      assert.notStrictEqual(result, ``);
+    }},
+
+    {name: `Generate SQL, sql names`, test: async () => {
+      const objects = await Database.getObjects(sqlSchema, `tables`);
+      assert.notStrictEqual(objects.length, 0);
+
+      const result = await Database.generateSQL(sqlSchema, objects[0].name, `tables`);
       assert.notStrictEqual(result, ``);
     }},
 
