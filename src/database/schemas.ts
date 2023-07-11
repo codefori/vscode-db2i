@@ -17,7 +17,8 @@ const typeMap = {
 
 export default class Database {
   static async getObjects(schema: string, type: SQLType, details: PageData = {}): Promise<BasicSQLObject[]> {
-    schema = Statement.delimName(schema);
+    // The database doesn't store the object name with the quotes.
+    schema = Statement.noQuotes(Statement.delimName(schema));
 
     let objects;
 

@@ -8,6 +8,7 @@ import { fetchSystemInfo } from "../config";
 import Configuration from "../configuration";
 
 import Types from "./types";
+import Statement from "../database/statement";
 
 const viewItem = {
   "tables": `table`,
@@ -65,8 +66,8 @@ export default class schemaBrowser {
           prompt: `Library to add to Database Browser`
         });
 
-        if (newSchema && !schemas.includes(newSchema.toUpperCase())) {
-          schemas.push(newSchema.toUpperCase());
+        if (newSchema && !schemas.includes(newSchema)) {
+          schemas.push(newSchema);
           config[`databaseBrowserList`] = schemas;
           await getInstance().setConfig(config);
           this.refresh();
@@ -302,7 +303,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getResultSet`, async (object) => {
         if (object && object instanceof SQLObject) {
-          const content = `SELECT * FROM ${object.schema}.${object.name} as a`;
+          const content = `SELECT * FROM ${Statement.delimName(object.schema)}.${Statement.delimName(object.name)} as a`;
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             type: `statement`,
