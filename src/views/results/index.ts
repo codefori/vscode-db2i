@@ -158,7 +158,7 @@ export function initialise(context: vscode.ExtensionContext) {
                 resultSetProvider.setScrolling(statement.content, true);
               } else {
                 const scrollingEnabled = Configuration.get(`scrollingResultSet`);
-                if (scrollingEnabled && statement.type === `statement` && isBasicStatement(statement.content)) {
+                if (scrollingEnabled && statement.type === `statement`) {
                   // If it's a basic statement, we can let it scroll!
                   resultSetProvider.setScrolling(statement.content);
 
@@ -244,12 +244,6 @@ export function initialise(context: vscode.ExtensionContext) {
         }
       }),
   )
-}
-
-export function isBasicStatement(statement: string) {
-  const basicStatement = statement.trim().toUpperCase();
-
-  return basicStatement.startsWith(`SELECT`) && !basicStatement.includes(`LIMIT`) && !basicStatement.includes(`FETCH FIRST`);
 }
 
 export function parseStatement(editor: vscode.TextEditor): StatementInfo {
