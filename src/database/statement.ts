@@ -8,4 +8,10 @@ export default class Statement {
       linesBetweenQueries: 2, // Defaults to 1
     });
   }
+
+  static delimName(name: string) {
+    if (name.startsWith(`"`) && name.endsWith(`"`)) return name.substring(1, name.length-1);
+    if (name.length <= 10) return name.toUpperCase();
+    else return name;
+  }
 }
