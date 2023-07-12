@@ -46,7 +46,7 @@ export default class Database {
     case `functions`:
       objects = await JobManager.runSQL([
         `select ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT from QSYS2.SYSFUNCS`,
-        `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and ROUTINE_NAME like '%${details.filter}%'`: ``}`,
+        `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and ROUTINE_NAME like '%${details.filter}%'`: ``} and FUNCTION_ORIGIN in ('E','U')`,
         `order by ROUTINE_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
       ].join(` `));
