@@ -27,7 +27,10 @@ export function getLoadingHTML(): string {
         </script>
       </head>
       <body>
-        <p id="loadingText">View will be active when a statement is executed.</p>
+        <div id="spinnerContent" class="center-screen">
+          <p id="loadingText">View will be active when a statement is executed.</p>
+          <span class="loader"></span>
+        </div>
       </body>
     </html>
   `;
@@ -167,6 +170,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
         </table>
         <p id="nextButton"></p>
         <div id="spinnerContent" class="center-screen">
+          <p id="loadingText">Running statement</p>
           <span class="loader"></span>
         </div>
       </body>
