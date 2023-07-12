@@ -485,6 +485,7 @@
     "esbuild-loader": "^3.0.1",
     "eslint": "^7.32.0",
     "glob": "^7.1.7",
+    "raw-loader": "^4.0.2",
     "ts-loader": "^9.3.1",
     "typescript": "^4.3.2",
     "vscode-test": "^1.5.2",
@@ -496,6 +497,7 @@
     "frappe-datatable": "^1.17.2",
     "node-fetch": "^3.3.1",
     "octokit": "^2.0.14",
+    "sortablejs": "^1.15.0",
     "sql-formatter": "^4.0.2"
   }
 }

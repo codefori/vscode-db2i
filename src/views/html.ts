@@ -1,14 +1,22 @@
-
 const DatatableJs = require(`frappe-datatable/dist/frappe-datatable.min.js`);
-const DatatableCss = require(`frappe-datatable/dist/frappe-datatable.min.css`);
+const {default: DatatableCss} = require(`raw-loader!frappe-datatable/dist/frappe-datatable.min.css`);
+const SortableJs = require(`sortablejs/Sortable.min.js`)
 
 export const head = /*html*/`
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>${SortableJs}</script>
   <script>${DatatableJs}</script>
   <style>
     ${DatatableCss}
     /* END OF DATATABLE-CSS */
+
+    html, body {
+      padding-right: 20px;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
 
     #resultset {
       margin: 0.5em;

@@ -45,12 +45,12 @@ const config = {
     rules: [
       {
         test: /\.js$/,
-        include: path.resolve(__dirname, `node_modules/frappe-datatable/dist/*.min.js`),
+        include: path.resolve(__dirname, `node_modules/frappe-datatable/dist/frappe-datatable.min.js`),
         type: `asset/source`
       },
       {
-        test: /\.css$/,
-        include: path.resolve(__dirname, `node_modules/frappe-datatable/dist/*.min.css`),
+        test: /\.js$/,
+        include: path.resolve(__dirname, `node_modules/sortablejs/Sortable.min.js`),
         type: `asset/source`
       },
       {

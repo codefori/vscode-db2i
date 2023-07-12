@@ -47,6 +47,9 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
           const basicSelect = ${JSON.stringify(basicSelect)};
           let myQueryId = '';
 
+          let datatable;
+          
+          let mustLoadDataTable = true;
           let noMoreRows = false;
           let isFetching = false;
 
@@ -64,36 +67,72 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
 
             Observer.observe(document.getElementById("nextButton"));
 
+            let columnList;
             window.addEventListener('message', event => {
+              const datatableDiv = document.getElementById("resultset");
               const scroller = document.getElementById("scroller");
               const data = event.data;
-
+              
               switch (data.command) {
                 case 'rows':
+                  // Change loading state here...
                   isFetching = false;
                   myQueryId = data.queryId;
                   noMoreRows = data.isDone;
 
-                  if (data.rows.length > 0 && scroller.columnDefinitions.length === 0) {
-                    scroller.columnDefinitions = Object.keys(data.rows[0]).map(col => ({
-                      title: col,
-                      columnDataKey: col,
+                  // TODO: get column names from metadata?
+                  columnList = Object.keys(data.rows[0]);
+
+                  if (mustLoadDataTable && columnList.length > 0 && data.rows.length > 0) {
+                    const columns = Object.keys(data.rows[0]).map(col => ({
+                      name: col,
+                      id: col,
+                      editable: false,
+                      sortable: false,
+                      focusable: false,
+                      dropdown: false
                     }));
+
+                    datatable = new DataTable(datatableDiv, {
+                      columns,
+                      data: [],
+                      checkboxColumn: false,
+                      serialNoColumn: false,
+                      inlineFilters: false,
+                      layout: "fluid"
+                    });
+
+                    mustLoadDataTable = false;
                   }
 
-                  if (scroller.rowsData.length > 0) {
-                    scroller.rowsData = [...scroller.rowsData, ...data.rows];
-                  } else {
-                    scroller.rowsData = data.rows;
+                  console.log(data.rows);
+
+                  if (data.rows.length > 0) {
+                    let rowsOfColumns = data.rows.map(row => {
+                      return columnList.map(colName => row[colName] || '')
+                    });
+
+                    console.log(rowsOfColumns);
+
+                    const datamanager = datatable.datamanager;
+                    console.log(datamanager);
+
+                    const rowCount = datamanager.rowCount;
+                    const preppedRows = rowsOfColumns.map((newRow, rowId) => datamanager.prepareRow(newRow, {rowIndex: rowCount+rowId, indent: 0}));
+                    console.log(preppedRows);
+
+                    // For some reason we have to push for both. No problem
+                    datamanager.rows.push(...preppedRows);
+                    datamanager.data.push(...preppedRows);
+                    datatable.refresh();
                   }
 
                   const nextButton = document.getElementById("nextButton");
-                  nextButton.innerText = noMoreRows ? ('Loaded ' + scroller.rowsData.length + '. End of data') : ('Loaded ' + scroller.rowsData.length + '. Fetching more...');
+                  // nextButton.innerText = noMoreRows ? ('Loaded ' + scroller.rowsData.length + '. End of data') : ('Loaded ' + scroller.rowsData.length + '. Fetching more...');
                   break;
 
                 case 'fetch':
-                  scroller.columnDefinitions = [];
-                  scroller.rowsData = [];
+                  // Set loading here....
                   fetchNextPage();
                   break;
               }
@@ -111,8 +150,8 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
         </script>
       </head>
       <body>
-        <vscode-data-grid id="scroller" style="min-width: max-content;"></vscode-data-grid>
-        <vscode-divider></vscode-divider>
+        <div id="resultset"></div>
+        <hr>
         <p id="nextButton">Execute statement.</p>
       </body>
     </html>
