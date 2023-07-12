@@ -114,7 +114,9 @@ export class SQLJobManager {
     const selected = this.jobs[this.selectedJob]
     if (SQLJobManager.jobSupport && selected) {
       return selected.job.query<T>(query, opts);
-    } else {
+    } else if(!SQLJobManager.jobSupport) {
+      throw new Error(`Database server component is required. Please see documentation for details.`);
+    }else {
       throw new Error(`Active SQL job is required. Please spin one up first.`);
     }
   }
