@@ -11,7 +11,7 @@ export default class Callable {
 
     return JobManager.runSQL<SQLParm>([
       `SELECT * FROM QSYS2.SYSPARMS`,
-      `WHERE SPECIFIC_SCHEMA = '${schema}' AND SPECIFIC_NAME = (select SPECIFIC_NAME from qsys2.sysroutines where ROUTINE_SCHEMA = '${schema}' and ROUTINE_NAME = '${name}')`,
+      `WHERE SPECIFIC_SCHEMA = '${schema}' AND SPECIFIC_NAME = (select SPECIFIC_NAME from qsys2.sysroutines where ROUTINE_SCHEMA = '${schema}' and ROUTINE_NAME = '${name}') and ROW_TYPE = 'P'`,
       `ORDER BY ORDINAL_POSITION`
     ].join(` `));
   }
