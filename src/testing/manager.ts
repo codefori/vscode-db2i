@@ -16,7 +16,7 @@ export const ManagerSuite: TestSuite = {
     }},
 
     {name: `Adding a job`, test: async () => {
-      assert.strictEqual(ServerComponent.installed, true);
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
       // Ensure we have a blank manager first
       await JobManager.endAll();
@@ -46,7 +46,7 @@ export const ManagerSuite: TestSuite = {
     }},
 
     {name: `End all jobs`, test: async () => {
-      assert.strictEqual(ServerComponent.installed, true);
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
       // Ensure we have a blank manager first
       await JobManager.endAll();
@@ -67,7 +67,7 @@ export const ManagerSuite: TestSuite = {
     }},
 
     {name: `runSQL method`, test: async () => {
-      assert.strictEqual(ServerComponent.installed, true);
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
       // Ensure we have a blank manager first
       await JobManager.endAll();
@@ -97,7 +97,7 @@ export const ManagerSuite: TestSuite = {
     }},
 
     {name: `Set selected by name`, test: async () => {
-      assert.strictEqual(ServerComponent.installed, true);
+      assert.strictEqual(ServerComponent.isInstalled(), true);
       
       // Ensure we have a blank manager first
       await JobManager.endAll();
