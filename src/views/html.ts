@@ -1,13 +1,29 @@
 
-const WebToolkit = require(`@vscode/webview-ui-toolkit/dist/toolkit.min.js`);
+const DatatableJs = require(`frappe-datatable/dist/frappe-datatable.min.js`);
+const DatatableCss = require(`frappe-datatable/dist/frappe-datatable.min.css`);
 
 export const head = /*html*/`
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script type="module">${WebToolkit}</script>
+  <script>${DatatableJs}</script>
   <style>
-    body {
-      padding-top: 1em;
+    ${DatatableCss}
+    /* END OF DATATABLE-CSS */
+
+    #resultset {
+      margin: 0.5em;
+      height: 100%;
+    }
+
+    .datatable {
+      height: 100% !important;
+    }
+
+    .dt-scrollable {
+      height: 93% !important;
+      overflow: auto !important;
+      position: relative !important;
+      padding-bottom: 10em !important;
     }
 
     .center-screen {

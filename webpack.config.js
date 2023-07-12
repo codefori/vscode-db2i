@@ -45,7 +45,12 @@ const config = {
     rules: [
       {
         test: /\.js$/,
-        include: path.resolve(__dirname, `node_modules/@vscode/webview-ui-toolkit/dist/toolkit.min.js`),
+        include: path.resolve(__dirname, `node_modules/frappe-datatable/dist/*.min.js`),
+        type: `asset/source`
+      },
+      {
+        test: /\.css$/,
+        include: path.resolve(__dirname, `node_modules/frappe-datatable/dist/*.min.css`),
         type: `asset/source`
       },
       {
