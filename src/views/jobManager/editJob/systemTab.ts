@@ -46,13 +46,13 @@ export default function getSystemTab(options: JDBCOptions) {
           value: `true`,
           description: `True`,
           text: `Commit (true)`,
-          selected: options["auto commit"] === `true`,
+          selected: options["auto commit"] === true,
         },
         {
           value: `false`,
           description: `False`,
           text: `No commit (false)`,
-          selected: options["auto commit"] === `false`,
+          selected: options["auto commit"] === false,
         },
       ],
       `Specifies whether auto-commit mode is the default connection mode for new connections. Note that, in order to use transaction isolation levels other than *NONE when using auto-commit mode, the property "true autocommit" needs to be set to true.`
@@ -90,13 +90,13 @@ export default function getSystemTab(options: JDBCOptions) {
           value: `true`,
           description: `True`,
           text: `true`,
-          selected: options["cursor hold"] === `true`,
+          selected: options["cursor hold"] === true,
         },
         {
           value: `false`,
           description: `False`,
           text: `false`,
-          selected: options["cursor hold"] === `false`,
+          selected: options["cursor hold"] === false,
         },
       ],
       `	Specifies whether to hold the cursor across transactions. If this property is set to "true", cursors are not closed when a transaction is committed. All resources acquired during the unit of work are held, but locks on specific rows and objects implicitly acquired during the unit of work are released.`
@@ -353,13 +353,13 @@ export default function getSystemTab(options: JDBCOptions) {
           value: `false`,
           text: `Do not use true autocommit`,
           description: `false`,
-          selected: options["true autocommit"] === `false`,
+          selected: options["true autocommit"] === false,
         },
         {
           value: `true`,
           text: `Use true autocommit`,
           description: `true`,
-          selected: options["true autocommit"] === `true`,
+          selected: options["true autocommit"] === true,
         },
       ],
       `Specifies whether the connection should use true auto commit support. True autocommit means that autocommit is on and is running under a isolation level other than *NONE. By default, the driver handles autocommit by running under the system isolation level of *NONE.`

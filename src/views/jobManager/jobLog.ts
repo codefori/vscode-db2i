@@ -1,29 +1,22 @@
 import { ViewColumn, window } from "vscode";
 import { JobInfo } from "../../connection/manager";
 import { head } from "../html";
+import { JobLogEntry } from "../../connection/types";
 
-interface JobLogMessage {
-  MESSAGE_ID: string;
-  MESSAGE_TIMESTAMP: string;
-  FROM_LIBRARY: string;
-  FROM_PROGRAM: string;
-  MESSAGE_TYPE: string;
-  MESSAGE_TEXT: string;
-}
 
 export async function displayJobLog(selected: JobInfo) {
-  const jobLogRows = await selected.job.query<JobLogMessage>(`select * from table(qsys2.joblog_info('*')) a`);
+  const jobLog = await selected.job.getJobLog();
 
-  if (jobLogRows.length > 0) {
+  if (jobLog.data.length > 0) {
     const panel = window.createWebviewPanel(`tab`, selected.job.id, {viewColumn: ViewColumn.Active}, {enableScripts: true});
-    panel.webview.html = generatePage(jobLogRows);
+    panel.webview.html = generatePage(jobLog.data);
     panel.reveal();
   } else {
     window.showInformationMessage(`No messages in job log for ${selected.job.id}`);
   }
 }
 
-function generatePage(rows: JobLogMessage[]) {
+function generatePage(rows: JobLogEntry[]) {
   return /*html*/ `
     <!DOCTYPE html>
     <html lang="en">
