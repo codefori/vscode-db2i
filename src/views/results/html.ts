@@ -46,12 +46,12 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
           const vscode = acquireVsCodeApi();
           const basicSelect = ${JSON.stringify(basicSelect)};
           let myQueryId = '';
-
-          let datatable;
           
-          let mustLoadDataTable = true;
+          let mustLoadHeaders = true;
+          let totalRows = 0;
           let noMoreRows = false;
           let isFetching = false;
+          let columnList = [];
 
           window.addEventListener("load", main);
             function main() {
@@ -67,68 +67,41 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
 
             Observer.observe(document.getElementById("nextButton"));
 
-            let columnList;
+
             window.addEventListener('message', event => {
-              const datatableDiv = document.getElementById("resultset");
-              const scroller = document.getElementById("scroller");
               const data = event.data;
               
               switch (data.command) {
+                case 'metadata':
+                  // TODO: get backend to give us header metadata
+                  // columnList = data.columnList;
+                  // setHeaders('resultset', data.columnList)
+                  mustLoadHeaders = false;
+                  break;
+
                 case 'rows':
                   // Change loading state here...
                   isFetching = false;
                   myQueryId = data.queryId;
                   noMoreRows = data.isDone;
 
-                  // TODO: get column names from metadata?
-                  columnList = Object.keys(data.rows[0]);
+                  // HACK: right now, we build the column list from the first row keys... bad
 
-                  if (mustLoadDataTable && columnList.length > 0 && data.rows.length > 0) {
-                    const columns = Object.keys(data.rows[0]).map(col => ({
-                      name: col,
-                      id: col,
-                      editable: false,
-                      sortable: false,
-                      focusable: false,
-                      dropdown: false
-                    }));
+                  if (mustLoadHeaders && data.rows.length > 0) {
+                    columnList = Object.keys(data.rows[0]);
+                    
+                    setHeaders('resultset', columnList);
 
-                    datatable = new DataTable(datatableDiv, {
-                      columns,
-                      data: [],
-                      checkboxColumn: false,
-                      serialNoColumn: false,
-                      inlineFilters: false,
-                      layout: "fluid"
-                    });
-
-                    mustLoadDataTable = false;
+                    mustLoadHeaders = false;
                   }
 
-                  console.log(data.rows);
-
                   if (data.rows.length > 0) {
-                    let rowsOfColumns = data.rows.map(row => {
-                      return columnList.map(colName => row[colName] || '')
-                    });
-
-                    console.log(rowsOfColumns);
-
-                    const datamanager = datatable.datamanager;
-                    console.log(datamanager);
-
-                    const rowCount = datamanager.rowCount;
-                    const preppedRows = rowsOfColumns.map((newRow, rowId) => datamanager.prepareRow(newRow, {rowIndex: rowCount+rowId, indent: 0}));
-                    console.log(preppedRows);
-
-                    // For some reason we have to push for both. No problem
-                    datamanager.rows.push(...preppedRows);
-                    datamanager.data.push(...preppedRows);
-                    datatable.refresh();
+                    totalRows += data.rows.length;
+                    appendRows('resultset', columnList, data.rows);
                   }
 
                   const nextButton = document.getElementById("nextButton");
-                  // nextButton.innerText = noMoreRows ? ('Loaded ' + scroller.rowsData.length + '. End of data') : ('Loaded ' + scroller.rowsData.length + '. Fetching more...');
+                  nextButton.innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. Fetching more...');
                   break;
 
                 case 'fetch':
@@ -147,11 +120,49 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
               queryId: myQueryId
             });
           }
+
+          function setHeaders(tableId, columns) {
+            var tHeadRef = document.getElementById(tableId).getElementsByTagName('thead')[0];
+            tHeadRef.innerHTML = '';
+
+            // Insert a row at the end of table
+            var newRow = tHeadRef.insertRow();
+
+            columns.forEach(colName => {
+              // Insert a cell at the end of the row
+              var newCell = newRow.insertCell();
+
+              // Append a text node to the cell
+              var newText = document.createTextNode(colName);
+              newCell.appendChild(newText);
+            });
+          }
+
+          function appendRows(tableId, colList, arrayOfObjects) {
+            var tBodyRef = document.getElementById(tableId).getElementsByTagName('tbody')[0];
+
+            for (const row of arrayOfObjects) {
+              // Insert a row at the end of table
+              var newRow = tBodyRef.insertRow();
+
+              for (const columnName of colList) {
+                // Insert a cell at the end of the row
+                var newCell = newRow.insertCell();
+
+                // Append a text node to the cell
+                var newText = document.createTextNode(row[columnName] || 'null');
+                newCell.appendChild(newText);
+              }
+            }
+
+          }
         </script>
       </head>
       <body>
-        <div id="resultset"></div>
-        <hr>
+        <table id="resultset">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
         <p id="nextButton">Execute statement.</p>
       </body>
     </html>
