@@ -151,7 +151,6 @@ export default class Database {
     schema = Statement.noQuotes(Statement.delimName(schema));
     object = Statement.noQuotes(Statement.delimName(object));
 
-    // Remove plural and convert to uppercase. Needs work
     let validType: string = internalTypes[type];
 
     const lines = await JobManager.runSQL<{SRCDTA: string}>([
