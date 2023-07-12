@@ -39,10 +39,10 @@ class ResultSetPanelProvider {
         let queryObject = Query.byId(message.queryId);
         try {
           if (undefined === queryObject) {
-            let query = await JobManager.getPagingStatement(message.query, {isClCommand: message.isCL});
+            let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL });
             queryObject = query;
           }
-          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore(): await queryObject.run();
+          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
           data = queryResults.data;
           this._view.webview.postMessage({
             command: `rows`,
@@ -96,16 +96,6 @@ class ResultSetPanelProvider {
     html.setLoadingText(this._view.webview, content);
   }
 
-  /**
-   * @param {object[]} results 
-   */
-  async setResults(results) {
-    await this.focus();
-    this.loadingState = false;
-    const content = html.generateResults(results);
-    this._view.webview.html = content;
-  }
-
   async setScrolling(basicSelect, isCL = false) {
     await this.focus();
 
@@ -157,25 +147,16 @@ export function initialise(context: vscode.ExtensionContext) {
               if (statement.type === `cl`) {
                 resultSetProvider.setScrolling(statement.content, true);
               } else {
-                const scrollingEnabled = Configuration.get(`scrollingResultSet`);
-                if (scrollingEnabled && statement.type === `statement`) {
+                if (statement.type === `statement`) {
                   // If it's a basic statement, we can let it scroll!
                   resultSetProvider.setScrolling(statement.content);
 
                 } else {
                   // Otherwise... it's a bit complicated.
-
-                  if (statement.type === `statement`) {
-                    resultSetProvider.setLoadingText(`Executing statement...`);
-                  }
-
                   const data = await JobManager.runSQL(statement.content);
 
                   if (data.length > 0) {
                     switch (statement.type) {
-                    case `statement`:
-                      resultSetProvider.setResults(data);
-                      break;
 
                     case `csv`:
                     case `json`:
@@ -213,11 +194,7 @@ export function initialise(context: vscode.ExtensionContext) {
                     }
 
                   } else {
-                    if (statement.type === `statement`) {
-                      resultSetProvider.setError(`Query executed with no data returned.`);
-                    } else {
-                      vscode.window.showInformationMessage(`Query executed with no data returned.`);
-                    }
+                    vscode.window.showInformationMessage(`Query executed with no data returned.`);
                   }
                 }
               }
