@@ -68,8 +68,13 @@ export const DatabaseSuite: TestSuite = {
       const withSpace = Statement.delimName(`my object`);
       assert.strictEqual(withSpace, `"my object"`);
 
-      const longName = Statement.delimName(`create_sql_sample`);
-      assert.strictEqual(longName, `"create_sql_sample"`);
+      // User input test
+      const longNameUser = Statement.delimName(`create_sql_sample`, true);
+      assert.strictEqual(longNameUser, `"create_sql_sample"`);
+
+      // Name from system
+      const longNameSystem = Statement.delimName(`CREATE_SQL_SAMPLE`);
+      assert.strictEqual(longNameSystem, `CREATE_SQL_SAMPLE`);
     }},
 
     {name: `Get tables, system name`, test: async () => {

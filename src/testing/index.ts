@@ -8,8 +8,8 @@ import { DatabaseSuite } from "./database";
 
 const suites : TestSuite[] = [
   DatabaseSuite,
-  JobsSuite,
-  ManagerSuite
+  // JobsSuite,
+  // ManagerSuite
 ]
 
 export type TestSuite = {

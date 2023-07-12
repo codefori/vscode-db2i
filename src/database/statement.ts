@@ -9,11 +9,18 @@ export default class Statement {
     });
   }
 
-  static delimName(name: string) {
-    if (name.startsWith(`"`) && name.endsWith(`"`)) return name;
-    if (name.includes(` `)) return `"${name}"`;
+  /**
+   * 
+   * @param name Value which should be normalised
+   * @param fromUser If the value is true, then we likely need to normalise. Items from the database are usually normalised already
+   * @returns 
+   */
+  static delimName(name: string, fromUser = false) {
+    if (fromUser && name.startsWith(`"`) && name.endsWith(`"`)) return name;
+    if (fromUser === false && name.includes(` `)) return `"${name}"`;
     if (name.length <= 10) return name.toUpperCase();
-    else return `"${name}"`;
+    else if (fromUser) return `"${name}"`;
+    else return name;
   }
 
   static noQuotes(name: string) {
