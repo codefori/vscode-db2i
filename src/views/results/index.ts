@@ -234,7 +234,7 @@ export function initialise(context: vscode.ExtensionContext) {
                 errorText = e.message || `Error running SQL statement.`;
               }
 
-              if (statement.type === `statement`) {
+              if (statement.type === `statement` && statement.history !== false) {
                 resultSetProvider.setError(errorText);
               } else {
                 vscode.window.showErrorMessage(errorText);
