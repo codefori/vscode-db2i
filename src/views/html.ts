@@ -34,22 +34,24 @@ export const head = /*html*/`
       min-height: 100vh;
     }
 
-    .plaintext {
-      background-color: var(--vscode-button-secondaryBackground);
-      padding: 1em;
-      color: var(--vscode-button-secondaryForeground);
+    /* https://cssloaders.github.io */
+    .loader {
+      width: 48px;
+      height: 48px;
+      border: 5px solid #FFF;
+      border-bottom-color: transparent;
+      border-radius: 50%;
+      display: inline-block;
+      box-sizing: border-box;
+      animation: rotation 1s linear infinite;
     }
 
-    .errortext {
-      background-color: var(--vscode-button-secondaryBackground);
-      padding: 1em;
-      color: var(--vscode-errorForeground);
-    }
-
-    .loading {
-      position: fixed; /* or absolute */
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
+    @keyframes rotation {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    } 
   </style>`;

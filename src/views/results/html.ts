@@ -27,10 +27,7 @@ export function getLoadingHTML(): string {
         </script>
       </head>
       <body>
-        <p id="loadingText">Loading..</p>
-        <section class="loading">
-          <p><vscode-progress-ring></vscode-progress-ring></p>
-        </section>
+        <p id="loadingText">View will be active when a statement is executed.</p>
       </body>
     </html>
   `;
@@ -67,7 +64,6 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
 
             Observer.observe(document.getElementById("nextButton"));
 
-
             window.addEventListener('message', event => {
               const data = event.data;
               
@@ -80,6 +76,8 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   break;
 
                 case 'rows':
+                  hideSpinner();
+
                   // Change loading state here...
                   isFetching = false;
                   myQueryId = data.queryId;
@@ -119,6 +117,10 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
               isCL: ${isCL},
               queryId: myQueryId
             });
+          }
+
+          function hideSpinner() {
+            document.getElementById("spinnerContent").style.display = 'none';
           }
 
           function setHeaders(tableId, columns) {
@@ -163,7 +165,10 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
           <thead></thead>
           <tbody></tbody>
         </table>
-        <p id="nextButton">Execute statement.</p>
+        <p id="nextButton"></p>
+        <div id="spinnerContent" class="center-screen">
+          <span class="loader"></span>
+        </div>
       </body>
     </html>
   `;
