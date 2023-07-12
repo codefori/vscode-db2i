@@ -16,7 +16,7 @@ const typeMap = {
 };
 
 export default class Database {
-  static async getObjects(schema: string, type: SQLType, details: PageData = {}): Promise<BasicSQLObject[]> {
+  static async getObjects(schema: string, type: SQLType | string, details: PageData = {}): Promise<BasicSQLObject[]> {
     schema = schema.toUpperCase();
 
     let objects;
