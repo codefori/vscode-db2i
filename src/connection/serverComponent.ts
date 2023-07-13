@@ -57,7 +57,7 @@ export class ServerComponent {
     return;
   }
 
-  static async initialise(withUpdate = true): Promise<boolean> {
+  static async initialise(): Promise<boolean> {
     const instance = getInstance();
     const connection = instance.getConnection();
 
@@ -67,16 +67,13 @@ export class ServerComponent {
 
     this.installed = (exists.code === 0);
 
-    if (withUpdate)
-      this.checkForUpdate();
-
     return this.installed;
   }
 
   /**
    * Returns whether server component is installed.
    */
-  private static async checkForUpdate() {
+  public static async checkForUpdate() {
     const instance = getInstance();
     const connection = instance.getConnection();
 
@@ -123,7 +120,7 @@ export class ServerComponent {
               await Config.setServerComponentName(basename);
 
               window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
-              JobManagerView.setVisible(true);
+              this.installed = true;
               
             } else {
               window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`);

@@ -22,10 +22,17 @@ export function setupConfig(context: ExtensionContext) {
 
     Config.setConnectionName(instance.getConnection().currentConnectionName);
 
-    const backendSupport = await ServerComponent.initialise();
+    const backendSupport = await ServerComponent.initialise().then(result => {
+      if (result) {
+        JobManagerView.setVisible(true);
+      }
+    });
 
-    SQLJobManager.jobSupport = backendSupport;
-    JobManagerView.setVisible(true);
+    const didUpdate = ServerComponent.checkForUpdate().then(result => {
+      if (result) {
+        JobManagerView.setVisible(true);
+      }
+    });
   });
 
   getInstance().onEvent(`disconnected`, async () => {
