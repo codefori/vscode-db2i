@@ -193,6 +193,25 @@ export const JobsSuite: TestSuite = {
       newJob.close();
     }},
 
+    {name: `Job can run 3 queries at once `, test: async () => {
+      const newJob = new SQLJob();
+
+      await newJob.connect();
+      let stmt = `select * from QIWS.QCUSTCDT`;
+      const resultAPromise = newJob.query(stmt).run();
+      const resultBPromise = newJob.query(stmt).run();
+      const resultCPromise = newJob.query(stmt).run();
+      Promise.all([resultAPromise,resultBPromise,resultCPromise] ).then((values) => {
+        assert.strictEqual(values[0].is_done, true);
+        assert.strictEqual(values[1].is_done, true);
+        assert.strictEqual(values[2].is_done, true);
+        assert.strictEqual(values[0].data, values[1].data);
+        assert.strictEqual(values[0].data, values[2].data);
+      });
+
+      newJob.close();
+    }},
+
     {name: `Library list is used`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
 
