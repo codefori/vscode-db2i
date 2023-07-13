@@ -192,24 +192,36 @@ export const JobsSuite: TestSuite = {
 
       newJob.close();
     }},
-
-    {name: `Job can run 3 queries at once `, test: async () => {
+    
+    {name: `Job can run many queries at once `, test: async () => {
       const newJob = new SQLJob();
 
       await newJob.connect();
       let stmt = `select * from QIWS.QCUSTCDT`;
+      let stmt2 = `values (job_name)`;
       const resultAPromise = newJob.query(stmt).run();
+      const result2APromise = newJob.query(stmt2).run();
       const resultBPromise = newJob.query(stmt).run();
       const resultCPromise = newJob.query(stmt).run();
-      Promise.all([resultAPromise,resultBPromise,resultCPromise] ).then((values) => {
+      const result2BPromise = newJob.query(stmt2).run();
+      await Promise.all([resultAPromise,result2APromise, resultBPromise, resultCPromise, result2BPromise] ).then((values) => {
         assert.strictEqual(values[0].is_done, true);
         assert.strictEqual(values[1].is_done, true);
         assert.strictEqual(values[2].is_done, true);
-        assert.strictEqual(values[0].data, values[1].data);
-        assert.strictEqual(values[0].data, values[2].data);
+        assert.strictEqual(values[3].is_done, true);
+        assert.strictEqual(values[4].is_done, true);
+        assert.strictEqual(values[0].success, true);
+        assert.strictEqual(values[1].success, true);
+        assert.strictEqual(values[2].success, true);
+        assert.strictEqual(values[3].success, true);
+        assert.strictEqual(values[4].success, true);
+        assert.deepEqual(values[0].data, values[2].data);
+        assert.deepEqual(values[0].data, values[3].data);
+        assert.deepEqual(values[1].data, values[4].data);
+        assert.notDeepEqual(values[0].data, values[1].data);
+      }).finally(() => {
         newJob.close();
       });
-
     }},
 
     {name: `Library list is used`, test: async () => {
