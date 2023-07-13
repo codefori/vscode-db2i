@@ -14,6 +14,40 @@ const sqlSchema = `"TestDelimiters"`;
 export const DatabaseSuite: TestSuite = {
   name: `Database object query tests`,
   tests: [
+    {name: `Delim name tests`, test: async () => {
+      // User input
+      const systemDelim = Statement.delimName(systemLibrary, true);
+      assert.strictEqual(systemDelim, `SAMPLE`);
+
+      // Name from user
+      const sqlDelimUser = Statement.delimName(sqlSchema, true);
+      assert.strictEqual(sqlDelimUser, `"TestDelimiters"`);
+
+      // Name from system
+      const sqlDelimFromSys = Statement.delimName(`TestDelimiters`);
+      assert.strictEqual(sqlDelimFromSys, sqlSchema);
+
+      // Name from user
+      const withSpaceUserA = Statement.delimName(`"my object"`, true);
+      assert.strictEqual(withSpaceUserA, `"my object"`);
+
+      // Name from user
+      const withSpaceUserB = Statement.delimName(`my object`, true);
+      assert.strictEqual(withSpaceUserB, `"my object"`);
+
+      // Name from system
+      const withSpaceSys = Statement.delimName(`my object`);
+      assert.strictEqual(withSpaceSys, `"my object"`);
+
+      // Name from user
+      const longNameUser = Statement.delimName(`create_sql_sample`, true);
+      assert.strictEqual(longNameUser, `CREATE_SQL_SAMPLE`);
+
+      // Name from system
+      const longNameSystem = Statement.delimName(`CREATE_SQL_SAMPLE`);
+      assert.strictEqual(longNameSystem, `"CREATE_SQL_SAMPLE"`);
+    }},
+
     {name: `Create environment`, test: async () => {
       try {
         await JobManager.runSQL(`call qsys.create_sql_sample('SAMPLE')`);
@@ -56,25 +90,6 @@ export const DatabaseSuite: TestSuite = {
         console.log(`Possible fail`);
       
       } finally {};
-    }},
-
-    {name: `Delim name tests`, test: async () => {
-      const systemDelim = Statement.delimName(systemLibrary);
-      assert.strictEqual(systemDelim, `SAMPLE`);
-
-      const sqlDelim = Statement.delimName(sqlSchema);
-      assert.strictEqual(sqlDelim, sqlSchema); // No change expect
-
-      const withSpace = Statement.delimName(`my object`);
-      assert.strictEqual(withSpace, `"my object"`);
-
-      // User input test
-      const longNameUser = Statement.delimName(`create_sql_sample`, true);
-      assert.strictEqual(longNameUser, `"create_sql_sample"`);
-
-      // Name from system
-      const longNameSystem = Statement.delimName(`CREATE_SQL_SAMPLE`);
-      assert.strictEqual(longNameSystem, `CREATE_SQL_SAMPLE`);
     }},
 
     {name: `Get tables, system name`, test: async () => {
@@ -138,8 +153,8 @@ export const DatabaseSuite: TestSuite = {
     }},
 
     {name: `Get parms`, test: async () => {
-      const qsys = Statement.delimName(`qsys`);
-      const createSqlSample = Statement.delimName(`CREATE_SQL_SAMPLE`);
+      const qsys = Statement.delimName(`qsys`, true);
+      const createSqlSample = Statement.delimName(`CREATE_SQL_SAMPLE`, true);
 
       const parms = await Callable.getParms(qsys, createSqlSample);
       assert.notStrictEqual(parms.length, 0);

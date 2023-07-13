@@ -1,4 +1,6 @@
 
+import { getInstance } from "../base";
+
 import {format} from "sql-formatter"
 
 export default class Statement {
@@ -9,6 +11,21 @@ export default class Statement {
     });
   }
 
+  static validQsysName(name: string) {
+    const instance = getInstance();
+    const connection = instance ? instance.getConnection() : undefined;
+
+    if (instance && connection) {
+      // We know the encoding specific variants
+      const variant_chars_local = connection.variantChars.local;
+      const validQsysName = new RegExp(`^[A-Z0-9${variant_chars_local}][A-Z0-9_${variant_chars_local}.]{0,9}$`);
+      return validQsysName.test(name);
+    } else {
+      // Fall back with standard variants
+      return name.match(`[^A-Z0-9_@#$]`);
+    }
+  }
+
   /**
    * 
    * @param name Value which should be normalised
@@ -16,11 +33,19 @@ export default class Statement {
    * @returns 
    */
   static delimName(name: string, fromUser = false) {
-    if (fromUser && name.startsWith(`"`) && name.endsWith(`"`)) return name;
-    if (fromUser === false && name.includes(` `)) return `"${name}"`;
-    if (name.length <= 10) return name.toUpperCase();
-    else if (fromUser) return `"${name}"`;
-    else return name;
+    if (fromUser) { // The name was input by the user
+      // If already delimited, return it as-is
+      if (name.startsWith(`"`) && name.endsWith(`"`)) return name;
+      // If the value contains a space or decimal it needs to be delimited
+      if (name.includes(` `) || name.includes(`.`)) return `"${name}"`;
+      // Otherwise, fold to uppercase.  The user should have explicitly delimited if that was their intention.
+      return name.toUpperCase();
+    } else { // The name came from a catalog file query
+      // If the name contains characters other than the valid variants, uppercase, digits, or underscores, it must be delimited
+      if (!Statement.validQsysName(name)) return `"${name}"`;
+      // The name should already be uppercase coming from the catalog so just return it
+      return name;
+    }
   }
 
   static noQuotes(name: string) {

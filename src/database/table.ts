@@ -11,8 +11,8 @@ export default class Table {
    * @returns {Promise<TableColumn[]>}
    */
   static async getItems(schema: string, name: string): Promise<TableColumn[]> {
-    schema = Statement.noQuotes(Statement.delimName(schema));
-    name = Statement.noQuotes(Statement.delimName(name));
+    schema = Statement.noQuotes(Statement.delimName(schema, true));
+    name = Statement.noQuotes(Statement.delimName(name, true));
     
     const sql = [
       `SELECT `,
@@ -41,8 +41,8 @@ export default class Table {
   }
 
   static clearAdvisedIndexes(schema: string, name: string) {
-    schema = Statement.noQuotes(Statement.delimName(schema));
-    name = Statement.noQuotes(Statement.delimName(name));
+    schema = Statement.noQuotes(Statement.delimName(schema, true));
+    name = Statement.noQuotes(Statement.delimName(name, true));
 
     const query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
     return getInstance().getContent().runSQL(query);
