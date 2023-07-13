@@ -9,7 +9,7 @@ import { JobManager } from "../config";
 const internalTypes: {[typeString: string]: string} = {
   "tables": "TABLE",
   "views": "VIEW",
-  "aliaes": "ALIAS",
+  "aliases": "ALIAS",
   "constraints": "CONSTRAINT",
   "functions": "FUNCTION",
   "variables": "VARIABLE",
@@ -20,7 +20,6 @@ const internalTypes: {[typeString: string]: string} = {
   "triggers": "TRIGGERS",
   "types": "TYPE"
 };
-
 type SQLType = "tables"|"views"|"aliases"|"constraints"|"functions"|"variables"|"indexes"|"procedures"|"sequences"|"packages"|"triggers"|"types";
 type PageData = {filter?: string, offset?: number, limit?: number};
 
