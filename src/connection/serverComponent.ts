@@ -16,8 +16,8 @@ const octokit = new Octokit();
 const ExecutablePathDir = `$HOME/.vscode/`;
 
 export class ServerComponent {
+  private static installed: boolean = false;
   static outputChannel: OutputChannel;
-  static installed: boolean = false;
 
   static initOutputChannel() {
     if (!this.outputChannel) {
@@ -31,6 +31,10 @@ export class ServerComponent {
     if (this.outputChannel) {
       this.outputChannel.appendLine(jsonString);
     }
+  }
+
+  static isInstalled() {
+    return this.installed;
   }
 
   static getInitCommand(): string|undefined {

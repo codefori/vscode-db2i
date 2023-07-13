@@ -18,7 +18,7 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Backend version check`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      assert.strictEqual(ServerComponent.isInstalled(), true);
   
       let newJob = new SQLJob();
       await newJob.connect();
@@ -33,7 +33,7 @@ export const JobsSuite: TestSuite = {
     }},
     
     {name: `Backend set trace options and retrieve`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      assert.strictEqual(ServerComponent.isInstalled(), true);
   
       let newJob = new SQLJob();
       await newJob.connect();
@@ -49,7 +49,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Backend retrieve trace data without turning on trace`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
       let newJob = new SQLJob();
       await newJob.connect();
       let trace = await newJob.getTraceData();
@@ -58,6 +59,8 @@ export const JobsSuite: TestSuite = {
     }},
     
     {name: `Paging query`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
       let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
       await newJob.connect();
 
@@ -81,7 +84,7 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `CL Command (success)`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      assert.strictEqual(ServerComponent.isInstalled(), true);
   
       let newJob = new SQLJob();
       await newJob.connect();
@@ -101,7 +104,7 @@ export const JobsSuite: TestSuite = {
       newJob.close();
     }},
     {name: `CL Command (error)`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
       let newJob = new SQLJob();
       await newJob.connect();
@@ -122,7 +125,7 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Retrieve job log`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
       let newJob = new SQLJob();
       await newJob.connect();
@@ -145,6 +148,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Creating a job`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
       const newJob = new SQLJob();
 
       assert.strictEqual(newJob.getStatus(), JobStatus.NotStarted);
@@ -189,6 +194,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Library list is used`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
       let newJob = new SQLJob({libraries: [`QSYS`, `SYSTOOLS`], naming: `system`});
       await newJob.connect();
 
@@ -211,6 +218,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Binding parameters`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
       let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
       await newJob.connect();
 
@@ -225,6 +234,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Ensure API compatability`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
       const instance = getInstance();
       const content = instance.getContent();
 
@@ -241,6 +252,8 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Performance measuring`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+      
       const instance = getInstance();
       const content = instance.getContent();
 

@@ -69,7 +69,8 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
 
             window.addEventListener('message', event => {
               const data = event.data;
-              
+              myQueryId = data.queryId;
+
               switch (data.command) {
                 case 'metadata':
                   // TODO: get backend to give us header metadata
@@ -83,7 +84,6 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
 
                   // Change loading state here...
                   isFetching = false;
-                  myQueryId = data.queryId;
                   noMoreRows = data.isDone;
 
                   // HACK: right now, we build the column list from the first row keys... bad
