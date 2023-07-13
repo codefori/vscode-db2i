@@ -9,4 +9,9 @@ export default class Configuration {
     const globalData = vscode.workspace.getConfiguration(`vscode-db2i`);
     return globalData.get(prop);
   }
+
+  static set(prop: string, newValue: any) {
+    const globalData = vscode.workspace.getConfiguration(`vscode-db2i`);
+    return globalData.update(prop, newValue, true);
+  }
 }
