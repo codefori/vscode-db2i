@@ -36,6 +36,7 @@ export function setupConfig(context: ExtensionContext) {
   });
 
   getInstance().onEvent(`disconnected`, async () => {
+    JobManagerView.setVisible(false);
     await JobManager.endAll();
   });
 }
