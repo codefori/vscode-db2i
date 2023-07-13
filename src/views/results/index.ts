@@ -102,7 +102,8 @@ class ResultSetPanelProvider {
     this._view.webview.html = html.generateScroller(basicSelect, isCL);
 
     this._view.webview.postMessage({
-      command: `fetch`
+      command: `fetch`,
+      queryId: ``
     });
   }
 
