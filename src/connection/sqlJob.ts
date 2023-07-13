@@ -24,7 +24,7 @@ export class SQLJob {
 
   id: string | undefined;
 
-  
+
   public static getNewUniqueRequestId(prefix: string = `sqljob`): string {
     return prefix + (++SQLJob.uniqueIdCounter);
   }
@@ -43,9 +43,14 @@ export class SQLJob {
           if (outString.endsWith(`\n`)) {
             let thisMsg = outString;
             outString = ``;
-            if(this.isTracingChannelData)ServerComponent.writeOutput(thisMsg);
-            let response: ReqRespFmt = JSON.parse(thisMsg);
-            this.responseEmitter.emit(response.id, thisMsg);
+            if (this.isTracingChannelData) ServerComponent.writeOutput(thisMsg);
+            try {
+              let response: ReqRespFmt = JSON.parse(thisMsg);
+              this.responseEmitter.emit(response.id, thisMsg);
+            } catch (e: any) {
+              console.log(`Error: ` + e);
+              outString = ``;
+            }
           }
         });
         resolve(stream);
@@ -54,7 +59,7 @@ export class SQLJob {
   }
 
   async send(content: string): Promise<string> {
-    if(this.isTracingChannelData) ServerComponent.writeOutput(content);
+    if (this.isTracingChannelData) ServerComponent.writeOutput(content);
     let req: ReqRespFmt = JSON.parse(content);
     this.channel.stdin.write(content + `\n`);
     this.status = JobStatus.Active;
