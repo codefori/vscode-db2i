@@ -67,11 +67,11 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             window.addEventListener('message', event => {
               const scroller = document.getElementById("scroller");
               const data = event.data;
+              myQueryId = data.queryId;
 
               switch (data.command) {
                 case 'rows':
                   isFetching = false;
-                  myQueryId = data.queryId;
                   noMoreRows = data.isDone;
 
                   if (data.rows.length > 0 && scroller.columnDefinitions.length === 0) {
