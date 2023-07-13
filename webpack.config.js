@@ -44,16 +44,6 @@ const config = {
   module: {
     rules: [
       {
-        test: /\.js$/,
-        include: path.resolve(__dirname, `node_modules/frappe-datatable/dist/frappe-datatable.min.js`),
-        type: `asset/source`
-      },
-      {
-        test: /\.js$/,
-        include: path.resolve(__dirname, `node_modules/sortablejs/Sortable.min.js`),
-        type: `asset/source`
-      },
-      {
         test: /\.(ts|tsx)$/i,
         exclude: /node_modules/,
         use: [
