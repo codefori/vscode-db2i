@@ -6,20 +6,6 @@ const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`
 import Statement from "./statement";
 import { JobManager } from "../config";
 
-const internalTypes: {[typeString: string]: string} = {
-  "tables": "TABLE",
-  "views": "VIEW",
-  "aliases": "ALIAS",
-  "constraints": "CONSTRAINT",
-  "functions": "FUNCTION",
-  "variables": "VARIABLE",
-  "indexes": "INDEXES",
-  "procedures": "PROCEDURE",
-  "sequences": "SEQUENCE",
-  "packages": "PACKAGE",
-  "triggers": "TRIGGERS",
-  "types": "TYPE"
-};
 type SQLType = "tables"|"views"|"aliases"|"constraints"|"functions"|"variables"|"indexes"|"procedures"|"sequences"|"packages"|"triggers"|"types";
 type PageData = {filter?: string, offset?: number, limit?: number};
 
@@ -146,14 +132,12 @@ export default class Database {
     }));
   }
 
-  static async generateSQL(schema: string, object: string, type: SQLType): Promise<string> {
+  static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
     schema = Statement.noQuotes(Statement.delimName(schema));
     object = Statement.noQuotes(Statement.delimName(object));
 
-    let validType: string = internalTypes[type];
-
     const lines = await JobManager.runSQL<{SRCDTA: string}>([
-      `CALL QSYS2.GENERATE_SQL('${object}', '${schema}', '${validType}', CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
+      `CALL QSYS2.GENERATE_SQL('${object}', '${schema}', '${internalType}', CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
     ].join(` `));
 
     const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
