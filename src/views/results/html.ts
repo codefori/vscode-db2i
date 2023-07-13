@@ -88,7 +88,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
 
                   // HACK: right now, we build the column list from the first row keys... bad
 
-                  if (mustLoadHeaders && data.rows.length > 0) {
+                  if (mustLoadHeaders && data.rows && data.rows.length > 0) {
                     columnList = Object.keys(data.rows[0]);
                     
                     setHeaders('resultset', columnList);
@@ -96,13 +96,17 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                     mustLoadHeaders = false;
                   }
 
-                  if (data.rows.length > 0) {
+                  if (data.rows && data.rows.length > 0) {
                     totalRows += data.rows.length;
                     appendRows('resultset', columnList, data.rows);
                   }
 
                   const nextButton = document.getElementById("nextButton");
-                  nextButton.innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. Fetching more...');
+                  if (data.rows === undefined && totalRows === 0) {
+                    nextButton.innerText = 'Query executed with no result set returned.';
+                  } else {
+                    nextButton.innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. Fetching more...');
+                  }
                   break;
 
                 case 'fetch':
