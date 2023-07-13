@@ -207,9 +207,9 @@ export const JobsSuite: TestSuite = {
         assert.strictEqual(values[2].is_done, true);
         assert.strictEqual(values[0].data, values[1].data);
         assert.strictEqual(values[0].data, values[2].data);
+        newJob.close();
       });
 
-      newJob.close();
     }},
 
     {name: `Library list is used`, test: async () => {
