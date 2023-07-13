@@ -204,24 +204,22 @@ export const JobsSuite: TestSuite = {
       const resultBPromise = newJob.query(stmt).run();
       const resultCPromise = newJob.query(stmt).run();
       const result2BPromise = newJob.query(stmt2).run();
-      await Promise.all([resultAPromise,result2APromise, resultBPromise, resultCPromise, result2BPromise] ).then((values) => {
-        assert.strictEqual(values[0].is_done, true);
-        assert.strictEqual(values[1].is_done, true);
-        assert.strictEqual(values[2].is_done, true);
-        assert.strictEqual(values[3].is_done, true);
-        assert.strictEqual(values[4].is_done, true);
-        assert.strictEqual(values[0].success, true);
-        assert.strictEqual(values[1].success, true);
-        assert.strictEqual(values[2].success, true);
-        assert.strictEqual(values[3].success, true);
-        assert.strictEqual(values[4].success, true);
-        assert.deepEqual(values[0].data, values[2].data);
-        assert.deepEqual(values[0].data, values[3].data);
-        assert.deepEqual(values[1].data, values[4].data);
-        assert.notDeepEqual(values[0].data, values[1].data);
-      }).finally(() => {
-        newJob.close();
-      });
+      let values = await Promise.all([resultAPromise,result2APromise, resultBPromise, resultCPromise, result2BPromise] );
+      assert.strictEqual(values[0].is_done, true);
+      assert.strictEqual(values[1].is_done, true);
+      assert.strictEqual(values[2].is_done, true);
+      assert.strictEqual(values[3].is_done, true);
+      assert.strictEqual(values[4].is_done, true);
+      assert.strictEqual(values[0].success, true);
+      assert.strictEqual(values[1].success, true);
+      assert.strictEqual(values[2].success, true);
+      assert.strictEqual(values[3].success, true);
+      assert.strictEqual(values[4].success, true);
+      assert.deepEqual(values[0].data, values[2].data);
+      assert.deepEqual(values[0].data, values[3].data);
+      assert.deepEqual(values[1].data, values[4].data);
+      assert.notDeepEqual(values[0].data, values[1].data);
+      newJob.close();
     }},
 
     {name: `Library list is used`, test: async () => {
