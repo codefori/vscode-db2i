@@ -43,6 +43,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
       <head>
         ${head}
         <script>
+          // ${basicSelect} ${new Date().getTime()}
           const vscode = acquireVsCodeApi();
           const basicSelect = ${JSON.stringify(basicSelect)};
           let myQueryId = '';
