@@ -11,17 +11,18 @@ export async function updateStatusBar() {
   if (ServerComponent.isInstalled()) {
     const selected = JobManager.getSelection();
 
+    let text;
     let backgroundColour: ThemeColor|undefined = undefined;
     let toolTipItems = [];
 
     if (selected) {
-      item.text = `$(database) ${selected.name}`;
+      text = `$(database) ${selected.name}`;
 
       if (selected.job.underCommitControl()) {
         const pendingsTracts = await selected.job.getPendingTransactions();
         if (pendingsTracts > 0) {
           backgroundColour = new ThemeColor('statusBarItem.warningBackground');
-          item.text = `$(pencil) ${selected.name}`;
+          text = `$(pencil) ${selected.name}`;
 
           toolTipItems.push(
             `${pendingsTracts} pending change${pendingsTracts !== 1 ? `s` : ``}.`,
@@ -33,13 +34,14 @@ export async function updateStatusBar() {
       toolTipItems.push(`[$(info) View Job Log](command:vscode-db2i.jobManager.viewJobLog)`);
       toolTipItems.push(`[$(edit) Edit Connection Settings](command:vscode-db2i.jobManager.editJobProps)`);
     } else {
-      item.text = `$(database) No job active`;
+      text = `$(database) No job active`;
       toolTipItems.push(`[Start Job](command:vscode-db2i.jobManager.newJob)`);
     }
     
     const toolTip = new MarkdownString(toolTipItems.join(`\n\n---\n\n`), true);
     toolTip.isTrusted = true;
     
+    item.text = text;
     item.tooltip = toolTip;
     item.backgroundColor = backgroundColour;
 
