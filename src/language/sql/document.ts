@@ -48,7 +48,9 @@ export default class Document {
         case `keyword`:
           switch (tokens[i].value?.toUpperCase()) {
             case `BEGIN`:
-              const statementTokens = tokens.slice(statementStart, i);
+              // We include BEGIN in the current statement
+              // then the next statement beings
+              const statementTokens = tokens.slice(statementStart, i+1);
               this.addStatement(statementTokens);
               statementStart = i + 1;
               break;

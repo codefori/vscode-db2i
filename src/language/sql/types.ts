@@ -7,6 +7,7 @@ export enum StatementType {
 	Update,
 	Delete,
 	Declare,
+	Begin,
 	Drop,
 	End,
 	Call
@@ -22,7 +23,8 @@ export const StatementTypeWord = {
 	'DECLARE': StatementType.Declare,
 	'DROP': StatementType.Drop,
 	'END': StatementType.End,
-	'CALL': StatementType.Call
+	'CALL': StatementType.Call,
+	'BEGIN': StatementType.Begin
 };
 
 export interface IRange {
