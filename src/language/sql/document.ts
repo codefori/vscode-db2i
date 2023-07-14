@@ -1,6 +1,6 @@
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-import { IRange, StatementType, StatementTypeWord, Token } from "./types";
+import { IRange, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
 
 export default class Document {
   statements: Statement[];
@@ -82,5 +82,11 @@ export default class Document {
     if (statement) {
       return statement.getTokenByOffset(offset);
     }
+  }
+
+  getStatementGroups(): StatementGroup[] {
+    let groups: StatementGroup[] = [];
+
+    return groups;
   }
 }

@@ -17,23 +17,29 @@ export default class Statement {
 
 			this.type = StatementTypeWord[wordValue];
 		}
-
-		if (tokenIs(first, `keyword`, `BEGIN`)) {
-			this.beginBlock = true;
-		}	
 		
-		if (this.type === StatementType.Create) {
-			const last = tokens[tokens.length-1];
-			if (tokenIs(last, `keyword`, `BEGIN`)) {
-				this.beginBlock = true;
-			}
-		} else {
+		if (this.type !== StatementType.Create) {
 			this.tokens = SQLTokeniser.findScalars(this.tokens);
 		}
 	}
 
 	isBlockOpener() {
-		return this.beginBlock;
+		if (this.tokens.length === 1 && tokenIs(this.tokens[0], `keyword`, `BEGIN`)) {
+			return true;
+		}
+
+		if (this.type === StatementType.Create) {
+			const last = this.tokens[this.tokens.length-1];
+			if (tokenIs(last, `keyword`, `BEGIN`)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	isBlockEnder() {
+		return this.type === StatementType.End && this.tokens.length === 1;
 	}
 
 	getTokenByOffset(offset: number) {

@@ -1,16 +1,16 @@
 
 export enum StatementType {
-	Unknown,
-	Create,
-	Insert,
-	Select,
-	Update,
-	Delete,
-	Declare,
-	Begin,
-	Drop,
-	End,
-	Call
+	Unknown = "Unknown",
+	Create = "Create",
+	Insert = "Insert",
+	Select = "Select",
+	Update = "Update",
+	Delete = "Delete",
+	Declare = "Declare",
+	Begin = "Being",
+	Drop = "Drop",
+	End = "End",
+	Call = "Call"
 }
 
 export const StatementTypeWord = {
@@ -48,4 +48,9 @@ export interface ObjectRef {
   tokens: Token[],
   object: QualifiedObject;
   alias?: string;
+}
+
+export interface StatementGroup {
+	range: IRange,
+	statements: []
 }
