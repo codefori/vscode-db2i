@@ -11,7 +11,13 @@ export const head = /*html*/`
       min-width: 400px;
     }
 
-    thead tr {
+
+    #resultset thead td {
+      resize: horizontal;
+      overflow: auto;
+    }
+
+    #resultset thead tr {
       background-color: var(--vscode-banner-background);
       color: var(--vscode-banner-foreground);
       text-align: left;
