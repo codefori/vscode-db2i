@@ -37,8 +37,41 @@ export class JobManagerView implements TreeDataProvider<any> {
       vscode.commands.registerCommand(`vscode-db2i.jobManager.closeJob`, async (node?: SQLJobItem) => {
         if (node) {
           const id = node.label as string;
-          await JobManager.closeJobByName(id);
-          this.refresh();
+          let selected = JobManager.getJob(id);
+
+          if (selected) {
+
+            if (selected.job.underCommitControl()) {
+              const uncommitted = await selected.job.getPendingTransactions();
+
+              if (uncommitted > 0) {
+                const decision = await vscode.window.showWarningMessage(
+                  `Cannot end job yet`,
+                  {
+                    modal: true,
+                    detail: `You have ${uncommitted} uncommitted change${uncommitted !== 1 ? `s` : ``}.`
+                  },
+                  `Commit and end`,
+                  `Rollback and end`
+                );
+
+                switch (decision) {
+                  case `Commit and end`:
+                    await selected.job.endTransaction(TransactionEndType.COMMIT);
+                    break;
+                  case `Rollback and end`:
+                    await selected.job.endTransaction(TransactionEndType.ROLLBACK);
+                    break;
+                  default:
+                    // Actually... don't end the job
+                    return;
+                }
+              }
+            }
+
+            await JobManager.closeJobByName(id);
+            this.refresh();
+          }
         }
       }),
 
