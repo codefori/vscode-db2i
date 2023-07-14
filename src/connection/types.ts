@@ -45,11 +45,13 @@ export interface QueryResult<T> extends ServerResponse {
 
 export interface JobLogEntry {
   MESSAGE_ID: string;
+  SEVERITY: string;
   MESSAGE_TIMESTAMP: string;
   FROM_LIBRARY: string;
   FROM_PROGRAM: string;
   MESSAGE_TYPE: string;
   MESSAGE_TEXT: string;
+  MESSAGE_SECOND_LEVEL_TEXT: string
 }
 export interface CLCommandResult extends ServerResponse {
   joblog: JobLogEntry[];

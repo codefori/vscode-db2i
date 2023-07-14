@@ -180,6 +180,7 @@ export class SQLJob {
   getJobLog(): Promise<QueryResult<JobLogEntry>> {
     return this.query<JobLogEntry>(`select * from table(qsys2.joblog_info('*')) a`).run();
   }
+  
   async close() {
     const exitObject = {
       id: SQLJob.getNewUniqueRequestId(),

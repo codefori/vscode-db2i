@@ -27,10 +27,10 @@ export function getLoadingHTML(): string {
         </script>
       </head>
       <body>
-        <p id="loadingText">Loading..</p>
-        <section class="loading">
-          <p><vscode-progress-ring></vscode-progress-ring></p>
-        </section>
+        <div id="spinnerContent" class="center-screen">
+          <p id="loadingText">View will be active when a statement is executed.</p>
+          <span class="loader"></span>
+        </div>
       </body>
     </html>
   `;
@@ -43,12 +43,16 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
       <head>
         ${head}
         <script>
+          // ${basicSelect} ${new Date().getTime()}
           const vscode = acquireVsCodeApi();
           const basicSelect = ${JSON.stringify(basicSelect)};
           let myQueryId = '';
-
+          
+          let mustLoadHeaders = true;
+          let totalRows = 0;
           let noMoreRows = false;
           let isFetching = false;
+          let columnList = [];
 
           window.addEventListener("load", main);
             function main() {
@@ -65,35 +69,49 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             Observer.observe(document.getElementById("nextButton"));
 
             window.addEventListener('message', event => {
-              const scroller = document.getElementById("scroller");
               const data = event.data;
               myQueryId = data.queryId;
 
               switch (data.command) {
+                case 'metadata':
+                  // TODO: get backend to give us header metadata
+                  // columnList = data.columnList;
+                  // setHeaders('resultset', data.columnList)
+                  mustLoadHeaders = false;
+                  break;
+
                 case 'rows':
+                  hideSpinner();
+
+                  // Change loading state here...
                   isFetching = false;
                   noMoreRows = data.isDone;
 
-                  if (data.rows.length > 0 && scroller.columnDefinitions.length === 0) {
-                    scroller.columnDefinitions = Object.keys(data.rows[0]).map(col => ({
-                      title: col,
-                      columnDataKey: col,
-                    }));
+                  // HACK: right now, we build the column list from the first row keys... bad
+
+                  if (mustLoadHeaders && data.rows && data.rows.length > 0) {
+                    columnList = Object.keys(data.rows[0]);
+                    
+                    setHeaders('resultset', columnList);
+
+                    mustLoadHeaders = false;
                   }
 
-                  if (scroller.rowsData.length > 0) {
-                    scroller.rowsData = [...scroller.rowsData, ...data.rows];
-                  } else {
-                    scroller.rowsData = data.rows;
+                  if (data.rows && data.rows.length > 0) {
+                    totalRows += data.rows.length;
+                    appendRows('resultset', columnList, data.rows);
                   }
 
                   const nextButton = document.getElementById("nextButton");
-                  nextButton.innerText = noMoreRows ? ('Loaded ' + scroller.rowsData.length + '. End of data') : ('Loaded ' + scroller.rowsData.length + '. Fetching more...');
+                  if (data.rows === undefined && totalRows === 0) {
+                    nextButton.innerText = 'Query executed with no result set returned.';
+                  } else {
+                    nextButton.innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. Fetching more...');
+                  }
                   break;
 
                 case 'fetch':
-                  scroller.columnDefinitions = [];
-                  scroller.rowsData = [];
+                  // Set loading here....
                   fetchNextPage();
                   break;
               }
@@ -108,12 +126,58 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
               queryId: myQueryId
             });
           }
+
+          function hideSpinner() {
+            document.getElementById("spinnerContent").style.display = 'none';
+          }
+
+          function setHeaders(tableId, columns) {
+            var tHeadRef = document.getElementById(tableId).getElementsByTagName('thead')[0];
+            tHeadRef.innerHTML = '';
+
+            // Insert a row at the end of table
+            var newRow = tHeadRef.insertRow();
+
+            columns.forEach(colName => {
+              // Insert a cell at the end of the row
+              var newCell = newRow.insertCell();
+
+              // Append a text node to the cell
+              var newText = document.createTextNode(colName);
+              newCell.appendChild(newText);
+            });
+          }
+
+          function appendRows(tableId, colList, arrayOfObjects) {
+            var tBodyRef = document.getElementById(tableId).getElementsByTagName('tbody')[0];
+
+            for (const row of arrayOfObjects) {
+              // Insert a row at the end of table
+              var newRow = tBodyRef.insertRow();
+
+              for (const columnName of colList) {
+                // Insert a cell at the end of the row
+                var newCell = newRow.insertCell();
+
+                // Append a text node to the cell
+                var newText = document.createTextNode(row[columnName] || 'null');
+                newCell.appendChild(newText);
+              }
+            }
+
+          }
         </script>
       </head>
       <body>
-        <vscode-data-grid id="scroller" style="min-width: max-content;"></vscode-data-grid>
-        <vscode-divider></vscode-divider>
-        <p id="nextButton">Execute statement.</p>
+        <table id="resultset">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+        <p id="nextButton"></p>
+        <div id="spinnerContent" class="center-screen">
+          <p id="loadingText">Running statement</p>
+          <span class="loader"></span>
+        </div>
       </body>
     </html>
   `;

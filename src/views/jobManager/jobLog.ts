@@ -1,7 +1,8 @@
 import { ViewColumn, window } from "vscode";
 import { JobInfo } from "../../connection/manager";
-import { head } from "../html";
+import { escapeHTML, head } from "../html";
 import { JobLogEntry } from "../../connection/types";
+import { JobManager } from "../../config";
 
 
 export async function displayJobLog(selected: JobInfo) {
@@ -22,46 +23,35 @@ function generatePage(rows: JobLogEntry[]) {
     <html lang="en">
       <head>
         ${head}
-        <script>
-          window.addEventListener("load", main);
-          function main() {}
-        </script>
       </head>
       <body>
-        <vscode-data-grid grid-template-columns="150px 100px auto">
-          ${rows.map(row => {
-            let i = 1;
-
-            // <vscode-data-grid-cell grid-column="${i++}">
-            //   ${row.MESSAGE_TIMESTAMP}
-            // </vscode-data-grid-cell>
-            // <vscode-data-grid-cell grid-column="${i++}">
-            //   <code>${row.FROM_LIBRARY}/${row.FROM_PROGRAM}</code>
-            // </vscode-data-grid-cell>
-
-            return `<vscode-data-grid-row>
-              <vscode-data-grid-cell grid-column="${i++}">
-                ${row.MESSAGE_TYPE}
-              </vscode-data-grid-cell>
-              <vscode-data-grid-cell grid-column="${i++}">
-                ${row.MESSAGE_ID}
-              </vscode-data-grid-cell>
-              <vscode-data-grid-cell grid-column="${i++}">
-                ${escapeHTML(row.MESSAGE_TEXT)}
-              </vscode-data-grid-cell>
-            </vscode-data-grid-row>`
-          }).join(``)}
-        </vscode-data-grid>
+        <table id="resultset">
+          <tbody>
+            ${rows.map(row => {
+              return `<tr>
+                <td width="150px">
+                  ${row.MESSAGE_TIMESTAMP}
+                </td>
+                <td>
+                  ${row.MESSAGE_TYPE}
+                </td>
+                <td>
+                  ${row.SEVERITY}
+                </td>
+                <td>
+                  ${row.MESSAGE_ID}
+                </td>
+                <td>
+                  ${escapeHTML(row.MESSAGE_TEXT || ``)}
+                </td>
+                <td>
+                  ${escapeHTML(row.MESSAGE_SECOND_LEVEL_TEXT || ``)}
+                </td>
+              </tr>`
+            }).join(``)}
+          </tbody>
+        </table>
       </body>
     </html>
   `;
 }
-
-const escapeHTML = str => str.replace(/[&<>'"]/g, 
-  tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag]));
