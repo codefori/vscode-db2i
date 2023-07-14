@@ -27,29 +27,34 @@ export function getLoadingHTML(): string {
         </script>
       </head>
       <body>
-        <p id="loadingText">Loading..</p>
-        <section class="loading">
-          <p><vscode-progress-ring></vscode-progress-ring></p>
-        </section>
+        <div id="spinnerContent" class="center-screen">
+          <p id="loadingText">View will be active when a statement is executed.</p>
+          <span class="loader"></span>
+        </div>
       </body>
     </html>
   `;
 }
 
-export function generateScroller(basicSelect: string): string {
+export function generateScroller(basicSelect: string, isCL: boolean): string {
   return /*html*/`
     <!DOCTYPE html>
     <html lang="en">
       <head>
         ${head}
         <script>
+          /* 
+          ${new Date().getTime()}
+          */
           const vscode = acquireVsCodeApi();
           const basicSelect = ${JSON.stringify(basicSelect)};
-          const limit = 50;
-
-          let nextOffset = 0;
+          let myQueryId = '';
+          
+          let mustLoadHeaders = true;
+          let totalRows = 0;
           let noMoreRows = false;
           let isFetching = false;
+          let columnList = [];
 
           window.addEventListener("load", main);
             function main() {
@@ -66,41 +71,49 @@ export function generateScroller(basicSelect: string): string {
             Observer.observe(document.getElementById("nextButton"));
 
             window.addEventListener('message', event => {
-              const scroller = document.getElementById("scroller");
               const data = event.data;
+              myQueryId = data.queryId;
 
               switch (data.command) {
+                case 'metadata':
+                  // TODO: get backend to give us header metadata
+                  // columnList = data.columnList;
+                  // setHeaders('resultset', data.columnList)
+                  mustLoadHeaders = false;
+                  break;
+
                 case 'rows':
+                  hideSpinner();
+
+                  // Change loading state here...
                   isFetching = false;
+                  noMoreRows = data.isDone;
 
-                  if (data.rows.length > 0 && scroller.columnDefinitions.length === 0) {
-                    scroller.columnDefinitions = Object.keys(data.rows[0]).map(col => ({
-                      title: col,
-                      columnDataKey: col,
-                    }));
+                  // HACK: right now, we build the column list from the first row keys... bad
+
+                  if (mustLoadHeaders && data.rows && data.rows.length > 0) {
+                    columnList = Object.keys(data.rows[0]);
+                    
+                    setHeaders('resultset', columnList);
+
+                    mustLoadHeaders = false;
                   }
 
-                  if (scroller.rowsData.length > 0) {
-                    scroller.rowsData = [...scroller.rowsData, ...data.rows];
-                  } else {
-                    scroller.rowsData = data.rows;
-                  }
-
-                  console.log('row check');
-                  if (data.rows.length < limit) {
-                    console.log("No more rows");
-                    noMoreRows = true;
+                  if (data.rows && data.rows.length > 0) {
+                    totalRows += data.rows.length;
+                    appendRows('resultset', columnList, data.rows);
                   }
 
                   const nextButton = document.getElementById("nextButton");
-                  const textValue = noMoreRows ? ('Loaded ' + scroller.rowsData.length + '. End of data') : ('Loaded ' + scroller.rowsData.length + '. Fetching more...');
-                  nextButton.innerHTML = '<p>' + textValue + '</p>';
+                  if (data.rows === undefined && totalRows === 0) {
+                    nextButton.innerText = 'Query executed with no result set returned.';
+                  } else {
+                    nextButton.innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. Fetching more...');
+                  }
                   break;
 
                 case 'fetch':
-                  scroller.columnDefinitions = [];
-                  scroller.rowsData = [];
-                  nextOffset = 0;
+                  // Set loading here....
                   fetchNextPage();
                   break;
               }
@@ -111,73 +124,65 @@ export function generateScroller(basicSelect: string): string {
             isFetching = true;
             vscode.postMessage({
               query: basicSelect,
-              limit,
-              offset: nextOffset,
+              isCL: ${isCL},
+              queryId: myQueryId
             });
+          }
 
-            nextOffset += limit;
+          function hideSpinner() {
+            document.getElementById("spinnerContent").style.display = 'none';
+          }
+
+          function setHeaders(tableId, columns) {
+            var tHeadRef = document.getElementById(tableId).getElementsByTagName('thead')[0];
+            tHeadRef.innerHTML = '';
+
+            // Insert a row at the end of table
+            var newRow = tHeadRef.insertRow();
+
+            columns.forEach(colName => {
+              // Insert a cell at the end of the row
+              var newCell = newRow.insertCell();
+
+              // Append a text node to the cell
+              var newText = document.createTextNode(colName);
+              newCell.appendChild(newText);
+            });
+          }
+
+          function appendRows(tableId, colList, arrayOfObjects) {
+            var tBodyRef = document.getElementById(tableId).getElementsByTagName('tbody')[0];
+
+            for (const row of arrayOfObjects) {
+              // Insert a row at the end of table
+              var newRow = tBodyRef.insertRow();
+
+              for (const columnName of colList) {
+                // Insert a cell at the end of the row
+                var newCell = newRow.insertCell();
+
+                // Append a text node to the cell
+                var newText = document.createTextNode(row[columnName] === undefined ? 'null' : row[columnName]);
+                newCell.appendChild(newText);
+              }
+            }
+
           }
         </script>
       </head>
       <body>
-        <vscode-data-grid id="scroller" style="min-width: max-content;"></vscode-data-grid>
-        <vscode-divider></vscode-divider>
-        <div id="nextButton">
-          <div class="loading">
-            <p><vscode-progress-ring></vscode-progress-ring></p>
-          </div>
+        <table id="resultset">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+        <p id="nextButton"></p>
+        <div id="spinnerContent" class="center-screen">
+          <p id="loadingText">Running statement</p>
+          <span class="loader"></span>
         </div>
       </body>
     </html>
   `;
 }
 
-export function generateResults(rows: object[]): string {
-  const columns = Object.keys(rows[0]).map(column => ({
-    title: column,
-    columnDataKey: column,
-  }));
-
-  const inlineData = generateTable(`results`, columns, rows);
-
-  return /*html*/ `
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        ${head}
-        <script>
-          window.addEventListener("load", main);
-          function main() {
-            ${inlineData.js}
-          }
-        </script>
-      </head>
-      <body>
-        ${inlineData.html}
-      </body>
-    </html>
-  `;
-}
-
 interface ColumnDetail {title: string, columnDataKey: string|number, transform?: (row: object) => string|number};
-
-export function generateTable(id: string, columns: ColumnDetail[], rows: any[]) {
-  rows.forEach(row => {
-    columns.forEach(column => {
-      if (row[column.columnDataKey] && column.transform) {
-        row[column.columnDataKey] = column.transform(row);
-      }
-    });
-  });
-    
-  let result = {
-    html: `<vscode-data-grid id="${id}" style="min-width: max-content;"></vscode-data-grid>`,
-    js: [
-      `const ${id} = document.getElementById("${id}");`,
-      `${id}.columnDefinitions = ${JSON.stringify(columns)};`,
-      `${id}.rowsData = ${JSON.stringify(rows)};`,
-    ].join(``),
-  };
-
-  return result;
-}

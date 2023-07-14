@@ -1,74 +1,57 @@
 import { ViewColumn, window } from "vscode";
 import { JobInfo } from "../../connection/manager";
-import { head } from "../html";
+import { escapeHTML, head } from "../html";
+import { JobLogEntry } from "../../connection/types";
+import { JobManager } from "../../config";
 
-interface JobLogMessage {
-  MESSAGE_ID: string;
-  MESSAGE_TIMESTAMP: string;
-  FROM_LIBRARY: string;
-  FROM_PROGRAM: string;
-  MESSAGE_TYPE: string;
-  MESSAGE_TEXT: string;
-}
 
 export async function displayJobLog(selected: JobInfo) {
-  const jobLogRows = await selected.job.query<JobLogMessage>(`select * from table(qsys2.joblog_info('*')) a`);
+  const jobLog = await selected.job.getJobLog();
 
-  if (jobLogRows.length > 0) {
+  if (jobLog.data.length > 0) {
     const panel = window.createWebviewPanel(`tab`, selected.job.id, {viewColumn: ViewColumn.Active}, {enableScripts: true});
-    panel.webview.html = generatePage(jobLogRows);
+    panel.webview.html = generatePage(jobLog.data);
     panel.reveal();
   } else {
     window.showInformationMessage(`No messages in job log for ${selected.job.id}`);
   }
 }
 
-function generatePage(rows: JobLogMessage[]) {
+function generatePage(rows: JobLogEntry[]) {
   return /*html*/ `
     <!DOCTYPE html>
     <html lang="en">
       <head>
         ${head}
-        <script>
-          window.addEventListener("load", main);
-          function main() {}
-        </script>
       </head>
       <body>
-        <vscode-data-grid grid-template-columns="150px 100px auto">
-          ${rows.map(row => {
-            let i = 1;
-
-            // <vscode-data-grid-cell grid-column="${i++}">
-            //   ${row.MESSAGE_TIMESTAMP}
-            // </vscode-data-grid-cell>
-            // <vscode-data-grid-cell grid-column="${i++}">
-            //   <code>${row.FROM_LIBRARY}/${row.FROM_PROGRAM}</code>
-            // </vscode-data-grid-cell>
-
-            return `<vscode-data-grid-row>
-              <vscode-data-grid-cell grid-column="${i++}">
-                ${row.MESSAGE_TYPE}
-              </vscode-data-grid-cell>
-              <vscode-data-grid-cell grid-column="${i++}">
-                ${row.MESSAGE_ID}
-              </vscode-data-grid-cell>
-              <vscode-data-grid-cell grid-column="${i++}">
-                ${escapeHTML(row.MESSAGE_TEXT)}
-              </vscode-data-grid-cell>
-            </vscode-data-grid-row>`
-          }).join(``)}
-        </vscode-data-grid>
+        <table id="resultset">
+          <tbody>
+            ${rows.map(row => {
+              return `<tr>
+                <td width="150px">
+                  ${row.MESSAGE_TIMESTAMP}
+                </td>
+                <td>
+                  ${row.MESSAGE_TYPE}
+                </td>
+                <td>
+                  ${row.SEVERITY}
+                </td>
+                <td>
+                  ${row.MESSAGE_ID}
+                </td>
+                <td>
+                  ${escapeHTML(row.MESSAGE_TEXT || ``)}
+                </td>
+                <td>
+                  ${escapeHTML(row.MESSAGE_SECOND_LEVEL_TEXT || ``)}
+                </td>
+              </tr>`
+            }).join(``)}
+          </tbody>
+        </table>
       </body>
     </html>
   `;
 }
-
-const escapeHTML = str => str.replace(/[&<>'"]/g, 
-  tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag]));
