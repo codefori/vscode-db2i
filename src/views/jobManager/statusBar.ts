@@ -5,7 +5,7 @@ import { JobManager } from "../../config";
 
 const statusItem = languages.createLanguageStatusItem(`sqlStatus`, {language: `sql`});
 
-const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Right);
+const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Left);
 
 export async function updateStatusBar() {
   if (ServerComponent.isInstalled()) {
