@@ -49,7 +49,7 @@ export class SQLJobManager {
   }
 
   getRunningJobs() {
-    return this.jobs.filter(info => [JobStatus.Ready, JobStatus.Busy].includes(info.job.getStatus()));
+    return this.jobs.filter(info => [JobStatus.Ready, JobStatus.Active].includes(info.job.getStatus()));
   }
 
   async endAll() {

@@ -8,7 +8,6 @@ export enum QueryState {
 }
 export class Query<T> {
 
-  private static uniqueIdCounter: number = 0;
   private static globalQueryList: Query<any>[] = [];
   private correlationId: string;
   private sql: string;
@@ -39,13 +38,13 @@ export class Query<T> {
     let queryObject;
     if (this.isCLCommand) {
       queryObject = {
-        id: `clcommand` + (++Query.uniqueIdCounter),
+        id: SQLJob.getNewUniqueRequestId(`clcommand`),
         type: `cl`,
         cmd: this.sql
       };
     } else {
       queryObject = {
-        id: `query` + (++Query.uniqueIdCounter),
+        id: SQLJob.getNewUniqueRequestId(`query`),
         type: this.isPrepared ? `prepare_sql_execute` : `sql`,
         sql: this.sql,
         rows: rowsToFetch,
@@ -74,7 +73,7 @@ export class Query<T> {
       throw new Error('Statement has already been fully run');
     }
     let queryObject = {
-      id: `fetchMore` + (++Query.uniqueIdCounter),
+      id: SQLJob.getNewUniqueRequestId(`fetchMore`),
       cont_id: this.correlationId,
       type: `sqlmore`,
       sql: this.sql,
