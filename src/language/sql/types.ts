@@ -1,3 +1,4 @@
+import Statement from "./statement";
 
 export enum StatementType {
 	Unknown = "Unknown",
@@ -52,5 +53,5 @@ export interface ObjectRef {
 
 export interface StatementGroup {
 	range: IRange,
-	statements: []
+	statements: Statement[]
 }

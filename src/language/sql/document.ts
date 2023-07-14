@@ -87,6 +87,42 @@ export default class Document {
   getStatementGroups(): StatementGroup[] {
     let groups: StatementGroup[] = [];
 
+    let currentGroup: Statement[] = [];
+
+    let depth = 0;
+
+    for (const statement of this.statements) {
+      if (depth > 0) {
+        currentGroup.push(statement);
+
+        if (statement.isBlockEnder()) {
+          depth--;
+          groups.push({
+            range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
+            statements: currentGroup
+          })
+        }
+      } else {
+        if (statement.isBlockOpener()) {
+          depth++;
+          currentGroup = [statement];
+        } else {
+          groups.push({
+            range: statement.range,
+            statements: [statement]
+          })
+        }
+      }
+    }
+
     return groups;
+  }
+
+  getGroupByOffset(offset: number) {
+    const groups = this.getStatementGroups();
+    return groups.find((statement, i) => {
+      const end = (groups[i + 1] ? groups[i + 1].range.start : statement.range.end);
+      return (offset >= statement.range.start && offset < end) || (i === (groups.length - 1) && offset >= end);
+    })
   }
 }
