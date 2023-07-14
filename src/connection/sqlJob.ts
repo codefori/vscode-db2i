@@ -162,6 +162,8 @@ export class SQLJob {
       tracedest: dest,
       tracelevel: level
     };
+    
+    this.isTracingChannelData = true;
 
     const result = await this.send(JSON.stringify(reqObj));
 
@@ -170,6 +172,7 @@ export class SQLJob {
     if (rpy.success !== true) {
       throw new Error(rpy.error || `Failed to set trace options on backend`);
     }
+
     return rpy;
   }
 

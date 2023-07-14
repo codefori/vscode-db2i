@@ -293,6 +293,16 @@
         "title": "View Job Log",
         "category": "Db2 for i",
         "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.enableTracing",
+        "title": "Enable Tracing",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.jobManager.getTrace",
+        "title": "Get Trace Data",
+        "category": "Db2 for i"
       }
     ],
     "menus": {
@@ -315,6 +325,14 @@
         },
         {
           "command": "vscode-db2i.jobManager.viewJobLog",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.enableTracing",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getTrace",
           "when": "never"
         }
       ],
@@ -464,6 +482,16 @@
           "command": "vscode-db2i.jobManager.viewJobLog",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.enableTracing",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "trace@1"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getTrace",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "trace@2"
         }
       ]
     }

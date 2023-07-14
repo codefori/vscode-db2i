@@ -1,9 +1,11 @@
 import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, env, window, workspace } from "vscode";
 import { TreeDataProvider } from "vscode";
 import { Config, JobManager } from "../../config";
-import { JobInfo } from "../../connection/manager";
+import { JobInfo, SQLJobManager } from "../../connection/manager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
+import { ServerTraceDest, ServerTraceLevel } from "../../connection/types";
+import { ServerComponent } from "../../connection/serverComponent";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -89,6 +91,32 @@ export class JobManagerView implements TreeDataProvider<any> {
               })
             }
           })
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.enableTracing`, async (node?: SQLJobItem) => {
+        if (node) {
+          const id = node.label as string;
+          const selected = await JobManager.getJob(id);
+
+          ServerComponent.writeOutput(`Enabling tracing for ${selected.name} (${selected.job.id})`, true);
+
+          selected.job.setTraceConfig(ServerTraceDest.IN_MEM, ServerTraceLevel.ERRORS);
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.getTrace`, async (node?: SQLJobItem) => {
+        if (node) {
+          const id = node.label as string;
+          const selected = await JobManager.getJob(id);
+
+          const trace = await selected.job.getTraceData();
+          if (trace.success) {
+            ServerComponent.writeOutput(trace.tracedata, true);
+          } else {
+            ServerComponent.writeOutput(`Unable to get trace data for ${selected.name} (${selected.job.id}):`, true);
+            ServerComponent.writeOutput(trace.error);
+          }
         }
       }),
 
