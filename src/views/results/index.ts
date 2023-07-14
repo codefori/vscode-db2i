@@ -7,6 +7,7 @@ import * as html from "./html";
 import { getInstance } from "../../base";
 import { JobManager } from "../../config";
 import { Query, QueryState } from "../../connection/query";
+import { updateStatusBar } from "../jobManager/statusBar";
 
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
@@ -60,6 +61,8 @@ class ResultSetPanelProvider {
             isDone: true
           });
         }
+
+        updateStatusBar();
       }
     });
   }

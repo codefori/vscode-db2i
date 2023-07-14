@@ -14,6 +14,14 @@ export enum JobStatus {
 interface ReqRespFmt {
   id: string
 };
+
+const TransactionCountQuery = [
+  `select count(*) as thecount`,
+  `  from qsys2.db_transaction_info`,
+  `  where JOB_NAME = qsys2.job_name and`,
+  `    (local_record_changes_pending = 'YES' or local_object_changes_pending = 'YES')`,
+].join(`\n`);
+
 export class SQLJob {
 
   private static uniqueIdCounter: number = 0;
@@ -179,6 +187,13 @@ export class SQLJob {
 
   getJobLog(): Promise<QueryResult<JobLogEntry>> {
     return this.query<JobLogEntry>(`select * from table(qsys2.joblog_info('*')) a`).run();
+  }
+
+  async getPendingTransactions() {
+    const rows = await this.query<{THECOUNT: number}>(TransactionCountQuery).run(1);
+
+    if (rows.success && rows.data && rows.data.length === 1 && rows.data[0].THECOUNT) return rows.data[0].THECOUNT;
+    return 0;
   }
   
   async close() {

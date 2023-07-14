@@ -4,6 +4,7 @@ import { Config, JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
+import { updateStatusBar } from "./statusBar";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -116,6 +117,7 @@ export class JobManagerView implements TreeDataProvider<any> {
 
   refresh() {
     this._onDidChangeTreeData.fire();
+    updateStatusBar();
   }
 
   getTreeItem(element: vscode.TreeItem) {
