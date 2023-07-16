@@ -1,15 +1,17 @@
+import Statement from "./statement";
 
 export enum StatementType {
-	Unknown,
-	Create,
-	Insert,
-	Select,
-	Update,
-	Delete,
-	Declare,
-	Drop,
-	End,
-	Call
+	Unknown = "Unknown",
+	Create = "Create",
+	Insert = "Insert",
+	Select = "Select",
+	Update = "Update",
+	Delete = "Delete",
+	Declare = "Declare",
+	Begin = "Being",
+	Drop = "Drop",
+	End = "End",
+	Call = "Call"
 }
 
 export const StatementTypeWord = {
@@ -22,7 +24,8 @@ export const StatementTypeWord = {
 	'DECLARE': StatementType.Declare,
 	'DROP': StatementType.Drop,
 	'END': StatementType.End,
-	'CALL': StatementType.Call
+	'CALL': StatementType.Call,
+	'BEGIN': StatementType.Begin
 };
 
 export interface IRange {
@@ -46,4 +49,9 @@ export interface ObjectRef {
   tokens: Token[],
   object: QualifiedObject;
   alias?: string;
+}
+
+export interface StatementGroup {
+	range: IRange,
+	statements: Statement[]
 }

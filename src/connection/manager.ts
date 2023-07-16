@@ -1,6 +1,7 @@
 import { getInstance } from "../base";
+import { Query } from "./query";
 import { JobStatus, SQLJob } from "./sqlJob";
-import { Rows } from "./types";
+import { QueryOptions, QueryResult, Rows } from "./types";
 
 export interface JobInfo {
   name: string;
@@ -48,7 +49,7 @@ export class SQLJobManager {
   }
 
   getRunningJobs() {
-    return this.jobs.filter(info => [JobStatus.Ready, JobStatus.Busy].includes(info.job.getStatus()));
+    return this.jobs.filter(info => [JobStatus.Ready, JobStatus.Active].includes(info.job.getStatus()));
   }
 
   async endAll() {
@@ -88,11 +89,14 @@ export class SQLJobManager {
     return (this.selectedJob >= 0);
   }
 
-  runSQL<T>(query: string): Promise<T[]> {
+  async runSQL<T>(query: string): Promise<T[]> {
     const selected = this.jobs[this.selectedJob]
     if (SQLJobManager.jobSupport && selected) {
-      return selected.job.query(query) as Promise<T[]>;
-
+      // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
+      // int. This is the largest number available without overflow (Integer.MAX_VALUE)
+      const rowsToFetch = 2147483647;
+      const results = await selected.job.query<T>(query).run(rowsToFetch);
+      return results.data;
     } else {
       const instance = getInstance();
       const config = instance.getConfig();
@@ -102,7 +106,18 @@ export class SQLJobManager {
         `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
         query
       ].join(`;\n`);
+      
       return content.runSQL(queryContext) as Promise<T[]>;
+    }
+  }
+  getPagingStatement<T>(query: string, opts?: QueryOptions): Query<T> {
+    const selected = this.jobs[this.selectedJob]
+    if (SQLJobManager.jobSupport && selected) {
+      return selected.job.query<T>(query, opts);
+    } else if(!SQLJobManager.jobSupport) {
+      throw new Error(`Database server component is required. Please see documentation for details.`);
+    }else {
+      throw new Error(`Active SQL job is required. Please spin one up first.`);
     }
   }
 }

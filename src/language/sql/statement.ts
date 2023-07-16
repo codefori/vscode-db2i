@@ -7,19 +7,39 @@ const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 
 export default class Statement {
 	public type: StatementType = StatementType.Unknown;
+	private beginBlock = false;
 
   constructor(public tokens: Token[], public range: IRange) {
 		const first = tokens[0];
 
-		if (tokenIs(first, `statementType`) || tokenIs(first, `keyword`, `END`)) {
+		if (tokenIs(first, `statementType`) || tokenIs(first, `keyword`, `END`) || tokenIs(first, `keyword`, `BEGIN`)) {
 			const wordValue = first.value?.toUpperCase();
 
 			this.type = StatementTypeWord[wordValue];
 		}
-
+		
 		if (this.type !== StatementType.Create) {
 			this.tokens = SQLTokeniser.findScalars(this.tokens);
 		}
+	}
+
+	isBlockOpener() {
+		if (this.tokens.length === 1 && tokenIs(this.tokens[0], `keyword`, `BEGIN`)) {
+			return true;
+		}
+
+		if (this.type === StatementType.Create) {
+			const last = this.tokens[this.tokens.length-1];
+			if (tokenIs(last, `keyword`, `BEGIN`)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	isBlockEnder() {
+		return this.type === StatementType.End && this.tokens.length === 1;
 	}
 
 	getTokenByOffset(offset: number) {

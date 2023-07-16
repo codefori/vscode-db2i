@@ -90,13 +90,13 @@ export default function getOtherTab(options: JDBCOptions) {
         value: `false`,
         text: `Do not throw an exception when autocommit is set to true`,
         description: `False`,
-        selected: options["autocommit exception"] !== `true`,
+        selected: options["autocommit exception"] !== true,
       },
       {
         value: `true`,
         text: `Throw an exception when autocommit is set to true`,
         description: `True`,
-        selected: options["autocommit exception"] === `true`,
+        selected: options["autocommit exception"] === true,
       },
     ])
     .addSelect(
@@ -162,13 +162,13 @@ export default function getOtherTab(options: JDBCOptions) {
           value: `true`,
           text: `Perform implicit reordering`,
           description: `True`,
-          selected: options["bidi implicit reordering"] === `true`,
+          selected: options["bidi implicit reordering"] === true,
         },
         {
           value: `false`,
           text: `Do not perform implicit reordering`,
           description: `False`,
-          selected: options["bidi implicit reordering"] !== `true`,
+          selected: options["bidi implicit reordering"] !== true,
         },
       ],
       `Specifies if bidi implicit LTR-RTL reordering should be used.`
@@ -181,13 +181,13 @@ export default function getOtherTab(options: JDBCOptions) {
           value: `false`,
           text: `Do not perform numeric ordering`,
           description: `False`,
-          selected: options["bidi numeric ordering"] !== `true`,
+          selected: options["bidi numeric ordering"] !== true,
         },
         {
           value: `true`,
           text: `Perform numeric ordering`,
           description: `True`,
-          selected: options["bidi numeric ordering"] === `true`,
+          selected: options["bidi numeric ordering"] === true,
         },
       ],
       `Specifies if the numeric ordering round trip feature should be used.`
@@ -200,13 +200,13 @@ export default function getOtherTab(options: JDBCOptions) {
           value: `true`,
           text: `true`,
           description: `True`,
-          selected: options["data truncation"] === `true`,
+          selected: options["data truncation"] === true,
         },
         {
           value: `false`,
           text: `false`,
           description: `False`,
-          selected: options["data truncation"] !== `true`,
+          selected: options["data truncation"] !== true,
         },
       ],
       formatDescription(dataTruncationText)
@@ -257,13 +257,13 @@ export default function getOtherTab(options: JDBCOptions) {
           value: `false`,
           text: `false`,
           description: `False`,
-          selected: options["extended metadata"] !== `true`,
+          selected: options["extended metadata"] !== true,
         },
         {
           value: `true`,
           text: `true`,
           description: `True`,
-          selected: options["extended metadata"] === `true`,
+          selected: options["extended metadata"] === true,
         },
       ],
       formatDescription(extendedMetaDataText)
@@ -276,13 +276,13 @@ export default function getOtherTab(options: JDBCOptions) {
           value: `true`,
           text: `true (type hold)`,
           description: `True`,
-          selected: options["hold input locators"] === `true`,
+          selected: options["hold input locators"] === true,
         },
         {
           value: `false`,
           text: `false`,
           description: `False`,
-          selected: options["hold input locators"] !== `true`,
+          selected: options["hold input locators"] !== true,
         },
       ],
       `Specifies whether input locators should be allocated as type hold locators or not hold locators. If the locators are of type hold, they will not be released when a commit is done.`
@@ -295,13 +295,13 @@ export default function getOtherTab(options: JDBCOptions) {
           value: `true`,
           text: `true`,
           description: `True`,
-          selected: options["hold statements"] === `true`,
+          selected: options["hold statements"] === true,
         },
         {
           value: `false`,
           text: `false`,
           description: `False`,
-          selected: options["hold statements"] !== `true`,
+          selected: options["hold statements"] !== true,
         },
       ],
       `Specifies if statements should remain open until a transaction boundary when autocommit is off and they are associated with a LOB locator. By default, all the resources associated with a statement are released when the statement is closed. Set this property to true only when access to a LOB locator is needed after a statement has been closed.`
@@ -373,13 +373,13 @@ export default function getOtherTab(options: JDBCOptions) {
         value: `false`,
         text: `encrypt only the password`,
         description: `False`,
-        selected: options["secure"] !== `true`,
+        selected: options["secure"] !== true,
       },
       {
         value: `true`,
         text: `encrypt all client/server communication`,
         description: `True`,
-        selected: options["secure"] === `true`,
+        selected: options["secure"] === true,
       },
     ])
     .addSelect(
@@ -436,13 +436,13 @@ export default function getOtherTab(options: JDBCOptions) {
         value: `true`,
         text: `true`,
         description: `True`,
-        selected: options["thread used"] === `true`,
+        selected: options["thread used"] === true,
       },
       {
         value: `false`,
         text: `false`,
         description: `False`,
-        selected: options["thread used"] !== `true`,
+        selected: options["thread used"] !== true,
       },
     ])
     .addSelect(
@@ -538,13 +538,13 @@ export default function getOtherTab(options: JDBCOptions) {
           value: `false`,
           text: `trace is not active`,
           description: `False`,
-          selected: options["trace"] !== `true`,
+          selected: options["trace"] !== true,
         },
         {
           value: `true`,
           text: `trace is active`,
           description: `True`,
-          selected: options["trace"] === `true`,
+          selected: options["trace"] === true,
         },
       ],
       `	Specifies whether trace messages should be logged. Trace messages are useful for debugging programs that call JDBC. However, there is a performance penalty associated with logging trace messages, so this property should only be set to "true" for debugging. Trace messages are logged to System.out.`
@@ -557,13 +557,13 @@ export default function getOtherTab(options: JDBCOptions) {
           value: `false`,
           text: `false`,
           description: `False`,
-          selected: options["translate binary"] !== `true`,
+          selected: options["translate binary"] !== true,
         },
         {
           value: `true`,
           text: `true`,
           description: `True`,
-          selected: options["translate binary"] === `true`,
+          selected: options["translate binary"] === true,
         },
       ],
       `Specifies whether binary data is translated. If this property is set to "true", then BINARY and VARBINARY fields are treated as CHAR and VARCHAR fields.`
@@ -573,13 +573,13 @@ export default function getOtherTab(options: JDBCOptions) {
         value: `true`,
         text: `true`,
         description: `True`,
-        selected: options["translate boolean"] === `true`,
+        selected: options["translate boolean"] === true,
       },
       {
         value: `false`,
         text: `false`,
         description: `False`,
-        selected: options["translate boolean"] !== `true`,
+        selected: options["translate boolean"] !== true,
       },
     ])
     .addInput(

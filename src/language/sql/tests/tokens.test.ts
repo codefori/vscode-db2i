@@ -50,3 +50,20 @@ test('New line (\\r\\n) and comments test', () => {
   expect(tokens.length).toBe(5);
   expect (tokens[3].type === `newline`);
 });
+
+test(`Delimited names`, () => {
+  const tokeniser = new SQLTokeniser();
+  const line = `CREATE TABLE "TestDelimiters"."Delimited Table" ("Delimited Column" INTEGER DEFAULT NULL, CONSTRAINT "TestDelimiters"."Delimited Key" PRIMARY KEY ("Delimited Column"));`;
+
+  const tokens = tokeniser.tokenise(line);
+
+  expect(tokens.length).toBe(22);
+
+  expect (tokens[2].type === `sqlName`);
+  expect (tokens[2].value === `"TestDelimiters"`);
+
+  expect (tokens[3].type === `dot`);
+
+  expect (tokens[4].type === `sqlName`);
+  expect (tokens[4].value === `"Delimited Table"`);
+});

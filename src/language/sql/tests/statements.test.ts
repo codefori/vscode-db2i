@@ -506,6 +506,7 @@ describe(`PL body tests`, () => {
 
     const medianResultSetProc = statements[0];
     expect(medianResultSetProc.type).toBe(StatementType.Create);
+    expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
@@ -561,6 +562,7 @@ describe(`PL body tests`, () => {
 
     const medianResultSetProc = statements[0];
     expect(medianResultSetProc.type).toBe(StatementType.Create);
+    expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
@@ -570,5 +572,6 @@ describe(`PL body tests`, () => {
 
     const callStatement = statements[statements.length-1];
     expect(callStatement.type).toBe(StatementType.Call);
+    expect(callStatement.isBlockOpener()).toBe(false);
   });
 });

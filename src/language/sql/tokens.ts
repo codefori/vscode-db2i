@@ -11,6 +11,13 @@ interface Matcher {
 
 export const NameTypes = [`word`, `sqlName`, `function`];
 
+enum ReadState {
+  NORMAL,
+  IN_STRING,
+  IN_COMMENT,
+  IN_NAME
+}
+
 export default class SQLTokeniser {
   matchers: Matcher[] = [
     {
@@ -89,6 +96,7 @@ export default class SQLTokeniser {
     '\r': `newliner`,
   };
   readonly stringChar: string = `'`;
+  readonly delimNameChar = `"`;
 
   readonly startCommentString: string = `--`;
   readonly endCommentString = `\n`;
@@ -97,9 +105,8 @@ export default class SQLTokeniser {
 
   tokenise(content: string) {
     let commentStart = -1;
-    let inComment = false;
 
-    let inString = false;
+    let state: ReadState = ReadState.NORMAL;
 
     let result: Token[] = [];
 
@@ -108,30 +115,34 @@ export default class SQLTokeniser {
 
     for (let i = 0; i < content.length; i++) {
       // Handle when the comment character is found
-      if (inString === false && inComment === false && content[i] && content[i + 1] && content.substring(i, i + 2) === this.startCommentString) {
+      if (state === ReadState.NORMAL && content[i] && content[i + 1] && content.substring(i, i + 2) === this.startCommentString) {
         commentStart = i;
-        inComment = true;
+        state = ReadState.IN_COMMENT;
 
         // Handle when the end of line is there and we're in a comment
-      } else if (inComment && content[i] === this.endCommentString) {
+      } else if (state === ReadState.IN_COMMENT && content[i] === this.endCommentString) {
         const preNewLine = i - 1;
         content = content.substring(0, commentStart) + ` `.repeat(preNewLine - commentStart) + content.substring(preNewLine);
         i--; // So we process the newline next
-        inComment = false;
+        state = ReadState.NORMAL;
 
         // Ignore characters when we're in a comment
-      } else if (inComment) {
+      } else if (state === ReadState.IN_COMMENT) {
         continue;
 
         // Handle when we're in a string
-      } else if (inString && content[i] !== this.stringChar) {
+      } else if (state === ReadState.IN_STRING && content[i] !== this.stringChar) {
+        currentText += content[i];
+
+        // Handle when we're in a name
+      } else if (state === ReadState.IN_NAME && content[i] !== this.delimNameChar) {
         currentText += content[i];
 
       } else {
         switch (content[i]) {
           // When it's the string character..
           case this.stringChar:
-            if (inString) {
+            if (state === ReadState.IN_STRING) {
               currentText += content[i];
               result.push({ value: currentText, type: `string`, range: { start: startsAt, end: startsAt + currentText.length } });
               currentText = ``;
@@ -140,12 +151,27 @@ export default class SQLTokeniser {
               currentText += content[i];
             }
 
-            inString = !inString;
+            // @ts-ignore
+            state = (state === ReadState.IN_STRING ? ReadState.NORMAL : ReadState.IN_STRING);
+            break;
+
+          case this.delimNameChar:
+            if (state === ReadState.IN_NAME) {
+              currentText += content[i];
+              result.push({ value: currentText, type: `sqlName`, range: { start: startsAt, end: startsAt + currentText.length } });
+              currentText = ``;
+            } else {
+              startsAt = i;
+              currentText += content[i];
+            }
+
+            // @ts-ignore
+            state = (state === ReadState.IN_NAME ? ReadState.NORMAL : ReadState.IN_NAME);
             break;
 
           // When it's any other character...
           default:
-            if (this.splitParts.includes(content[i]) && inString === false) {
+            if (this.splitParts.includes(content[i]) && state === ReadState.NORMAL) {
               if (currentText.trim() !== ``) {
                 result.push({ value: currentText, type: `word`, range: { start: startsAt, end: startsAt + currentText.length } });
                 currentText = ``;

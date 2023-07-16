@@ -44,11 +44,6 @@ const config = {
   module: {
     rules: [
       {
-        test: /\.js$/,
-        include: path.resolve(__dirname, `node_modules/@vscode/webview-ui-toolkit/dist/toolkit.min.js`),
-        type: `asset/source`
-      },
-      {
         test: /\.(ts|tsx)$/i,
         exclude: /node_modules/,
         use: [
