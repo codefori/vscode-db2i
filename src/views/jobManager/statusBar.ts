@@ -25,7 +25,7 @@ export async function updateStatusBar() {
           text = `$(pencil) ${selected.name}`;
 
           toolTipItems.push(
-            `${pendingsTracts} pending change${pendingsTracts !== 1 ? `s` : ``}.`,
+            `$(warning) Pending Transaction`,
             `[$(save) Commit](command:vscode-db2i.jobManager.jobCommit) / [$(discard) Rollback](command:vscode-db2i.jobManager.jobRollback)`
           );
         }
