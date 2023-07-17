@@ -55,8 +55,6 @@ describe(`Block statement tests`, () => {
 
     const doc = new Document(lines);
 
-    console.log(doc.statements);
-
     const t = doc.statements.length;
 
     const aliasDef = doc.statements[0];
@@ -111,5 +109,82 @@ describe(`Block statement tests`, () => {
     const beginStatement = groups[2];
     const compoundSubstring = lines.substring(beginStatement.range.start, beginStatement.range.end);
     expect(compoundSubstring).toBe(compoundStatement);
+  });
+});
+
+describe(`Definition tests`, () => {
+  test(`Definiton tests: Alias, function, procedure`, () => {
+    const lines = [
+      `CREATE ALIAS "TestDelimiters"."Delimited Alias" FOR "TestDelimiters"."Delimited Table";`,
+      ``,
+      `CREATE FUNCTION "TestDelimiters"."Delimited Function" ("Delimited Parameter" INTEGER) `,
+      `RETURNS INTEGER LANGUAGE SQL BEGIN RETURN "Delimited Parameter"; END;`,
+      ``,
+      `CREATE PROCEDURE "TestDelimiters"."Delimited Procedure" (INOUT "Delimited Parameter" INTEGER) `,
+      `LANGUAGE SQL BEGIN SET "Delimited Parameter" = 13; END;`,
+    ].join(`\n`);
+  
+    const doc = new Document(lines);
+  
+    const defs = doc.getDefinitions();
+  
+    expect(defs.length).toBe(3);
+
+    const aliasDef = defs[0];
+    expect(aliasDef.type).toBe(`ALIAS`);
+    expect(aliasDef.object.schema).toBe(`"TestDelimiters"`);
+    expect(aliasDef.object.name).toBe(`"Delimited Alias"`);
+    expect(aliasDef.children.length).toBe(0);
+  });
+
+  test(`Definition tests: procedure with children`, () => {
+    const lines = [
+      `-- SELECT * FROM`,
+      `-- TABLE(QSYS2.PARSE_STATEMENT('SELECT ORDNO,ORDSTS FROM PRODLIB.ORDHDR'))`,
+      `-- AS A`,
+      ``,
+      `CREATE OR REPLACE PROCEDURE ILEDITOR.TELLMEWHATICANDOBETTER(IN QUERY VARCHAR(16000))`,
+      `DYNAMIC RESULT SETS 1 `,
+      `BEGIN`,
+      `  DECLARE tableCount integer;`,
+      `  DECLARE columnClauseCount integer;`,
+      `  DECLARE hadTables Char(1);`,
+      ``,
+      `  DECLARE currentSchema varchar(128);`,
+      `  DECLARE currentObject varchar(128);`,
+      ``,
+      `  DECLARE ResultSet CURSOR FOR`,
+      `    SELECT * from session.suggestions;`,
+      ``,
+      `  OPEN ResultSet;`,
+      `  SET RESULT SETS CURSOR ResultSet;`,
+      `END;`,
+    ].join(`\r\n`);
+
+    const doc = new Document(lines);
+  
+    const defs = doc.getDefinitions();
+  
+    expect(defs.length).toBe(1);
+
+    const procDef = defs[0];
+    expect(procDef.type).toBe(`PROCEDURE`);
+    expect(procDef.object.schema).toBe(`ILEDITOR`);
+    expect(procDef.object.name).toBe(`TELLMEWHATICANDOBETTER`);
+    expect(procDef.children.length).toBe(6);
+
+    const children = procDef.children;
+
+    const tableCount = children[0];
+    expect(tableCount.object.name).toBe(`tableCount`);
+    expect(tableCount.type).toBe(`integer`);
+
+    const hadTables = children[2];
+    expect(hadTables.object.name).toBe(`hadTables`);
+    expect(hadTables.type).toBe(`Char(1)`);
+
+    const ResultSet = children[5];
+    expect(ResultSet.object.name).toBe(`ResultSet`);
+    expect(ResultSet.type).toBe(`CURSOR`);
   });
 });

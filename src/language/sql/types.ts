@@ -58,3 +58,8 @@ export interface StatementGroup {
 	range: IRange,
 	statements: Statement[]
 }
+
+export interface Definition extends ObjectRef {
+	range: IRange;
+	children: Definition[];
+}

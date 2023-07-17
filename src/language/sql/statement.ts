@@ -128,7 +128,7 @@ export default class Statement {
 				} else {
 					object = this.getRefAtToken(2);
 					if (object) {
-						object.type = this.tokens[3].value
+						object.type = this.tokens[1].value
 					}
 				}
 
