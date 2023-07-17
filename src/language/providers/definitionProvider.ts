@@ -1,7 +1,6 @@
-import { CancellationToken, Definition, DefinitionProvider, DocumentSymbol, DocumentSymbolProvider, Location, Position, ProviderResult, Range, SymbolInformation, SymbolKind, TextDocument, Uri } from "vscode";
+import { CancellationToken, DefinitionProvider, DocumentSymbol, DocumentSymbolProvider, Location, Position, ProviderResult, Range, SymbolInformation, SymbolKind, TextDocument, Uri } from "vscode";
 
-import { StatementType } from "../sql/types";
-import Statement from "../sql/statement";
+import { StatementType, Definition } from "../sql/types";
 import Document from "../sql/document";
 
 export let sqlSymbolProvider: DocumentSymbolProvider = {
@@ -11,69 +10,31 @@ export let sqlSymbolProvider: DocumentSymbolProvider = {
     const content = document.getText();
 
     const sqlDoc = new Document(content);
-    const groups = sqlDoc.getStatementGroups();
+    const defs = sqlDoc.getDefinitions();
 
-    for (let i = 0; i < groups.length; i++) {
-      const group = groups[i];
+    for (const def of defs) {
+      const symbol = defToSymbol(document, def);
 
-      if (group.statements.length > 0) {
-        if (group.statements.length === 1) {
-          defintions.push(...getSymbolsForStatements(document, group.statements));
+      symbol.children = def.children.map(cd => defToSymbol(document, cd));
 
-        } else {
-          const [baseDef] = getSymbolsForStatements(document, [group.statements[0]]);
-          
-          if (baseDef) {
-            baseDef.children = getSymbolsForStatements(document, group.statements.slice(1))
-          }
-
-          defintions.push(baseDef);
-        }
-      }
+      defintions.push(symbol);
     }
 
     return defintions;
   }
 }
 
-function getSymbolsForStatements(document: TextDocument, statements: Statement[]) {
-  let defintions: DocumentSymbol[] = [];
+function defToSymbol(doc: TextDocument, def: Definition) {
+  const range = new Range(
+    doc.positionAt(def.range.start),
+    doc.positionAt(def.range.end)
+  );
 
-  for (let i = 0; i < statements.length; i++) {
-    const statement = statements[i];
-    const [objectRef] = statement.getObjectReferences();
-
-    const statementRange = new Range(
-      document.positionAt(statement.range.start),
-      document.positionAt(statement.range.end),
-    )
-
-    switch (statement.type) {
-      case StatementType.Create:
-        if (objectRef) {
-          defintions.push(new DocumentSymbol(
-            objectRef.object.name || statement.type, 
-            objectRef.type, 
-            SymbolKind.File, // TODO: change kind based on object type?
-            statementRange, 
-            statementRange
-          ));
-        }
-        break;
-
-      case StatementType.Declare:
-        if (objectRef) {
-          defintions.push(new DocumentSymbol(
-            objectRef.object.name || statement.type, 
-            objectRef.type, 
-            SymbolKind.Variable, // TODO: change kind based on object type?
-            statementRange, 
-            statementRange
-          ))
-        }
-        break;
-    }
-  }
-
-  return defintions;
+  return new DocumentSymbol(
+    def.object.name, 
+    def.type, 
+    SymbolKind.File,
+    range,
+    range
+  );
 }
