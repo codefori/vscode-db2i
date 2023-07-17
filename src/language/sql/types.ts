@@ -8,7 +8,7 @@ export enum StatementType {
 	Update = "Update",
 	Delete = "Delete",
 	Declare = "Declare",
-	Begin = "Being",
+	Begin = "Begin",
 	Drop = "Drop",
 	End = "End",
 	Call = "Call"

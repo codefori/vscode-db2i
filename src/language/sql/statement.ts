@@ -136,20 +136,46 @@ export default class Statement {
 				break;
 
 			case StatementType.Declare:
-				if (tokenIs(this.tokens[1], `word`, `GLOBAL`)) {
-					// Handle DECLARE GLOBAL TEMP TABLE...
+				if (tokenIs(this.tokens[2], `keyword`, `HANDLER`)) {
+					// DECLARE XX HANDLER FOR....
+					let def: ObjectRef = {
+						object: {name: this.tokens[1].value},
+						tokens: this.tokens.slice(1, 3)
+					}
+
+					def.type = `Handler`;
+					doAdd(def);
+
+				} else
+				if (tokenIs(this.tokens[2], `word`, `PROCEDURE`)) {
+					// DECLARE XX PROCEDURE..
+					
+				} else
+				if (tokenIs(this.tokens[1], `word`, `GLOBAL`) && tokenIs(this.tokens[2], `word`, `TEMPORARY`), tokenIs(this.tokens[3], `word`, `TABLE`)) {
+					// Handle DECLARE GLOBAL TEMP TABLE x.x ()...
+					let def: ObjectRef = this.getRefAtToken(4);
+					def.type = `Temporary Table`;
+					doAdd(def);
 
 				} else
 				if (tokenIs(this.tokens[1], `word`)) {
+					// DECLARE XX TYPE DEFAULT ..
 					let def: ObjectRef = {
 						object: {name: this.tokens[1].value},
 						tokens: this.tokens.slice(1)
 					}
 
 					if (tokenIs(this.tokens[2], `keyword`, `CURSOR`)) {
-						def.type = `CURSOR`;
+						def.type = `Cursor`;
 					} else {
-						def.type = this.tokens.slice(2).map(t => t.value).join(``);
+						let defaultIndex = this.tokens.findIndex(t => tokenIs(t, `keyword`, `DEFAULT`));
+
+						def.type = this.tokens
+							.slice(
+								2, 
+								defaultIndex >= 0 ? defaultIndex : undefined
+							)
+							.map(t => t.value).join(``);
 					}
 
 					doAdd(def);

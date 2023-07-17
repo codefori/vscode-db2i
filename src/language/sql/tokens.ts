@@ -56,7 +56,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `OR`, `REPLACE`, `FROM`, `INTO`, `BEGIN`, `END`, `CURSOR`].includes(value.toUpperCase());
+        return [`AS`, `OR`, `REPLACE`, `FROM`, `INTO`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },
@@ -76,7 +76,7 @@ export default class SQLTokeniser {
       becomes: `newline`,
     },
   ];
-  readonly spaces = [` `];
+  readonly spaces = [`\t`, ` `];
   readonly splitParts: string[] = [`(`, `)`, `/`, `.`, `*`, `-`, `+`, `;`, `"`, `&`, `%`, `,`, `|`, `\n`, `\r`, ...this.spaces];
   readonly types: { [part: string]: string } = {
     '(': `openbracket`,

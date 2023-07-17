@@ -92,27 +92,39 @@ export default class Document {
     let depth = 0;
 
     for (const statement of this.statements) {
-      if (depth > 0) {
-        currentGroup.push(statement);
-
         if (statement.isBlockEnder()) {
-          depth--;
-          groups.push({
-            range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
-            statements: currentGroup
-          })
-        }
-      } else {
+          if (depth > 0) {
+            currentGroup.push(statement);
+              
+            depth--;
+          }
+
+          if (depth === 0) {
+            groups.push({
+              range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
+              statements: currentGroup
+            })
+          }
+        } else
         if (statement.isBlockOpener()) {
+          if (depth > 0) {
+            currentGroup.push(statement);
+          } else {
+            currentGroup = [statement];
+          }
+
           depth++;
-          currentGroup = [statement];
+
         } else {
-          groups.push({
-            range: statement.range,
-            statements: [statement]
-          })
+          if (depth > 0) {
+            currentGroup.push(statement);
+          } else {
+            groups.push({
+              range: statement.range,
+              statements: [statement]
+            });
+          }
         }
-      }
     }
 
     return groups;
