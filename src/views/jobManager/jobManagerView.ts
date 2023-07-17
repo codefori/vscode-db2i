@@ -4,6 +4,8 @@ import { Config, JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
+import { updateStatusBar } from "./statusBar";
+import { TransactionEndType } from "../../connection/sqlJob";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -34,19 +36,49 @@ export class JobManagerView implements TreeDataProvider<any> {
       vscode.commands.registerCommand(`vscode-db2i.jobManager.closeJob`, async (node?: SQLJobItem) => {
         if (node) {
           const id = node.label as string;
-          await JobManager.closeJobByName(id);
-          this.refresh();
+          let selected = JobManager.getJob(id);
+
+          if (selected) {
+
+            if (selected.job.underCommitControl()) {
+              const uncommitted = await selected.job.getPendingTransactions();
+
+              if (uncommitted > 0) {
+                const decision = await vscode.window.showWarningMessage(
+                  `Cannot end job yet`,
+                  {
+                    modal: true,
+                    detail: `You have ${uncommitted} uncommitted change${uncommitted !== 1 ? `s` : ``}.`
+                  },
+                  `Commit and end`,
+                  `Rollback and end`
+                );
+
+                switch (decision) {
+                  case `Commit and end`:
+                    await selected.job.endTransaction(TransactionEndType.COMMIT);
+                    break;
+                  case `Rollback and end`:
+                    await selected.job.endTransaction(TransactionEndType.ROLLBACK);
+                    break;
+                  default:
+                    // Actually... don't end the job
+                    return;
+                }
+              }
+            }
+
+            await JobManager.closeJobByName(id);
+            this.refresh();
+          }
         }
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.viewJobLog`, async (node?: SQLJobItem) => {
-        if (node) {
-          const id = node.label as string;
-          const selected = await JobManager.getJob(id);
-
-          if (selected) {
-            displayJobLog(selected);
-          }
+        const id = node ? node.label as string : undefined;
+        let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected) {
+          displayJobLog(selected);
         }
       }),
 
@@ -63,10 +95,9 @@ export class JobManagerView implements TreeDataProvider<any> {
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.editJobProps`, async (node?: SQLJobItem) => {
-        if (node) {
-          const id = node.label as string;
-          const selected = await JobManager.getJob(id);
-
+        const id = node ? node.label as string : undefined;
+        let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected) {
           editJobUi(selected.job.options, selected.name).then(newOptions => {
             if (newOptions) {
               window.withProgress({location: ProgressLocation.Window}, async (progress) => {
@@ -88,6 +119,40 @@ export class JobManagerView implements TreeDataProvider<any> {
               })
             }
           })
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.jobCommit`, async (node?: SQLJobItem) => {
+        const id = node ? node.label as string : undefined;
+        let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected) {
+          if (selected.job.underCommitControl()) {
+            const result = await selected.job.endTransaction(TransactionEndType.COMMIT);
+            if (!result.success) {
+              vscode.window.showErrorMessage(`Failed to commit.` + result.error);
+            }
+
+            this.refresh();
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.jobRollback`, async (node?: SQLJobItem) => {
+        const id = node ? node.label as string : undefined;
+        let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected) {
+          if (selected.job.underCommitControl()) {
+            try {
+              const result = await selected.job.endTransaction(TransactionEndType.ROLLBACK);
+              if (!result.success) {
+                vscode.window.showErrorMessage(`Failed to rollback. ` + result.error);
+              }
+            } catch (e) {
+              vscode.window.showErrorMessage(`Failed to rollback. ` + e.message);
+            }
+
+            this.refresh();
+          }
         }
       }),
 
@@ -115,6 +180,7 @@ export class JobManagerView implements TreeDataProvider<any> {
 
   refresh() {
     this._onDidChangeTreeData.fire();
+    updateStatusBar();
   }
 
   getTreeItem(element: vscode.TreeItem) {

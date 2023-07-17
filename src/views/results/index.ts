@@ -7,6 +7,7 @@ import * as html from "./html";
 import { getInstance } from "../../base";
 import { JobManager } from "../../config";
 import { Query, QueryState } from "../../connection/query";
+import { updateStatusBar } from "../jobManager/statusBar";
 import Document from "../../language/sql/document";
 
 function delay(t: number, v?: number) {
@@ -61,6 +62,8 @@ class ResultSetPanelProvider {
             isDone: true
           });
         }
+
+        updateStatusBar();
       }
     });
   }
