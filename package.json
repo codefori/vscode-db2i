@@ -50,20 +50,15 @@
     "configuration": {
       "title": "Db2 for IBM i",
       "properties": {
-        "vscode-db2i.validator": {
-          "type": "boolean",
-          "description": "Enable the SQL validator",
-          "default": false
-        },
-        "vscode-db2i.scrollingResultSet": {
-          "type": "boolean",
-          "description": "Enable scrolling result sets for basic SELECT statements.",
-          "default": true
-        },
         "vscode-db2i.pageSize": {
           "type": "number",
           "description": "Page size for Schema browser",
           "default": 500
+        },
+        "vscode-db2i.alwaysStartSQLJob": {
+          "type": "boolean",
+          "description": "If the SQL Server Component is installed, automatically start a new when connected",
+          "default": false
         }
       }
     },
