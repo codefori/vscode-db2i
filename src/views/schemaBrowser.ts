@@ -446,8 +446,6 @@ export default class schemaBrowser {
   }
 }
 
-
-
 class Schema extends vscode.TreeItem {
   schema: string;
   constructor(name: string) {
