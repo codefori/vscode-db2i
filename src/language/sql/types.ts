@@ -8,7 +8,7 @@ export enum StatementType {
 	Update = "Update",
 	Delete = "Delete",
 	Declare = "Declare",
-	Begin = "Being",
+	Begin = "Begin",
 	Drop = "Drop",
 	End = "End",
 	Call = "Call"
@@ -49,9 +49,17 @@ export interface ObjectRef {
   tokens: Token[],
   object: QualifiedObject;
   alias?: string;
+
+	/** only used within create statements */
+	type?: string;
 }
 
 export interface StatementGroup {
 	range: IRange,
 	statements: Statement[]
+}
+
+export interface Definition extends ObjectRef {
+	range: IRange;
+	children: Definition[];
 }
