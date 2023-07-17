@@ -26,7 +26,7 @@ export async function updateStatusBar() {
 
           toolTipItems.push(
             `${pendingsTracts} pending change${pendingsTracts !== 1 ? `s` : ``}.`,
-            `[$(save) Commit](command:vscode-db2i.jobManager.jobCommit) / [$(discard) Revert](command:vscode-db2i.jobManager.jobRollback)`
+            `[$(save) Commit](command:vscode-db2i.jobManager.jobCommit) / [$(discard) Rollback](command:vscode-db2i.jobManager.jobRollback)`
           );
         }
       }
