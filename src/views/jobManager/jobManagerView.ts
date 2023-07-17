@@ -19,7 +19,6 @@ export class JobManagerView implements TreeDataProvider<any> {
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async () => {
-
         await window.withProgress({location: ProgressLocation.Window}, async (progress) => {
           try {
             progress.report({message: `Spinning up SQL job...`});

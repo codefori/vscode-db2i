@@ -4,6 +4,7 @@ import { getInstance } from "./base";
 import { SQLJobManager } from "./connection/manager";
 import { ServerComponent } from "./connection/serverComponent";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
+import Configuration from "./configuration";
 
 interface IBMiLevels {
   version: number;
@@ -22,13 +23,34 @@ export function setupConfig(context: ExtensionContext) {
 
     Config.setConnectionName(instance.getConnection().currentConnectionName);
 
-    const backendSupport = await ServerComponent.initialise();
+    await ServerComponent.initialise().then(installed => {
+      if (installed) {
+        JobManagerView.setVisible(true);
+      }
+    });
 
-    SQLJobManager.jobSupport = backendSupport;
-    JobManagerView.setVisible(true);
+    const didUpdate = ServerComponent.checkForUpdate().then(result => {
+      if (ServerComponent.isInstalled()) {
+        if (Configuration.get(`alwaysStartSQLJob`)) {
+          commands.executeCommand(`vscode-db2i.jobManager.newJob`);
+
+        } else {
+          window.showInformationMessage(`Would you like to start an SQL Job?`, `Yes`, `Always`, `No`).then(async chosen => {
+            if (chosen === `Yes` || chosen === `Always`) {
+              if (chosen === `Always`) {
+                await Configuration.set(`alwaysStartSQLJob`, true);
+              }
+
+              commands.executeCommand(`vscode-db2i.jobManager.newJob`);
+            }
+          });
+        }
+      }
+    });
   });
 
   getInstance().onEvent(`disconnected`, async () => {
+    JobManagerView.setVisible(false);
     await JobManager.endAll();
   });
 }
