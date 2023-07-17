@@ -1,6 +1,6 @@
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-import { IRange, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
+import { Definition, IRange, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
 
 export default class Document {
   statements: Statement[];
@@ -92,30 +92,68 @@ export default class Document {
     let depth = 0;
 
     for (const statement of this.statements) {
-      if (depth > 0) {
-        currentGroup.push(statement);
-
         if (statement.isBlockEnder()) {
-          depth--;
-          groups.push({
-            range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
-            statements: currentGroup
-          })
-        }
-      } else {
+          if (depth > 0) {
+            currentGroup.push(statement);
+              
+            depth--;
+          }
+
+          if (depth === 0) {
+            groups.push({
+              range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
+              statements: currentGroup
+            })
+          }
+        } else
         if (statement.isBlockOpener()) {
+          if (depth > 0) {
+            currentGroup.push(statement);
+          } else {
+            currentGroup = [statement];
+          }
+
           depth++;
-          currentGroup = [statement];
+
         } else {
-          groups.push({
-            range: statement.range,
-            statements: [statement]
-          })
+          if (depth > 0) {
+            currentGroup.push(statement);
+          } else {
+            groups.push({
+              range: statement.range,
+              statements: [statement]
+            });
+          }
+        }
+    }
+
+    return groups;
+  }
+
+  getDefinitions(): Definition[] {
+    const groups = this.getStatementGroups();
+    let list: Definition[] = [];
+
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i];
+
+      if (group.statements.length > 0) {
+        if (group.statements.length === 1) {
+          list.push(...getSymbolsForStatements(group.statements));
+
+        } else {
+          const [baseDef] = getSymbolsForStatements([group.statements[0]]);
+          
+          if (baseDef) {
+            baseDef.children = getSymbolsForStatements(group.statements.slice(1))
+          }
+
+          list.push(baseDef);
         }
       }
     }
 
-    return groups;
+    return list;
   }
 
   getGroupByOffset(offset: number) {
@@ -125,4 +163,28 @@ export default class Document {
       return (offset >= statement.range.start && offset < end) || (i === (groups.length - 1) && offset >= end);
     })
   }
+}
+
+function getSymbolsForStatements(statements: Statement[]) {
+  let defintions: Definition[] = [];
+
+  for (let i = 0; i < statements.length; i++) {
+    const statement = statements[i];
+    const [objectRef] = statement.getObjectReferences();
+
+    switch (statement.type) {
+      case StatementType.Declare:
+      case StatementType.Create:
+        if (objectRef) {
+          defintions.push({
+            ...objectRef,
+            children: [],
+            range: statement.range
+          });
+        }
+        break;
+    }
+  }
+
+  return defintions;
 }
