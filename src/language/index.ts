@@ -2,8 +2,7 @@ import { CompletionItem, CompletionItemKind, languages } from "vscode";
 import Database from "../database/schemas";
 import Table from "../database/table";
 import Document from "./sql/document";
-import { ObjectRef } from "./sql/types";
-import Statement from "../database/statement";
+import { sqlSymbolProvider } from "./providers/definitionProvider";
 
 function createCompletionItem(
   name: string,
@@ -84,6 +83,7 @@ export function languageInit() {
   let functionality = [];
 
   functionality.push(
+    languages.registerDocumentSymbolProvider(`sql`, sqlSymbolProvider),
     languages.registerCompletionItemProvider(
       `sql`,
       {
