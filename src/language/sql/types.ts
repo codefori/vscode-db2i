@@ -49,6 +49,9 @@ export interface ObjectRef {
   tokens: Token[],
   object: QualifiedObject;
   alias?: string;
+
+	/** only used within create statements */
+	type?: string;
 }
 
 export interface StatementGroup {

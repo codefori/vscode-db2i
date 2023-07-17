@@ -117,6 +117,44 @@ export default class Statement {
 					}
 				}
 				break;
+			case StatementType.Create:
+				let object: ObjectRef;
+
+				if (tokenIs(this.tokens[1], `keyword`, `OR`) && tokenIs(this.tokens[2], `keyword`, `REPLACE`)) {
+					object = this.getRefAtToken(4);
+					if (object) {
+						object.type = this.tokens[3].value;
+					}
+				} else {
+					object = this.getRefAtToken(2);
+					if (object) {
+						object.type = this.tokens[3].value
+					}
+				}
+
+				doAdd(object);
+				break;
+
+			case StatementType.Declare:
+				if (tokenIs(this.tokens[1], `word`, `GLOBAL`)) {
+					// Handle DECLARE GLOBAL TEMP TABLE...
+
+				} else
+				if (tokenIs(this.tokens[1], `word`)) {
+					let def: ObjectRef = {
+						object: {name: this.tokens[1].value},
+						tokens: this.tokens.slice(1)
+					}
+
+					if (tokenIs(this.tokens[2], `keyword`, `CURSOR`)) {
+						def.type = `CURSOR`;
+					} else {
+						def.type = this.tokens.slice(2).map(t => t.value).join(``);
+					}
+
+					doAdd(def);
+				}
+				break;
 		}
 
 		return list;

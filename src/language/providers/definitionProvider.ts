@@ -41,6 +41,7 @@ function getSymbolsForStatements(document: TextDocument, statements: Statement[]
 
   for (let i = 0; i < statements.length; i++) {
     const statement = statements[i];
+    const [objectRef] = statement.getObjectReferences();
 
     const statementRange = new Range(
       document.positionAt(statement.range.start),
@@ -49,11 +50,27 @@ function getSymbolsForStatements(document: TextDocument, statements: Statement[]
 
     switch (statement.type) {
       case StatementType.Create:
-        defintions.push(new DocumentSymbol(statement.type, `Cool`, SymbolKind.File, statementRange, statementRange))
+        if (objectRef) {
+          defintions.push(new DocumentSymbol(
+            objectRef.object.name || statement.type, 
+            objectRef.type, 
+            SymbolKind.File, // TODO: change kind based on object type?
+            statementRange, 
+            statementRange
+          ));
+        }
         break;
 
       case StatementType.Declare:
-        defintions.push(new DocumentSymbol(statement.type, `Cool`, SymbolKind.Variable, statementRange, statementRange))
+        if (objectRef) {
+          defintions.push(new DocumentSymbol(
+            objectRef.object.name || statement.type, 
+            objectRef.type, 
+            SymbolKind.Variable, // TODO: change kind based on object type?
+            statementRange, 
+            statementRange
+          ))
+        }
         break;
     }
   }
