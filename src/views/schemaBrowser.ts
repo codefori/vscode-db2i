@@ -74,14 +74,14 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.removeSchemaFromSchemaBrowser`, async (node) => {
+      vscode.commands.registerCommand(`vscode-db2i.removeSchemaFromSchemaBrowser`, async (node: SchemaItem) => {
         if (node) {
           //Running from right click
           const config = getInstance().getConfig();
 
           let schemas = config[`databaseBrowserList`];
 
-          let index = schemas.findIndex(file => file.toUpperCase() === node.schema)
+          let index = schemas.findIndex(file => file.toUpperCase() === node.label)
           if (index >= 0) {
             schemas.splice(index, 1);
           }
