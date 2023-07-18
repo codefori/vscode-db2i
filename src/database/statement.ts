@@ -54,9 +54,15 @@ export default class Statement {
    */
   static prettyName(name: string) {
       // If the name contains characters other than the valid variants, uppercase, digits, or underscores, it must be delimited
-      if (!Statement.validQsysName(name)) return `"${name}"`;
-      // The name should already be uppercase coming from the catalog so just return it
-      return name.toLocaleLowerCase();
+      if (Statement.validQsysName(name)) return name.toLowerCase();
+      else {
+        // Delimited name
+        if (name.includes(` `) || name.includes(`.`) || name !== name.toUpperCase()) {
+          return `"${name}"`;
+        } else {
+          return name.toLowerCase();
+        }
+      }
   }
 
   static noQuotes(name: string) {
