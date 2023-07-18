@@ -7,9 +7,9 @@ import { JobsSuite } from "./jobs";
 import { DatabaseSuite } from "./database";
 
 const suites : TestSuite[] = [
+  JobsSuite,
+  ManagerSuite,
   DatabaseSuite,
-  // JobsSuite,
-  // ManagerSuite
 ]
 
 export type TestSuite = {
