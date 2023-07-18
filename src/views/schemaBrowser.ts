@@ -81,7 +81,7 @@ export default class schemaBrowser {
 
           let schemas = config[`databaseBrowserList`];
 
-          let index = schemas.findIndex(file => file.toUpperCase() === node.label)
+          let index = schemas.findIndex(file => file === node.label)
           if (index >= 0) {
             schemas.splice(index, 1);
           }
