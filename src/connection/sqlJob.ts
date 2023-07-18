@@ -3,54 +3,86 @@ import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions } from "./types";
 import { Query } from "./query";
+import { EventEmitter } from "stream";
 
 export enum JobStatus {
   NotStarted = "notStarted",
   Ready = "ready",
-  Busy = "busy",
+  Active = "active",
   Ended = "ended"
 }
 
+export enum TransactionEndType {
+  COMMIT,
+  ROLLBACK
+}
+
+interface ReqRespFmt {
+  id: string
+};
+
+const TransactionCountQuery = [
+  `select count(*) as thecount`,
+  `  from qsys2.db_transaction_info`,
+  `  where JOB_NAME = qsys2.job_name and`,
+  `    (local_record_changes_pending = 'YES' or local_object_changes_pending = 'YES')`,
+].join(`\n`);
+
 export class SQLJob {
 
+  private static uniqueIdCounter: number = 0;
   private channel: any;
+  private responseEmitter: EventEmitter = new EventEmitter();
   private status: JobStatus = JobStatus.NotStarted;
+  private isTracingChannelData: boolean = false;
 
   id: string | undefined;
-  constructor(public options: JDBCOptions = {}) {}
 
-  private static async getChannel() {
+
+  public static getNewUniqueRequestId(prefix: string = `sqljob`): string {
+    return prefix + (++SQLJob.uniqueIdCounter);
+  }
+
+  constructor(public options: JDBCOptions = {}) {}
+  private async getChannel() {
     const instance = getInstance();
     const connection = instance.getConnection();
     return new Promise((resolve, reject) => {
       connection.client.connection.exec(ServerComponent.getInitCommand() + ` && exit`, {}, (err: any, stream: any) => {
-        if (err) reject(err);
+        if (err)
+          reject(err);
+        let outString = ``;
+        stream.on(`data`, (data: Buffer) => {
+          outString += String(data);
+          if (outString.endsWith(`\n`)) {
+            let thisMsg = outString;
+            outString = ``;
+            if (this.isTracingChannelData) ServerComponent.writeOutput(thisMsg);
+            try {
+              let response: ReqRespFmt = JSON.parse(thisMsg);
+              this.responseEmitter.emit(response.id, thisMsg);
+            } catch (e: any) {
+              console.log(`Error: ` + e);
+              outString = ``;
+            }
+          }
+        });
         resolve(stream);
       })
     })
   }
 
   async send(content: string): Promise<string> {
-    if (this.status === JobStatus.Ready) {
-      this.status = JobStatus.Busy;
-      ServerComponent.writeOutput(content);
-      return new Promise((resolve, reject) => {
-        this.channel.stdin.write(content + `\n`);
-
-        let outString = ``;
-        this.channel.stdout.on(`data`, (data: Buffer) => {
-          outString += String(data);
-          if (outString.endsWith(`\n`)) {
-            this.status = JobStatus.Ready;
-            this.channel.stdout.removeAllListeners(`data`);
-            ServerComponent.writeOutput(outString);
-            resolve(outString);
-          }
-        });
+    if (this.isTracingChannelData) ServerComponent.writeOutput(content);
+    let req: ReqRespFmt = JSON.parse(content);
+    this.channel.stdin.write(content + `\n`);
+    this.status = JobStatus.Active;
+    return new Promise((resolve, reject) => {
+      this.responseEmitter.on(req.id, (x: string) => {
+        this.responseEmitter.removeAllListeners(req.id);
+        resolve(x);
       });
-    } else {
-      throw new Error(`Job is currently busy.`);
-    }
+    });
   }
 
   getStatus() {
@@ -58,7 +90,7 @@ export class SQLJob {
   }
 
   async connect(): Promise<ConnectionResult> {
-    this.channel = await SQLJob.getChannel();
+    this.channel = await this.getChannel();
 
     this.status = JobStatus.Ready;
 
@@ -74,7 +106,7 @@ export class SQLJob {
       .join(`;`)
 
     const connectionObject = {
-      id: `boop`,
+      id: SQLJob.getNewUniqueRequestId(),
       type: `connect`,
       props: props.length > 0 ? props : undefined
     }
@@ -96,7 +128,6 @@ export class SQLJob {
     this.channel.on(`close`, () => {
       this.dispose();
     })
-
     this.id = connectResult.job;
     this.status = JobStatus.Ready;
 
@@ -108,7 +139,7 @@ export class SQLJob {
 
   async getVersion(): Promise<VersionCheckResult> {
     const verObj = {
-      id: `boop`,
+      id: SQLJob.getNewUniqueRequestId(),
       type: `getversion`
     };
 
@@ -124,7 +155,7 @@ export class SQLJob {
   }
   async getTraceData(): Promise<GetTraceDataResult> {
     const tracedataReqObj = {
-      id: `boop`,
+      id: SQLJob.getNewUniqueRequestId(),
       type: `gettracedata`
     };
 
@@ -140,7 +171,7 @@ export class SQLJob {
   //TODO: add/modify this API to allow manipulation of JTOpen tracing, and add tests
   async setTraceConfig(dest: ServerTraceDest, level: ServerTraceLevel): Promise<SetConfigResult> {
     const reqObj = {
-      id: `boop`,
+      id: SQLJob.getNewUniqueRequestId(),
       type: `setconfig`,
       tracedest: dest,
       tracelevel: level
@@ -163,9 +194,32 @@ export class SQLJob {
   getJobLog(): Promise<QueryResult<JobLogEntry>> {
     return this.query<JobLogEntry>(`select * from table(qsys2.joblog_info('*')) a`).run();
   }
+
+  underCommitControl() {
+    return this.options["transaction isolation"] !== `none`;
+  }
+
+  async getPendingTransactions() {
+    const rows = await this.query<{THECOUNT: number}>(TransactionCountQuery).run(1);
+
+    if (rows.success && rows.data && rows.data.length === 1 && rows.data[0].THECOUNT) return rows.data[0].THECOUNT;
+    return 0;
+  }
+
+  async endTransaction(type: TransactionEndType) {
+    let query;
+    switch (type) {
+      case TransactionEndType.COMMIT: query = `COMMIT`; break;
+      case TransactionEndType.ROLLBACK: query = `ROLLBACK`; break;
+      default: throw new Error(`TransactionEndType ${type} not valid`);
+    }
+
+    return this.query<JobLogEntry>(query).run();
+  }
+  
   async close() {
     const exitObject = {
-      id: `boop`,
+      id: SQLJob.getNewUniqueRequestId(),
       type: `exit`
     };
 

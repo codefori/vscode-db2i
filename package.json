@@ -50,20 +50,15 @@
     "configuration": {
       "title": "Db2 for IBM i",
       "properties": {
-        "vscode-db2i.validator": {
-          "type": "boolean",
-          "description": "Enable the SQL validator",
-          "default": false
-        },
-        "vscode-db2i.scrollingResultSet": {
-          "type": "boolean",
-          "description": "Enable scrolling result sets for basic SELECT statements.",
-          "default": true
-        },
         "vscode-db2i.pageSize": {
           "type": "number",
           "description": "Page size for Schema browser",
           "default": 500
+        },
+        "vscode-db2i.alwaysStartSQLJob": {
+          "type": "boolean",
+          "description": "If the SQL Server Component is installed, automatically start a new when connected",
+          "default": false
         }
       }
     },
@@ -284,7 +279,7 @@
       },
       {
         "command": "vscode-db2i.jobManager.copyJobId",
-        "title": "Copy Job ID",
+        "title": "Copy Job Name",
         "category": "Db2 for i",
         "icon": "$(keyboard)"
       },
@@ -471,7 +466,7 @@
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",
-    "test": "node ./test/runTest.js",
+    "language:test": "vitest",
     "package": "vsce package",
     "vscode:prepublish": "webpack --mode production",
     "webpack": "webpack --mode development",
@@ -485,14 +480,15 @@
     "esbuild-loader": "^3.0.1",
     "eslint": "^7.32.0",
     "glob": "^7.1.7",
+    "raw-loader": "^4.0.2",
     "ts-loader": "^9.3.1",
     "typescript": "^4.3.2",
+    "vitest": "^0.33.0",
     "vscode-test": "^1.5.2",
     "webpack": "^5.24.3",
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
-    "@vscode/webview-ui-toolkit": "^1.2.0",
     "csv": "^6.1.3",
     "node-fetch": "^3.3.1",
     "octokit": "^2.0.14",
