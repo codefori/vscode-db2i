@@ -29,7 +29,7 @@ export enum ServerTraceDest {
   IN_MEM = "IN_MEM"
 }
 export interface QueryOptions {
-  isClCommand: boolean,
+  isClCommand?: boolean,
   parameters?: any[]
 }
 export interface SetConfigResult extends ServerResponse {

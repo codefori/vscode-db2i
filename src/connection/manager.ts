@@ -88,13 +88,13 @@ export class SQLJobManager {
     return (this.selectedJob >= 0);
   }
 
-  async runSQL<T>(query: string): Promise<T[]> {
+  async runSQL<T>(query: string, parameters: any[] = []): Promise<T[]> {
     const selected = this.jobs[this.selectedJob]
     if (ServerComponent.isInstalled() && selected) {
       // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
       // int. This is the largest number available without overflow (Integer.MAX_VALUE)
       const rowsToFetch = 2147483647;
-      const results = await selected.job.query<T>(query).run(rowsToFetch);
+      const results = await selected.job.query<T>(query, {parameters}).run(rowsToFetch);
       return results.data;
     } else {
       const instance = getInstance();
