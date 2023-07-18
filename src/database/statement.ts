@@ -48,6 +48,17 @@ export default class Statement {
     }
   }
 
+  /**
+   * Converts a catalog name to a pretty name for UI purposes
+   * @param name Catalog name
+   */
+  static prettyName(name: string) {
+      // If the name contains characters other than the valid variants, uppercase, digits, or underscores, it must be delimited
+      if (!Statement.validQsysName(name)) return `"${name}"`;
+      // The name should already be uppercase coming from the catalog so just return it
+      return name.toLocaleLowerCase();
+  }
+
   static noQuotes(name: string) {
     if (name.startsWith(`"`) && name.endsWith(`"`)) return name.substring(1, name.length-1);
     return name;
