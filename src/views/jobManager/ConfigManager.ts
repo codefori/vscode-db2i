@@ -74,7 +74,18 @@ export class ConfigManager {
           await this.deleteConfig(configNode.name);
           this.refresh();
         }
-      })
+      }),
+
+      // Currently not accessible from the UI
+      commands.registerCommand(`vscode-db2i.jobManager.setAsStartupConfig`, async (configNode: SavedConfig) => {
+        if (configNode && configNode.name) {
+          window.showWarningMessage(`This will attempt to startup ${configNode.name} automatically when you connect to any system. Do you want to continue?`, `Absolutely`, `Cancel`).then(chosen => {
+            if (chosen === `Absolutely`) {
+              Configuration.set(`alwaysStartSQLJob`, configNode.name);
+            }
+          })
+        }
+      }),
     ]
   }
 
@@ -96,7 +107,7 @@ export class ConfigManager {
     return Configuration.get<JobConfigs>(`jobConfigs`);
   }
 
-  private static getConfig(name: string): JDBCOptions | undefined {
+  static getConfig(name: string): JDBCOptions | undefined {
     return this.getSavedConfigs()[name];
   }
 
