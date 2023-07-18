@@ -6,6 +6,7 @@ import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
 import { updateStatusBar } from "./statusBar";
 import { TransactionEndType } from "../../connection/sqlJob";
+import { ConfigGroup, ConfigManager } from "./ConfigManager";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -20,6 +21,8 @@ export class JobManagerView implements TreeDataProvider<any> {
         this.refresh();
       }),
 
+      ...ConfigManager.initialiseSaveCommands(),
+
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async () => {
         await window.withProgress({location: ProgressLocation.Window}, async (progress) => {
           try {
@@ -28,9 +31,9 @@ export class JobManagerView implements TreeDataProvider<any> {
           } catch (e) {
             window.showErrorMessage(e.message);
           }
-        });
 
-        this.refresh();
+          this.refresh();
+        });
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.closeJob`, async (node?: SQLJobItem) => {
@@ -187,14 +190,26 @@ export class JobManagerView implements TreeDataProvider<any> {
     return element;
   }
 
-  async getChildren(): Promise<SQLJobItem[]> {
-    return JobManager
-      .getRunningJobs()
-      .map((info, index) => new SQLJobItem(info, index === JobManager.selectedJob));
+  async getChildren(element: ConfigGroup): Promise<SQLJobItem[]> {
+    if (element) {
+      return ConfigManager.getConfigTreeItems();
+      
+    } else {
+      let nodes = 
+        JobManager
+          .getRunningJobs()
+          .map((info, index) => new SQLJobItem(info, index === JobManager.selectedJob));
+
+      if (ConfigManager.hasSavedItems()) {
+        nodes.push(new ConfigGroup());
+      }
+      
+      return nodes;
+    }
   }
 }
 
-class SQLJobItem extends vscode.TreeItem {
+export class SQLJobItem extends vscode.TreeItem {
   constructor(jobInfo: JobInfo, active: boolean = false) {
     super(jobInfo.name, TreeItemCollapsibleState.None);
 
