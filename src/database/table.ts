@@ -6,14 +6,11 @@ import Statement from "./statement";
 
 export default class Table {
   /**
-   * @param {string} schema 
-   * @param {string} name 
+   * @param {string} schema Not user input
+   * @param {string} name Not user input
    * @returns {Promise<TableColumn[]>}
    */
   static async getItems(schema: string, name: string): Promise<TableColumn[]> {
-    schema = Statement.noQuotes(Statement.delimName(schema, true));
-    name = Statement.noQuotes(Statement.delimName(name, true));
-    
     const sql = [
       `SELECT `,
       `  column.COLUMN_NAME,`,
@@ -40,16 +37,17 @@ export default class Table {
     return JobManager.runSQL(sql);
   }
 
+  /**
+   * @param schema Not user input
+   * @param name Not user input
+   */
   static clearAdvisedIndexes(schema: string, name: string) {
-    schema = Statement.noQuotes(Statement.delimName(schema, true));
-    name = Statement.noQuotes(Statement.delimName(name, true));
-
     const query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
     return getInstance().getContent().runSQL(query);
   }
 
-  static async clearFile(schema: string, name: string): Promise<void> {
-    const command = `CLRPFM ${schema}/${name}`;
+  static async clearFile(library: string, objectName: string): Promise<void> {
+    const command = `CLRPFM ${library}/${objectName}`;
               
     const commandResult = await getInstance().getConnection().runCommand({
       command: command,
@@ -61,9 +59,9 @@ export default class Table {
     }
   }
 
-  static async copyFile(schema: string, name: string, options: CPYFOptions): Promise<void> {
+  static async copyFile(library: string, objectName: string, options: CPYFOptions): Promise<void> {
     const command = [
-      `CPYF FROMFILE(${schema}/${name}) TOFILE(${options.toLib}/${options.toFile})`,
+      `CPYF FROMFILE(${library}/${objectName}) TOFILE(${options.toLib}/${options.toFile})`,
       `FROMMBR(${options.fromMbr}) TOMBR(${options.toMbr}) MBROPT(${options.mbrOpt})`,
       `CRTFILE(${options.crtFile}) OUTFMT(${options.outFmt})`
     ].join(` `);

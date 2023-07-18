@@ -9,7 +9,7 @@ export const JobsSuite: TestSuite = {
   name: `Connection tests`,
   tests: [
     {name: `Backend check`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      const backendInstalled = await ServerComponent.initialise();
   
       // To run these tests, we need the backend server. If this test fails. Don't bother
       assert.strictEqual(backendInstalled, true);

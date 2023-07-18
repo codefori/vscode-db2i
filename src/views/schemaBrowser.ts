@@ -466,7 +466,7 @@ class SchemaItem extends vscode.TreeItem {
     super(name, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.contextValue = type;
-    this.schema = schema;
+    this.schema = Statement.noQuotes(Statement.delimName(schema, true));
     if (icon) this.iconPath = new vscode.ThemeIcon(icon);
   }
 }

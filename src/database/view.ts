@@ -5,9 +5,6 @@ import Statement from "./statement";
 
 export default class View {
   static getColumns(schema: string, name: string): Promise<TableColumn[]> {
-    schema = Statement.noQuotes(Statement.delimName(schema, true));
-    name = Statement.noQuotes(Statement.delimName(name, true));
-    
     return JobManager.runSQL([
       `SELECT * FROM QSYS2.SYSCOLUMNS`,
       `WHERE TABLE_SCHEMA = '${schema}' AND TABLE_NAME = '${name}'`,

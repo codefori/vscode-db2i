@@ -14,10 +14,10 @@ const typeMap = {
 };
 
 export default class Database {
+  /**
+   * @param schema Not user input
+   */
   static async getObjects(schema: string, type: SQLType, details: PageData = {}): Promise<BasicSQLObject[]> {
-    // The database doesn't store the object name with the quotes.
-    schema = Statement.noQuotes(Statement.delimName(schema, true));
-
     let objects;
 
     switch (type) {
@@ -130,10 +130,11 @@ export default class Database {
     }));
   }
 
+  /**
+   * @param schema Not user input
+   * @param object Not user input
+   */
   static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
-    schema = Statement.noQuotes(Statement.delimName(schema, true));
-    object = Statement.noQuotes(Statement.delimName(object, true));
-
     const lines = await JobManager.runSQL<{SRCDTA: string}>([
       `CALL QSYS2.GENERATE_SQL('${object}', '${schema}', '${internalType}', CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
     ].join(` `));
