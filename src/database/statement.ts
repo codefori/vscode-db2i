@@ -42,9 +42,14 @@ export default class Statement {
       return name.toUpperCase();
     } else { // The name came from a catalog file query
       // If the name contains characters other than the valid variants, uppercase, digits, or underscores, it must be delimited
-      if (!Statement.validQsysName(name)) return `"${name}"`;
-      // The name should already be uppercase coming from the catalog so just return it
-      return name;
+      if (Statement.validQsysName(name)) return name;
+      else {
+        if (name.includes(` `) || name.includes(`.`) || name !== name.toUpperCase()) {
+          return `"${name}"`;
+        } else {
+          return name;
+        }
+      }
     }
   }
 

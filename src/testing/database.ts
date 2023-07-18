@@ -44,7 +44,7 @@ export const DatabaseSuite: TestSuite = {
 
       // Name from system
       const longNameSystem = Statement.delimName(`CREATE_SQL_SAMPLE`);
-      assert.strictEqual(longNameSystem, `"CREATE_SQL_SAMPLE"`);
+      assert.strictEqual(longNameSystem, `CREATE_SQL_SAMPLE`);
     }},
 
     {name: `Create environment`, test: async () => {
