@@ -36,7 +36,7 @@ export class SQLJobManager {
         this.totalJobs += 1;
 
         this.jobs.push({
-          name: name || `New job ${this.totalJobs}`,
+          name: `${name || 'New job'} ${this.totalJobs}`,
           job: newJob
         });
 
