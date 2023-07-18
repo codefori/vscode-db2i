@@ -4,6 +4,7 @@ import { JDBCOptions } from "../../connection/types";
 import { SQLJobItem } from "./jobManagerView";
 import { JobManager } from "../../config";
 import { SQLJob } from "../../connection/sqlJob";
+import { editJobUi } from "./editJob";
 
 interface JobConfigs {
   [name: string]: JDBCOptions
@@ -36,30 +37,43 @@ export class ConfigManager {
           }
         }
       }),
-  
+
       commands.registerCommand(`vscode-db2i.jobManager.startJobFromConfig`, async (name: string) => {
         const options = this.getConfig(name);
 
         if (options) {
-          await window.withProgress({location: ProgressLocation.Window}, async (progress) => {
+          await window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
             try {
-              progress.report({message: `Spinning up SQL job...`});
+              progress.report({ message: `Spinning up SQL job...` });
               await JobManager.newJob(new SQLJob(options), name);
             } catch (e) {
               window.showErrorMessage(e.message);
             }
-            
+
             this.refresh();
           });
         }
       }),
 
-      commands.registerCommand(`vscode-db2i.jobManager.editConfig`, async (name: string) => {
-  
+      commands.registerCommand(`vscode-db2i.jobManager.editConfig`, (configNode: SavedConfig) => {
+        if (configNode && configNode.name) {
+          const options = this.getConfig(configNode.name);
+
+          if (options) {
+            editJobUi(options, configNode.name).then(newOptions => {
+              if (newOptions) {
+                this.storeConfig(configNode.name, options);
+              }
+            })
+          }
+        }
       }),
 
-      commands.registerCommand(`vscode-db2i.jobManager.deleteConfig`, async (name: string) => {
-  
+      commands.registerCommand(`vscode-db2i.jobManager.deleteConfig`, async (configNode: SavedConfig) => {
+        if (configNode && configNode.name) {
+          await this.deleteConfig(configNode.name);
+          this.refresh();
+        }
       })
     ]
   }
@@ -82,7 +96,7 @@ export class ConfigManager {
     return Configuration.get<JobConfigs>(`jobConfigs`);
   }
 
-  private static getConfig(name: string): JDBCOptions|undefined {
+  private static getConfig(name: string): JDBCOptions | undefined {
     return this.getSavedConfigs()[name];
   }
 
@@ -91,15 +105,15 @@ export class ConfigManager {
       ...ConfigManager.getSavedConfigs(),
       [name]: options
     };
-  
+
     return Configuration.set(`jobConfigs`, configs);
   }
 
   private static deleteConfig(name: string) {
     let configs = ConfigManager.getSavedConfigs();
-  
-    delete configs[name];
-  
+
+    configs[name] = undefined;
+
     return Configuration.set(`jobConfigs`, configs);
   };
 }
