@@ -305,13 +305,13 @@
         "command": "vscode-db2i.jobManager.editConfig",
         "title": "Edit configuration",
         "category": "Db2 for i",
-        "icon": "$(save)"
+        "icon": "$(edit)"
       },
       {
         "command": "vscode-db2i.jobManager.deleteConfig",
         "title": "Delete configuration",
         "category": "Db2 for i",
-        "icon": "$(save)"
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -504,12 +504,12 @@
         {
           "command": "vscode-db2i.jobManager.editConfig",
           "when": "view == jobManager && viewItem == savedConfig",
-          "group": "config@1"
+          "group": "inline"
         },
         {
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "view == jobManager && viewItem == savedConfig",
-          "group": "config@2"
+          "group": "inline"
         }
       ]
     }
