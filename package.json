@@ -56,9 +56,15 @@
           "default": 500
         },
         "vscode-db2i.alwaysStartSQLJob": {
-          "type": "boolean",
-          "description": "If the SQL Server Component is installed, automatically start a new when connected",
-          "default": false
+          "type": "string",
+          "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",
+          "default": "ask"
+        },
+        "vscode-db2i.jobConfigs": {
+          "type": "object",
+          "description": "Saved configs for",
+          "default": {},
+          "additionalProperties": true
         }
       }
     },
@@ -288,6 +294,24 @@
         "title": "View Job Log",
         "category": "Db2 for i",
         "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.newConfig",
+        "title": "Save settings to config",
+        "category": "Db2 for i",
+        "icon": "$(save)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editConfig",
+        "title": "Edit configuration",
+        "category": "Db2 for i",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.deleteConfig",
+        "title": "Delete configuration",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -310,6 +334,18 @@
         },
         {
           "command": "vscode-db2i.jobManager.viewJobLog",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "never"
         }
       ],
@@ -458,6 +494,21 @@
         {
           "command": "vscode-db2i.jobManager.viewJobLog",
           "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newConfig",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "config@1"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "view == jobManager && viewItem == savedConfig",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.deleteConfig",
+          "when": "view == jobManager && viewItem == savedConfig",
           "group": "inline"
         }
       ]

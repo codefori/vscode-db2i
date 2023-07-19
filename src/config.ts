@@ -5,6 +5,7 @@ import { SQLJobManager } from "./connection/manager";
 import { ServerComponent } from "./connection/serverComponent";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import Configuration from "./configuration";
+import { ConfigManager } from "./views/jobManager/ConfigManager";
 
 interface IBMiLevels {
   version: number;
@@ -31,19 +32,36 @@ export function setupConfig(context: ExtensionContext) {
 
     const didUpdate = ServerComponent.checkForUpdate().then(result => {
       if (ServerComponent.isInstalled()) {
-        if (Configuration.get(`alwaysStartSQLJob`)) {
-          commands.executeCommand(`vscode-db2i.jobManager.newJob`);
+        let newJob = Configuration.get<string>(`alwaysStartSQLJob`) || `ask`;
+        if (typeof newJob !== `string`) newJob = `ask`; //For legacy settings where it used to be a boolean
 
-        } else {
-          window.showInformationMessage(`Would you like to start an SQL Job?`, `Yes`, `Always`, `No`).then(async chosen => {
-            if (chosen === `Yes` || chosen === `Always`) {
-              if (chosen === `Always`) {
-                await Configuration.set(`alwaysStartSQLJob`, true);
+        switch (newJob) {
+          case `ask`:
+            window.showInformationMessage(`Would you like to start an SQL Job?`, `Yes`, `Always`, `No`).then(async chosen => {
+              if (chosen === `Yes` || chosen === `Always`) {
+                if (chosen === `Always`) {
+                  await Configuration.set(`alwaysStartSQLJob`, `new`);
+                }
+  
+                commands.executeCommand(`vscode-db2i.jobManager.newJob`);
               }
+            });
+            break;
 
+          case `new`:
+            commands.executeCommand(`vscode-db2i.jobManager.newJob`);
+            break;
+
+          case `never`:
+            break;
+
+          default:
+            if (ConfigManager.getConfig(newJob)) {
+              commands.executeCommand(`vscode-db2i.jobManager.startJobFromConfig`, newJob);
+            } else {
               commands.executeCommand(`vscode-db2i.jobManager.newJob`);
             }
-          });
+            break;
         }
       }
     });

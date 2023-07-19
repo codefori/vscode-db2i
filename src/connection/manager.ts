@@ -16,7 +16,7 @@ export class SQLJobManager {
 
   constructor() {}
 
-  async newJob(predefinedJob?: SQLJob) {
+  async newJob(predefinedJob?: SQLJob, name?: string) {
     if (ServerComponent.isInstalled()) {
       const instance = getInstance();
       const config = instance.getConfig();
@@ -36,7 +36,7 @@ export class SQLJobManager {
         this.totalJobs += 1;
 
         this.jobs.push({
-          name: `New job ${this.totalJobs}`,
+          name: `${name || 'New job'} ${this.totalJobs}`,
           job: newJob
         });
 
