@@ -1,5 +1,6 @@
 
 import vscode from "vscode";
+import Statement from "../../database/statement";
 
 export default class ColumnTreeItem extends vscode.TreeItem {
   schema: string;
@@ -7,7 +8,7 @@ export default class ColumnTreeItem extends vscode.TreeItem {
   name: string;
 
   constructor(schema: string, table: string, data: TableColumn) {
-    super(data.COLUMN_NAME.toLowerCase(), vscode.TreeItemCollapsibleState.None);
+    super(Statement.prettyName(data.COLUMN_NAME), vscode.TreeItemCollapsibleState.None);
 
     this.contextValue = `column`;
     this.schema = schema;

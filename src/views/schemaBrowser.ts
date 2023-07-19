@@ -8,6 +8,7 @@ import { fetchSystemInfo } from "../config";
 import Configuration from "../configuration";
 
 import Types from "./types";
+import Statement from "../database/statement";
 
 const viewItem = {
   "tables": `table`,
@@ -65,22 +66,22 @@ export default class schemaBrowser {
           prompt: `Library to add to Database Browser`
         });
 
-        if (newSchema && !schemas.includes(newSchema.toUpperCase())) {
-          schemas.push(newSchema.toUpperCase());
+        if (newSchema && !schemas.includes(newSchema)) {
+          schemas.push(newSchema);
           config[`databaseBrowserList`] = schemas;
           await getInstance().setConfig(config);
           this.refresh();
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.removeSchemaFromSchemaBrowser`, async (node) => {
+      vscode.commands.registerCommand(`vscode-db2i.removeSchemaFromSchemaBrowser`, async (node: SchemaItem) => {
         if (node) {
           //Running from right click
           const config = getInstance().getConfig();
 
           let schemas = config[`databaseBrowserList`];
 
-          let index = schemas.findIndex(file => file.toUpperCase() === node.schema)
+          let index = schemas.findIndex(file => file === node.label)
           if (index >= 0) {
             schemas.splice(index, 1);
           }
@@ -302,7 +303,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getResultSet`, async (object) => {
         if (object && object instanceof SQLObject) {
-          const content = `SELECT * FROM ${object.schema}.${object.name} as a`;
+          const content = `SELECT * FROM ${Statement.delimName(object.schema)}.${Statement.delimName(object.name)} as a`;
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             type: `statement`,
@@ -449,7 +450,7 @@ export default class schemaBrowser {
 class Schema extends vscode.TreeItem {
   schema: string;
   constructor(name: string) {
-    super(name.toLowerCase(), vscode.TreeItemCollapsibleState.Collapsed);
+    super(name, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.contextValue = `schema`;
     this.schema = name;
@@ -463,7 +464,7 @@ class SchemaItem extends vscode.TreeItem {
     super(name, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.contextValue = type;
-    this.schema = schema;
+    this.schema = Statement.noQuotes(Statement.delimName(schema, true));
     if (icon) this.iconPath = new vscode.ThemeIcon(icon);
   }
 }
@@ -480,7 +481,7 @@ class SQLObject extends vscode.TreeItem {
 
   constructor(item: BasicSQLObject) {
     const type = viewItem[item.type];
-    super(item.name.toLowerCase(), Types[type] ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+    super(Statement.prettyName(item.name), Types[type] ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 
     this.contextValue = type;
     this.path = `${item.schema}.${item.name}`;
