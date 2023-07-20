@@ -15,6 +15,14 @@ const octokit = new Octokit();
 
 const ExecutablePathDir = `$HOME/.vscode/`;
 
+export enum UpdateStatus {
+  FAILED,
+  NONE_AVAILABLE,
+  UP_TO_DATE,
+  DECLINED_UPDATE,
+  JUST_UPDATED,
+}
+
 export class ServerComponent {
   private static installed: boolean = false;
   static outputChannel: OutputChannel;
@@ -61,7 +69,7 @@ export class ServerComponent {
     return;
   }
 
-  static async initialise(withUpdate = true): Promise<boolean> {
+  static async initialise(): Promise<boolean> {
     const instance = getInstance();
     const connection = instance.getConnection();
 
@@ -71,16 +79,14 @@ export class ServerComponent {
 
     this.installed = (exists.code === 0);
 
-    if (withUpdate)
-      this.checkForUpdate();
-
     return this.installed;
   }
 
   /**
    * Returns whether server component is installed.
    */
-  private static async checkForUpdate() {
+  public static async checkForUpdate(): Promise<UpdateStatus> {
+    let updateResult: UpdateStatus = UpdateStatus.NONE_AVAILABLE;
     const instance = getInstance();
     const connection = instance.getConnection();
 
@@ -127,26 +133,33 @@ export class ServerComponent {
               await Config.setServerComponentName(basename);
 
               window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
-              JobManagerView.setVisible(true);
+              this.installed = true;
+              updateResult = UpdateStatus.JUST_UPDATED;
               
             } else {
+              updateResult = UpdateStatus.FAILED;
               window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`);
             }
+          } else {
+            updateResult = UpdateStatus.DECLINED_UPDATE;
           }
 
         } else {
           // Already installed. Move along
+          updateResult = UpdateStatus.UP_TO_DATE;
         }
 
       } else {
         // Uh oh. A release was made by there's no jar file??
+        updateResult = UpdateStatus.NONE_AVAILABLE;
       }
     } catch (e) {
+      updateResult = UpdateStatus.FAILED;
       window.showErrorMessage(`Something went really wrong during the update process! ${e.message}`);
       console.log(e);
     }
 
-    return this.installed;
+    return updateResult;
   }
 }
 

@@ -50,20 +50,21 @@
     "configuration": {
       "title": "Db2 for IBM i",
       "properties": {
-        "vscode-db2i.validator": {
-          "type": "boolean",
-          "description": "Enable the SQL validator",
-          "default": false
-        },
-        "vscode-db2i.scrollingResultSet": {
-          "type": "boolean",
-          "description": "Enable scrolling result sets for basic SELECT statements.",
-          "default": true
-        },
         "vscode-db2i.pageSize": {
           "type": "number",
           "description": "Page size for Schema browser",
           "default": 500
+        },
+        "vscode-db2i.alwaysStartSQLJob": {
+          "type": "string",
+          "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",
+          "default": "ask"
+        },
+        "vscode-db2i.jobConfigs": {
+          "type": "object",
+          "description": "Saved configs for",
+          "default": {},
+          "additionalProperties": true
         }
       }
     },
@@ -303,6 +304,24 @@
         "command": "vscode-db2i.jobManager.getTrace",
         "title": "Get Trace Data",
         "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.jobManager.newConfig",
+        "title": "Save settings to config",
+        "category": "Db2 for i",
+        "icon": "$(save)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editConfig",
+        "title": "Edit configuration",
+        "category": "Db2 for i",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.deleteConfig",
+        "title": "Delete configuration",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -333,6 +352,18 @@
         },
         {
           "command": "vscode-db2i.jobManager.getTrace",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "never"
         }
       ],
@@ -492,6 +523,21 @@
           "command": "vscode-db2i.jobManager.getTrace",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "trace@2"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newConfig",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "config@1"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "view == jobManager && viewItem == savedConfig",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.deleteConfig",
+          "when": "view == jobManager && viewItem == savedConfig",
+          "group": "inline"
         }
       ]
     }
@@ -499,7 +545,7 @@
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",
-    "test": "node ./test/runTest.js",
+    "language:test": "vitest",
     "package": "vsce package",
     "vscode:prepublish": "webpack --mode production",
     "webpack": "webpack --mode development",
@@ -516,6 +562,7 @@
     "raw-loader": "^4.0.2",
     "ts-loader": "^9.3.1",
     "typescript": "^4.3.2",
+    "vitest": "^0.33.0",
     "vscode-test": "^1.5.2",
     "webpack": "^5.24.3",
     "webpack-cli": "^4.5.0"

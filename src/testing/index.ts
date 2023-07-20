@@ -4,10 +4,12 @@ import { TestSuitesTreeProvider } from "./testCasesTree";
 import { getInstance } from "../base";
 import { ManagerSuite } from "./manager";
 import { JobsSuite } from "./jobs";
+import { DatabaseSuite } from "./database";
 
 const suites : TestSuite[] = [
   JobsSuite,
-  ManagerSuite
+  ManagerSuite,
+  DatabaseSuite,
 ]
 
 export type TestSuite = {

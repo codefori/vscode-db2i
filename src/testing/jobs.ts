@@ -4,12 +4,13 @@ import { JobStatus, SQLJob } from "../connection/sqlJob";
 import { getInstance } from "../base";
 import { ServerComponent } from "../connection/serverComponent";
 import { ServerTraceDest, ServerTraceLevel } from "../connection/types";
+import { Query } from "../connection/query";
 
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
   tests: [
     {name: `Backend check`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      const backendInstalled = await ServerComponent.initialise();
   
       // To run these tests, we need the backend server. If this test fails. Don't bother
       assert.strictEqual(backendInstalled, true);
@@ -83,6 +84,35 @@ export const JobsSuite: TestSuite = {
       newJob.close();
     }},
 
+    {name: `Auto close statements`, test: async () => {
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      const autoCloseAnyway = newJob.query(`select * from QIWS.QCUSTCDT`, {autoClose: true});
+      const noAutoClose = newJob.query(`select * from QIWS.QCUSTCDT`, {autoClose: false});
+      const neverRuns = newJob.query(`select * from QIWS.QCUSTCDT`, {autoClose: true});
+
+      assert.strictEqual(Query.getOpenIds(newJob.id).length, 3);
+
+      // If we ran this, two both autoClose statements would be cleaned up
+      // await Query.cleanup();
+
+      await Promise.all([autoCloseAnyway.run(1), noAutoClose.run(1)]);
+
+      assert.strictEqual(Query.getOpenIds(newJob.id).length, 3);
+      
+      // Now cleanup should auto close autoCloseAnyway and neverRuns,
+      // but not noAutoClose because it hasn't finished running
+      await Query.cleanup();
+
+      const leftOverIds = Query.getOpenIds(newJob.id);
+      assert.strictEqual(leftOverIds.length, 1);
+
+      assert.strictEqual(noAutoClose.getId(), leftOverIds[0]);
+
+      newJob.close();
+    }},
+
     {name: `CL Command (success)`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
   
@@ -103,6 +133,7 @@ export const JobsSuite: TestSuite = {
       assert.equal(CPF2880, true);
       newJob.close();
     }},
+
     {name: `CL Command (error)`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
 

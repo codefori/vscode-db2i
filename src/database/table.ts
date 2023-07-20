@@ -2,11 +2,12 @@
 import vscode from "vscode"
 import { JobManager } from "../config";
 import { getInstance } from "../base";
+import Statement from "./statement";
 
 export default class Table {
   /**
-   * @param {string} schema 
-   * @param {string} name 
+   * @param {string} schema Not user input
+   * @param {string} name Not user input
    * @returns {Promise<TableColumn[]>}
    */
   static async getItems(schema: string, name: string): Promise<TableColumn[]> {
@@ -29,20 +30,24 @@ export default class Table {
       `    column.table_schema = key.table_schema and`,
       `    column.table_name = key.table_name and`,
       `    column.column_name = key.column_name`,
-      `WHERE column.TABLE_SCHEMA = '${schema.toUpperCase()}' AND column.TABLE_NAME = '${name.toUpperCase()}'`,
+      `WHERE column.TABLE_SCHEMA = '${schema}' AND column.TABLE_NAME = '${name}'`,
       `ORDER BY column.ORDINAL_POSITION`,
     ].join(` `);
 
     return JobManager.runSQL(sql);
   }
 
+  /**
+   * @param schema Not user input
+   * @param name Not user input
+   */
   static clearAdvisedIndexes(schema: string, name: string) {
     const query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
     return getInstance().getContent().runSQL(query);
   }
 
-  static async clearFile(schema: string, name: string): Promise<void> {
-    const command = `CLRPFM ${schema}/${name}`;
+  static async clearFile(library: string, objectName: string): Promise<void> {
+    const command = `CLRPFM ${library}/${objectName}`;
               
     const commandResult = await getInstance().getConnection().runCommand({
       command: command,
@@ -54,9 +59,9 @@ export default class Table {
     }
   }
 
-  static async copyFile(schema: string, name: string, options: CPYFOptions): Promise<void> {
+  static async copyFile(library: string, objectName: string, options: CPYFOptions): Promise<void> {
     const command = [
-      `CPYF FROMFILE(${schema}/${name}) TOFILE(${options.toLib}/${options.toFile})`,
+      `CPYF FROMFILE(${library}/${objectName}) TOFILE(${options.toLib}/${options.toFile})`,
       `FROMMBR(${options.fromMbr}) TOMBR(${options.toMbr}) MBROPT(${options.mbrOpt})`,
       `CRTFILE(${options.crtFile}) OUTFMT(${options.outFmt})`
     ].join(` `);

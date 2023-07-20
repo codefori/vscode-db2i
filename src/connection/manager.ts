@@ -1,5 +1,6 @@
 import { getInstance } from "../base";
 import { Query } from "./query";
+import { ServerComponent } from "./serverComponent";
 import { JobStatus, SQLJob } from "./sqlJob";
 import { QueryOptions, QueryResult, Rows } from "./types";
 
@@ -9,16 +10,14 @@ export interface JobInfo {
 }
 
 export class SQLJobManager {
-  static jobSupport: boolean = false;
-
   private totalJobs = 0;
   private jobs: JobInfo[] = [];
   selectedJob: number = -1;
 
   constructor() {}
 
-  async newJob(predefinedJob?: SQLJob) {
-    if (SQLJobManager.jobSupport) {
+  async newJob(predefinedJob?: SQLJob, name?: string) {
+    if (ServerComponent.isInstalled()) {
       const instance = getInstance();
       const config = instance.getConfig();
 
@@ -37,7 +36,7 @@ export class SQLJobManager {
         this.totalJobs += 1;
 
         this.jobs.push({
-          name: `New job ${this.totalJobs}`,
+          name: `${name || 'New job'} ${this.totalJobs}`,
           job: newJob
         });
 
@@ -89,13 +88,16 @@ export class SQLJobManager {
     return (this.selectedJob >= 0);
   }
 
-  async runSQL<T>(query: string): Promise<T[]> {
+  async runSQL<T>(query: string, parameters: any[] = []): Promise<T[]> {
     const selected = this.jobs[this.selectedJob]
-    if (SQLJobManager.jobSupport && selected) {
+    if (ServerComponent.isInstalled() && selected) {
       // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
       // int. This is the largest number available without overflow (Integer.MAX_VALUE)
       const rowsToFetch = 2147483647;
-      const results = await selected.job.query<T>(query).run(rowsToFetch);
+
+      const statement = selected.job.query<T>(query, {parameters});
+      const results = await statement.run(rowsToFetch);
+      statement.close();
       return results.data;
     } else {
       const instance = getInstance();
@@ -112,9 +114,9 @@ export class SQLJobManager {
   }
   getPagingStatement<T>(query: string, opts?: QueryOptions): Query<T> {
     const selected = this.jobs[this.selectedJob]
-    if (SQLJobManager.jobSupport && selected) {
+    if (ServerComponent.isInstalled() && selected) {
       return selected.job.query<T>(query, opts);
-    } else if(!SQLJobManager.jobSupport) {
+    } else if(!ServerComponent.isInstalled()) {
       throw new Error(`Database server component is required. Please see documentation for details.`);
     }else {
       throw new Error(`Active SQL job is required. Please spin one up first.`);

@@ -11,9 +11,23 @@ export enum JobStatus {
   Active = "active",
   Ended = "ended"
 }
+
+export enum TransactionEndType {
+  COMMIT,
+  ROLLBACK
+}
+
 interface ReqRespFmt {
   id: string
 };
+
+const TransactionCountQuery = [
+  `select count(*) as thecount`,
+  `  from qsys2.db_transaction_info`,
+  `  where JOB_NAME = qsys2.job_name and`,
+  `    (local_record_changes_pending = 'YES' or local_object_changes_pending = 'YES')`,
+].join(`\n`);
+
 export class SQLJob {
 
   private static uniqueIdCounter: number = 0;
@@ -182,6 +196,28 @@ export class SQLJob {
 
   getJobLog(): Promise<QueryResult<JobLogEntry>> {
     return this.query<JobLogEntry>(`select * from table(qsys2.joblog_info('*')) a`).run();
+  }
+
+  underCommitControl() {
+    return this.options["transaction isolation"] !== `none`;
+  }
+
+  async getPendingTransactions() {
+    const rows = await this.query<{THECOUNT: number}>(TransactionCountQuery).run(1);
+
+    if (rows.success && rows.data && rows.data.length === 1 && rows.data[0].THECOUNT) return rows.data[0].THECOUNT;
+    return 0;
+  }
+
+  async endTransaction(type: TransactionEndType) {
+    let query;
+    switch (type) {
+      case TransactionEndType.COMMIT: query = `COMMIT`; break;
+      case TransactionEndType.ROLLBACK: query = `ROLLBACK`; break;
+      default: throw new Error(`TransactionEndType ${type} not valid`);
+    }
+
+    return this.query<JobLogEntry>(query).run();
   }
   
   async close() {

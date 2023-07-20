@@ -1,7 +1,5 @@
-import vscode from "vscode"
-import { getInstance } from "../base";
 
-const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
+import { getInstance } from "../base";
 
 import Statement from "./statement";
 import { JobManager } from "../config";
@@ -16,9 +14,10 @@ const typeMap = {
 };
 
 export default class Database {
+  /**
+   * @param schema Not user input
+   */
   static async getObjects(schema: string, type: SQLType, details: PageData = {}): Promise<BasicSQLObject[]> {
-    schema = schema.toUpperCase();
-
     let objects;
 
     switch (type) {
@@ -45,7 +44,7 @@ export default class Database {
     case `functions`:
       objects = await JobManager.runSQL([
         `select ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT from QSYS2.SYSFUNCS`,
-        `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and ROUTINE_NAME like '%${details.filter}%'`: ``}`,
+        `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and ROUTINE_NAME like '%${details.filter}%'`: ``} and FUNCTION_ORIGIN in ('E','U')`,
         `order by ROUTINE_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
       ].join(` `));
@@ -131,15 +130,14 @@ export default class Database {
     }));
   }
 
-  static async generateSQL(schema: string, object: string, type: SQLType): Promise<string> {
-    const content = instance.getContent();
-
-    schema = schema.toUpperCase();
-
-    // TODO: fix?
+  /**
+   * @param schema Not user input
+   * @param object Not user input
+   */
+  static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
     const lines = await JobManager.runSQL<{SRCDTA: string}>([
-      `CALL QSYS2.GENERATE_SQL('${object}', '${schema}', '${type}', CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
-    ].join(` `));
+      `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
+    ].join(` `), [object, schema, internalType]);
 
     const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
     const formatted = Statement.format(generatedStatement);

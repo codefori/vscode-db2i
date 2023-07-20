@@ -43,7 +43,9 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
       <head>
         ${head}
         <script>
-          // ${basicSelect} ${new Date().getTime()}
+          /* 
+          ${new Date().getTime()}
+          */
           const vscode = acquireVsCodeApi();
           const basicSelect = ${JSON.stringify(basicSelect)};
           let myQueryId = '';
@@ -160,7 +162,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                 var newCell = newRow.insertCell();
 
                 // Append a text node to the cell
-                var newText = document.createTextNode(row[columnName] || 'null');
+                var newText = document.createTextNode(row[columnName] === undefined ? 'null' : row[columnName]);
                 newCell.appendChild(newText);
               }
             }
