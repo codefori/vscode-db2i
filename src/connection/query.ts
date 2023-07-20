@@ -12,14 +12,14 @@ export class Query<T> {
   private correlationId: string;
   private sql: string;
   private isPrepared: boolean = false;
-  private parameters: any[];
+  private parameters: any[]|undefined;
   private rowsToFetch: number = 100;
   private isCLCommand: boolean;
   private state: QueryState = QueryState.NOT_YET_RUN;
 
   public autoClose: boolean | undefined;
 
-  constructor(private job: SQLJob, query: string, opts: QueryOptions = { isClCommand: false, parameters: [], autoClose: false }) {
+  constructor(private job: SQLJob, query: string, opts: QueryOptions = { isClCommand: false, parameters: undefined, autoClose: false }) {
     this.job = job;
     this.isPrepared = (undefined !== opts.parameters);
     this.parameters = opts.parameters;
@@ -126,7 +126,7 @@ export class Query<T> {
   public async close() {
     this.state = QueryState.RUN_DONE;
 
-    if (this.correlationId) {
+    if (this.correlationId && this.isPrepared) {
       let queryObject = {
         id: SQLJob.getNewUniqueRequestId(`sqlclose`),
         cont_id: this.correlationId,

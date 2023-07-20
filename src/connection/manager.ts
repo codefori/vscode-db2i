@@ -94,10 +94,9 @@ export class SQLJobManager {
       // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
       // int. This is the largest number available without overflow (Integer.MAX_VALUE)
       const rowsToFetch = 2147483647;
-      const cursor =  selected.job.query<T>(query, {parameters});
-      const results = await cursor.run(rowsToFetch);
-      cursor.close();
-      
+
+      // No close here required because it's not a prepared statement (no parameters)
+      const results = await selected.job.query<T>(query, {parameters}).run(rowsToFetch);
       return results.data;
     } else {
       const instance = getInstance();
