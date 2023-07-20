@@ -11,17 +11,17 @@ const completionTypes = {
     type: `tables`,
     icon: CompletionItemKind.File,
   },
-  aliases: {
-    order: `b`,
-    label: `alias`,
-    type: `aliases`,
-    icon: CompletionItemKind.Reference,
-  },
   views: {
-    order: `c`,
+    order: `b`,
     label: `view`,
     type: `views`,
     icon: CompletionItemKind.Interface,
+  },
+  aliases: {
+    order: `c`,
+    label: `alias`,
+    type: `aliases`,
+    icon: CompletionItemKind.Reference,
   },
 };
 
