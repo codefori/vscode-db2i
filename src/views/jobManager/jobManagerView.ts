@@ -1,4 +1,4 @@
-import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, env, window, workspace } from "vscode";
+import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri, commands, env, window, workspace } from "vscode";
 import { TreeDataProvider } from "vscode";
 import { Config, JobManager } from "../../config";
 import { JobInfo, SQLJobManager } from "../../connection/manager";
@@ -134,7 +134,7 @@ export class JobManagerView implements TreeDataProvider<any> {
 
           ServerComponent.writeOutput(`Enabling tracing for ${selected.name} (${selected.job.id})`, true);
 
-          selected.job.setTraceConfig(ServerTraceDest.IN_MEM, ServerTraceLevel.ERRORS);
+          selected.job.setTraceConfig(ServerTraceDest.IN_MEM, ServerTraceLevel.DATASTREAM);
         }
       }),
 
@@ -143,12 +143,31 @@ export class JobManagerView implements TreeDataProvider<any> {
           const id = node.label as string;
           const selected = await JobManager.getJob(id);
 
-          const trace = await selected.job.getTraceData();
-          if (trace.success) {
-            ServerComponent.writeOutput(trace.tracedata, true);
+          const possibleFile = selected.job.getTraceFilePath();
+
+          if (possibleFile) {
+            // Trace was written to a file
+            vscode.workspace.openTextDocument(Uri.from({
+              scheme: `streamfile`,
+              path: possibleFile
+            })).then(doc => {
+              vscode.window.showTextDocument(doc);
+            });
+            
           } else {
-            ServerComponent.writeOutput(`Unable to get trace data for ${selected.name} (${selected.job.id}):`, true);
-            ServerComponent.writeOutput(trace.error);
+            // This likely means IN_MEM was used
+            const trace = await selected.job.getTraceData();
+            if (trace.success) {
+              vscode.workspace.openTextDocument({
+                content: trace.tracedata.trim()
+              }).then(doc => {
+                vscode.window.showTextDocument(doc);
+              })
+
+            } else {
+              ServerComponent.writeOutput(`Unable to get trace data for ${selected.name} (${selected.job.id}):`, true);
+              ServerComponent.writeOutput(trace.error);
+            }
           }
         }
       }),

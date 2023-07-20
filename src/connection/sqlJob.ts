@@ -34,6 +34,8 @@ export class SQLJob {
   private channel: any;
   private responseEmitter: EventEmitter = new EventEmitter();
   private status: JobStatus = JobStatus.NotStarted;
+
+  private traceFile: string|undefined;
   private isTracingChannelData: boolean = false;
 
   id: string | undefined;
@@ -153,6 +155,11 @@ export class SQLJob {
 
     return version;
   }
+
+  getTraceFilePath(): string|undefined {
+    return this.traceFile;
+  }
+
   async getTraceData(): Promise<GetTraceDataResult> {
     const tracedataReqObj = {
       id: SQLJob.getNewUniqueRequestId(),
@@ -166,9 +173,10 @@ export class SQLJob {
     if (rpy.success !== true) {
       throw new Error(rpy.error || `Failed to get trace data from backend`);
     }
+
     return rpy;
   }
-  //TODO: add/modify this API to allow manipulation of JTOpen tracing, and add tests
+
   async setTraceConfig(dest: ServerTraceDest, level: ServerTraceLevel): Promise<SetConfigResult> {
     const reqObj = {
       id: SQLJob.getNewUniqueRequestId(),
@@ -186,6 +194,8 @@ export class SQLJob {
     if (rpy.success !== true) {
       throw new Error(rpy.error || `Failed to set trace options on backend`);
     }
+
+    this.traceFile = (rpy.tracedest && rpy.tracedest[0] === `/` ? rpy.tracedest : undefined);
 
     return rpy;
   }
