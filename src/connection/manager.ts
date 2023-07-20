@@ -95,8 +95,9 @@ export class SQLJobManager {
       // int. This is the largest number available without overflow (Integer.MAX_VALUE)
       const rowsToFetch = 2147483647;
 
-      // No close here required because it's not a prepared statement (no parameters)
-      const results = await selected.job.query<T>(query, {parameters}).run(rowsToFetch);
+      const statement = selected.job.query<T>(query, {parameters});
+      const results = await statement.run(rowsToFetch);
+      statement.close();
       return results.data;
     } else {
       const instance = getInstance();
