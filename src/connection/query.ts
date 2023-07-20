@@ -17,7 +17,7 @@ export class Query<T> {
   private isCLCommand: boolean;
   private state: QueryState = QueryState.NOT_YET_RUN;
 
-  public shouldAutoClose: boolean | undefined;
+  public shouldAutoClose: boolean;
 
   constructor(private job: SQLJob, query: string, opts: QueryOptions = { isClCommand: false, parameters: undefined, autoClose: false }) {
     this.job = job;
