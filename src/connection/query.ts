@@ -34,6 +34,12 @@ export class Query<T> {
     return (undefined === id || '' === id) ? undefined : Query.globalQueryList.find(query => query.correlationId === id);
   }
 
+  public static getOpenIds(forJob?: string) {
+    return this.globalQueryList
+      .filter(q => q.job.id === forJob || forJob === undefined)
+      .map(q => q.correlationId);
+  }
+
   public static async cleanup() {
     let closePromises = [];
 
@@ -121,13 +127,15 @@ export class Query<T> {
     // TODO: close the cursor
     this.state = QueryState.RUN_DONE;
 
-    let queryObject = {
-      id: SQLJob.getNewUniqueRequestId(`sqlclose`),
-      cont_id: this.correlationId,
-      type: `sqlclose`,
-    };
+    if (this.correlationId) {
+      let queryObject = {
+        id: SQLJob.getNewUniqueRequestId(`sqlclose`),
+        cont_id: this.correlationId,
+        type: `sqlclose`,
+      };
 
-    return this.job.send(JSON.stringify(queryObject));
+      return this.job.send(JSON.stringify(queryObject));
+    }
   }
 
   public getId(): string {
