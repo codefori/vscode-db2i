@@ -33,17 +33,18 @@ class ResultSetPanelProvider {
     webviewView.webview.html = html.getLoadingHTML();
     this._view.webview.onDidReceiveMessage(async (message) => {
       if (message.query) {
-        const instance = await getInstance();
-        const content = instance.getContent();
-        const config = instance.getConfig();
         let data = [];
 
         let queryObject = Query.byId(message.queryId);
         try {
-          if (undefined === queryObject) {
-            let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL });
+          if (queryObject === undefined) {
+            // We will need to revisit this if we ever allow multiple result tabs like ACS does
+            Query.cleanup();
+
+            let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true });
             queryObject = query;
           }
+
           let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
           data = queryResults.data;
           this._view.webview.postMessage({

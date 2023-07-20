@@ -30,7 +30,8 @@ export enum ServerTraceDest {
 }
 export interface QueryOptions {
   isClCommand?: boolean,
-  parameters?: any[]
+  parameters?: any[],
+  autoClose?: boolean
 }
 export interface SetConfigResult extends ServerResponse {
   tracedest: ServerTraceDest,
