@@ -124,9 +124,8 @@ export class Query<T> {
   }
 
   public async close() {
-    this.state = QueryState.RUN_DONE;
-
-    if (this.correlationId) {
+    if (this.correlationId && this.state !== QueryState.RUN_DONE) {
+      this.state = QueryState.RUN_DONE;
       let queryObject = {
         id: SQLJob.getNewUniqueRequestId(`sqlclose`),
         cont_id: this.correlationId,
