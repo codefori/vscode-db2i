@@ -1,9 +1,11 @@
-import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, env, window, workspace } from "vscode";
+import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri, commands, env, window, workspace } from "vscode";
 import { TreeDataProvider } from "vscode";
 import { Config, JobManager } from "../../config";
-import { JobInfo } from "../../connection/manager";
+import { JobInfo, SQLJobManager } from "../../connection/manager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
+import { ServerTraceDest, ServerTraceLevel } from "../../connection/types";
+import { ServerComponent } from "../../connection/serverComponent";
 import { updateStatusBar } from "./statusBar";
 import { TransactionEndType } from "../../connection/sqlJob";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
@@ -24,9 +26,9 @@ export class JobManagerView implements TreeDataProvider<any> {
       ...ConfigManager.initialiseSaveCommands(),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async () => {
-        await window.withProgress({location: ProgressLocation.Window}, async (progress) => {
+        await window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
           try {
-            progress.report({message: `Spinning up SQL job...`});
+            progress.report({ message: `Spinning up SQL job...` });
             await JobManager.newJob();
           } catch (e) {
             window.showErrorMessage(e.message);
@@ -103,15 +105,15 @@ export class JobManagerView implements TreeDataProvider<any> {
         if (selected) {
           editJobUi(selected.job.options, selected.name).then(newOptions => {
             if (newOptions) {
-              window.withProgress({location: ProgressLocation.Window}, async (progress) => {
-                progress.report({message: `Ending current job`});
+              window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
+                progress.report({ message: `Ending current job` });
 
                 await selected.job.close();
 
-                progress.report({message: `Starting new job`});
+                progress.report({ message: `Starting new job` });
 
                 selected.job.options = newOptions;
-                
+
                 try {
                   await selected.job.connect();
                 } catch (e) {
@@ -125,6 +127,50 @@ export class JobManagerView implements TreeDataProvider<any> {
         }
       }),
 
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.enableTracing`, async (node?: SQLJobItem) => {
+        if (node) {
+          const id = node.label as string;
+          const selected = await JobManager.getJob(id);
+
+          ServerComponent.writeOutput(`Enabling tracing for ${selected.name} (${selected.job.id})`, true);
+
+          selected.job.setTraceConfig(ServerTraceDest.IN_MEM, ServerTraceLevel.DATASTREAM);
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.getTrace`, async (node?: SQLJobItem) => {
+        if (node) {
+          const id = node.label as string;
+          const selected = await JobManager.getJob(id);
+
+          const possibleFile = selected.job.getTraceFilePath();
+
+          if (possibleFile) {
+            // Trace was written to a file
+            vscode.workspace.openTextDocument(Uri.from({
+              scheme: `streamfile`,
+              path: possibleFile
+            })).then(doc => {
+              vscode.window.showTextDocument(doc);
+            });
+            
+          } else {
+            // This likely means IN_MEM was used
+            const trace = await selected.job.getTraceData();
+            if (trace.success) {
+              vscode.workspace.openTextDocument({
+                content: trace.tracedata.trim()
+              }).then(doc => {
+                vscode.window.showTextDocument(doc);
+              })
+
+            } else {
+              ServerComponent.writeOutput(`Unable to get trace data for ${selected.name} (${selected.job.id}):`, true);
+              ServerComponent.writeOutput(trace.error);
+            }
+          }
+        }
+      }),
       vscode.commands.registerCommand(`vscode-db2i.jobManager.jobCommit`, async (node?: SQLJobItem) => {
         const id = node ? node.label as string : undefined;
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
@@ -193,9 +239,9 @@ export class JobManagerView implements TreeDataProvider<any> {
   async getChildren(element: ConfigGroup): Promise<SQLJobItem[]> {
     if (element) {
       return ConfigManager.getConfigTreeItems();
-      
+
     } else {
-      let nodes = 
+      let nodes =
         JobManager
           .getRunningJobs()
           .map((info, index) => new SQLJobItem(info, index === JobManager.selectedJob));
@@ -203,7 +249,7 @@ export class JobManagerView implements TreeDataProvider<any> {
       if (ConfigManager.hasSavedItems()) {
         nodes.push(new ConfigGroup());
       }
-      
+
       return nodes;
     }
   }

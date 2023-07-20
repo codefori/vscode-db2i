@@ -35,7 +35,11 @@ export class ServerComponent {
     return this.outputChannel;
   }
 
-  static writeOutput(jsonString: string) {
+  static writeOutput(jsonString: string, show = false) {
+    if (show) {
+      this.outputChannel.show();
+    }
+    
     if (this.outputChannel) {
       this.outputChannel.appendLine(jsonString);
     }
