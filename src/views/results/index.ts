@@ -38,6 +38,7 @@ class ResultSetPanelProvider {
         let queryObject = Query.byId(message.queryId);
         try {
           if (queryObject === undefined) {
+            // We will need to revisit this if we ever allow multiple result tabs like ACS does
             Query.cleanup();
 
             let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true });
