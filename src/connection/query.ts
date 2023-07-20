@@ -124,7 +124,6 @@ export class Query<T> {
   }
 
   public async close() {
-    // TODO: close the cursor
     this.state = QueryState.RUN_DONE;
 
     if (this.correlationId) {
