@@ -9,9 +9,12 @@ import { OutputChannel, commands, window } from "vscode";
 
 import { writeFile } from "fs/promises";
 import os from "os";
-import { JobManagerView } from "../views/jobManager/jobManagerView";
 
 const octokit = new Octokit();
+
+// During development, you can set the SERVER_VERSION in .vscode/launch.json
+// Otherwise, fall back to the working version
+const SERVER_VERSION = process.env[`SERVER_VERSION`] || `v1.0.0-alpha-32`;
 
 const ExecutablePathDir = `$HOME/.vscode/`;
 
@@ -94,7 +97,7 @@ export class ServerComponent {
     const repo = `CodeForIBMiServer`;
 
     try {
-      const result = await octokit.request('GET /repos/{owner}/{repo}/releases/latest', {
+      const result = await octokit.request(`GET /repos/{owner}/{repo}/releases/tags/${SERVER_VERSION}`, {
         owner,
         repo,
         headers: {
