@@ -117,10 +117,13 @@ export class SQLJobManager {
     const selected = this.jobs[this.selectedJob]
     if (ServerComponent.isInstalled() && selected) {
       return selected.job.query<T>(query, opts);
-    } else if(!ServerComponent.isInstalled()) {
+    } else if (!ServerComponent.isInstalled()) {
       let updateResult = await ServerComponent.checkForUpdate();
-      if(UpdateStatus.JUST_UPDATED === updateResult) {
-        setTimeout(() => {JobManagerView.setVisible(true)});
+      if (UpdateStatus.JUST_UPDATED === updateResult) {
+        JobManagerView.setVisible(true);
+        if (`new`=== Configuration.get<string>(`alwaysStartSQLJob`)) {
+          await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
+        }
         return this.getPagingStatement(query, opts);
       }
       throw new Error(`Database server component is required. Please see documentation for details.`);
