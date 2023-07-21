@@ -30,8 +30,10 @@ export function setupConfig(context: ExtensionContext) {
       }
     });
 
-    const didUpdate = ServerComponent.checkForUpdate().then(result => {
+    ServerComponent.checkForUpdate().then(result => {
       if (ServerComponent.isInstalled()) {
+        JobManagerView.setVisible(true);
+
         let newJob = Configuration.get<string>(`alwaysStartSQLJob`) || `ask`;
         if (typeof newJob !== `string`) newJob = `ask`; //For legacy settings where it used to be a boolean
 
