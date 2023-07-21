@@ -78,6 +78,7 @@ function getCompletionItemsForOtherTriggers(objectRefs) {
   });
   return list;
 }
+import { completionProvider } from "./providers/completionProvider";
 
 export function languageInit() {
   let functionality = [];
@@ -108,8 +109,9 @@ export function languageInit() {
         },
       },
       `.`
-    )
+    ),
+    completionProvider
   );
-
+  
   return functionality;
 }
