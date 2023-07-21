@@ -251,16 +251,18 @@ export function parseStatement(editor: vscode.TextEditor): StatementInfo {
     if (group) {
       content = text.substring(group.range.start, group.range.end);
       editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
-
-      [`cl`, `json`, `csv`, `sql`].forEach(mode => {
-        if (content.trim().toLowerCase().startsWith(mode + `:`)) {
-          content = content.substring(mode.length + 1).trim();
-
-          //@ts-ignore We know the type.
-          type = mode;
-        }
-      });
     }
+  }
+
+  if (content) {
+    [`cl`, `json`, `csv`, `sql`].forEach(mode => {
+      if (content.trim().toLowerCase().startsWith(mode + `:`)) {
+        content = content.substring(mode.length + 1).trim();
+
+        //@ts-ignore We know the type.
+        type = mode;
+      }
+    });
   }
 
   return {
