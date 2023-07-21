@@ -105,6 +105,8 @@ export class ServerComponent {
         }
       });
 
+      ServerComponent.writeOutput(JSON.stringify(result));
+
       const newAsset = result.data.assets.find(asset => asset.name.endsWith(`.jar`));
 
       if (newAsset) {
@@ -141,7 +143,13 @@ export class ServerComponent {
               
             } else {
               updateResult = UpdateStatus.FAILED;
-              window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`);
+
+              this.writeOutput(JSON.stringify(commandResult));
+              window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`).then(chosen => {
+                if (chosen === `Show`) {
+                  this.outputChannel.show();
+                }
+              });
             }
           } else {
             updateResult = UpdateStatus.DECLINED_UPDATE;
@@ -158,8 +166,14 @@ export class ServerComponent {
       }
     } catch (e) {
       updateResult = UpdateStatus.FAILED;
-      window.showErrorMessage(`Something went really wrong during the update process! ${e.message}`);
+      ServerComponent.writeOutput(JSON.stringify(e));
       console.log(e);
+
+      window.showErrorMessage(`Something went really wrong during the update process! Check the Db2 for i Output log for the log`, `Show`).then(chosen => {
+        if (chosen === `Show`) {
+          this.outputChannel.show();
+        }
+      });
     }
 
     return updateResult;
