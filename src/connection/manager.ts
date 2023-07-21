@@ -1,9 +1,11 @@
+import { commands } from "vscode";
 import { getInstance } from "../base";
 import { JobManagerView } from "../views/jobManager/jobManagerView";
 import { Query } from "./query";
 import { ServerComponent, UpdateStatus } from "./serverComponent";
 import { JobStatus, SQLJob } from "./sqlJob";
 import { QueryOptions, QueryResult, Rows } from "./types";
+import Configuration from "../configuration";
 
 export interface JobInfo {
   name: string;
