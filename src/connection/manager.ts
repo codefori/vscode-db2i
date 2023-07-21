@@ -1,6 +1,7 @@
 import { getInstance } from "../base";
+import { JobManagerView } from "../views/jobManager/jobManagerView";
 import { Query } from "./query";
-import { ServerComponent } from "./serverComponent";
+import { ServerComponent, UpdateStatus } from "./serverComponent";
 import { JobStatus, SQLJob } from "./sqlJob";
 import { QueryOptions, QueryResult, Rows } from "./types";
 
@@ -112,15 +113,19 @@ export class SQLJobManager {
       return content.runSQL(queryContext) as Promise<T[]>;
     }
   }
-  getPagingStatement<T>(query: string, opts?: QueryOptions): Query<T> {
+  async getPagingStatement<T>(query: string, opts?: QueryOptions): Promise<Query<T>> {
     const selected = this.jobs[this.selectedJob]
     if (ServerComponent.isInstalled() && selected) {
       return selected.job.query<T>(query, opts);
     } else if(!ServerComponent.isInstalled()) {
-      ServerComponent.checkForUpdate();
+      let updateResult = await ServerComponent.checkForUpdate();
+      if(UpdateStatus.JUST_UPDATED === updateResult) {
+        setTimeout(() => {JobManagerView.setVisible(true)});
+        return this.getPagingStatement(query, opts);
+      }
       throw new Error(`Database server component is required. Please see documentation for details.`);
     }else {
-      throw new Error(`Active SQL job is required. Please spin one up first.`);
+      throw new Error(`Active SQL job is required. Please spin one up in the 'SQL Job Manager' view and try again.`);
     }
   }
 }
