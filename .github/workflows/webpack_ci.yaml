@@ -26,6 +26,7 @@ jobs:
       run: |
         npm install
         npx webpack
+        npm install -g vsce
         vsce package
 
     - name: Copy dist artifacts to staging directory
