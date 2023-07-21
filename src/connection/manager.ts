@@ -117,6 +117,7 @@ export class SQLJobManager {
     if (ServerComponent.isInstalled() && selected) {
       return selected.job.query<T>(query, opts);
     } else if(!ServerComponent.isInstalled()) {
+      ServerComponent.checkForUpdate();
       throw new Error(`Database server component is required. Please see documentation for details.`);
     }else {
       throw new Error(`Active SQL job is required. Please spin one up first.`);

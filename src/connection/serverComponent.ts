@@ -115,7 +115,7 @@ export class ServerComponent {
         const lastInstalledName = Config.getServerComponentName();
 
         if (lastInstalledName !== basename || this.installed === false) {
-          const updateQuestion = await window.showInformationMessage(`An update to the database server component is available: ${basename}`, `Update`);
+          const updateQuestion = await window.showInformationMessage(`An update to the database server component is required: ${basename}`, `Update`);
 
           if (updateQuestion === `Update`) {
             // This means we're currently running a different version, 
