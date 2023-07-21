@@ -30,7 +30,7 @@ jobs:
         vsce package
 
     - name: Copy dist artifacts to staging directory
-      run: mkdir staging && cp target/*.vsix staging
+      run: mkdir staging && cp ./*.vsix staging
 
     - name: Upload dist artifacts
       uses: actions/upload-artifact@v3
