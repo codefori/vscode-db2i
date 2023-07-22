@@ -433,6 +433,64 @@ describe(`Object references`, () => {
     expect(refsA[0].object.name).toBe(`create_Sql_sample`);
     expect(refsA[0].object.schema).toBe(`"QSYS"`);
   });
+
+  test(`ALTER: with reference`, () => {
+    const content = [
+      `ALTER TABLE DEPARTMENT`,
+      `      ADD FOREIGN KEY RDE (MGRNO)`,
+      `          REFERENCES EMPLOYEE`,
+      `          ON DELETE SET NULL;`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+  
+    const statement = document.statements[0];
+    
+    expect(statement.type).toBe(StatementType.Alter);
+
+    const objs = statement.getObjectReferences();
+
+    expect(objs.length).toBe(2);
+
+    expect(objs[0].tokens.length).toBe(1);
+    expect(objs[0].object.name).toBe(`DEPARTMENT`);
+    expect(objs[0].object.schema).toBeUndefined();
+
+    expect(objs[1].tokens.length).toBe(1);
+    expect(objs[1].object.name).toBe(`EMPLOYEE`);
+    expect(objs[1].object.schema).toBeUndefined();
+  });
+
+  test(`ALTER: with qualified reference`, () => {
+    const content = [
+      `ALTER TABLE myschema.dept`,
+      `      ADD FOREIGN KEY RDE (MGRNO)`,
+      `          REFERENCES myschema.emp`,
+      `          ON DELETE SET NULL;`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+  
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.Alter);
+
+    const objs = statement.getObjectReferences();
+
+    expect(objs.length).toBe(2);
+
+    expect(objs[0].tokens.length).toBe(3);
+    expect(objs[0].object.name).toBe(`dept`);
+    expect(objs[0].object.schema).toBe(`myschema`);
+
+    expect(objs[1].tokens.length).toBe(3);
+    expect(objs[1].object.name).toBe(`emp`);
+    expect(objs[1].object.schema).toBe(`myschema`);
+  });
 });
 
 describe(`Offset reference tests`, () => {

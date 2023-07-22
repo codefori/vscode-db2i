@@ -107,6 +107,25 @@ export default class Statement {
 				// CALL X()
 				doAdd(this.getRefAtToken(1));
 				break;
+
+			case StatementType.Alter:
+				if (this.tokens.length >= 3) {
+					let object = this.getRefAtToken(2);
+
+					if (object) {
+						object.type = this.tokens[1].value;
+
+						doAdd(object);
+
+						for (let i = object.tokens.length+2; i < this.tokens.length; i++) {
+							if (tokenIs(this.tokens[i], `keyword`, `REFERENCES`)) {
+								doAdd(this.getRefAtToken(i+1));
+							}
+						}
+					}
+				}
+				break;
+
 			case StatementType.Insert:
 			case StatementType.Select:
 			case StatementType.Delete:
