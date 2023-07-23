@@ -491,6 +491,134 @@ describe(`Object references`, () => {
     expect(objs[1].object.name).toBe(`emp`);
     expect(objs[1].object.schema).toBe(`myschema`);
   });
+
+  test(`CREATE INDEX: with and without UNIQUE`, () => {
+    const content = [
+      `CREATE UNIQUE INDEX XDEPT1`,
+      `       ON DEPARTMENT (DEPTNO);`,
+      ``,
+      `CREATE INDEX XDEPT2`,
+      `       ON DEPARTMENT (MGRNO);`,
+    ].join(`\r\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(2);
+  
+    const withUnique = document.statements[0];
+    const withoutUnique = document.statements[1];
+
+    expect(withUnique.type).toBe(StatementType.Create);
+    expect(withoutUnique.type).toBe(StatementType.Create);
+
+    const refsA = withUnique.getObjectReferences();
+    const refsB = withoutUnique.getObjectReferences();
+
+    expect(refsA.length).toBe(2);
+    expect(refsA[0].tokens.length).toBe(1);
+    expect(refsA[0].type).toBe(`INDEX`);
+    expect(refsA[0].object.name).toBe(`XDEPT1`);
+    expect(refsA[0].object.schema).toBeUndefined();
+
+    expect(refsA[1].tokens.length).toBe(1);
+    expect(refsA[1].type).toBeUndefined();
+    expect(refsA[1].object.name).toBe(`DEPARTMENT`);
+    expect(refsA[1].object.schema).toBeUndefined();
+
+    expect(refsB.length).toBe(2);
+    expect(refsB[0].tokens.length).toBe(1);
+    expect(refsB[0].type).toBe(`INDEX`);
+    expect(refsB[0].object.name).toBe(`XDEPT2`);
+    expect(refsB[0].object.schema).toBeUndefined();
+
+    expect(refsB[1].tokens.length).toBe(1);
+    expect(refsB[1].type).toBeUndefined();
+    expect(refsB[1].object.name).toBe(`DEPARTMENT`);
+    expect(refsB[1].object.schema).toBeUndefined();
+  });
+
+  test(`CREATE INDEX: with and without UNIQUE, but qualified`, () => {
+    const content = [
+      `CREATE UNIQUE INDEX myschema.XDEPT1`,
+      `       ON other.DEPARTMENT (DEPTNO);`,
+      ``,
+      `CREATE INDEX myschema.XDEPT2`,
+      `       ON other.DEPARTMENT (MGRNO);`,
+    ].join(`\r\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(2);
+  
+    const withUnique = document.statements[0];
+    const withoutUnique = document.statements[1];
+
+    expect(withUnique.type).toBe(StatementType.Create);
+    expect(withoutUnique.type).toBe(StatementType.Create);
+
+    const refsA = withUnique.getObjectReferences();
+    const refsB = withoutUnique.getObjectReferences();
+
+    expect(refsA.length).toBe(2);
+    expect(refsA[0].tokens.length).toBe(3);
+    expect(refsA[0].type).toBe(`INDEX`);
+    expect(refsA[0].object.name).toBe(`XDEPT1`);
+    expect(refsA[0].object.schema).toBe(`myschema`);
+
+    expect(refsA[1].tokens.length).toBe(3);
+    expect(refsA[1].type).toBeUndefined();
+    expect(refsA[1].object.name).toBe(`DEPARTMENT`);
+    expect(refsA[1].object.schema).toBe(`other`);
+
+    expect(refsB.length).toBe(2);
+    expect(refsB[0].tokens.length).toBe(3);
+    expect(refsB[0].type).toBe(`INDEX`);
+    expect(refsB[0].object.name).toBe(`XDEPT2`);
+    expect(refsB[0].object.schema).toBe(`myschema`);
+
+    expect(refsB[1].tokens.length).toBe(3);
+    expect(refsB[1].type).toBeUndefined();
+    expect(refsB[1].object.name).toBe(`DEPARTMENT`);
+    expect(refsB[1].object.schema).toBe(`other`);
+  });
+
+  test(`CREATE ALIAS`, () => {
+    const content = [
+      `create or replace view tagtalk as (`,
+      `  select b.*, a.tag`,
+      `    from hashtags as a`,
+      `    left join talks as b`,
+      `      on a.base_talk = b.t_id`,
+      `);`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+  
+    const view = document.statements[0];
+
+    expect(view.type).toBe(StatementType.Create);
+
+    const defs = view.getObjectReferences();
+
+    expect(defs.length).toBe(3);
+
+    expect(defs[0].type).toBe(`view`);
+    expect(defs[0].object.name).toBe(`tagtalk`);
+    expect(defs[0].object.schema).toBeUndefined();
+    expect(defs[0].alias).toBeUndefined();
+
+    expect(defs[1].type).toBeUndefined();
+    expect(defs[1].object.name).toBe(`hashtags`);
+    expect(defs[1].object.schema).toBeUndefined();
+    expect(defs[1].alias).toBe(`a`);
+
+    expect(defs[2].type).toBeUndefined();
+    expect(defs[2].object.name).toBe(`talks`);
+    expect(defs[2].object.schema).toBeUndefined();
+    expect(defs[2].alias).toBe(`b`);
+  })
 });
 
 describe(`Offset reference tests`, () => {
