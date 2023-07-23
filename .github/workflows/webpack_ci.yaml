@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [16.x, 18.x]
+        node-version: [16.x]
 
     steps:
     - uses: actions/checkout@v3
@@ -22,7 +22,18 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
-    - name: Build
+    - name: Build and package
       run: |
         npm install
         npx webpack
+        npm install -g vsce
+        vsce package
+
+    - name: Copy dist artifacts to staging directory
+      run: mkdir staging && cp ./*.vsix staging
+
+    - name: Upload dist artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: Package
+        path: staging
