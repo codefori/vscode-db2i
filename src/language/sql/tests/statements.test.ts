@@ -581,6 +581,44 @@ describe(`Object references`, () => {
     expect(refsB[1].object.name).toBe(`DEPARTMENT`);
     expect(refsB[1].object.schema).toBe(`other`);
   });
+
+  test(`CREATE ALIAS`, () => {
+    const content = [
+      `create or replace view tagtalk as (`,
+      `  select b.*, a.tag`,
+      `    from hashtags as a`,
+      `    left join talks as b`,
+      `      on a.base_talk = b.t_id`,
+      `);`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+  
+    const view = document.statements[0];
+
+    expect(view.type).toBe(StatementType.Create);
+
+    const defs = view.getObjectReferences();
+
+    expect(defs.length).toBe(3);
+
+    expect(defs[0].type).toBe(`view`);
+    expect(defs[0].object.name).toBe(`tagtalk`);
+    expect(defs[0].object.schema).toBeUndefined();
+    expect(defs[0].alias).toBeUndefined();
+
+    expect(defs[1].type).toBeUndefined();
+    expect(defs[1].object.name).toBe(`hashtags`);
+    expect(defs[1].object.schema).toBeUndefined();
+    expect(defs[1].alias).toBe(`a`);
+
+    expect(defs[2].type).toBeUndefined();
+    expect(defs[2].object.name).toBe(`talks`);
+    expect(defs[2].object.schema).toBeUndefined();
+    expect(defs[2].alias).toBe(`b`);
+  })
 });
 
 describe(`Offset reference tests`, () => {

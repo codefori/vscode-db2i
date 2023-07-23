@@ -276,7 +276,7 @@ export default class Statement {
 
 			// If the next token is not a clause.. we might have the alias
 			if (nameToken && this.tokens[nameIndex+1]) {
-				if (this.tokens[nameIndex+1].type === `keyword`) {
+				if (tokenIs(this.tokens[nameIndex+1], `keyword`, `AS`) && tokenIs(this.tokens[nameIndex+2], `word`)) {
 					endIndex = nameIndex+2;
 					sqlObj.alias = this.tokens[nameIndex+2].value;
 				} else

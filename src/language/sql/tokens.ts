@@ -38,7 +38,7 @@ export default class SQLTokeniser {
       name: `JOIN`,
       match: [
         { type: `word`, match: (value: string) => {
-          return [`INNER`, `EXCEPTION`, `CROSS`].includes(value.toUpperCase());
+          return [`INNER`, `EXCEPTION`, `CROSS`, `LEFT`, `RIGHT`].includes(value.toUpperCase());
         } }, 
         {type: `word`, match: (value: string) => {return value.toUpperCase() === `JOIN`}}
       ],
