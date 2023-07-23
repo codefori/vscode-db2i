@@ -136,22 +136,56 @@ export default class Statement {
 					}
 				}
 				break;
+
 			case StatementType.Create:
 				let object: ObjectRef;
+				let postName: number|undefined;
 
 				if (tokenIs(this.tokens[1], `keyword`, `OR`) && tokenIs(this.tokens[2], `keyword`, `REPLACE`)) {
 					object = this.getRefAtToken(4);
 					if (object) {
+						postName = object.tokens.length+4;
 						object.type = this.tokens[3].value;
 					}
+				} else
+				if (tokenIs(this.tokens[1], `keyword`, `UNIQUE`)) {
+					object = this.getRefAtToken(3);
+					if (object) {
+						postName = object.tokens.length+3;
+						object.type = this.tokens[2].value;
+					}
+				
 				} else {
 					object = this.getRefAtToken(2);
 					if (object) {
+						postName = object.tokens.length+2;
 						object.type = this.tokens[1].value
 					}
 				}
 
 				doAdd(object);
+
+				if (object && postName) {
+					switch (object.type?.toUpperCase()) {
+						case `INDEX`:
+							// If the type is `INDEX`, the next reference is the `ON` keyword
+							for (let i = postName; i < this.tokens.length; i++) {
+								if (tokenIs(this.tokens[i], `keyword`, `ON`)) {
+									doAdd(this.getRefAtToken(i+1));
+									break;
+								}
+							}
+							break;
+
+						case `VIEW`:
+							for (let i = postName; i < this.tokens.length; i++) {
+								if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`)) {
+									doAdd(this.getRefAtToken(i+1));
+								}
+							}
+							break;
+					}
+				}
 				break;
 
 			case StatementType.Declare:
