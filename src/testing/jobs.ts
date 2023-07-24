@@ -113,6 +113,19 @@ export const JobsSuite: TestSuite = {
       newJob.close();
     }},
 
+    {name: `SQL with no result set`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+  
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      let result = await newJob.query(`create or replace table qtemp.tt as (select * from sysibm.sysdummy1) with data on replace delete rows`).run();
+      assert.equal(result.success, true);
+      assert.equal(result.has_results, false);
+      assert.equal(result.data, undefined);
+      newJob.close();
+    }},
+
     {name: `CL Command (success)`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
   

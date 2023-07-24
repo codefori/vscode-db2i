@@ -41,6 +41,7 @@ export interface SetConfigResult extends ServerResponse {
 export interface QueryResult<T> extends ServerResponse {
   metadata: QueryMetaData,
   is_done: boolean;
+  has_results: boolean;
   data: T[];
 }
 
