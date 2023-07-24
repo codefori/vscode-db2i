@@ -6,6 +6,9 @@ import { ServerComponent, UpdateStatus } from "./serverComponent";
 import { JobStatus, SQLJob } from "./sqlJob";
 import { QueryOptions, QueryResult, Rows } from "./types";
 import Configuration from "../configuration";
+import { Config, onConnectOrServerInstall } from "../config";
+import { ConfigManager } from "../views/jobManager/ConfigManager";
+import IBMiContent from "@halcyontech/vscode-ibmi-types/api/IBMiContent";
 
 export interface JobInfo {
   name: string;
@@ -25,9 +28,9 @@ export class SQLJobManager {
       const config = instance.getConfig();
 
       const newJob = predefinedJob || (new SQLJob({
-        libraries: [config.currentLibrary, ...config.libraryList], 
-        naming: `system`, 
-        "full open": false, 
+        libraries: [config.currentLibrary, ...config.libraryList],
+        naming: `system`,
+        "full open": false,
         "transaction isolation": "none",
         "query optimize goal": "1",
         "block size": "512"
@@ -43,7 +46,7 @@ export class SQLJobManager {
           job: newJob
         });
 
-        this.selectedJob = this.jobs.length-1;
+        this.selectedJob = this.jobs.length - 1;
       } catch (e: any) {
         throw e;
       }
@@ -63,10 +66,10 @@ export class SQLJobManager {
   async closeJob(index?: number) {
     if (this.jobs[index]) {
       const selected: JobInfo = this.jobs[index];
-      
+
       selected.job.close();
       this.jobs.splice(index, 1);
-      this.selectedJob = this.selectedJob-1;
+      this.selectedJob = this.selectedJob - 1;
     }
   }
 
@@ -75,11 +78,11 @@ export class SQLJobManager {
     return this.closeJob(id);
   }
 
-  getSelection(): JobInfo|undefined {
+  getSelection(): JobInfo | undefined {
     return this.jobs[this.selectedJob];
   }
 
-  getJob(name: string): JobInfo|undefined {
+  getJob(name: string): JobInfo | undefined {
     return this.jobs.find(info => info.name === name);
   }
 
@@ -98,7 +101,7 @@ export class SQLJobManager {
       // int. This is the largest number available without overflow (Integer.MAX_VALUE)
       const rowsToFetch = 2147483647;
 
-      const statement = selected.job.query<T>(query, {parameters});
+      const statement = selected.job.query<T>(query, { parameters });
       const results = await statement.run(rowsToFetch);
       statement.close();
       return results.data;
@@ -111,7 +114,7 @@ export class SQLJobManager {
         `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
         query
       ].join(`;\n`);
-      
+
       return content.runSQL(queryContext) as Promise<T[]>;
     }
   }
@@ -122,14 +125,11 @@ export class SQLJobManager {
     } else if (!ServerComponent.isInstalled()) {
       let updateResult = await ServerComponent.checkForUpdate();
       if (UpdateStatus.JUST_UPDATED === updateResult) {
-        JobManagerView.setVisible(true);
-        if (`new`=== Configuration.get<string>(`alwaysStartSQLJob`)) {
-          await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
-        }
+        await onConnectOrServerInstall();
         return this.getPagingStatement(query, opts);
       }
       throw new Error(`Database server component is required. Please see documentation for details.`);
-    }else {
+    } else {
       throw new Error(`Active SQL job is required. Please spin one up in the 'SQL Job Manager' view and try again.`);
     }
   }
