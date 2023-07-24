@@ -37,21 +37,11 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
 
     switch (newJob) {
     case `ask`:
-      const chosen = await window.showInformationMessage(`Would you like to start an SQL Job?`, `Yes`, `Always`, `No`);
-      if (chosen === `Yes` || chosen === `Always`) {
-        if (chosen === `Always`) {
-          await Configuration.set(`alwaysStartSQLJob`, `new`);
-        }
-
-        await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
-        return true;
-      }
-      break;
+      return await askAboutNewJob();
 
     case `new`:
       await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
       return true;
-      break;
 
     case `never`:
       break;
@@ -103,4 +93,18 @@ export async function fetchSystemInfo() {
       db2Level
     }
   }
+}
+
+export async function askAboutNewJob(): Promise<boolean> {
+  const chosen = await window.showInformationMessage(`Would you like to start an SQL Job?`, `Yes`, `Always`, `No`);
+  if (chosen === `Yes` || chosen === `Always`) {
+    if (chosen === `Always`) {
+      await Configuration.set(`alwaysStartSQLJob`, `new`);
+    }
+
+    await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
+    return true;
+  }
+
+  return false;
 }

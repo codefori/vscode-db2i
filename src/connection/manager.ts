@@ -1,14 +1,10 @@
-import { commands } from "vscode";
+
 import { getInstance } from "../base";
-import { JobManagerView } from "../views/jobManager/jobManagerView";
 import { Query } from "./query";
 import { ServerComponent, UpdateStatus } from "./serverComponent";
 import { JobStatus, SQLJob } from "./sqlJob";
-import { QueryOptions, QueryResult, Rows } from "./types";
-import Configuration from "../configuration";
-import { Config, onConnectOrServerInstall } from "../config";
-import { ConfigManager } from "../views/jobManager/ConfigManager";
-import IBMiContent from "@halcyontech/vscode-ibmi-types/api/IBMiContent";
+import { QueryOptions } from "./types";
+import { askAboutNewJob, onConnectOrServerInstall } from "../config";
 
 export interface JobInfo {
   name: string;
@@ -20,7 +16,7 @@ export class SQLJobManager {
   private jobs: JobInfo[] = [];
   selectedJob: number = -1;
 
-  constructor() {}
+  constructor() { }
 
   async newJob(predefinedJob?: SQLJob, name?: string) {
     if (ServerComponent.isInstalled()) {
@@ -95,33 +91,21 @@ export class SQLJobManager {
   }
 
   async runSQL<T>(query: string, parameters: any[] = []): Promise<T[]> {
-    const selected = this.jobs[this.selectedJob]
-    if (ServerComponent.isInstalled() && selected) {
-      // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
-      // int. This is the largest number available without overflow (Integer.MAX_VALUE)
-      const rowsToFetch = 2147483647;
+    // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
+    // int. This is the largest number available without overflow (Integer.MAX_VALUE)
+    const rowsToFetch = 2147483647;
 
-      const statement = selected.job.query<T>(query, { parameters });
-      const results = await statement.run(rowsToFetch);
-      statement.close();
-      return results.data;
-    } else {
-      const instance = getInstance();
-      const config = instance.getConfig();
-      const content = instance.getContent();
-
-      const queryContext = [
-        `SET CURRENT SCHEMA = '${config.currentLibrary.toUpperCase()}'`,
-        query
-      ].join(`;\n`);
-
-      return content.runSQL(queryContext) as Promise<T[]>;
-    }
+    const statement = await this.getPagingStatement<T>(query, { parameters });
+    const results = await statement.run(rowsToFetch);
+    statement.close();
+    return results.data;
   }
+
   async getPagingStatement<T>(query: string, opts?: QueryOptions): Promise<Query<T>> {
     const selected = this.jobs[this.selectedJob]
     if (ServerComponent.isInstalled() && selected) {
       return selected.job.query<T>(query, opts);
+      
     } else if (!ServerComponent.isInstalled()) {
       let updateResult = await ServerComponent.checkForUpdate();
       if (UpdateStatus.JUST_UPDATED === updateResult) {
@@ -129,8 +113,15 @@ export class SQLJobManager {
         return this.getPagingStatement(query, opts);
       }
       throw new Error(`Database server component is required. Please see documentation for details.`);
+
     } else {
-      throw new Error(`Active SQL job is required. Please spin one up in the 'SQL Job Manager' view and try again.`);
+      const hasNewJob = await askAboutNewJob();
+
+      if (hasNewJob) {
+        return this.getPagingStatement(query, opts);
+      } else {
+        throw new Error(`Active SQL job is required. Please spin one up in the 'SQL Job Manager' view and try again.`);
+      }
     }
   }
 }
