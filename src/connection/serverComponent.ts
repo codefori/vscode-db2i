@@ -14,7 +14,7 @@ const octokit = new Octokit();
 
 // During development, you can set the SERVER_VERSION in .vscode/launch.json
 // Otherwise, fall back to the working version
-const SERVER_VERSION = process.env[`SERVER_VERSION`] || `v1.0.0-alpha-32`;
+const SERVER_VERSION = process.env[`SERVER_VERSION`] || `v1.0.0-alpha-33`;
 
 const ExecutablePathDir = `$HOME/.vscode/`;
 
@@ -115,7 +115,7 @@ export class ServerComponent {
         const lastInstalledName = Config.getServerComponentName();
 
         if (lastInstalledName !== basename || this.installed === false) {
-          const updateQuestion = await window.showInformationMessage(`An update to the database server component is available: ${basename}`, `Update`);
+          const updateQuestion = await window.showInformationMessage(`An update to the database server component is required: ${basename}`, `Update`);
 
           if (updateQuestion === `Update`) {
             // This means we're currently running a different version, 
@@ -162,6 +162,7 @@ export class ServerComponent {
 
       } else {
         // Uh oh. A release was made by there's no jar file??
+        ServerComponent.writeOutput('Unable to get file name from server component release');
         updateResult = UpdateStatus.NONE_AVAILABLE;
       }
     } catch (e) {
