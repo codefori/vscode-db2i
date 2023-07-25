@@ -55,7 +55,7 @@ export const JobsSuite: TestSuite = {
       let newJob = new SQLJob();
       await newJob.connect();
       let trace = await newJob.getTraceData();
-      assert.equal(``, trace.tracedata);
+      assert.notEqual(undefined, trace.tracedata);
       newJob.close();
     }},
     
@@ -92,24 +92,36 @@ export const JobsSuite: TestSuite = {
       const noAutoClose = newJob.query(`select * from QIWS.QCUSTCDT`, {autoClose: false});
       const neverRuns = newJob.query(`select * from QIWS.QCUSTCDT`, {autoClose: true});
 
-      assert.strictEqual(Query.getOpenIds(newJob.id).length, 3);
+      assert.strictEqual(Query.getOpenIds(newJob).length, 3);
 
       // If we ran this, two both autoClose statements would be cleaned up
       // await Query.cleanup();
 
       await Promise.all([autoCloseAnyway.run(1), noAutoClose.run(1)]);
-
-      assert.strictEqual(Query.getOpenIds(newJob.id).length, 3);
+      assert.strictEqual(Query.getOpenIds(newJob).length, 3);
       
       // Now cleanup should auto close autoCloseAnyway and neverRuns,
       // but not noAutoClose because it hasn't finished running
       await Query.cleanup();
 
-      const leftOverIds = Query.getOpenIds(newJob.id);
+      const leftOverIds = Query.getOpenIds(newJob);
       assert.strictEqual(leftOverIds.length, 1);
 
       assert.strictEqual(noAutoClose.getId(), leftOverIds[0]);
 
+      newJob.close();
+    }},
+
+    {name: `SQL with no result set`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+  
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      let result = await newJob.query(`create or replace table qtemp.tt as (select * from sysibm.sysdummy1) with data on replace delete rows`).run();
+      assert.equal(result.success, true);
+      assert.equal(result.has_results, false);
+      assert.equal(result.data, undefined);
       newJob.close();
     }},
 

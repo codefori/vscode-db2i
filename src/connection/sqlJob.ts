@@ -40,10 +40,14 @@ export class SQLJob {
   private traceFile: string|undefined;
   private isTracingChannelData: boolean = false;
 
+  //currently unused but we will inevitably need a unique ID assigned to each instance
+  // since server job names can be reused in some circumstances
+  private uniqueId = SQLJob.getNewUniqueId(`sqljob`);
+
   id: string | undefined;
 
 
-  public static getNewUniqueRequestId(prefix: string = `sqljob`): string {
+  public static getNewUniqueId(prefix: string = `id`): string {
     return prefix + (++SQLJob.uniqueIdCounter);
   }
 
@@ -110,7 +114,7 @@ export class SQLJob {
       .join(`;`)
 
     const connectionObject = {
-      id: SQLJob.getNewUniqueRequestId(),
+      id: SQLJob.getNewUniqueId(),
       type: `connect`,
       technique: `cli`,
       application: `vscode-db2i ${DB2I_VERSION} (Visual Studio Code extension)`,
@@ -145,7 +149,7 @@ export class SQLJob {
 
   async getVersion(): Promise<VersionCheckResult> {
     const verObj = {
-      id: SQLJob.getNewUniqueRequestId(),
+      id: SQLJob.getNewUniqueId(),
       type: `getversion`
     };
 
@@ -166,7 +170,7 @@ export class SQLJob {
 
   async getTraceData(): Promise<GetTraceDataResult> {
     const tracedataReqObj = {
-      id: SQLJob.getNewUniqueRequestId(),
+      id: SQLJob.getNewUniqueId(),
       type: `gettracedata`
     };
 
@@ -183,7 +187,7 @@ export class SQLJob {
 
   async setTraceConfig(dest: ServerTraceDest, level: ServerTraceLevel): Promise<SetConfigResult> {
     const reqObj = {
-      id: SQLJob.getNewUniqueRequestId(),
+      id: SQLJob.getNewUniqueId(),
       type: `setconfig`,
       tracedest: dest,
       tracelevel: level
@@ -234,9 +238,13 @@ export class SQLJob {
     return this.query<JobLogEntry>(query).run();
   }
   
+  getUniqueId() {
+    return this.uniqueId;
+  }
+
   async close() {
     const exitObject = {
-      id: SQLJob.getNewUniqueRequestId(),
+      id: SQLJob.getNewUniqueId(),
       type: `exit`
     };
 
