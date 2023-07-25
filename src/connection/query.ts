@@ -34,9 +34,10 @@ export class Query<T> {
     return (undefined === id || '' === id) ? undefined : Query.globalQueryList.find(query => query.correlationId === id);
   }
 
-  public static getOpenIds(forJob?: string) {
+  public static getOpenIds(forJob?: SQLJob) {
     return this.globalQueryList
-      .filter(q => q.job.id === forJob || forJob === undefined)
+      .filter(q => q.job == forJob || forJob === undefined)
+      .filter(q => q.getState() === QueryState.NOT_YET_RUN || q.getState() === QueryState.RUN_MORE_DATA_AVAILABLE )
       .map(q => q.correlationId);
   }
 
@@ -67,13 +68,13 @@ export class Query<T> {
     let queryObject;
     if (this.isCLCommand) {
       queryObject = {
-        id: SQLJob.getNewUniqueRequestId(`clcommand`),
+        id: SQLJob.getNewUniqueId(`clcommand`),
         type: `cl`,
         cmd: this.sql
       };
     } else {
       queryObject = {
-        id: SQLJob.getNewUniqueRequestId(`query`),
+        id: SQLJob.getNewUniqueId(`query`),
         type: this.isPrepared ? `prepare_sql_execute` : `sql`,
         sql: this.sql,
         rows: rowsToFetch,
@@ -103,7 +104,7 @@ export class Query<T> {
         throw new Error('Statement has already been fully run');
     }
     let queryObject = {
-      id: SQLJob.getNewUniqueRequestId(`fetchMore`),
+      id: SQLJob.getNewUniqueId(`fetchMore`),
       cont_id: this.correlationId,
       type: `sqlmore`,
       sql: this.sql,
@@ -127,12 +128,14 @@ export class Query<T> {
     if (this.correlationId && this.state !== QueryState.RUN_DONE) {
       this.state = QueryState.RUN_DONE;
       let queryObject = {
-        id: SQLJob.getNewUniqueRequestId(`sqlclose`),
+        id: SQLJob.getNewUniqueId(`sqlclose`),
         cont_id: this.correlationId,
         type: `sqlclose`,
       };
 
       return this.job.send(JSON.stringify(queryObject));
+    } else if(undefined === this.correlationId) {
+      this.state = QueryState.RUN_DONE;
     }
   }
 
