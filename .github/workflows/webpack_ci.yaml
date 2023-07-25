@@ -25,7 +25,7 @@ jobs:
     - name: Build and package
       run: |
         npm install
-        npx webpack
+        npm run webpack
         npm install -g vsce
         vsce package
 
