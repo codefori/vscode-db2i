@@ -28,6 +28,8 @@ const TransactionCountQuery = [
   `    (local_record_changes_pending = 'YES' or local_object_changes_pending = 'YES')`,
 ].join(`\n`);
 
+const DB2I_VERSION = process.env[`DB2I_VERSION`] || `<version unknown>`;
+
 export class SQLJob {
 
   private static uniqueIdCounter: number = 0;
@@ -111,7 +113,7 @@ export class SQLJob {
       id: SQLJob.getNewUniqueRequestId(),
       type: `connect`,
       technique: `cli`,
-      application: `vscode-db2i (Visual Studio Code extension)`,//TODO: insert version here? 
+      application: `vscode-db2i ${DB2I_VERSION} (Visual Studio Code extension)`,
       props: props.length > 0 ? props : undefined
     }
 
