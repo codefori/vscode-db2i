@@ -116,7 +116,7 @@ export class SQLJob {
     const connectionObject = {
       id: SQLJob.getNewUniqueId(),
       type: `connect`,
-      technique: `cli`,
+      technique: (65535 === getInstance().getConnection().qccsid) ? `tcp` : `cli`, //TODO: investigate why QCCSID 65535 breaks CLI and if there is any workaround
       application: `vscode-db2i ${DB2I_VERSION} (Visual Studio Code extension)`,
       props: props.length > 0 ? props : undefined
     }
