@@ -110,6 +110,8 @@ export class SQLJob {
     const connectionObject = {
       id: SQLJob.getNewUniqueRequestId(),
       type: `connect`,
+      technique: `cli`,
+      application: `vscode-db2i (Visual Studio Code extension)`,//TODO: insert version here? 
       props: props.length > 0 ? props : undefined
     }
 
