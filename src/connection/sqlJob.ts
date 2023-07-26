@@ -28,7 +28,7 @@ const TransactionCountQuery = [
   `    (local_record_changes_pending = 'YES' or local_object_changes_pending = 'YES')`,
 ].join(`\n`);
 
-const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((`true` === process.env['DEV']) ? ``:`-dev`);
+const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
 export class SQLJob {
 
