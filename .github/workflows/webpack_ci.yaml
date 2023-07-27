@@ -29,11 +29,13 @@ jobs:
         npm install -g vsce
         vsce package
 
-    - name: Copy dist artifacts to staging directory
-      run: mkdir staging && cp ./*.vsix staging
+    - name: get .vsix name
+      run: |
+        echo "vsix_name=$(echo *.vsix)" >> $GITHUB_ENV
+        cat $GITHUB_ENV
 
     - name: Upload dist artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: Package
-        path: staging
+        name: test_vsix
+        path: ${{env.vsix_name}}

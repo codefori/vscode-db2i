@@ -28,6 +28,8 @@ const TransactionCountQuery = [
   `    (local_record_changes_pending = 'YES' or local_object_changes_pending = 'YES')`,
 ].join(`\n`);
 
+const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
+
 export class SQLJob {
 
   private static uniqueIdCounter: number = 0;
@@ -114,6 +116,8 @@ export class SQLJob {
     const connectionObject = {
       id: SQLJob.getNewUniqueId(),
       type: `connect`,
+      technique: (65535 === getInstance().getConnection().qccsid) ? `tcp` : `cli`, //TODO: investigate why QCCSID 65535 breaks CLI and if there is any workaround
+      application: `vscode-db2i ${DB2I_VERSION}`,
       props: props.length > 0 ? props : undefined
     }
 
