@@ -75,13 +75,6 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
               myQueryId = data.queryId;
 
               switch (data.command) {
-                case 'metadata':
-                  // TODO: get backend to give us header metadata
-                  // columnList = data.columnList;
-                  // setHeaders('resultset', data.columnList)
-                  mustLoadHeaders = false;
-                  break;
-
                 case 'rows':
                   hideSpinner();
 
@@ -89,10 +82,8 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   isFetching = false;
                   noMoreRows = data.isDone;
 
-                  // HACK: right now, we build the column list from the first row keys... bad
-
-                  if (mustLoadHeaders && data.rows && data.rows.length > 0) {
-                    columnList = Object.keys(data.rows[0]);
+                  if (mustLoadHeaders) {
+                    columnList = event.data.columnList;
                     
                     setHeaders('resultset', columnList);
 
