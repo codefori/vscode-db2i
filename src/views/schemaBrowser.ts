@@ -98,10 +98,10 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.generateSQL`, async (object) => {
+      vscode.commands.registerCommand(`vscode-db2i.generateSQL`, async (object: SQLObject) => {
         if (object) {
           try {
-            const content = await Schemas.generateSQL(object.schema, object.name, object.type.toUpperCase());
+            const content = await Schemas.generateSQL(object.schema, object.uniqueName(), object.type.toUpperCase());
             const textDoc = await vscode.workspace.openTextDocument({language: `sql`, content});
             await vscode.window.showTextDocument(textDoc);
           } catch (e) {
@@ -174,7 +174,7 @@ export default class schemaBrowser {
                 location: vscode.ProgressLocation.Notification,
                 title: `Deleting ${object.name}...`
               }, async () => {
-                await Schemas.deleteObject(object.schema, object.name, object.type);
+                await Schemas.deleteObject(object.schema, object.uniqueName(), object.type);
               });
 
               vscode.window.showInformationMessage(`${object.name} deleted`);
@@ -424,7 +424,7 @@ export default class schemaBrowser {
         const type = element.type;
 
         if (Types[type]) {
-          items = await Types[type].getChildren(element.schema, element.name);
+          items = await Types[type].getChildren(element.schema, element.uniqueName());
         }
       }
 
@@ -473,6 +473,7 @@ class SQLObject extends vscode.TreeItem {
   path: string;
   schema: string;
   name: string;
+  specificName: string;
   type: string;
   system: {
     schema: string;
@@ -487,11 +488,23 @@ class SQLObject extends vscode.TreeItem {
     this.path = `${item.schema}.${item.name}`;
     this.schema = item.schema;
     this.name = item.name;
+    this.specificName = item.specificName; // Only applies to routines
     this.system = item.system;
     this.type = type;
     this.description = item.text;
-
+    // For functions and procedures, set a tooltip that includes the specific name
+    if (Schemas.isRoutineType(this.type)) {
+      this.tooltip = new vscode.MarkdownString(`${Statement.prettyName(item.name)} (*${Statement.prettyName(item.specificName)}*)`); // Name (Specific name)
+    }
     this.iconPath = itemIcons[type] ? new vscode.ThemeIcon(itemIcons[type]) : undefined;
+  }
+
+  /**
+   * Returns the unique name to use to reference the object.
+   * For most objects this just returns the name, but for routines, which can be overloaded, it returns the specific name.
+   */
+  uniqueName(): string {
+    return Schemas.isRoutineType(this.type) ? this.specificName : this.name;
   }
 }
 
