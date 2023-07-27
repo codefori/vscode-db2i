@@ -70,6 +70,7 @@ export class Query<T> {
       queryObject = {
         id: SQLJob.getNewUniqueId(`clcommand`),
         type: `cl`,
+        terse: true,
         cmd: this.sql
       };
     } else {
@@ -77,6 +78,7 @@ export class Query<T> {
         id: SQLJob.getNewUniqueId(`query`),
         type: this.isPrepared ? `prepare_sql_execute` : `sql`,
         sql: this.sql,
+        terse: true,
         rows: rowsToFetch,
         parameters: this.parameters
       };
