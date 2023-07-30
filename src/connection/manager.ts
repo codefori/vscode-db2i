@@ -90,12 +90,12 @@ export class SQLJobManager {
     return (this.selectedJob >= 0);
   }
 
-  async runSQL<T>(query: string, parameters: any[] = []): Promise<T[]> {
+  async runSQL<T>(query: string, parameters: any[] = [], isTerseResults: boolean = false): Promise<T[]> {
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
     const rowsToFetch = 2147483647;
 
-    const statement = await this.getPagingStatement<T>(query, { parameters });
+    const statement = await this.getPagingStatement<T>(query, { parameters: parameters, isTerseResults: isTerseResults });
     const results = await statement.run(rowsToFetch);
     statement.close();
     return results.data;

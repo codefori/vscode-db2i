@@ -16,6 +16,7 @@ export class Query<T> {
   private rowsToFetch: number = 100;
   private isCLCommand: boolean;
   private state: QueryState = QueryState.NOT_YET_RUN;
+  private isTerseResults: boolean;
 
   public shouldAutoClose: boolean;
 
@@ -26,6 +27,7 @@ export class Query<T> {
     this.sql = query;
     this.isCLCommand = opts.isClCommand;
     this.shouldAutoClose = opts.autoClose;
+    this.isTerseResults = opts.isTerseResults;
 
     Query.globalQueryList.push(this);
   }
@@ -70,7 +72,7 @@ export class Query<T> {
       queryObject = {
         id: SQLJob.getNewUniqueId(`clcommand`),
         type: `cl`,
-        terse: true,
+        terse: this.isTerseResults,
         cmd: this.sql
       };
     } else {
@@ -78,7 +80,7 @@ export class Query<T> {
         id: SQLJob.getNewUniqueId(`query`),
         type: this.isPrepared ? `prepare_sql_execute` : `sql`,
         sql: this.sql,
-        terse: true,
+        terse: this.isTerseResults,
         rows: rowsToFetch,
         parameters: this.parameters
       };
