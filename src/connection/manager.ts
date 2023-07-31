@@ -93,7 +93,8 @@ export class SQLJobManager {
    * Runs SQL
    * @param query the SQL query
    * @param parameters the list of parameters (indicated by '?' parameter parkers in the SQL query)
-   * @param isTerseResults whether the returned data is in terse format
+   * @param isTerseResults whether the returned data is in terse format. When set to true, the data is returned as an array
+   * of arrays. When set to false, data is returned as an array of objects (compatible with legacy API).
    * @returns 
    */
   async runSQL<T>(query: string, parameters: any[] = [], isTerseResults: boolean = false): Promise<T[]> {
