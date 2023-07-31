@@ -83,6 +83,7 @@ async function getCompletionItemsForTriggerDot(
   for (const ref of objectRefs) {
     if (curSchema === ref.object.schema || curSchema === ref.alias) {
       curRefIdentifier = ref;
+      // check if ref is an alias
       if (curRefIdentifier.alias && curRefIdentifier.object.name) {
         isAlias = true;
       }
@@ -106,15 +107,17 @@ async function getCompletionItemsForTriggerDot(
   return list;
 }
 
-function getCompletionItemsForOtherTriggers(objectRefs) {
+async function getCompletionItemsForOtherTriggers(objectRefs) {
   let list: CompletionItem[] = [];
-  objectRefs.forEach((ref) => {
-    if (ref.alias) {
-      list.push(createCompletionItem(ref.alias, CompletionItemKind.File));
-    } else if (ref.object.name) {
-      list.push(createCompletionItem(ref.object.name, CompletionItemKind.File));
+  for (const ref of objectRefs) {
+    if (ref.object.name && ref.object.schema) {
+      const completionItems = await getTableItems(
+        ref.object.schema,
+        ref.object.name
+      );
+      list.push(...completionItems);
     }
-  });
+  }
   return list;
 }
 
@@ -128,8 +131,14 @@ export const completionProvider = languages.registerCompletionItemProvider(
 
       const sqlDoc = new Document(content);
       const currentStatement = sqlDoc.getStatementByOffset(offset);
-      const objectRefs = currentStatement.getObjectReferences();
-      const s = currentStatement.getTokenByOffset(offset);
+      const objectRefs = currentStatement ? currentStatement.getObjectReferences() : [];
+
+      const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
+
+      // if s is undefined, assume ctrl+ space trigger
+      if (s === undefined) {
+        return getCompletionItemsForOtherTriggers(objectRefs);
+      }
 
       if (trigger === "." || s.type === `dot`) {
         const defs = sqlDoc.getDefinitions();
@@ -138,9 +147,8 @@ export const completionProvider = languages.registerCompletionItemProvider(
           currentStatement,
           offset
         );
-      } else {
-        return getCompletionItemsForOtherTriggers(objectRefs);
       }
+      return getCompletionItemsForOtherTriggers(objectRefs);
     },
   },
   `.`
