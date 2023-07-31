@@ -56,7 +56,7 @@ export class ServerComponent {
     const path = this.getComponentPath();
 
     if (path) {
-      return `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -jar ${path}`
+      return `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -Dos400.stdio.convert=N -jar ${path}`
     }
   }
 
