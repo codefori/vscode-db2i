@@ -103,7 +103,7 @@ export const JobsSuite: TestSuite = {
     {name: `Can round-trip Extended characters`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
 
-      let testString = `¯\_(ツ)_/¯`
+      let testString = `¯\\_(ツ)_/¯`
       let newJob = new SQLJob();
       await newJob.connect();
       let qryResults = await newJob.query(`create table qtemp.weewoo (col1 varchar(1208) ccsid 1208)`).run();
