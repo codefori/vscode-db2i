@@ -39,3 +39,14 @@ jobs:
       with:
         name: test_vsix
         path: ${{env.vsix_name}}
+          
+    - name: Post comment
+      uses: actions/github-script@v5
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '👋  A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.\n * [Download here.](https://github.com/halcyon-tech/vscode-db2i/actions/runs/${{ github.run_id }})\n'
+          })
