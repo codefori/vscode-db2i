@@ -1,0 +1,67 @@
+import Statement from "./statement";
+
+export enum StatementType {
+	Unknown = "Unknown",
+	Create = "Create",
+	Insert = "Insert",
+	Select = "Select",
+	Update = "Update",
+	Delete = "Delete",
+	Declare = "Declare",
+	Begin = "Begin",
+	Drop = "Drop",
+	End = "End",
+	Call = "Call",
+	Alter = "Alter"
+}
+
+export const StatementTypeWord = {
+	'CREATE': StatementType.Create,
+	'SELECT': StatementType.Select,
+	'WITH': StatementType.Select,
+	'INSERT': StatementType.Insert,
+	'UPDATE': StatementType.Update,
+	'DELETE': StatementType.Delete,
+	'DECLARE': StatementType.Declare,
+	'DROP': StatementType.Drop,
+	'END': StatementType.End,
+	'CALL': StatementType.Call,
+	'BEGIN': StatementType.Begin,
+	'ALTER': StatementType.Alter
+};
+
+export interface IRange {
+  start: number;
+  end: number;
+}
+
+export interface Token {
+  value?: string;
+  block?: Token[];
+  type: string;
+  range: IRange;
+}
+
+export interface QualifiedObject {
+  schema?: string;
+  name?: string;
+}
+
+export interface ObjectRef {
+  tokens: Token[],
+  object: QualifiedObject;
+  alias?: string;
+
+	/** only used within create statements */
+	type?: string;
+}
+
+export interface StatementGroup {
+	range: IRange,
+	statements: Statement[]
+}
+
+export interface Definition extends ObjectRef {
+	range: IRange;
+	children: Definition[];
+}
