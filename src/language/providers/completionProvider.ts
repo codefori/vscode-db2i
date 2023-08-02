@@ -1,10 +1,17 @@
 import { CompletionItem, CompletionItemKind, languages } from "vscode";
-import Document from "../sql/document";
-import Database from "../../database/schemas";
+import Database, { SQLType } from "../../database/schemas";
 import Table from "../../database/table";
+import Document from "../sql/document";
 import { ObjectRef } from "../sql/types";
 
-const completionTypes = {
+export interface CompletionType {
+  order: string;
+  label: string;
+  type: SQLType;
+  icon: CompletionItemKind;
+}
+
+const completionTypes: { [index: string]: CompletionType } = {
   tables: {
     order: `a`,
     label: `table`,
@@ -48,7 +55,7 @@ async function getTableItems(schema: string, name: string) {
 
 async function getObjectCompletions(
   curSchema: string,
-  sqlTypes: { [index: string]: any }
+  sqlTypes: { [index: string]: CompletionType }
 ) {
   const list = [];
   for (let key in sqlTypes) {

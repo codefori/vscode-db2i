@@ -6,7 +6,7 @@ const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`
 import Statement from "./statement";
 import { JobManager } from "../config";
 
-type SQLType = "tables"|"views"|"aliases"|"constraints"|"functions"|"variables"|"indexes"|"procedures"|"sequences"|"packages"|"triggers"|"types";
+export type SQLType = "tables"|"views"|"aliases"|"constraints"|"functions"|"variables"|"indexes"|"procedures"|"sequences"|"packages"|"triggers"|"types";
 type PageData = {filter?: string, offset?: number, limit?: number};
 
 const typeMap = {
@@ -16,7 +16,7 @@ const typeMap = {
 };
 
 export default class Database {
-  static async getObjects(schema: string, type: SQLType | string, details: PageData = {}): Promise<BasicSQLObject[]> {
+  static async getObjects(schema: string, type: SQLType, details: PageData = {}): Promise<BasicSQLObject[]> {
     schema = schema.toUpperCase();
 
     let objects;
