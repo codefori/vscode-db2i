@@ -94,19 +94,6 @@ export class SQLJob {
     });
   }
 
-  async send1(content: string): Promise<string> {
-    if (this.isTracingChannelData) ServerComponent.writeOutput(content);
-    let req: ReqRespFmt = JSON.parse(content);
-    this.channel.stdin.write(content + `\n`);
-    this.status = JobStatus.Active;
-    return new Promise((resolve, reject) => {
-      this.responseEmitter.on(req.id, (x: string) => {
-        this.responseEmitter.removeAllListeners(req.id);
-        resolve(x + "HELLO");
-      });
-    });
-  }
-
   getStatus() {
     return this.status;
   }
