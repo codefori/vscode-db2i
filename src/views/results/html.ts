@@ -69,9 +69,11 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             }, { threshold: [0] });
 
             Observer.observe(document.getElementById("nextButton"));
+            Observer.observe(document.getElementById("headerText"));
 
             window.addEventListener('message', event => {
               const data = event.data;
+              qResults = data.qResult;
               myQueryId = data.queryId;
 
               switch (data.command) {
@@ -98,17 +100,18 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
 
                     mustLoadHeaders = false;
                   }
-
+                  
                   if (data.rows && data.rows.length > 0) {
                     totalRows += data.rows.length;
                     appendRows('resultset', columnList, data.rows);
                   }
-
-                  const nextButton = document.getElementById("nextButton");
+                  const nextButton1 = document.getElementById("nextButton1");
+                  const headerText = document.getElementById("headerText");
                   if (data.rows === undefined && totalRows === 0) {
-                    nextButton.innerText = 'Query executed with no result set returned.';
+                    nextButton.innerText = 'Query executed with no result set returned. Rows affected : ' + qResults;
                   } else {
                     nextButton.innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. Fetching more...');
+                    headerText.innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. Fetching more...');
                   }
                   break;
 
@@ -171,6 +174,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
         </script>
       </head>
       <body>
+        <p id="headerText"></p>
         <table id="resultset">
           <thead></thead>
           <tbody></tbody>

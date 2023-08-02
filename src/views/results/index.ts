@@ -50,6 +50,7 @@ class ResultSetPanelProvider {
           this._view.webview.postMessage({
             command: `rows`,
             rows: queryResults.data,
+            qResult: queryResults,
             queryId: queryObject.getId(),
             isDone: queryResults.is_done
           });

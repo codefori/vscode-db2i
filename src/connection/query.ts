@@ -58,7 +58,20 @@ export class Query<T> {
     this.globalQueryList = this.globalQueryList.filter(q => q.getState() !== QueryState.RUN_DONE);
   }
 
+private transformQuery(query: string): string {
+  // Replace "UPDATE" with "SELECT COUNT(1) FROM"
+  query = query.replace(/^UPDATE/, 'SELECT COUNT(1) FROM');
+
+  // Clear everything after "SET" and including "SET" until "WHERE"
+  query = query.replace(/SET.*?WHERE/, '');
+
+  return query;
+}
+
+  
+
   public async run(rowsToFetch: number = this.rowsToFetch): Promise<QueryResult<T>> {
+    let isUpdate = false;
     switch (this.state) {
       case QueryState.RUN_MORE_DATA_AVAILABLE:
         throw new Error('Statement has already been run');
@@ -66,6 +79,7 @@ export class Query<T> {
         throw new Error('Statement has already been fully run');
     }
     let queryObject;
+    let queryObject1;
     if (this.isCLCommand) {
       queryObject = {
         id: SQLJob.getNewUniqueId(`clcommand`),
@@ -73,18 +87,31 @@ export class Query<T> {
         cmd: this.sql
       };
     } else {
+      if(this.sql.includes("update")){
+        queryObject1 = {
+          id: SQLJob.getNewUniqueId(`query`),
+          type: this.isPrepared ? `prepare_sql_execute` : `sql`,
+          sql: this.transformQuery(this.sql),
+          rows: rowsToFetch,
+          parameters: this.parameters,
+        };
+      }
       queryObject = {
         id: SQLJob.getNewUniqueId(`query`),
         type: this.isPrepared ? `prepare_sql_execute` : `sql`,
         sql: this.sql,
         rows: rowsToFetch,
-        parameters: this.parameters
+        parameters: this.parameters,
       };
     }
+    
     this.rowsToFetch = rowsToFetch;
-    let result = await this.job.send(JSON.stringify(queryObject));
+    let result = await this.job.send1(JSON.stringify(queryObject));
+    let resultRows
+    if(isUpdate) resultRows = await this.job.send1(JSON.stringify(queryObject1));
+    throw new Error(" " + this.transformQuery(this.sql));
     let queryResult: QueryResult<T> = JSON.parse(result);
-
+  
     this.state = queryResult.is_done ? QueryState.RUN_DONE : QueryState.RUN_MORE_DATA_AVAILABLE;
 
     if (queryResult.success !== true && !this.isCLCommand) {

@@ -4,6 +4,7 @@ import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions } from "./types";
 import { Query } from "./query";
 import { EventEmitter } from "stream";
+import { resolveObjectURL } from "buffer";
 
 export enum JobStatus {
   NotStarted = "notStarted",
@@ -89,6 +90,19 @@ export class SQLJob {
       this.responseEmitter.on(req.id, (x: string) => {
         this.responseEmitter.removeAllListeners(req.id);
         resolve(x);
+      });
+    });
+  }
+
+  async send1(content: string): Promise<string> {
+    if (this.isTracingChannelData) ServerComponent.writeOutput(content);
+    let req: ReqRespFmt = JSON.parse(content);
+    this.channel.stdin.write(content + `\n`);
+    this.status = JobStatus.Active;
+    return new Promise((resolve, reject) => {
+      this.responseEmitter.on(req.id, (x: string) => {
+        this.responseEmitter.removeAllListeners(req.id);
+        resolve(x + "HELLO");
       });
     });
   }
