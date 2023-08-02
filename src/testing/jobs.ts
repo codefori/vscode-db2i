@@ -33,6 +33,22 @@ export const JobsSuite: TestSuite = {
       newJob.close();
     }},
     
+    {name: `Verify client special registers are set`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      let qry = newJob.query(`SELECT V_CLIENT_APPLNAME, V_CLIENT_PROGRAMID FROM TABLE(QSYS2.GET_JOB_INFO('*')) limit 1`);
+      let qryResults = await qry.run();
+      assert.equal(qryResults.success, true);
+      assert.equal(qryResults.data.length, 1);
+      let dataRow = qryResults.data[0];
+      assert.equal((``+dataRow['V_CLIENT_APPLNAME']).startsWith(`vscode-db2i`), true);
+      assert.equal((``+dataRow['V_CLIENT_PROGRAMID']).startsWith(`VSCode`), true);
+
+      newJob.close();
+    }},
+
     {name: `Backend set trace options and retrieve`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
   

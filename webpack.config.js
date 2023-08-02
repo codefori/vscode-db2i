@@ -9,6 +9,8 @@ const npm_runner = process.env[`npm_lifecycle_script`];
 const isProduction = (npm_runner && npm_runner.includes(`production`));
 
 console.log(`Is production build: ${isProduction}`);
+// @ts-ignore
+const packageVer = require(`./package.json`).version;
 
 let exclude = undefined;
 
@@ -30,7 +32,10 @@ const config = {
   },
   plugins: [
     new webpack.DefinePlugin({
-      'process.env.DEV': JSON.stringify(!isProduction),
+      'process.env': {
+        DEV: JSON.stringify(!isProduction),
+        DB2I_VERSION: JSON.stringify(packageVer)
+      }
     })
   ],
   devtool: `source-map`,
