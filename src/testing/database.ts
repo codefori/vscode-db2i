@@ -47,7 +47,7 @@ export const DatabaseSuite: TestSuite = {
       assert.strictEqual(longNameSystem, `CREATE_SQL_SAMPLE`);
     }},
 
-    {name: `Create environment`, test: async () => {
+    {name: `Setup for delimited names`, test: async () => {
       try {
         await JobManager.runSQL(`call qsys.create_sql_sample('SAMPLE')`);
       } catch (e) {
@@ -157,6 +157,105 @@ export const DatabaseSuite: TestSuite = {
 
       const parms = await Callable.getParms(qsys, createSqlSample);
       assert.notStrictEqual(parms.length, 0);
+    }},
+
+    {name: `Setup for overloaded routines`, test: async () => {
+      // Setup overloaded routines
+      try {
+        await JobManager.runSQL(`CREATE SCHEMA OVERLOAD`);
+      } catch (e) {
+        console.log(`Probably exists.`);
+      }
+      try {
+        const setupStatements = [
+          // Functions
+          `CREATE OR REPLACE FUNCTION OVERLOAD.MULTI_FUNC (P1 INTEGER) RETURNS INTEGER SPECIFIC OVERLOAD.MULTI_FUNC_SQUARED RETURN P1 * P1;`,
+          `LABEL ON SPECIFIC FUNCTION OVERLOAD.MULTI_FUNC_SQUARED IS 'Accepts One Integer and Returns Its Square';`,
+          `COMMENT ON PARAMETER SPECIFIC FUNCTION OVERLOAD.MULTI_FUNC_SQUARED (P1 IS 'Value to Square');`,
+
+          `CREATE OR REPLACE FUNCTION OVERLOAD.MULTI_FUNC (P1 INTEGER, P2 INTEGER) RETURNS INTEGER SPECIFIC OVERLOAD.MULTI_FUNC_PRODUCT RETURN P1 * P2;`,
+          `LABEL ON SPECIFIC FUNCTION OVERLOAD.MULTI_FUNC_PRODUCT IS 'Accepts Two Integer and Returns the Product';`,
+          `COMMENT ON PARAMETER SPECIFIC FUNCTION OVERLOAD.MULTI_FUNC_PRODUCT (P1 IS 'First Value', P2 IS 'Second Value');`,
+
+          // Procedures
+          `CREATE OR REPLACE PROCEDURE OVERLOAD.MULTI_PROC () SPECIFIC OVERLOAD.MULTI_PROC_ALL_MONITORS PROGRAM TYPE SUB DYNAMIC RESULT SETS 1 `,
+            `BEGIN DECLARE MONITORS CURSOR WITH RETURN FOR SELECT * FROM QUSRSYS.QAUGDBPMD2; OPEN MONITORS; END;`,
+          `LABEL ON SPECIFIC PROCEDURE OVERLOAD.MULTI_PROC_ALL_MONITORS IS 'Returns the Entire List of Monitors';`,
+
+          `CREATE OR REPLACE PROCEDURE OVERLOAD.MULTI_PROC (IN CREATOR CHARACTER(10)) SPECIFIC OVERLOAD.MULTI_PROC_MY_MONITORS PROGRAM TYPE SUB DYNAMIC RESULT SETS 1 `,
+            `BEGIN DECLARE MONITORS CURSOR WITH RETURN FOR SELECT * FROM QUSRSYS.QAUGDBPMD2 WHERE "Created by" = CREATOR; OPEN MONITORS; END;`,
+          `LABEL ON SPECIFIC PROCEDURE OVERLOAD.MULTI_PROC_MY_MONITORS IS 'Returns the List of My Monitors';`,
+          `COMMENT ON PARAMETER SPECIFIC PROCEDURE OVERLOAD.MULTI_PROC_MY_MONITORS (CREATOR IS 'User That Created the Monitor');`,
+        ]
+        // Server component doesn't support running multiple queries in one request
+        await getInstance().getContent().runSQL(setupStatements.join(`\n`));
+      } catch (e) {
+        console.log(`Possible fail`);
+      }
+    }},
+
+    {name: `Retrieve overloaded functions`, test: async () => {
+      const functions = await Database.getObjects(`OVERLOAD`, `functions`);
+      // Verify two functions with same name exist
+      assert.strictEqual(functions.length, 2);
+    }},
+
+    {name: `Retrieve overloaded function parameters`, test: async () => {
+      const parms1 = await Callable.getParms(`OVERLOAD`, `MULTI_FUNC_SQUARED`);
+      // Verify one parameter for this function
+      assert.strictEqual(parms1.length, 1);
+
+      const parms2 = await Callable.getParms(`OVERLOAD`, `MULTI_FUNC_PRODUCT`);
+      // Verify two parameter for this function
+      assert.strictEqual(parms2.length, 2);
+    }},
+
+    {name: `Generate SQL for overloaded functions`, test: async () => {
+      // Generate SQL for overloaded functions, verify they are different
+      const func1 = await Database.generateSQL(`OVERLOAD`, `MULTI_FUNC_SQUARED`, `FUNCTION`);
+      const func2 = await Database.generateSQL(`OVERLOAD`, `MULTI_FUNC_PRODUCT`, `FUNCTION`);
+      assert.notStrictEqual(func1, func2);
+    }},
+
+    {name: `Delete overloaded function`, test: async () => {
+      // Delete one of the overloaded functions
+      await Database.deleteObject(`OVERLOAD`, `MULTI_FUNC_SQUARED`, `function`);
+      const functions = await Database.getObjects(`OVERLOAD`, `functions`);
+      // Verify only one function remains and it is not the one deleted
+      assert.strictEqual(functions.length, 1);
+      assert.strictEqual(functions[0].specificName, `MULTI_FUNC_PRODUCT`);
+    }},
+
+    {name: `Retrieve overloaded procedures`, test: async () => {
+      const procedures = await Database.getObjects(`OVERLOAD`, `procedures`);
+      // Verify two procedures with same name exist
+      assert.strictEqual(procedures.length, 2);
+    }},
+
+    {name: `Retrieve overloaded procedure parameters`, test: async () => {
+      const parms1 = await Callable.getParms(`OVERLOAD`, `MULTI_PROC_ALL_MONITORS`);
+      // Verify one parameter for this procedure
+      assert.strictEqual(parms1.length, 0);
+
+      const parms2 = await Callable.getParms(`OVERLOAD`, `MULTI_PROC_MY_MONITORS`);
+      // Verify two parameter for this procedure
+      assert.strictEqual(parms2.length, 1);
+    }},
+
+    {name: `Generate SQL for overloaded procedures`, test: async () => {
+      // Generate SQL for overloaded procedures, verify they are different
+      const proc1 = await Database.generateSQL(`OVERLOAD`, `MULTI_PROC_ALL_MONITORS`, `PROCEDURE`);
+      const proc2 = await Database.generateSQL(`OVERLOAD`, `MULTI_PROC_MY_MONITORS`, `PROCEDURE`);
+      assert.notStrictEqual(proc1, proc2);
+    }},
+
+    {name: `Delete overloaded procedure`, test: async () => {
+      // Delete one of the overloaded procedures
+      await Database.deleteObject(`OVERLOAD`, `MULTI_PROC_ALL_MONITORS`, `procedure`);
+      const procedures = await Database.getObjects(`OVERLOAD`, `procedures`);
+      // Verify only one function remains and it is not the one deleted
+      assert.strictEqual(procedures.length, 1);
+      assert.strictEqual(procedures[0].specificName, `MULTI_PROC_MY_MONITORS`);
     }},
   ]
 }
