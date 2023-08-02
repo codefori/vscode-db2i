@@ -138,7 +138,7 @@ export default class Database {
   static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
     const lines = await JobManager.runSQL<{SRCDTA: string}>([
       `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
-    ].join(` `), [object, schema, internalType]);
+    ].join(` `), { parameters : [object, schema, internalType] });
 
     const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
     const formatted = Statement.format(generatedStatement);
