@@ -1,6 +1,7 @@
 
 import vscode from "vscode"
 import { JobManager } from "../config";
+import { QueryOptions } from "../connection/types";
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
 export default class Callable {
@@ -10,10 +11,12 @@ export default class Callable {
    * @returns 
    */
   static getParms(schema: string, specificName: string): Promise<SQLParm[]> {
+    const options : QueryOptions = { parameters : [schema, specificName] };
     return JobManager.runSQL<SQLParm>([
       `SELECT * FROM QSYS2.SYSPARMS`,
-      `WHERE SPECIFIC_SCHEMA = '${schema}' AND SPECIFIC_NAME = '${specificName}' and ROW_TYPE = 'P'`,
+      `WHERE SPECIFIC_SCHEMA = ? AND SPECIFIC_NAME = ? and ROW_TYPE = 'P'`,
       `ORDER BY ORDINAL_POSITION`
-    ].join(` `));
+    ].join(` `),
+    options);
   }
 }
