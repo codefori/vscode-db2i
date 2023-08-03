@@ -234,11 +234,11 @@ export const DatabaseSuite: TestSuite = {
 
     {name: `Retrieve overloaded procedure parameters`, test: async () => {
       const parms1 = await Callable.getParms(`OVERLOAD`, `MULTI_PROC_ALL_MONITORS`);
-      // Verify one parameter for this procedure
+      // Verify no parameters for this procedure
       assert.strictEqual(parms1.length, 0);
 
       const parms2 = await Callable.getParms(`OVERLOAD`, `MULTI_PROC_MY_MONITORS`);
-      // Verify two parameter for this procedure
+      // Verify one parameter for this procedure
       assert.strictEqual(parms2.length, 1);
     }},
 
@@ -253,7 +253,7 @@ export const DatabaseSuite: TestSuite = {
       // Delete one of the overloaded procedures
       await Database.deleteObject(`OVERLOAD`, `MULTI_PROC_ALL_MONITORS`, `procedure`);
       const procedures = await Database.getObjects(`OVERLOAD`, `procedures`);
-      // Verify only one function remains and it is not the one deleted
+      // Verify only one procedure remains and it is not the one deleted
       assert.strictEqual(procedures.length, 1);
       assert.strictEqual(procedures[0].specificName, `MULTI_PROC_MY_MONITORS`);
     }},
