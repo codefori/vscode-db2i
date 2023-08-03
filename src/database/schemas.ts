@@ -43,9 +43,9 @@ export default class Database {
 
     case `functions`:
       objects = await JobManager.runSQL([
-        `select ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT from QSYS2.SYSFUNCS`,
+        `select ROUTINE_NAME as NAME, SPECIFIC_NAME as SPECNAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT from QSYS2.SYSFUNCS`,
         `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and ROUTINE_NAME like '%${details.filter}%'`: ``} and FUNCTION_ORIGIN in ('E','U')`,
-        `order by ROUTINE_NAME asc`,
+        `order by ROUTINE_NAME asc, SPECIFIC_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
       ].join(` `));
       break;
@@ -70,9 +70,9 @@ export default class Database {
 
     case `procedures`:
       objects = await JobManager.runSQL([
-        `select ROUTINE_NAME as NAME, ROUTINE_TEXT as TEXT from QSYS2.SYSPROCS`,
+        `select ROUTINE_NAME as NAME, SPECIFIC_NAME as SPECNAME, ROUTINE_TEXT as TEXT from QSYS2.SYSPROCS`,
         `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and ROUTINE_NAME like '%${details.filter}%'`: ``}`,
-        `order by ROUTINE_NAME asc`,
+        `order by ROUTINE_NAME asc, SPECIFIC_NAME asc`,
         `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
       ].join(` `));
       break;
@@ -114,18 +114,19 @@ export default class Database {
       break;
     }
 
-    return objects.map(table => ({
+    return objects.map(object => ({
       type,
       schema,
-      name: table.NAME,
-      text: table.TEXT,
+      name: object.NAME,
+      specificName: object.SPECNAME,
+      text: object.TEXT,
       system: {
-        schema: table.SYS_SCHEMA,
-        name: table.SYS_NAME,
+        schema: object.SYS_SCHEMA,
+        name: object.SYS_NAME,
       },
       basedOn: {
-        schema: table.BASE_SCHEMA,
-        name: table.BASE_OBJ
+        schema: object.BASE_SCHEMA,
+        name: object.BASE_OBJ
       }
     }));
   }
@@ -137,7 +138,7 @@ export default class Database {
   static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
     const lines = await JobManager.runSQL<{SRCDTA: string}>([
       `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
-    ].join(` `), [object, schema, internalType]);
+    ].join(` `), { parameters : [object, schema, internalType] });
 
     const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
     const formatted = Statement.format(generatedStatement);
@@ -146,12 +147,16 @@ export default class Database {
   }
   
   static async deleteObject(schema: string, name:string, type: string): Promise<void> {
-    const query = `DROP ${type} IF EXISTS ${schema}.${name}`;
+    const query = `DROP ${(this.isRoutineType(type) ? 'SPECIFIC ' : '') + type} IF EXISTS ${schema}.${name}`;
     await getInstance().getContent().runSQL(query);
   }
   
   static async renameObject(schema: string, oldName: string, newName: string, type: string): Promise<void> {
     const query = `RENAME ${type === 'view' ? 'table' : type} ${schema}.${oldName} TO ${newName}`;
     await getInstance().getContent().runSQL(query);
+  }
+
+  static isRoutineType(type: string): boolean {
+    return type === `function` || type === `procedure`;
   }
 }
