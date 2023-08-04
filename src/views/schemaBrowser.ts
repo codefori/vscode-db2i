@@ -1,9 +1,8 @@
 
-import vscode from "vscode"
+import vscode, { ThemeIcon } from "vscode"
 import Schemas from "../database/schemas";
 import Table from "../database/table";
 import { getInstance, loadBase } from "../base";
-import { fetchSystemInfo } from "../config";
 
 import Configuration from "../configuration";
 
@@ -58,20 +57,43 @@ export default class schemaBrowser {
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.addSchemaToSchemaBrowser`, async () => {
-        const config = getInstance().getConfig();
-
-        const schemas = config[`databaseBrowserList`] || [];
-
-        const newSchema = await vscode.window.showInputBox({
-          prompt: `Library to add to Database Browser`
+        const schemas = getInstance().getConfig()[`databaseBrowserList`] || [];
+        let newSchema = await vscode.window.showInputBox({
+          prompt: `Schema to add to Schema Browser`,
+          validateInput(value): string {
+            value = Statement.delimName(value, true);
+            return schemas.includes(value) ? `${value} already in Schema Browser list` : undefined;
+          },
         });
-
-        if (newSchema && !schemas.includes(newSchema)) {
-          schemas.push(newSchema);
-          config[`databaseBrowserList`] = schemas;
-          await getInstance().setConfig(config);
-          this.refresh();
+        if (newSchema) {
+          newSchema = Statement.delimName(newSchema, true);
+          const schemaLookup = await Schemas.getObjects(undefined, `schemas`, { filter: Statement.noQuotes(newSchema) });
+          if (schemaLookup.length == 1) {
+            // The schema exists, use the SQL name even if the user entered the system schema name
+            this.addSchemas([Statement.delimName(schemaLookup[0].name)]);
+          } else {
+            vscode.window.showErrorMessage(`${newSchema} does not exist`);
+          }
         }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.browseForSchemasToAddToSchemaBrowser`, async () => {
+        const allSchemas = await Schemas.getObjects(undefined, `schemas`);
+        const icon: ThemeIcon = new ThemeIcon(`database`);
+        const selections = await vscode.window.showQuickPick(allSchemas.map(o => {
+          const name = Statement.delimName(o.name);
+          const systemName = o.system.name;
+          return ({
+            label: name,
+            // If the name and system name are different, show the system name as part of the description
+            description: (name !== systemName ? `( ${systemName} )   ` : ``) + (o.text ? o.text : ``),
+            iconPath: icon,
+          })
+        }), {
+          title: `Schemas on ${getInstance().getConnection().currentHost}`,
+          canPickMany: true
+        });
+        this.addSchemas(selections.map(selection => selection.label));
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.removeSchemaFromSchemaBrowser`, async (node: SchemaItem) => {
@@ -335,6 +357,26 @@ export default class schemaBrowser {
     });
   }
 
+  /**
+   * Add the specified schemas to the Schema Browser list
+   */
+  async addSchemas(schemasToAdd : string[]) {
+    if (schemasToAdd?.length > 0) {
+      const config = getInstance().getConfig();
+      const schemas = config[`databaseBrowserList`] || [];
+      for (let x in schemasToAdd) {
+        const schema = schemasToAdd[x];
+        // If the schema is not already in the list, add it
+        if (!schemas.includes(schema)) {
+          schemas.push(schema);
+        }
+      }
+      config[`databaseBrowserList`] = schemas;
+      await getInstance().setConfig(config);
+      this.refresh();
+    }
+  }
+
   refresh() {
     this.emitter.fire(undefined);
   }
@@ -433,10 +475,15 @@ export default class schemaBrowser {
       if (connection) {
         const config = getInstance().getConfig();
 
-        const libraries = config[`databaseBrowserList`] || [];
+        const schemas = config[`databaseBrowserList`] || [];
+        schemas.sort((s1, s2) => {
+          if (s1 > s2) return 1;
+          if (s1 < s2) return -1;
+          return 0;
+        });
 
-        for (let library of libraries) {
-          items.push(new Schema(library));
+        for (let schema of schemas) {
+          items.push(new Schema(schema));
         }
       } else {
         items.push(new Schema(`No connection. Refresh when ready.`));

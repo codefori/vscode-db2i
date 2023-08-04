@@ -163,6 +163,12 @@
         "icon": "$(add)"
       },
       {
+        "command": "vscode-db2i.browseForSchemasToAddToSchemaBrowser",
+        "title": "Browse for Schemas to Add to Schema Browser",
+        "category": "Db2 for i",
+        "icon": "$(list-selection)"
+      },
+      {
         "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
         "title": "Remove schema from view",
         "category": "Db2 for i",
@@ -389,6 +395,11 @@
       "view/title": [
         {
           "command": "vscode-db2i.addSchemaToSchemaBrowser",
+          "group": "navigation",
+          "when": "view == schemaBrowser"
+        },
+        {
+          "command": "vscode-db2i.browseForSchemasToAddToSchemaBrowser",
           "group": "navigation",
           "when": "view == schemaBrowser"
         },
