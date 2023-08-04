@@ -25,7 +25,7 @@ export default class Database {
           `select SCHEMA_NAME as NAME, SCHEMA_TEXT as TEXT, SYSTEM_SCHEMA_NAME as SYS_NAME `,
           `from QSYS2.SYSSCHEMAS`,
           details.filter ? `where SCHEMA_NAME = '${details.filter}' or SYSTEM_SCHEMA_NAME = '${details.filter}'` : ``,
-          `order by SCHEMA_NAME asc`
+          `order by QSYS2.DELIMIT_NAME(SCHEMA_NAME) asc`
         ].join(` `);
           break;
     case `tables`:
