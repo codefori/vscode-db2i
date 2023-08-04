@@ -56,44 +56,61 @@ export default class schemaBrowser {
         this.refresh();
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.addSchemaToSchemaBrowser`, async () => {
-        const schemas = getInstance().getConfig()[`databaseBrowserList`] || [];
-        let newSchema = await vscode.window.showInputBox({
-          prompt: `Schema to add to Schema Browser`,
-          validateInput(value): string {
-            value = Statement.delimName(value, true);
-            return schemas.includes(value) ? `${value} already in Schema Browser list` : undefined;
-          },
-        });
-        if (newSchema) {
-          newSchema = Statement.delimName(newSchema, true);
-          const schemaLookup = await Schemas.getObjects(undefined, `schemas`, { filter: Statement.noQuotes(newSchema) });
-          if (schemaLookup.length == 1) {
-            // The schema exists, use the SQL name even if the user entered the system schema name
-            this.addSchemas([Statement.delimName(schemaLookup[0].name)]);
-          } else {
-            vscode.window.showErrorMessage(`${newSchema} does not exist`);
+      /** Manage the schemas listed in the Schema Browser */
+      vscode.commands.registerCommand(`vscode-db2i.manageSchemaBrowserList`, async () => {
+        /** QuickPick item that represents a schema */
+        class ListItem implements vscode.QuickPickItem {
+          label: string;
+          detail?: string;
+          description?: string;
+          iconPath: ThemeIcon;
+
+          constructor(object: BasicSQLObject) {
+            const name = Statement.delimName(object.name);
+            const systemName = object.system.name;
+            this.label = name;
+            // If the name and system name are different, show the system name in the detail line
+            if (name !== systemName) {
+              this.detail = systemName;
+            }
+            this.description = object.text ? object.text : undefined;
+            this.iconPath = new ThemeIcon(`database`);
           }
         }
-      }),
 
-      vscode.commands.registerCommand(`vscode-db2i.browseForSchemasToAddToSchemaBrowser`, async () => {
+        const config = getInstance().getConfig();
+        // Get the list of schemas currently selected for display
+        const currentSchemas = config[`databaseBrowserList`] || [];
+        // Get all the schemas on the system
         const allSchemas = await Schemas.getObjects(undefined, `schemas`);
-        const icon: ThemeIcon = new ThemeIcon(`database`);
-        const selections = await vscode.window.showQuickPick(allSchemas.map(o => {
-          const name = Statement.delimName(o.name);
-          const systemName = o.system.name;
-          return ({
-            label: name,
-            // If the name and system name are different, show the system name as part of the description
-            description: (name !== systemName ? `( ${systemName} )   ` : ``) + (o.text ? o.text : ``),
-            iconPath: icon,
-          })
-        }), {
-          title: `Schemas on ${getInstance().getConnection().currentHost}`,
-          canPickMany: true
-        });
-        this.addSchemas(selections.map(selection => selection.label));
+        // Create an array of ListItems representing the currently selected schemas
+        const selectedItems: ListItem[] = allSchemas.filter(schema => currentSchemas.includes(Statement.delimName(schema.name))).map(object => new ListItem(object));
+        // Prepare the QuickPick window
+        const quickPick = vscode.window.createQuickPick();
+        quickPick.title = `Schema Browser - ${config.name}`;
+        quickPick.canSelectMany = true;
+        quickPick.matchOnDetail = true;
+        // Build the quick pick list with two sections, selected schemas first, followed by the remaining available schemas on the system
+        quickPick.items = [
+          { kind: vscode.QuickPickItemKind.Separator, label: "Currently selected schemas" },
+          ...selectedItems,
+          { kind: vscode.QuickPickItemKind.Separator, label: "Available schemas" },
+          ...allSchemas.filter(schema => !currentSchemas.includes(Statement.delimName(schema.name))).map(object => new ListItem(object))
+        ];
+        // Set the selected items
+        quickPick.selectedItems = selectedItems;
+        // Process the selections
+        quickPick.onDidAccept(() => {
+          const selections = quickPick.selectedItems;
+          if (selections) {
+            config[`databaseBrowserList`] = selections.map(selection => selection.label);
+            getInstance().setConfig(config);
+            this.refresh();
+          }
+          quickPick.hide()
+        })
+        quickPick.onDidHide(() => quickPick.dispose());
+        quickPick.show();
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.removeSchemaFromSchemaBrowser`, async (node: SchemaItem) => {
@@ -355,26 +372,6 @@ export default class schemaBrowser {
       this.cache = {};
       this.refresh();
     });
-  }
-
-  /**
-   * Add the specified schemas to the Schema Browser list
-   */
-  async addSchemas(schemasToAdd : string[]) {
-    if (schemasToAdd?.length > 0) {
-      const config = getInstance().getConfig();
-      const schemas = config[`databaseBrowserList`] || [];
-      for (let x in schemasToAdd) {
-        const schema = schemasToAdd[x];
-        // If the schema is not already in the list, add it
-        if (!schemas.includes(schema)) {
-          schemas.push(schema);
-        }
-      }
-      config[`databaseBrowserList`] = schemas;
-      await getInstance().setConfig(config);
-      this.refresh();
-    }
   }
 
   refresh() {

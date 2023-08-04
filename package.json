@@ -157,14 +157,8 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "vscode-db2i.addSchemaToSchemaBrowser",
-        "title": "Add Schema to Schema Browser",
-        "category": "Db2 for i",
-        "icon": "$(add)"
-      },
-      {
-        "command": "vscode-db2i.browseForSchemasToAddToSchemaBrowser",
-        "title": "Browse for Schemas to Add to Schema Browser",
+        "command": "vscode-db2i.manageSchemaBrowserList",
+        "title": "Manage Schema Browser List",
         "category": "Db2 for i",
         "icon": "$(list-selection)"
       },
@@ -394,12 +388,7 @@
       ],
       "view/title": [
         {
-          "command": "vscode-db2i.addSchemaToSchemaBrowser",
-          "group": "navigation",
-          "when": "view == schemaBrowser"
-        },
-        {
-          "command": "vscode-db2i.browseForSchemasToAddToSchemaBrowser",
+          "command": "vscode-db2i.manageSchemaBrowserList",
           "group": "navigation",
           "when": "view == schemaBrowser"
         },
