@@ -130,8 +130,15 @@ export default class Statement {
 			case StatementType.Select:
 			case StatementType.Delete:
 				// SELECT
+				let inFromClause = false;
 				for (let i = 0; i < this.tokens.length; i++) {
-					if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`)) {
+					if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
+						inFromClause = true;
+					} else if (inFromClause && tokenIs(this.tokens[i], `CLAUSE`) || tokenIs(this.tokens[i], `JOIN`) || tokenIs(this.tokens[i], `closebracket`)) {
+						inFromClause = false;
+					}
+
+					if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
 						doAdd(this.getRefAtToken(i+1));
 					}
 				}
