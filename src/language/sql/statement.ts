@@ -101,6 +101,8 @@ export default class Statement {
 		const doAdd = (ref?: ObjectRef) => {
 			if (ref) list.push(ref);
 		}
+		
+		let inFromClause = false;
 
 		switch (this.type) {
 			case StatementType.Call:
@@ -131,7 +133,13 @@ export default class Statement {
 			case StatementType.Delete:
 				// SELECT
 				for (let i = 0; i < this.tokens.length; i++) {
-					if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`)) {
+					if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
+						inFromClause = true;
+					} else if (inFromClause && tokenIs(this.tokens[i], `CLAUSE`) || tokenIs(this.tokens[i], `JOIN`) || tokenIs(this.tokens[i], `closebracket`)) {
+						inFromClause = false;
+					}
+
+					if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
 						doAdd(this.getRefAtToken(i+1));
 					}
 				}
@@ -178,8 +186,14 @@ export default class Statement {
 							break;
 
 						case `VIEW`:
-							for (let i = postName; i < this.tokens.length; i++) {
-								if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`)) {
+							for (let i = 0; i < this.tokens.length; i++) {
+								if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
+									inFromClause = true;
+								} else if (inFromClause && tokenIs(this.tokens[i], `CLAUSE`) || tokenIs(this.tokens[i], `JOIN`) || tokenIs(this.tokens[i], `closebracket`)) {
+									inFromClause = false;
+								}
+			
+								if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
 									doAdd(this.getRefAtToken(i+1));
 								}
 							}

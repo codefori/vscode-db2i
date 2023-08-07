@@ -177,6 +177,27 @@ describe(`Object references`, () => {
     expect(obj.alias).toBe(`a`)
   });
 
+  test(`SELECT: Two tables in FROM clause`, () => {
+    const query = [
+      `SELECT ORID, ORCUID, CUSTNM, ORYEAR,`,
+      `   ORDATE,  ORDATDEL, ORDATCLO,`,
+      `   COALESCE ( (SELECT SUM(ODTOTVAT)`,
+      `              FROM   DETORD D`,
+      `              WHERE H.ORID = ODORID ), 0) AS TOTVAL`,
+      `FROM  "ORDER" H ,  CUSTOMER`,
+      `WHERE ORCUID = CUID`,
+    ].join(`\r\n`);    
+    
+    const document = new Document(query);
+  
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    const refs = statement.getObjectReferences();
+    expect(refs.length).toBe(3);
+  })
+
   test(`SELECT JOIN: inner join`, () => {
     const query = [
       `SELECT EMPNO, LASTNAME, PROJNO`,
