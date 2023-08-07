@@ -639,7 +639,53 @@ describe(`Object references`, () => {
     expect(defs[2].object.name).toBe(`talks`);
     expect(defs[2].object.schema).toBeUndefined();
     expect(defs[2].alias).toBe(`b`);
-  })
+  });
+
+  test(`CREATE VIEW: with references`, () => {
+    const content = [
+      `CREATE VIEW ARTLSTDAT (`,
+      `  ARID ,`,
+      `  ARDESC ,`,
+      `  LASTORDER ,`,
+      `  QUANTITY )`,
+      `  AS`,
+      `  SELECT ARID, ARDESC,     MAX(ORDATE) AS LASTORDER , SUM(ODQTY) AS QUANTITY`,
+      `    FROM  ARTICLE,            "ORDER",            DETORD`,
+      `    WHERE ARID = ODARID AND ODORID = ORID GROUP BY ARID, ARDESC`,
+      `  ;`,
+    ].join(`\n`);
+  
+    const document = new Document(content);
+  
+    expect(document.statements.length).toBe(1);
+  
+    const view = document.statements[0];
+  
+    expect(view.type).toBe(StatementType.Create);
+  
+    const defs = view.getObjectReferences();
+  
+    expect(defs.length).toBe(4);
+    expect(defs[0].type).toBe(`VIEW`);
+    expect(defs[0].object.name).toBe(`ARTLSTDAT`);
+    expect(defs[0].object.schema).toBeUndefined();
+    expect(defs[0].alias).toBeUndefined();
+  
+    expect(defs[1].type).toBeUndefined();
+    expect(defs[1].object.name).toBe(`ARTICLE`);
+    expect(defs[1].object.schema).toBeUndefined();
+    expect(defs[1].alias).toBeUndefined();
+  
+    expect(defs[2].type).toBeUndefined();
+    expect(defs[2].object.name).toBe(`"ORDER"`);
+    expect(defs[2].object.schema).toBeUndefined();
+    expect(defs[2].alias).toBeUndefined();
+  
+    expect(defs[3].type).toBeUndefined();
+    expect(defs[3].object.name).toBe(`DETORD`);
+    expect(defs[3].object.schema).toBeUndefined();
+    expect(defs[3].alias).toBeUndefined();
+  });
 });
 
 describe(`Offset reference tests`, () => {

@@ -135,7 +135,7 @@ export default class Statement {
 				for (let i = 0; i < this.tokens.length; i++) {
 					if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
 						inFromClause = true;
-					} else if (inFromClause && tokenIs(this.tokens[i], `CLAUSE`) || tokenIs(this.tokens[i], `JOIN`) || tokenIs(this.tokens[i], `closebracket`)) {
+					} else if (inFromClause && tokenIs(this.tokens[i], `clause`) || tokenIs(this.tokens[i], `join`) || tokenIs(this.tokens[i], `closebracket`)) {
 						inFromClause = false;
 					}
 
@@ -186,15 +186,19 @@ export default class Statement {
 							break;
 
 						case `VIEW`:
-							for (let i = 0; i < this.tokens.length; i++) {
-								if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
-									inFromClause = true;
-								} else if (inFromClause && tokenIs(this.tokens[i], `CLAUSE`) || tokenIs(this.tokens[i], `JOIN`) || tokenIs(this.tokens[i], `closebracket`)) {
-									inFromClause = false;
-								}
-			
-								if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
-									doAdd(this.getRefAtToken(i+1));
+							const asKeyword = this.tokens.findIndex(token => tokenIs(token, `keyword`, `AS`));
+
+							if (asKeyword > 0) {
+								for (let i = asKeyword; i < this.tokens.length; i++) {
+									if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
+										inFromClause = true;
+									} else if (inFromClause && (tokenIs(this.tokens[i], `clause`) || tokenIs(this.tokens[i], `join`) || tokenIs(this.tokens[i], `closebracket`))) {
+										inFromClause = false;
+									}
+				
+									if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
+										doAdd(this.getRefAtToken(i+1));
+									}
 								}
 							}
 							break;
