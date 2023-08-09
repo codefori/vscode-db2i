@@ -78,39 +78,49 @@ export default class schemaBrowser {
           }
         }
 
-        const config = getInstance().getConfig();
-        // Get the list of schemas currently selected for display
-        const currentSchemas = config[`databaseBrowserList`] || [];
-        // Get all the schemas on the system
-        const allSchemas = await Schemas.getObjects(undefined, `schemas`);
-        // Create an array of ListItems representing the currently selected schemas
-        const selectedItems: ListItem[] = allSchemas.filter(schema => currentSchemas.includes(Statement.delimName(schema.name))).map(object => new ListItem(object));
-        // Prepare the QuickPick window
-        const quickPick = vscode.window.createQuickPick();
-        quickPick.title = `Schema Browser - ${config.name}`;
-        quickPick.canSelectMany = true;
-        quickPick.matchOnDetail = true;
-        // Build the quick pick list with two sections, selected schemas first, followed by the remaining available schemas on the system
-        quickPick.items = [
-          { kind: vscode.QuickPickItemKind.Separator, label: "Currently selected schemas" },
-          ...selectedItems,
-          { kind: vscode.QuickPickItemKind.Separator, label: "Available schemas" },
-          ...allSchemas.filter(schema => !currentSchemas.includes(Statement.delimName(schema.name))).map(object => new ListItem(object))
-        ];
-        // Set the selected items
-        quickPick.selectedItems = selectedItems;
-        // Process the selections
-        quickPick.onDidAccept(() => {
-          const selections = quickPick.selectedItems;
-          if (selections) {
-            config[`databaseBrowserList`] = selections.map(selection => selection.label);
-            getInstance().setConfig(config);
-            this.refresh();
-          }
-          quickPick.hide()
-        })
-        quickPick.onDidHide(() => quickPick.dispose());
-        quickPick.show();
+        try {
+          const config = getInstance().getConfig();
+          // Get the list of schemas currently selected for display
+          const currentSchemas = config[`databaseBrowserList`] || [];
+          let allSchemas: BasicSQLObject[];
+          // Get all the schemas on the system.  This might take a while, so display a progress message to let the user know something is happening.
+          await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Retrieving schemas for ${config.name}...`
+          }, async () => {
+            allSchemas = await Schemas.getObjects(undefined, `schemas`);
+          });
+          // Create an array of ListItems representing the currently selected schemas
+          const selectedItems: ListItem[] = allSchemas.filter(schema => currentSchemas.includes(Statement.delimName(schema.name))).map(object => new ListItem(object));
+          // Prepare the QuickPick window
+          const quickPick = vscode.window.createQuickPick();
+          quickPick.title = `Schema Browser - ${config.name}`;
+          quickPick.canSelectMany = true;
+          quickPick.matchOnDetail = true;
+          // Build the quick pick list with two sections, selected schemas first, followed by the remaining available schemas on the system
+          quickPick.items = [
+            { kind: vscode.QuickPickItemKind.Separator, label: "Currently selected schemas" },
+            ...selectedItems,
+            { kind: vscode.QuickPickItemKind.Separator, label: "Available schemas" },
+            ...allSchemas.filter(schema => !currentSchemas.includes(Statement.delimName(schema.name))).map(object => new ListItem(object))
+          ];
+          // Set the selected items
+          quickPick.selectedItems = selectedItems;
+          // Process the selections
+          quickPick.onDidAccept(() => {
+            const selections = quickPick.selectedItems;
+            if (selections) {
+              config[`databaseBrowserList`] = selections.map(selection => selection.label);
+              getInstance().setConfig(config);
+              this.refresh();
+            }
+            quickPick.hide()
+          })
+          quickPick.onDidHide(() => quickPick.dispose());
+          quickPick.show();
+        } catch (e) {
+          vscode.window.showErrorMessage(e.message);
+        }
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.removeSchemaFromSchemaBrowser`, async (node: SchemaItem) => {
