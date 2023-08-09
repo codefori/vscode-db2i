@@ -390,7 +390,7 @@
         {
           "command": "vscode-db2i.manageSchemaBrowserList",
           "group": "navigation",
-          "when": "view == schemaBrowser"
+          "when": "view == schemaBrowser && vscode-db2i:manageSchemaBrowserEnabled"
         },
         {
           "command": "vscode-db2i.refreshSchemaBrowser",
