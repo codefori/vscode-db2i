@@ -244,7 +244,6 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.copyData`, async (object: SQLObject) => {
         if (object) {
-          const base = loadBase();
           const page = await copyUI.loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
           
           if(page && page.data) {
@@ -252,23 +251,19 @@ export default class schemaBrowser {
             page.panel.dispose();
 
             if (data.buttons == 'copy') {
-              if (data.library != "" && data.file != "") {
-                try {
-                  await vscode.window.withProgress({
-                    location: vscode.ProgressLocation.Notification,
-                    title: `Copying ${object.name}...`
-                  }, async () => {
-                    await Table.copyFile(object.system.schema, object.system.name, data);
-                  });
-    
-                  vscode.window.showInformationMessage(`Table copied`);
-                  this.cache = {};
-                  this.refresh();
-                } catch (e) {
-                  vscode.window.showErrorMessage(e.message);
-                }
-              } else {
-                vscode.window.showErrorMessage("Schema and Name cannot be blank.");
+              try {
+                await vscode.window.withProgress({
+                  location: vscode.ProgressLocation.Notification,
+                  title: `Copying ${object.name}...`
+                }, async () => {
+                  await Table.copyFile(object.system.schema, object.system.name, data);
+                });
+  
+                vscode.window.showInformationMessage(`Table copied`);
+                this.cache = {};
+                this.refresh();
+              } catch (e) {
+                vscode.window.showErrorMessage(e.message);
               }
             }
           }
