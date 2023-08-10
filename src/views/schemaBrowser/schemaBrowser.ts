@@ -1,14 +1,15 @@
 
 import vscode from "vscode"
-import Schemas from "../database/schemas";
-import Table from "../database/table";
-import { getInstance, loadBase } from "../base";
-import { fetchSystemInfo } from "../config";
+import Schemas from "../../database/schemas";
+import Table from "../../database/table";
+import { getInstance, loadBase } from "../../base";
+import { fetchSystemInfo } from "../../config";
 
-import Configuration from "../configuration";
+import Configuration from "../../configuration";
 
-import Types from "./types";
-import Statement from "../database/statement";
+import Types from "../types";
+import Statement from "../../database/statement";
+import { copyUI } from "./copyUI";
 
 const viewItem = {
   "tables": `table`,
@@ -244,34 +245,7 @@ export default class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.copyData`, async (object: SQLObject) => {
         if (object) {
           const base = loadBase();
-          const page = await base.customUI()
-            .addInput('toFile', 'To File')
-            .addInput('toLib', 'Library')
-            .addInput('fromMbr', 'From member', 'Name, generic*, *FIRST, *ALL', {
-              default: '*FIRST'
-            })
-            .addInput('toMbr', 'To member or label', 'Name, *FIRST, *FROMMBR, *ALL', {
-              default: '*FIRST'
-            })
-            .addSelect('mbrOpt', 'Replace or add records', [
-              {text: '*NONE', description: '*NONE', value: '*NONE'},
-              {text: '*ADD', description: '*ADD', value: '*ADD'},
-              {text: '*REPLACE', description: '*REPLACE', value: '*REPLACE'},
-              {text: '*UPDADD', description: '*UPDADD', value: '*UPDADD'},
-            ])
-            .addSelect('crtFile', 'Create file', [
-              {text: '*NO', description: '*NO', value: '*NO'},
-              {text: '*YES', description: '*YES', value: '*YES'},
-            ])
-            .addSelect('outFmt', 'Print format', [
-              {text: '*CHAR', description: '*CHAR', value: '*CHAR'},
-              {text: '*HEX', description: '*HEX', value: '*HEX'},
-            ])
-            .addButtons(
-              {id: 'copy', label:'Copy'},
-              {id: 'cancel', label:'Cancel'}
-            )
-            .loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
+          const page = await copyUI.loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
           
           if(page && page.data) {
             const data = page.data;
