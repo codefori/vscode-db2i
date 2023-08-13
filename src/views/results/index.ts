@@ -50,7 +50,7 @@ class ResultSetPanelProvider {
           this._view.webview.postMessage({
             command: `rows`,
             rows: queryResults.data,
-            columnList: queryResults.metadata.columns.map(x=>x.name),
+            columnList: queryResults.metadata ? queryResults.metadata.columns.map(x=>x.name) : undefined, // Query.fetchMore() doesn't return the metadata
             queryId: queryObject.getId(),
             isDone: queryResults.is_done
           });
