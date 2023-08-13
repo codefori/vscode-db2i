@@ -51,6 +51,7 @@ class ResultSetPanelProvider {
             command: `rows`,
             rows: queryResults.data,
             queryId: queryObject.getId(),
+            update_count: queryResults.update_count,
             isDone: queryResults.is_done
           });
 
