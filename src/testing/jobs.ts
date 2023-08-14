@@ -100,6 +100,22 @@ export const JobsSuite: TestSuite = {
       newJob.close();
     }},
 
+    {name: `Can round-trip Extended characters`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
+      let testString = `¯\\_(ツ)_/¯`
+      let newJob = new SQLJob();
+      await newJob.connect();
+      let qryResults = await newJob.query(`create table qtemp.weewoo (col1 varchar(1208) ccsid 1208)`).run();
+      assert.equal(qryResults.success, true);
+      qryResults = await newJob.query(`insert into qtemp.weewoo values('${testString}')`).run();
+      assert.equal(qryResults.success, true);
+      qryResults = await newJob.query(`select COL1 from qtemp.weewoo`).run();
+      assert.equal(qryResults.success, true);
+      let resultData = qryResults.data[0]['COL1'];
+      assert.equal(resultData, testString);
+      newJob.close();
+    }},
     {name: `Auto close statements`, test: async () => {
       let newJob = new SQLJob();
       await newJob.connect();

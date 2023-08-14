@@ -56,7 +56,8 @@ export class SQLJob {
     const instance = getInstance();
     const connection = instance.getConnection();
     return new Promise((resolve, reject) => {
-      connection.client.connection.exec(ServerComponent.getInitCommand() + ` && exit`, {}, (err: any, stream: any) => {
+      // Setting QIBM_JAVA_STDIO_CONVERT and QIBM_PASE_DESCRIPTOR_STDIO to make sure all PASE and Java converters are off
+      connection.client.connection.exec(`QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B exec `+ServerComponent.getInitCommand(), {}, (err: any, stream: any, options: {encoding: `binary`}) => {
         if (err)
           reject(err);
         let outString = ``;
