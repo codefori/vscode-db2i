@@ -1,13 +1,14 @@
 
 import vscode, { ThemeIcon } from "vscode"
-import Schemas from "../database/schemas";
-import Table from "../database/table";
-import { getInstance, loadBase } from "../base";
+import Schemas from "../../database/schemas";
+import Table from "../../database/table";
+import { getInstance, loadBase } from "../../base";
 
-import Configuration from "../configuration";
+import Configuration from "../../configuration";
 
-import Types from "./types";
-import Statement from "../database/statement";
+import Types from "../types";
+import Statement from "../../database/statement";
+import { copyUI } from "./copyUI";
 
 const viewItem = {
   "tables": `table`,
@@ -272,57 +273,25 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.copyData`, async (object: SQLObject) => {
         if (object) {
-          const base = loadBase();
-          const page = await base.customUI()
-            .addInput('toFile', 'To File')
-            .addInput('toLib', 'Library')
-            .addInput('fromMbr', 'From member', 'Name, generic*, *FIRST, *ALL', {
-              default: '*FIRST'
-            })
-            .addInput('toMbr', 'To member or label', 'Name, *FIRST, *FROMMBR, *ALL', {
-              default: '*FIRST'
-            })
-            .addSelect('mbrOpt', 'Replace or add records', [
-              {text: '*NONE', description: '*NONE', value: '*NONE'},
-              {text: '*ADD', description: '*ADD', value: '*ADD'},
-              {text: '*REPLACE', description: '*REPLACE', value: '*REPLACE'},
-              {text: '*UPDADD', description: '*UPDADD', value: '*UPDADD'},
-            ])
-            .addSelect('crtFile', 'Create file', [
-              {text: '*NO', description: '*NO', value: '*NO'},
-              {text: '*YES', description: '*YES', value: '*YES'},
-            ])
-            .addSelect('outFmt', 'Print format', [
-              {text: '*CHAR', description: '*CHAR', value: '*CHAR'},
-              {text: '*HEX', description: '*HEX', value: '*HEX'},
-            ])
-            .addButtons(
-              {id: 'copy', label:'Copy'},
-              {id: 'cancel', label:'Cancel'}
-            )
-            .loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
+          const page = await copyUI.loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
           
           if(page && page.data) {
             const data = page.data;
             page.panel.dispose();
 
             if (data.buttons == 'copy') {
-              if (data.library != "" && data.file != "") {
-                try {
-                  await vscode.window.withProgress({
-                    location: vscode.ProgressLocation.Notification,
-                    title: `Copying ${object.name}...`
-                  }, async () => {
-                    await Table.copyFile(object.system.schema, object.system.name, data);
-                  });
-    
-                  vscode.window.showInformationMessage(`Table copied`);
-                  this.clearCacheAndRefresh();
-                } catch (e) {
-                  vscode.window.showErrorMessage(e.message);
-                }
-              } else {
-                vscode.window.showErrorMessage("Schema and Name cannot be blank.");
+              try {
+                await vscode.window.withProgress({
+                  location: vscode.ProgressLocation.Notification,
+                  title: `Copying ${object.name}...`
+                }, async () => {
+                  await Table.copyFile(object.system.schema, object.system.name, data);
+                });
+  
+                vscode.window.showInformationMessage(`Table copied`);
+                this.clearCacheAndRefresh();
+              } catch (e) {
+                vscode.window.showErrorMessage(e.message);
               }
             }
           }
