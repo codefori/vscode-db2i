@@ -99,7 +99,38 @@ export const JobsSuite: TestSuite = {
 
       newJob.close();
     }},
+    {name: `Query with non-terse results`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
+      let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
+      await newJob.connect();
+
+      let rowsAtATime = 4;
+      let qry = newJob.query(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: false});
+      let qryResults = await qry.run(rowsAtATime);
+
+      assert.equal(qryResults.success, true);
+      let firstRow = qryResults.data[0];
+      let cusnum = firstRow[`CUSNUM`];
+      assert.equal(cusnum === undefined, false);
+      assert.equal(Array.isArray(firstRow), false);
+      newJob.close();
+    }},
+    {name: `Query with terse results`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
+      let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
+      await newJob.connect();
+
+      let rowsAtATime = 4;
+      let qry = newJob.query(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: true});
+      let qryResults = await qry.run(rowsAtATime);
+
+      assert.equal(qryResults.success, true);
+      let firstRow = qryResults.data[0];
+      assert.equal(Array.isArray(firstRow), true);
+      newJob.close();
+    }},
     {name: `Can round-trip Extended characters`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
 

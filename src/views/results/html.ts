@@ -54,7 +54,6 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
           let totalRows = 0;
           let noMoreRows = false;
           let isFetching = false;
-          let columnList = [];
 
           window.addEventListener("load", main);
             function main() {
@@ -82,17 +81,14 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   isFetching = false;
                   noMoreRows = data.isDone;
 
-                  if (mustLoadHeaders) {
-                    columnList = event.data.columnList;
-                    
-                    setHeaders('resultset', columnList);
-
+                  if (mustLoadHeaders && event.data.columnList) {
+                    setHeaders('resultset', event.data.columnList);
                     mustLoadHeaders = false;
                   }
 
                   if (data.rows && data.rows.length > 0) {
                     totalRows += data.rows.length;
-                    appendRows('resultset', columnList, data.rows);
+                    appendRows('resultset', data.rows);
                   }
 
                   const nextButton = document.getElementById("nextButton");
@@ -141,19 +137,19 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             });
           }
 
-          function appendRows(tableId, colList, arrayOfObjects) {
+          function appendRows(tableId, arrayOfObjects) {
             var tBodyRef = document.getElementById(tableId).getElementsByTagName('tbody')[0];
 
             for (const row of arrayOfObjects) {
               // Insert a row at the end of table
               var newRow = tBodyRef.insertRow();
 
-              for (const columnName of colList) {
+              for (const cell of row) {
                 // Insert a cell at the end of the row
                 var newCell = newRow.insertCell();
 
                 // Append a text node to the cell
-                var newText = document.createTextNode(row[columnName] === undefined ? 'null' : row[columnName]);
+                var newText = document.createTextNode(cell === undefined ? 'null' : cell);
                 newCell.appendChild(newText);
               }
             }

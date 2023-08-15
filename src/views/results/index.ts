@@ -41,7 +41,7 @@ class ResultSetPanelProvider {
             // We will need to revisit this if we ever allow multiple result tabs like ACS does
             Query.cleanup();
 
-            let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true });
+            let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
             queryObject = query;
           }
 
@@ -161,7 +161,7 @@ export function initialise(context: vscode.ExtensionContext) {
 
                 } else {
                   // Otherwise... it's a bit complicated.
-                  const data = await JobManager.runSQL(statement.content);
+                  const data = await JobManager.runSQL(statement.content, undefined, true);
 
                   if (data.length > 0) {
                     switch (statement.type) {

@@ -90,7 +90,16 @@ export class SQLJobManager {
     return (this.selectedJob >= 0);
   }
 
-  async runSQL<T>(query: string, opts: QueryOptions = {}): Promise<T[]> {
+  /**
+   * Runs SQL
+   * @param query the SQL query
+   * @param parameters the list of parameters (indicated by '?' parameter parkers in the SQL query)
+   * @param isTerseResults whether the returned data is in terse format. When set to true, the data is returned as an array
+   * of arrays. When set to false, data is returned as an array of objects (compatible with legacy API).
+   * @returns 
+   */
+  async runSQL<T>(query: string, opts?: QueryOptions): Promise<T[]> {
+
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
     const rowsToFetch = 2147483647;
