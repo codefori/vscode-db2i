@@ -98,13 +98,13 @@ export class SQLJobManager {
    * of arrays. When set to false, data is returned as an array of objects (compatible with legacy API).
    * @returns 
    */
-  async runSQL<T>(query: string, parameters: any[] = [], isTerseResults: boolean = false): Promise<T[]> {
+  async runSQL<T>(query: string, opts?: QueryOptions): Promise<T[]> {
 
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
     const rowsToFetch = 2147483647;
 
-    const statement = await this.getPagingStatement<T>(query, { parameters: parameters, isTerseResults: isTerseResults });
+    const statement = await this.getPagingStatement<T>(query, opts);
     const results = await statement.run(rowsToFetch);
     statement.close();
     return results.data;
