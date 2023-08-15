@@ -33,6 +33,22 @@ export const JobsSuite: TestSuite = {
       newJob.close();
     }},
     
+    {name: `Verify client special registers are set`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      let qry = newJob.query(`SELECT V_CLIENT_APPLNAME, V_CLIENT_PROGRAMID FROM TABLE(QSYS2.GET_JOB_INFO('*')) limit 1`);
+      let qryResults = await qry.run();
+      assert.equal(qryResults.success, true);
+      assert.equal(qryResults.data.length, 1);
+      let dataRow = qryResults.data[0];
+      assert.equal((``+dataRow['V_CLIENT_APPLNAME']).startsWith(`vscode-db2i`), true);
+      assert.equal((``+dataRow['V_CLIENT_PROGRAMID']).startsWith(`VSCode`), true);
+
+      newJob.close();
+    }},
+
     {name: `Backend set trace options and retrieve`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
   
@@ -83,7 +99,6 @@ export const JobsSuite: TestSuite = {
 
       newJob.close();
     }},
-
     {name: `Query with non-terse results`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
 
@@ -116,7 +131,22 @@ export const JobsSuite: TestSuite = {
       assert.equal(Array.isArray(firstRow), true);
       newJob.close();
     }},
+    {name: `Can round-trip Extended characters`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
+      let testString = `¯\\_(ツ)_/¯`
+      let newJob = new SQLJob();
+      await newJob.connect();
+      let qryResults = await newJob.query(`create table qtemp.weewoo (col1 varchar(1208) ccsid 1208)`).run();
+      assert.equal(qryResults.success, true);
+      qryResults = await newJob.query(`insert into qtemp.weewoo values('${testString}')`).run();
+      assert.equal(qryResults.success, true);
+      qryResults = await newJob.query(`select COL1 from qtemp.weewoo`).run();
+      assert.equal(qryResults.success, true);
+      let resultData = qryResults.data[0]['COL1'];
+      assert.equal(resultData, testString);
+      newJob.close();
+    }},
     {name: `Auto close statements`, test: async () => {
       let newJob = new SQLJob();
       await newJob.connect();

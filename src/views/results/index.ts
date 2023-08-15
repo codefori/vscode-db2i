@@ -52,6 +52,7 @@ class ResultSetPanelProvider {
             rows: queryResults.data,
             columnList: queryResults.metadata ? queryResults.metadata.columns.map(x=>x.name) : undefined, // Query.fetchMore() doesn't return the metadata
             queryId: queryObject.getId(),
+            update_count: queryResults.update_count,
             isDone: queryResults.is_done
           });
 

@@ -89,6 +89,7 @@ export class SQLJobManager {
 
     return (this.selectedJob >= 0);
   }
+
   /**
    * Runs SQL
    * @param query the SQL query
@@ -98,6 +99,7 @@ export class SQLJobManager {
    * @returns 
    */
   async runSQL<T>(query: string, parameters: any[] = [], isTerseResults: boolean = false): Promise<T[]> {
+
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
     const rowsToFetch = 2147483647;

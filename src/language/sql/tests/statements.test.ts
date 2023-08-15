@@ -177,6 +177,27 @@ describe(`Object references`, () => {
     expect(obj.alias).toBe(`a`)
   });
 
+  test(`SELECT: Two tables in FROM clause`, () => {
+    const query = [
+      `SELECT ORID, ORCUID, CUSTNM, ORYEAR,`,
+      `   ORDATE,  ORDATDEL, ORDATCLO,`,
+      `   COALESCE ( (SELECT SUM(ODTOTVAT)`,
+      `              FROM   DETORD D`,
+      `              WHERE H.ORID = ODORID ), 0) AS TOTVAL`,
+      `FROM  "ORDER" H ,  CUSTOMER`,
+      `WHERE ORCUID = CUID`,
+    ].join(`\r\n`);    
+    
+    const document = new Document(query);
+  
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    const refs = statement.getObjectReferences();
+    expect(refs.length).toBe(3);
+  })
+
   test(`SELECT JOIN: inner join`, () => {
     const query = [
       `SELECT EMPNO, LASTNAME, PROJNO`,
@@ -618,7 +639,53 @@ describe(`Object references`, () => {
     expect(defs[2].object.name).toBe(`talks`);
     expect(defs[2].object.schema).toBeUndefined();
     expect(defs[2].alias).toBe(`b`);
-  })
+  });
+
+  test(`CREATE VIEW: with references`, () => {
+    const content = [
+      `CREATE VIEW ARTLSTDAT (`,
+      `  ARID ,`,
+      `  ARDESC ,`,
+      `  LASTORDER ,`,
+      `  QUANTITY )`,
+      `  AS`,
+      `  SELECT ARID, ARDESC,     MAX(ORDATE) AS LASTORDER , SUM(ODQTY) AS QUANTITY`,
+      `    FROM  ARTICLE,            "ORDER",            DETORD`,
+      `    WHERE ARID = ODARID AND ODORID = ORID GROUP BY ARID, ARDESC`,
+      `  ;`,
+    ].join(`\n`);
+  
+    const document = new Document(content);
+  
+    expect(document.statements.length).toBe(1);
+  
+    const view = document.statements[0];
+  
+    expect(view.type).toBe(StatementType.Create);
+  
+    const defs = view.getObjectReferences();
+  
+    expect(defs.length).toBe(4);
+    expect(defs[0].type).toBe(`VIEW`);
+    expect(defs[0].object.name).toBe(`ARTLSTDAT`);
+    expect(defs[0].object.schema).toBeUndefined();
+    expect(defs[0].alias).toBeUndefined();
+  
+    expect(defs[1].type).toBeUndefined();
+    expect(defs[1].object.name).toBe(`ARTICLE`);
+    expect(defs[1].object.schema).toBeUndefined();
+    expect(defs[1].alias).toBeUndefined();
+  
+    expect(defs[2].type).toBeUndefined();
+    expect(defs[2].object.name).toBe(`"ORDER"`);
+    expect(defs[2].object.schema).toBeUndefined();
+    expect(defs[2].alias).toBeUndefined();
+  
+    expect(defs[3].type).toBeUndefined();
+    expect(defs[3].object.name).toBe(`DETORD`);
+    expect(defs[3].object.schema).toBeUndefined();
+    expect(defs[3].alias).toBeUndefined();
+  });
 });
 
 describe(`Offset reference tests`, () => {

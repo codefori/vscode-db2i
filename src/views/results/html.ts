@@ -93,7 +93,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
 
                   const nextButton = document.getElementById("nextButton");
                   if (data.rows === undefined && totalRows === 0) {
-                    nextButton.innerText = 'Query executed with no result set returned.';
+                    nextButton.innerText = 'Query executed with no result set returned. Rows affected: ' + data.update_count;
                   } else {
                     nextButton.innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. Fetching more...');
                   }

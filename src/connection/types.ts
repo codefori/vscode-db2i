@@ -43,6 +43,7 @@ export interface QueryResult<T> extends ServerResponse {
   metadata: QueryMetaData,
   is_done: boolean;
   has_results: boolean;
+  update_count: number;
   data: T[];
 }
 

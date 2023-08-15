@@ -28,6 +28,8 @@ const TransactionCountQuery = [
   `    (local_record_changes_pending = 'YES' or local_object_changes_pending = 'YES')`,
 ].join(`\n`);
 
+const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
+
 export class SQLJob {
 
   private static uniqueIdCounter: number = 0;
@@ -54,7 +56,8 @@ export class SQLJob {
     const instance = getInstance();
     const connection = instance.getConnection();
     return new Promise((resolve, reject) => {
-      connection.client.connection.exec(ServerComponent.getInitCommand() + ` && exit`, {}, (err: any, stream: any) => {
+      // Setting QIBM_JAVA_STDIO_CONVERT and QIBM_PASE_DESCRIPTOR_STDIO to make sure all PASE and Java converters are off
+      connection.client.connection.exec(`QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B exec `+ServerComponent.getInitCommand(), {}, (err: any, stream: any, options: {encoding: `binary`}) => {
         if (err)
           reject(err);
         let outString = ``;
@@ -114,6 +117,8 @@ export class SQLJob {
     const connectionObject = {
       id: SQLJob.getNewUniqueId(),
       type: `connect`,
+      technique: (65535 === getInstance().getConnection().qccsid) ? `tcp` : `cli`, //TODO: investigate why QCCSID 65535 breaks CLI and if there is any workaround
+      application: `vscode-db2i ${DB2I_VERSION}`,
       props: props.length > 0 ? props : undefined
     }
 
