@@ -2,13 +2,20 @@ import { CompletionItem } from "vscode";
 import LRU from "lru-cache";
 
 export abstract class UpdateCache {
-  static hasCreateBeenCalled: boolean = false;
+  static schemas: Map<string, string> = new Map();
 
-  static getStatus(): boolean {
-    return UpdateCache.hasCreateBeenCalled;
+  static add(schema: string) {
+    if (!this.schemas.has(schema)) {
+      this.schemas.set(schema, "");
+    }
   }
-  static update(seen: boolean) {
-    UpdateCache.hasCreateBeenCalled = seen;
+
+  static checkUpdateCache(schema: string): boolean {
+    if (this.schemas.has(schema)) {
+      this.schemas.delete(schema);
+      return true;
+    }
+    return false;
   }
 }
 

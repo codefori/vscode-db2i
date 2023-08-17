@@ -1,4 +1,5 @@
 import { UpdateCache } from "../language/providers/completionItemCache";
+import Document from "../language/sql/document";
 import { SQLJob } from "./sqlJob";
 import { CLCommandResult, JobLogEntry, QueryOptions, QueryResult, ServerResponse } from "./types";
 export enum QueryState {
@@ -63,9 +64,14 @@ export class Query<T> {
       throw new Error(queryResult.error || `Failed to run query (unknown error)`);
     }
     this.correlationId = queryResult.id;
-
+    
     if (this.sql.toUpperCase().includes("CREATE")) {
-      UpdateCache.update(true);
+      const sqlDoc = new Document(this.sql);
+      const currentStatement = sqlDoc.getStatementGroups()[0].statements;
+      const refs = currentStatement[0].getObjectReferences();
+      for (const ref of refs) {
+        UpdateCache.add(ref.object.schema);
+      }
     }
     return queryResult;
   }

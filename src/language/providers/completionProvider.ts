@@ -77,11 +77,8 @@ async function getObjectCompletions(
   curSchema: string,
   sqlTypes: { [index: string]: CompletionType }
 ) {
-  const schemaUpdate: boolean = UpdateCache.getStatus();
+  const schemaUpdate: boolean = UpdateCache.checkUpdateCache(curSchema);
   if (!completionItemCache.has(curSchema) || schemaUpdate) {
-    if (schemaUpdate) {
-      UpdateCache.update(false);
-    }
     const list = [];
     for (let key in sqlTypes) {
       let value = sqlTypes[key];
