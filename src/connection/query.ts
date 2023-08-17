@@ -1,3 +1,4 @@
+import { UpdateCache } from "../language/providers/completionItemCache";
 import { SQLJob } from "./sqlJob";
 import { CLCommandResult, JobLogEntry, QueryOptions, QueryResult, ServerResponse } from "./types";
 export enum QueryState {
@@ -62,6 +63,10 @@ export class Query<T> {
       throw new Error(queryResult.error || `Failed to run query (unknown error)`);
     }
     this.correlationId = queryResult.id;
+
+    if (this.sql.toUpperCase().includes("CREATE")) {
+      UpdateCache.update(true);
+    }
     return queryResult;
   }
   public async fetchMore(rowsToFetch: number = this.rowsToFetch): Promise<QueryResult<T>> {

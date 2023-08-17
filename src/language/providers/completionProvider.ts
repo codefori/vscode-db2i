@@ -3,6 +3,10 @@ import Database, { SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import Document from "../sql/document";
 import { ObjectRef } from "../sql/types";
+import { UpdateCache } from "./completionItemCache";
+import CompletionItemCache from "./completionItemCache";
+
+const completionItemCache = new CompletionItemCache();
 
 export interface CompletionType {
   order: string;
@@ -46,34 +50,57 @@ function createCompletionItem(
   return item;
 }
 
-async function getTableItems(schema: string, name: string) {
-  const items = await Table.getItems(schema, name);
-  return items.map((i) =>
-    createCompletionItem(i.COLUMN_NAME, CompletionItemKind.Field)
-  );
+function getColumnAtributes(column: TableColumn): string {
+  return `Field: ${column.COLUMN_NAME}\n Type: ${column.DATA_TYPE}\n HAS_DEFAULT: ${column.HAS_DEFAULT}\n IS_IDENTITY: ${column.IS_IDENTITY}\n IS_NULLABLE: ${column.IS_NULLABLE}`;
+}
+
+async function getTableItems(
+  schema: string,
+  name: string
+): Promise<CompletionItem[]> {
+  if (!completionItemCache.has(schema + name)) {
+    const items = await Table.getItems(schema, name);
+    const completionItems = items.map((i) =>
+      createCompletionItem(
+        i.COLUMN_NAME,
+        CompletionItemKind.Field,
+        getColumnAtributes(i),
+        `Schema: ${schema}\nTable: ${name}\n`
+      )
+    );
+    completionItemCache.set(schema + name, completionItems);
+  }
+  return completionItemCache.get(schema + name);
 }
 
 async function getObjectCompletions(
   curSchema: string,
   sqlTypes: { [index: string]: CompletionType }
 ) {
-  const list = [];
-  for (let key in sqlTypes) {
-    let value = sqlTypes[key];
-    const data = await Database.getObjects(curSchema, value.type);
-    data.forEach((table) => {
-      const item = createCompletionItem(
-        table.name,
-        value.icon,
-        `Type: ${value.label}`,
-        `Schema: ${table.schema}`,
-        value.order
-      );
-      list.push(item);
-    });
-  }
+  const schemaUpdate: boolean = UpdateCache.getStatus();
+  if (!completionItemCache.has(curSchema) || schemaUpdate) {
+    if (schemaUpdate) {
+      UpdateCache.update(false);
+    }
+    const list = [];
+    for (let key in sqlTypes) {
+      let value = sqlTypes[key];
+      const data = await Database.getObjects(curSchema, value.type);
+      data.forEach((table) => {
+        const item = createCompletionItem(
+          table.name,
+          value.icon,
+          `Type: ${value.label}`,
+          `Schema: ${table.schema}`,
+          value.order
+        );
+        list.push(item);
+      });
+    }
 
-  return list;
+    completionItemCache.set(curSchema, list);
+  }
+  return completionItemCache.get(curSchema);
 }
 
 async function getCompletionItemsForTriggerDot(
@@ -138,9 +165,13 @@ export const completionProvider = languages.registerCompletionItemProvider(
 
       const sqlDoc = new Document(content);
       const currentStatement = sqlDoc.getStatementByOffset(offset);
-      const objectRefs = currentStatement ? currentStatement.getObjectReferences() : [];
+      const objectRefs = currentStatement
+        ? currentStatement.getObjectReferences()
+        : [];
 
-      const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
+      const s = currentStatement
+        ? currentStatement.getTokenByOffset(offset)
+        : null;
 
       // if s is undefined, assume ctrl+ space trigger
       if (s === undefined) {
