@@ -2,11 +2,11 @@ import { CompletionItem } from "vscode";
 import LRU from "lru-cache";
 
 export abstract class UpdateCache {
-  static schemas: Map<string, string> = new Map();
+  static schemas: Set<string> = new Set();
 
   static add(schema: string) {
     if (!this.schemas.has(schema)) {
-      this.schemas.set(schema, "");
+      this.schemas.add(schema);
     }
   }
 
