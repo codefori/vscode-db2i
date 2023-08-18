@@ -79,22 +79,21 @@ async function getObjectCompletions(
 ) {
   const schemaUpdate: boolean = updateCache.delete(curSchema);
   if (!completionItemCache.has(curSchema) || schemaUpdate) {
-    const list = [];
-    for (let key in sqlTypes) {
-      let value = sqlTypes[key];
+    const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
       const data = await Database.getObjects(curSchema, value.type);
-      data.forEach((table) => {
-        const item = createCompletionItem(
+      return data.map((table) =>
+        createCompletionItem(
           table.name,
           value.icon,
           `Type: ${value.label}`,
           `Schema: ${table.schema}`,
           value.order
-        );
-        list.push(item);
-      });
-    }
+        )
+      );
+    });
 
+    const results = await Promise.all(promises);
+    const list = results.flat();
     completionItemCache.set(curSchema, list);
   }
   return completionItemCache.get(curSchema);
@@ -139,17 +138,15 @@ async function getCompletionItemsForTriggerDot(
 }
 
 async function getCompletionItemsForOtherTriggers(objectRefs) {
-  let list: CompletionItem[] = [];
-  for (const ref of objectRefs) {
-    if (ref.object.name && ref.object.schema) {
-      const completionItems = await getTableItems(
-        ref.object.schema,
-        ref.object.name
-      );
-      list.push(...completionItems);
-    }
-  }
-  return list;
+  const promises = objectRefs.map((ref) =>
+    ref.object.name && ref.object.schema
+      ? getTableItems(ref.object.schema, ref.object.name)
+      : Promise.resolve([])
+  );
+
+  const completionItemsArray = await Promise.all(promises);
+
+  return completionItemsArray.flat();
 }
 
 export const completionProvider = languages.registerCompletionItemProvider(
