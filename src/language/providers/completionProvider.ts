@@ -3,7 +3,7 @@ import Database, { SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import Document from "../sql/document";
 import { ObjectRef } from "../sql/types";
-import { UpdateCache } from "./completionItemCache";
+import { updateCache } from "./completionItemCache";
 import CompletionItemCache from "./completionItemCache";
 
 const completionItemCache = new CompletionItemCache();
@@ -77,7 +77,7 @@ async function getObjectCompletions(
   curSchema: string,
   sqlTypes: { [index: string]: CompletionType }
 ) {
-  const schemaUpdate: boolean = UpdateCache.checkUpdateCache(curSchema);
+  const schemaUpdate: boolean = updateCache.delete(curSchema);
   if (!completionItemCache.has(curSchema) || schemaUpdate) {
     const list = [];
     for (let key in sqlTypes) {

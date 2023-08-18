@@ -1,4 +1,4 @@
-import { UpdateCache } from "../language/providers/completionItemCache";
+import { updateCache } from "../language/providers/completionItemCache";
 import Document from "../language/sql/document";
 import { SQLJob } from "./sqlJob";
 import { CLCommandResult, JobLogEntry, QueryOptions, QueryResult, ServerResponse } from "./types";
@@ -70,7 +70,7 @@ export class Query<T> {
       const currentStatement = sqlDoc.getStatementGroups()[0].statements;
       const refs = currentStatement[0].getObjectReferences();
       for (const ref of refs) {
-        UpdateCache.add(ref.object.schema);
+        updateCache.add(ref.object.schema);
       }
     }
     return queryResult;
