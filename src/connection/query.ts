@@ -65,7 +65,7 @@ export class Query<T> {
     }
     this.correlationId = queryResult.id;
     
-    if (this.sql.toUpperCase().includes("CREATE")) {
+    if (this.sql.toUpperCase().startsWith("CREATE")) {
       const sqlDoc = new Document(this.sql);
       const currentStatement = sqlDoc.getStatementGroups()[0].statements;
       const refs = currentStatement[0].getObjectReferences();
