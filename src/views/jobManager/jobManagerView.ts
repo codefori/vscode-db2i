@@ -7,7 +7,7 @@ import { displayJobLog } from "./jobLog";
 import { ServerTraceDest, ServerTraceLevel } from "../../connection/types";
 import { ServerComponent } from "../../connection/serverComponent";
 import { updateStatusBar } from "./statusBar";
-import { TransactionEndType } from "../../connection/sqlJob";
+import { SQLJob, TransactionEndType } from "../../connection/sqlJob";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
@@ -25,11 +25,11 @@ export class JobManagerView implements TreeDataProvider<any> {
 
       ...ConfigManager.initialiseSaveCommands(),
 
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async () => {
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (predefinedJob?: SQLJob, name?: string) => {
         await window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
           try {
             progress.report({ message: `Spinning up SQL job...` });
-            await JobManager.newJob();
+            await JobManager.newJob(predefinedJob, name);
           } catch (e) {
             window.showErrorMessage(e.message);
           }
