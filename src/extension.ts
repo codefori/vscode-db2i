@@ -14,9 +14,12 @@ import { initialise } from "./testing";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { ServerComponent } from "./connection/serverComponent";
 import { SQLJobManager } from "./connection/manager";
+import { JDBCOptions } from "./connection/types";
+import { SQLJob } from "./connection/sqlJob";
 
 export interface Db2i {
-  sqlJobManager: SQLJobManager
+  sqlJobManager: SQLJobManager,
+  sqlJob: (options?: JDBCOptions) => SQLJob
 }
 
 // this method is called when your extension is activated
@@ -61,7 +64,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     initialise(context);
   }
 
-  return { sqlJobManager: JobManager };
+  return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new SQLJob(options) };
 }
 
 // this method is called when your extension is deactivated
