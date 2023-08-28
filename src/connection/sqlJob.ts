@@ -46,18 +46,42 @@ export class SQLJob {
 
   id: string | undefined;
 
-
   public static getNewUniqueId(prefix: string = `id`): string {
     return prefix + (++SQLJob.uniqueIdCounter);
+  }
+
+  public static async useExec() {
+    let useExec = false;
+
+    const instance = getInstance();
+    const connection = instance.getConnection();
+
+    const bashPathAvailable = connection.remoteFeatures[`bash`];
+    if (bashPathAvailable) {
+      const commandShellResult = await connection.sendCommand({
+        command: `echo $SHELL`
+      });
+      if (!commandShellResult.stderr) {
+        let userDefaultShell = commandShellResult.stdout.trim();
+        if (userDefaultShell === bashPathAvailable) {
+          useExec = true;
+        }
+      }
+    }
+
+    return useExec;
   }
 
   constructor(public options: JDBCOptions = {}) {}
   private async getChannel() {
     const instance = getInstance();
     const connection = instance.getConnection();
+
+    let useExec = await SQLJob.useExec();
+
     return new Promise((resolve, reject) => {
       // Setting QIBM_JAVA_STDIO_CONVERT and QIBM_PASE_DESCRIPTOR_STDIO to make sure all PASE and Java converters are off
-      const startingCommand = `QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B QIBM_USE_DESCRIPTOR_STDIO=Y QIBM_MULTI_THREADED=Y ` + ServerComponent.getInitCommand();
+      const startingCommand = `QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B QIBM_USE_DESCRIPTOR_STDIO=Y QIBM_MULTI_THREADED=Y ${useExec ? `exec ` : ``}` + ServerComponent.getInitCommand();
 
       ServerComponent.writeOutput(startingCommand);
 
