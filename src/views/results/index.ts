@@ -161,7 +161,7 @@ export function initialise(context: vscode.ExtensionContext) {
 
                 } else {
                   // Otherwise... it's a bit complicated.
-                  const data = await JobManager.runSQL(statement.content, undefined, true);
+                  const data = await JobManager.runSQL(statement.content, undefined);
 
                   if (data.length > 0) {
                     switch (statement.type) {
