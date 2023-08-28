@@ -4,7 +4,7 @@ import { getInstance } from "../base";
 import Statement from "./statement";
 import { JobManager } from "../config";
 
-type SQLType = "schemas"|"tables"|"views"|"aliases"|"constraints"|"functions"|"variables"|"indexes"|"procedures"|"sequences"|"packages"|"triggers"|"types";
+export type SQLType = "schemas"|"tables"|"views"|"aliases"|"constraints"|"functions"|"variables"|"indexes"|"procedures"|"sequences"|"packages"|"triggers"|"types";
 type PageData = {filter?: string, offset?: number, limit?: number};
 
 const typeMap = {
