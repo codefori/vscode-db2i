@@ -57,7 +57,7 @@ export class SQLJob {
     const connection = instance.getConnection();
     return new Promise((resolve, reject) => {
       // Setting QIBM_JAVA_STDIO_CONVERT and QIBM_PASE_DESCRIPTOR_STDIO to make sure all PASE and Java converters are off
-      const startingCommand = `QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B exec ` + ServerComponent.getInitCommand();
+      const startingCommand = `QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B QIBM_USE_DESCRIPTOR_STDIO=Y QIBM_MULTI_THREADED=Y ` + ServerComponent.getInitCommand();
 
       ServerComponent.writeOutput(startingCommand);
 
