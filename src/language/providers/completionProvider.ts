@@ -51,6 +51,7 @@ function createCompletionItem(
 }
 
 function getColumnAtributes(column: TableColumn): string {
+  
   const lines: string[] = [
     `Field: ${column.COLUMN_NAME}`,
     `Type: ${column.DATA_TYPE}`,
