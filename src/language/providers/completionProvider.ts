@@ -51,7 +51,14 @@ function createCompletionItem(
 }
 
 function getColumnAtributes(column: TableColumn): string {
-  return `Field: ${column.COLUMN_NAME}\n Type: ${column.DATA_TYPE}\n HAS_DEFAULT: ${column.HAS_DEFAULT}\n IS_IDENTITY: ${column.IS_IDENTITY}\n IS_NULLABLE: ${column.IS_NULLABLE}`;
+  const lines: string[] = [
+    `Field: ${column.COLUMN_NAME}`,
+    `Type: ${column.DATA_TYPE}`,
+    `HAS_DEFAULT: ${column.HAS_DEFAULT}`,
+    `IS_IDENTITY: ${column.IS_IDENTITY}`,
+    `IS_NULLABLE: ${column.IS_NULLABLE}`,
+  ];
+  return lines.join(`\n`);
 }
 
 async function getTableItems(
