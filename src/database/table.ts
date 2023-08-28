@@ -42,7 +42,7 @@ export default class Table {
    * @param name Not user input
    */
   static clearAdvisedIndexes(schema: string, name: string) {
-    const query = `DELETE FROM qsys2.condidxa WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
+    const query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
     return getInstance().getContent().runSQL(query);
   }
 
