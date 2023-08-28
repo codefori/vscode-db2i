@@ -57,18 +57,23 @@ export class SQLJob {
     const connection = instance.getConnection();
     return new Promise((resolve, reject) => {
       // Setting QIBM_JAVA_STDIO_CONVERT and QIBM_PASE_DESCRIPTOR_STDIO to make sure all PASE and Java converters are off
-      const startingCommand = `QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B exec ` + ServerComponent.getInitCommand();
+      const startingCommand = `QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B execggg ` + ServerComponent.getInitCommand();
 
       ServerComponent.writeOutput(startingCommand);
 
-      const a = connection.client.connection.exec(startingCommand, {}, (err: any, stream: any, options: {encoding: `binary`}) => {
+      const a = connection.client.connection.exec(startingCommand, (err: any, stream: any, options: {encoding: `binary`}) => {
         if (err) {
           reject(err);
           ServerComponent.writeOutput(err);
         }
+
         let outString = ``;
 
-        stream.on(`data`, (data: Buffer) => {
+        stream.stderr.on(`data`, (data: Buffer) => {
+          ServerComponent.writeOutput(data.toString());
+        })
+
+        stream.stdout.on(`data`, (data: Buffer) => {
           outString += String(data);
           if (outString.endsWith(`\n`)) {
             let thisMsg = outString;
@@ -111,19 +116,15 @@ export class SQLJob {
   async connect(): Promise<ConnectionResult> {
     this.channel = await this.getChannel();
 
-    this.channel.on(`error`, () => {
+    this.channel.on(`error`, (err) => {
+      ServerComponent.writeOutput(err);
       this.dispose();
     })
 
     this.channel.on(`close`, (code: number) => {
+      ServerComponent.writeOutput(`Exited with code ${code}.`)
       this.dispose();
-
-      if (code !== 0) {
-        throw new Error(`Ended with ${code}`);
-      }
     })
-
-    this.status = JobStatus.Ready;
 
     const props = Object
       .keys(this.options)
@@ -152,6 +153,10 @@ export class SQLJob {
       this.dispose();
       this.status = JobStatus.NotStarted;
       throw new Error(connectResult.error || `Failed to connect to server.`);
+    }
+
+    if (this.status === JobStatus.Ended) {
+      throw new Error(`Failed to connect properly.`);
     }
 
     this.id = connectResult.job;
