@@ -11,21 +11,43 @@ export enum JobStatus {
   Active = "active",
   Ended = "ended"
 }
+
+export enum TransactionEndType {
+  COMMIT,
+  ROLLBACK
+}
+
 interface ReqRespFmt {
   id: string
 };
+
+const TransactionCountQuery = [
+  `select count(*) as thecount`,
+  `  from qsys2.db_transaction_info`,
+  `  where JOB_NAME = qsys2.job_name and`,
+  `    (local_record_changes_pending = 'YES' or local_object_changes_pending = 'YES')`,
+].join(`\n`);
+
+const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
+
 export class SQLJob {
 
   private static uniqueIdCounter: number = 0;
   private channel: any;
   private responseEmitter: EventEmitter = new EventEmitter();
   private status: JobStatus = JobStatus.NotStarted;
+
+  private traceFile: string|undefined;
   private isTracingChannelData: boolean = false;
+
+  //currently unused but we will inevitably need a unique ID assigned to each instance
+  // since server job names can be reused in some circumstances
+  private uniqueId = SQLJob.getNewUniqueId(`sqljob`);
 
   id: string | undefined;
 
 
-  public static getNewUniqueRequestId(prefix: string = `sqljob`): string {
+  public static getNewUniqueId(prefix: string = `id`): string {
     return prefix + (++SQLJob.uniqueIdCounter);
   }
 
@@ -34,7 +56,8 @@ export class SQLJob {
     const instance = getInstance();
     const connection = instance.getConnection();
     return new Promise((resolve, reject) => {
-      connection.client.connection.exec(ServerComponent.getInitCommand() + ` && exit`, {}, (err: any, stream: any) => {
+      // Setting QIBM_JAVA_STDIO_CONVERT and QIBM_PASE_DESCRIPTOR_STDIO to make sure all PASE and Java converters are off
+      connection.client.connection.exec(`QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B exec `+ServerComponent.getInitCommand(), {}, (err: any, stream: any, options: {encoding: `binary`}) => {
         if (err)
           reject(err);
         let outString = ``;
@@ -92,8 +115,10 @@ export class SQLJob {
       .join(`;`)
 
     const connectionObject = {
-      id: SQLJob.getNewUniqueRequestId(),
+      id: SQLJob.getNewUniqueId(),
       type: `connect`,
+      technique: (65535 === getInstance().getConnection().qccsid) ? `tcp` : `cli`, //TODO: investigate why QCCSID 65535 breaks CLI and if there is any workaround
+      application: `vscode-db2i ${DB2I_VERSION}`,
       props: props.length > 0 ? props : undefined
     }
 
@@ -125,7 +150,7 @@ export class SQLJob {
 
   async getVersion(): Promise<VersionCheckResult> {
     const verObj = {
-      id: SQLJob.getNewUniqueRequestId(),
+      id: SQLJob.getNewUniqueId(),
       type: `getversion`
     };
 
@@ -139,9 +164,14 @@ export class SQLJob {
 
     return version;
   }
+
+  getTraceFilePath(): string|undefined {
+    return this.traceFile;
+  }
+
   async getTraceData(): Promise<GetTraceDataResult> {
     const tracedataReqObj = {
-      id: SQLJob.getNewUniqueRequestId(),
+      id: SQLJob.getNewUniqueId(),
       type: `gettracedata`
     };
 
@@ -152,16 +182,19 @@ export class SQLJob {
     if (rpy.success !== true) {
       throw new Error(rpy.error || `Failed to get trace data from backend`);
     }
+
     return rpy;
   }
-  //TODO: add/modify this API to allow manipulation of JTOpen tracing, and add tests
+
   async setTraceConfig(dest: ServerTraceDest, level: ServerTraceLevel): Promise<SetConfigResult> {
     const reqObj = {
-      id: SQLJob.getNewUniqueRequestId(),
+      id: SQLJob.getNewUniqueId(),
       type: `setconfig`,
       tracedest: dest,
       tracelevel: level
     };
+    
+    this.isTracingChannelData = true;
 
     const result = await this.send(JSON.stringify(reqObj));
 
@@ -170,6 +203,9 @@ export class SQLJob {
     if (rpy.success !== true) {
       throw new Error(rpy.error || `Failed to set trace options on backend`);
     }
+
+    this.traceFile = (rpy.tracedest && rpy.tracedest[0] === `/` ? rpy.tracedest : undefined);
+
     return rpy;
   }
 
@@ -180,10 +216,36 @@ export class SQLJob {
   getJobLog(): Promise<QueryResult<JobLogEntry>> {
     return this.query<JobLogEntry>(`select * from table(qsys2.joblog_info('*')) a`).run();
   }
+
+  underCommitControl() {
+    return this.options["transaction isolation"] !== `none`;
+  }
+
+  async getPendingTransactions() {
+    const rows = await this.query<{THECOUNT: number}>(TransactionCountQuery).run(1);
+
+    if (rows.success && rows.data && rows.data.length === 1 && rows.data[0].THECOUNT) return rows.data[0].THECOUNT;
+    return 0;
+  }
+
+  async endTransaction(type: TransactionEndType) {
+    let query;
+    switch (type) {
+      case TransactionEndType.COMMIT: query = `COMMIT`; break;
+      case TransactionEndType.ROLLBACK: query = `ROLLBACK`; break;
+      default: throw new Error(`TransactionEndType ${type} not valid`);
+    }
+
+    return this.query<JobLogEntry>(query).run();
+  }
   
+  getUniqueId() {
+    return this.uniqueId;
+  }
+
   async close() {
     const exitObject = {
-      id: SQLJob.getNewUniqueRequestId(),
+      id: SQLJob.getNewUniqueId(),
       type: `exit`
     };
 

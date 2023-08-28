@@ -54,7 +54,6 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
           let totalRows = 0;
           let noMoreRows = false;
           let isFetching = false;
-          let columnList = [];
 
           window.addEventListener("load", main);
             function main() {
@@ -75,13 +74,6 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
               myQueryId = data.queryId;
 
               switch (data.command) {
-                case 'metadata':
-                  // TODO: get backend to give us header metadata
-                  // columnList = data.columnList;
-                  // setHeaders('resultset', data.columnList)
-                  mustLoadHeaders = false;
-                  break;
-
                 case 'rows':
                   hideSpinner();
 
@@ -89,24 +81,19 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   isFetching = false;
                   noMoreRows = data.isDone;
 
-                  // HACK: right now, we build the column list from the first row keys... bad
-
-                  if (mustLoadHeaders && data.rows && data.rows.length > 0) {
-                    columnList = Object.keys(data.rows[0]);
-                    
-                    setHeaders('resultset', columnList);
-
+                  if (mustLoadHeaders && event.data.columnList) {
+                    setHeaders('resultset', event.data.columnList);
                     mustLoadHeaders = false;
                   }
 
                   if (data.rows && data.rows.length > 0) {
                     totalRows += data.rows.length;
-                    appendRows('resultset', columnList, data.rows);
+                    appendRows('resultset', data.rows);
                   }
 
                   const nextButton = document.getElementById("nextButton");
                   if (data.rows === undefined && totalRows === 0) {
-                    nextButton.innerText = 'Query executed with no result set returned.';
+                    nextButton.innerText = 'Query executed with no result set returned. Rows affected: ' + data.update_count;
                   } else {
                     nextButton.innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. Fetching more...');
                   }
@@ -150,19 +137,19 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             });
           }
 
-          function appendRows(tableId, colList, arrayOfObjects) {
+          function appendRows(tableId, arrayOfObjects) {
             var tBodyRef = document.getElementById(tableId).getElementsByTagName('tbody')[0];
 
             for (const row of arrayOfObjects) {
               // Insert a row at the end of table
               var newRow = tBodyRef.insertRow();
 
-              for (const columnName of colList) {
+              for (const cell of row) {
                 // Insert a cell at the end of the row
                 var newCell = newRow.insertCell();
 
                 // Append a text node to the cell
-                var newText = document.createTextNode(row[columnName] === undefined ? 'null' : row[columnName]);
+                var newText = document.createTextNode(cell === undefined ? 'null' : cell);
                 newCell.appendChild(newText);
               }
             }

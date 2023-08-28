@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "0.2.11",
+  "version": "0.4.0",
   "preview": true,
   "engines": {
     "vscode": "^1.70.0"
@@ -50,20 +50,21 @@
     "configuration": {
       "title": "Db2 for IBM i",
       "properties": {
-        "vscode-db2i.validator": {
-          "type": "boolean",
-          "description": "Enable the SQL validator",
-          "default": false
-        },
-        "vscode-db2i.scrollingResultSet": {
-          "type": "boolean",
-          "description": "Enable scrolling result sets for basic SELECT statements.",
-          "default": true
-        },
         "vscode-db2i.pageSize": {
           "type": "number",
           "description": "Page size for Schema browser",
           "default": 500
+        },
+        "vscode-db2i.alwaysStartSQLJob": {
+          "type": "string",
+          "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",
+          "default": "ask"
+        },
+        "vscode-db2i.jobConfigs": {
+          "type": "object",
+          "description": "Saved configs for",
+          "default": {},
+          "additionalProperties": true
         }
       }
     },
@@ -156,10 +157,10 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "vscode-db2i.addSchemaToSchemaBrowser",
-        "title": "Add Schema to Schema Browser",
+        "command": "vscode-db2i.manageSchemaBrowserList",
+        "title": "Manage Schema Browser List",
         "category": "Db2 for i",
-        "icon": "$(add)"
+        "icon": "$(list-selection)"
       },
       {
         "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
@@ -293,6 +294,34 @@
         "title": "View Job Log",
         "category": "Db2 for i",
         "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.enableTracing",
+        "title": "Enable Tracing",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.jobManager.getTrace",
+        "title": "Get Trace Data",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.jobManager.newConfig",
+        "title": "Save settings to config",
+        "category": "Db2 for i",
+        "icon": "$(save)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editConfig",
+        "title": "Edit configuration",
+        "category": "Db2 for i",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.deleteConfig",
+        "title": "Delete configuration",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -315,6 +344,26 @@
         },
         {
           "command": "vscode-db2i.jobManager.viewJobLog",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.enableTracing",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getTrace",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "never"
         }
       ],
@@ -339,9 +388,9 @@
       ],
       "view/title": [
         {
-          "command": "vscode-db2i.addSchemaToSchemaBrowser",
+          "command": "vscode-db2i.manageSchemaBrowserList",
           "group": "navigation",
-          "when": "view == schemaBrowser"
+          "when": "view == schemaBrowser && vscode-db2i:manageSchemaBrowserEnabled"
         },
         {
           "command": "vscode-db2i.refreshSchemaBrowser",
@@ -464,6 +513,31 @@
           "command": "vscode-db2i.jobManager.viewJobLog",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.enableTracing",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "trace@1"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getTrace",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "trace@2"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newConfig",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "config@1"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "view == jobManager && viewItem == savedConfig",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.deleteConfig",
+          "when": "view == jobManager && viewItem == savedConfig",
+          "group": "inline"
         }
       ]
     }
@@ -478,7 +552,7 @@
     "webpack-dev": "webpack --mode development --watch"
   },
   "devDependencies": {
-    "@halcyontech/vscode-ibmi-types": "^1.8.0",
+    "@halcyontech/vscode-ibmi-types": "^2.0.0",
     "@types/glob": "^7.1.3",
     "@types/node": "14.x",
     "@types/vscode": "^1.70.0",

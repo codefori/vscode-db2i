@@ -7,6 +7,8 @@ import * as html from "./html";
 import { getInstance } from "../../base";
 import { JobManager } from "../../config";
 import { Query, QueryState } from "../../connection/query";
+import { updateStatusBar } from "../jobManager/statusBar";
+import Document from "../../language/sql/document";
 
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
@@ -31,23 +33,26 @@ class ResultSetPanelProvider {
     webviewView.webview.html = html.getLoadingHTML();
     this._view.webview.onDidReceiveMessage(async (message) => {
       if (message.query) {
-        const instance = await getInstance();
-        const content = instance.getContent();
-        const config = instance.getConfig();
         let data = [];
 
         let queryObject = Query.byId(message.queryId);
         try {
-          if (undefined === queryObject) {
-            let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL });
+          if (queryObject === undefined) {
+            // We will need to revisit this if we ever allow multiple result tabs like ACS does
+            Query.cleanup();
+
+            let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
             queryObject = query;
           }
+
           let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
           data = queryResults.data;
           this._view.webview.postMessage({
             command: `rows`,
             rows: queryResults.data,
+            columnList: queryResults.metadata ? queryResults.metadata.columns.map(x=>x.name) : undefined, // Query.fetchMore() doesn't return the metadata
             queryId: queryObject.getId(),
+            update_count: queryResults.update_count,
             isDone: queryResults.is_done
           });
 
@@ -60,6 +65,8 @@ class ResultSetPanelProvider {
             isDone: true
           });
         }
+
+        updateStatusBar();
       }
     });
   }
@@ -154,7 +161,7 @@ export function initialise(context: vscode.ExtensionContext) {
 
                 } else {
                   // Otherwise... it's a bit complicated.
-                  const data = await JobManager.runSQL(statement.content);
+                  const data = await JobManager.runSQL(statement.content, undefined, true);
 
                   if (data.length > 0) {
                     switch (statement.type) {
@@ -229,7 +236,7 @@ export function parseStatement(editor: vscode.TextEditor): StatementInfo {
   const eol = (document.eol === vscode.EndOfLine.LF ? `\n` : `\r\n`);
 
   let text = document.getText(editor.selection).trim();
-  let content;
+  let content = ``;
 
   let type: StatementType = `statement`;
 
@@ -239,61 +246,24 @@ export function parseStatement(editor: vscode.TextEditor): StatementInfo {
     const cursor = editor.document.offsetAt(editor.selection.active);
     text = document.getText();
 
-    let statements = [];
+    const sqlDocument = new Document(text);
 
-    let inQuote = false;
-    let start = 0, end = 0;
+    const group = sqlDocument.getGroupByOffset(cursor);
 
-    for (const c of text) {
-      switch (c) {
-      case `'`:
-        inQuote = !inQuote;
-        break;
-
-      case `;`:
-        if (!inQuote) {
-          statements.push({
-            start,
-            end,
-            text: text.substring(start, end)
-          });
-
-          start = end + 1;
-        }
-        break;
-      }
-      end++;
+    if (group) {
+      content = text.substring(group.range.start, group.range.end);
+      editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
     }
+  }
 
-    //Add ending
-    statements.push({
-      start,
-      end,
-      text: text.substring(start, end)
-    });
+  if (content) {
+    [`cl`, `json`, `csv`, `sql`].forEach(mode => {
+      if (content.trim().toLowerCase().startsWith(mode + `:`)) {
+        content = content.substring(mode.length + 1).trim();
 
-    let statementData = statements.find(range => cursor >= range.start && cursor <= range.end);
-    content = statementData.text.trim();
-
-    editor.selection = new vscode.Selection(editor.document.positionAt(statementData.start), editor.document.positionAt(statementData.end));
-
-    // Remove blank lines and comment lines
-    let lines = content.split(eol).filter(line => line.trim().length > 0 && !line.trimStart().startsWith(`--`));
-
-    lines.forEach((line, startIndex) => {
-      if (type !== `statement`) return;
-
-      [`cl`, `json`, `csv`, `sql`].forEach(mode => {
-        if (line.trim().toLowerCase().startsWith(mode + `:`)) {
-          lines = lines.slice(startIndex);
-          lines[0] = lines[0].substring(mode.length + 1).trim();
-
-          content = lines.join(` `);
-
-          //@ts-ignore We know the type.
-          type = mode;
-        }
-      });
+        //@ts-ignore We know the type.
+        type = mode;
+      }
     });
   }
 

@@ -1,0 +1,52 @@
+name: NodeJS with Webpack
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Build and package
+      run: |
+        npm install
+        npx webpack
+        npm install -g vsce
+        vsce package
+
+    - name: get .vsix name
+      run: |
+        echo "vsix_name=$(echo *.vsix)" >> $GITHUB_ENV
+        cat $GITHUB_ENV
+
+    - name: Upload dist artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: test_vsix
+        path: ${{env.vsix_name}}
+          
+    - name: Post comment
+      uses: actions/github-script@v5
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '👋  A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.\n * [Download here.](https://github.com/halcyon-tech/vscode-db2i/actions/runs/${{ github.run_id }})\n'
+          })

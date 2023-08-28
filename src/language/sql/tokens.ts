@@ -23,7 +23,7 @@ export default class SQLTokeniser {
     {
       name: `STATEMENTTYPE`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`CREATE`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`].includes(value.toUpperCase());
+        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`].includes(value.toUpperCase());
       } }],
       becomes: `statementType`,
     },
@@ -38,7 +38,7 @@ export default class SQLTokeniser {
       name: `JOIN`,
       match: [
         { type: `word`, match: (value: string) => {
-          return [`INNER`, `EXCEPTION`, `CROSS`].includes(value.toUpperCase());
+          return [`INNER`, `EXCEPTION`, `CROSS`, `LEFT`, `RIGHT`].includes(value.toUpperCase());
         } }, 
         {type: `word`, match: (value: string) => {return value.toUpperCase() === `JOIN`}}
       ],
@@ -56,7 +56,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `OR`, `REPLACE`, `FROM`, `INTO`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`].includes(value.toUpperCase());
+        return [`AS`, `OR`, `REPLACE`, `FROM`, `INTO`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },

@@ -29,8 +29,10 @@ export enum ServerTraceDest {
   IN_MEM = "IN_MEM"
 }
 export interface QueryOptions {
-  isClCommand: boolean,
-  parameters?: any[]
+  isTerseResults?: boolean;
+  isClCommand?: boolean,
+  parameters?: any[],
+  autoClose?: boolean
 }
 export interface SetConfigResult extends ServerResponse {
   tracedest: ServerTraceDest,
@@ -40,6 +42,8 @@ export interface SetConfigResult extends ServerResponse {
 export interface QueryResult<T> extends ServerResponse {
   metadata: QueryMetaData,
   is_done: boolean;
+  has_results: boolean;
+  update_count: number;
   data: T[];
 }
 

@@ -177,6 +177,27 @@ describe(`Object references`, () => {
     expect(obj.alias).toBe(`a`)
   });
 
+  test(`SELECT: Two tables in FROM clause`, () => {
+    const query = [
+      `SELECT ORID, ORCUID, CUSTNM, ORYEAR,`,
+      `   ORDATE,  ORDATDEL, ORDATCLO,`,
+      `   COALESCE ( (SELECT SUM(ODTOTVAT)`,
+      `              FROM   DETORD D`,
+      `              WHERE H.ORID = ODORID ), 0) AS TOTVAL`,
+      `FROM  "ORDER" H ,  CUSTOMER`,
+      `WHERE ORCUID = CUID`,
+    ].join(`\r\n`);    
+    
+    const document = new Document(query);
+  
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    const refs = statement.getObjectReferences();
+    expect(refs.length).toBe(3);
+  })
+
   test(`SELECT JOIN: inner join`, () => {
     const query = [
       `SELECT EMPNO, LASTNAME, PROJNO`,
@@ -432,6 +453,238 @@ describe(`Object references`, () => {
     expect(refsA[0].tokens.length).toBe(3);
     expect(refsA[0].object.name).toBe(`create_Sql_sample`);
     expect(refsA[0].object.schema).toBe(`"QSYS"`);
+  });
+
+  test(`ALTER: with reference`, () => {
+    const content = [
+      `ALTER TABLE DEPARTMENT`,
+      `      ADD FOREIGN KEY RDE (MGRNO)`,
+      `          REFERENCES EMPLOYEE`,
+      `          ON DELETE SET NULL;`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+  
+    const statement = document.statements[0];
+    
+    expect(statement.type).toBe(StatementType.Alter);
+
+    const objs = statement.getObjectReferences();
+
+    expect(objs.length).toBe(2);
+
+    expect(objs[0].tokens.length).toBe(1);
+    expect(objs[0].object.name).toBe(`DEPARTMENT`);
+    expect(objs[0].object.schema).toBeUndefined();
+
+    expect(objs[1].tokens.length).toBe(1);
+    expect(objs[1].object.name).toBe(`EMPLOYEE`);
+    expect(objs[1].object.schema).toBeUndefined();
+  });
+
+  test(`ALTER: with qualified reference`, () => {
+    const content = [
+      `ALTER TABLE myschema.dept`,
+      `      ADD FOREIGN KEY RDE (MGRNO)`,
+      `          REFERENCES myschema.emp`,
+      `          ON DELETE SET NULL;`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+  
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.Alter);
+
+    const objs = statement.getObjectReferences();
+
+    expect(objs.length).toBe(2);
+
+    expect(objs[0].tokens.length).toBe(3);
+    expect(objs[0].object.name).toBe(`dept`);
+    expect(objs[0].object.schema).toBe(`myschema`);
+
+    expect(objs[1].tokens.length).toBe(3);
+    expect(objs[1].object.name).toBe(`emp`);
+    expect(objs[1].object.schema).toBe(`myschema`);
+  });
+
+  test(`CREATE INDEX: with and without UNIQUE`, () => {
+    const content = [
+      `CREATE UNIQUE INDEX XDEPT1`,
+      `       ON DEPARTMENT (DEPTNO);`,
+      ``,
+      `CREATE INDEX XDEPT2`,
+      `       ON DEPARTMENT (MGRNO);`,
+    ].join(`\r\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(2);
+  
+    const withUnique = document.statements[0];
+    const withoutUnique = document.statements[1];
+
+    expect(withUnique.type).toBe(StatementType.Create);
+    expect(withoutUnique.type).toBe(StatementType.Create);
+
+    const refsA = withUnique.getObjectReferences();
+    const refsB = withoutUnique.getObjectReferences();
+
+    expect(refsA.length).toBe(2);
+    expect(refsA[0].tokens.length).toBe(1);
+    expect(refsA[0].type).toBe(`INDEX`);
+    expect(refsA[0].object.name).toBe(`XDEPT1`);
+    expect(refsA[0].object.schema).toBeUndefined();
+
+    expect(refsA[1].tokens.length).toBe(1);
+    expect(refsA[1].type).toBeUndefined();
+    expect(refsA[1].object.name).toBe(`DEPARTMENT`);
+    expect(refsA[1].object.schema).toBeUndefined();
+
+    expect(refsB.length).toBe(2);
+    expect(refsB[0].tokens.length).toBe(1);
+    expect(refsB[0].type).toBe(`INDEX`);
+    expect(refsB[0].object.name).toBe(`XDEPT2`);
+    expect(refsB[0].object.schema).toBeUndefined();
+
+    expect(refsB[1].tokens.length).toBe(1);
+    expect(refsB[1].type).toBeUndefined();
+    expect(refsB[1].object.name).toBe(`DEPARTMENT`);
+    expect(refsB[1].object.schema).toBeUndefined();
+  });
+
+  test(`CREATE INDEX: with and without UNIQUE, but qualified`, () => {
+    const content = [
+      `CREATE UNIQUE INDEX myschema.XDEPT1`,
+      `       ON other.DEPARTMENT (DEPTNO);`,
+      ``,
+      `CREATE INDEX myschema.XDEPT2`,
+      `       ON other.DEPARTMENT (MGRNO);`,
+    ].join(`\r\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(2);
+  
+    const withUnique = document.statements[0];
+    const withoutUnique = document.statements[1];
+
+    expect(withUnique.type).toBe(StatementType.Create);
+    expect(withoutUnique.type).toBe(StatementType.Create);
+
+    const refsA = withUnique.getObjectReferences();
+    const refsB = withoutUnique.getObjectReferences();
+
+    expect(refsA.length).toBe(2);
+    expect(refsA[0].tokens.length).toBe(3);
+    expect(refsA[0].type).toBe(`INDEX`);
+    expect(refsA[0].object.name).toBe(`XDEPT1`);
+    expect(refsA[0].object.schema).toBe(`myschema`);
+
+    expect(refsA[1].tokens.length).toBe(3);
+    expect(refsA[1].type).toBeUndefined();
+    expect(refsA[1].object.name).toBe(`DEPARTMENT`);
+    expect(refsA[1].object.schema).toBe(`other`);
+
+    expect(refsB.length).toBe(2);
+    expect(refsB[0].tokens.length).toBe(3);
+    expect(refsB[0].type).toBe(`INDEX`);
+    expect(refsB[0].object.name).toBe(`XDEPT2`);
+    expect(refsB[0].object.schema).toBe(`myschema`);
+
+    expect(refsB[1].tokens.length).toBe(3);
+    expect(refsB[1].type).toBeUndefined();
+    expect(refsB[1].object.name).toBe(`DEPARTMENT`);
+    expect(refsB[1].object.schema).toBe(`other`);
+  });
+
+  test(`CREATE ALIAS`, () => {
+    const content = [
+      `create or replace view tagtalk as (`,
+      `  select b.*, a.tag`,
+      `    from hashtags as a`,
+      `    left join talks as b`,
+      `      on a.base_talk = b.t_id`,
+      `);`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+  
+    const view = document.statements[0];
+
+    expect(view.type).toBe(StatementType.Create);
+
+    const defs = view.getObjectReferences();
+
+    expect(defs.length).toBe(3);
+
+    expect(defs[0].type).toBe(`view`);
+    expect(defs[0].object.name).toBe(`tagtalk`);
+    expect(defs[0].object.schema).toBeUndefined();
+    expect(defs[0].alias).toBeUndefined();
+
+    expect(defs[1].type).toBeUndefined();
+    expect(defs[1].object.name).toBe(`hashtags`);
+    expect(defs[1].object.schema).toBeUndefined();
+    expect(defs[1].alias).toBe(`a`);
+
+    expect(defs[2].type).toBeUndefined();
+    expect(defs[2].object.name).toBe(`talks`);
+    expect(defs[2].object.schema).toBeUndefined();
+    expect(defs[2].alias).toBe(`b`);
+  });
+
+  test(`CREATE VIEW: with references`, () => {
+    const content = [
+      `CREATE VIEW ARTLSTDAT (`,
+      `  ARID ,`,
+      `  ARDESC ,`,
+      `  LASTORDER ,`,
+      `  QUANTITY )`,
+      `  AS`,
+      `  SELECT ARID, ARDESC,     MAX(ORDATE) AS LASTORDER , SUM(ODQTY) AS QUANTITY`,
+      `    FROM  ARTICLE,            "ORDER",            DETORD`,
+      `    WHERE ARID = ODARID AND ODORID = ORID GROUP BY ARID, ARDESC`,
+      `  ;`,
+    ].join(`\n`);
+  
+    const document = new Document(content);
+  
+    expect(document.statements.length).toBe(1);
+  
+    const view = document.statements[0];
+  
+    expect(view.type).toBe(StatementType.Create);
+  
+    const defs = view.getObjectReferences();
+  
+    expect(defs.length).toBe(4);
+    expect(defs[0].type).toBe(`VIEW`);
+    expect(defs[0].object.name).toBe(`ARTLSTDAT`);
+    expect(defs[0].object.schema).toBeUndefined();
+    expect(defs[0].alias).toBeUndefined();
+  
+    expect(defs[1].type).toBeUndefined();
+    expect(defs[1].object.name).toBe(`ARTICLE`);
+    expect(defs[1].object.schema).toBeUndefined();
+    expect(defs[1].alias).toBeUndefined();
+  
+    expect(defs[2].type).toBeUndefined();
+    expect(defs[2].object.name).toBe(`"ORDER"`);
+    expect(defs[2].object.schema).toBeUndefined();
+    expect(defs[2].alias).toBeUndefined();
+  
+    expect(defs[3].type).toBeUndefined();
+    expect(defs[3].object.name).toBe(`DETORD`);
+    expect(defs[3].object.schema).toBeUndefined();
+    expect(defs[3].alias).toBeUndefined();
   });
 });
 

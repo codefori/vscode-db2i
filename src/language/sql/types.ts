@@ -11,7 +11,8 @@ export enum StatementType {
 	Begin = "Begin",
 	Drop = "Drop",
 	End = "End",
-	Call = "Call"
+	Call = "Call",
+	Alter = "Alter"
 }
 
 export const StatementTypeWord = {
@@ -25,7 +26,8 @@ export const StatementTypeWord = {
 	'DROP': StatementType.Drop,
 	'END': StatementType.End,
 	'CALL': StatementType.Call,
-	'BEGIN': StatementType.Begin
+	'BEGIN': StatementType.Begin,
+	'ALTER': StatementType.Alter
 };
 
 export interface IRange {

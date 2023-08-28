@@ -1,5 +1,6 @@
 
 import vscode from "vscode";
+import Statement from "../../database/statement";
 
 const icons = {
   IN: `arrow-right`,
@@ -9,15 +10,15 @@ const icons = {
 
 export default class ParmTreeItem extends vscode.TreeItem {
   schema: string;
-  table: string;
+  routine: string;
   name: string;
 
-  constructor(schema: string, table: string, data: SQLParm) {
-    super(data.PARAMETER_NAME.toLowerCase(), vscode.TreeItemCollapsibleState.None);
+  constructor(schema: string, routine: string, data: SQLParm) {
+    super(Statement.prettyName(data.PARAMETER_NAME), vscode.TreeItemCollapsibleState.None);
 
     this.contextValue = `parameter`;
     this.schema = schema;
-    this.table = table;
+    this.routine = routine;
     this.name = data.PARAMETER_NAME;
 
     let detail, length;

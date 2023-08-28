@@ -39,6 +39,7 @@ interface BasicSQLObject {
   type: string;
   schema: string;
   name: string;
+  specificName: string;
   text: string;
   system: {
     schema: string;

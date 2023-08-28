@@ -101,38 +101,109 @@ export default class Statement {
 		const doAdd = (ref?: ObjectRef) => {
 			if (ref) list.push(ref);
 		}
+		
+		let inFromClause = false;
 
 		switch (this.type) {
 			case StatementType.Call:
 				// CALL X()
 				doAdd(this.getRefAtToken(1));
 				break;
+
+			case StatementType.Alter:
+				if (this.tokens.length >= 3) {
+					let object = this.getRefAtToken(2);
+
+					if (object) {
+						object.type = this.tokens[1].value;
+
+						doAdd(object);
+
+						for (let i = object.tokens.length+2; i < this.tokens.length; i++) {
+							if (tokenIs(this.tokens[i], `keyword`, `REFERENCES`)) {
+								doAdd(this.getRefAtToken(i+1));
+							}
+						}
+					}
+				}
+				break;
+
 			case StatementType.Insert:
 			case StatementType.Select:
 			case StatementType.Delete:
 				// SELECT
 				for (let i = 0; i < this.tokens.length; i++) {
-					if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`)) {
+					if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
+						inFromClause = true;
+					} else if (inFromClause && tokenIs(this.tokens[i], `clause`) || tokenIs(this.tokens[i], `join`) || tokenIs(this.tokens[i], `closebracket`)) {
+						inFromClause = false;
+					}
+
+					if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
 						doAdd(this.getRefAtToken(i+1));
 					}
 				}
 				break;
+
 			case StatementType.Create:
 				let object: ObjectRef;
+				let postName: number|undefined;
 
 				if (tokenIs(this.tokens[1], `keyword`, `OR`) && tokenIs(this.tokens[2], `keyword`, `REPLACE`)) {
 					object = this.getRefAtToken(4);
 					if (object) {
+						postName = object.tokens.length+4;
 						object.type = this.tokens[3].value;
 					}
+				} else
+				if (tokenIs(this.tokens[1], `keyword`, `UNIQUE`)) {
+					object = this.getRefAtToken(3);
+					if (object) {
+						postName = object.tokens.length+3;
+						object.type = this.tokens[2].value;
+					}
+				
 				} else {
 					object = this.getRefAtToken(2);
 					if (object) {
+						postName = object.tokens.length+2;
 						object.type = this.tokens[1].value
 					}
 				}
 
 				doAdd(object);
+
+				if (object && postName) {
+					switch (object.type?.toUpperCase()) {
+						case `INDEX`:
+							// If the type is `INDEX`, the next reference is the `ON` keyword
+							for (let i = postName; i < this.tokens.length; i++) {
+								if (tokenIs(this.tokens[i], `keyword`, `ON`)) {
+									doAdd(this.getRefAtToken(i+1));
+									break;
+								}
+							}
+							break;
+
+						case `VIEW`:
+							const asKeyword = this.tokens.findIndex(token => tokenIs(token, `keyword`, `AS`));
+
+							if (asKeyword > 0) {
+								for (let i = asKeyword; i < this.tokens.length; i++) {
+									if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
+										inFromClause = true;
+									} else if (inFromClause && (tokenIs(this.tokens[i], `clause`) || tokenIs(this.tokens[i], `join`) || tokenIs(this.tokens[i], `closebracket`))) {
+										inFromClause = false;
+									}
+				
+									if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
+										doAdd(this.getRefAtToken(i+1));
+									}
+								}
+							}
+							break;
+					}
+				}
 				break;
 
 			case StatementType.Declare:
@@ -223,7 +294,7 @@ export default class Statement {
 
 			// If the next token is not a clause.. we might have the alias
 			if (nameToken && this.tokens[nameIndex+1]) {
-				if (this.tokens[nameIndex+1].type === `keyword`) {
+				if (tokenIs(this.tokens[nameIndex+1], `keyword`, `AS`) && tokenIs(this.tokens[nameIndex+2], `word`)) {
 					endIndex = nameIndex+2;
 					sqlObj.alias = this.tokens[nameIndex+2].value;
 				} else

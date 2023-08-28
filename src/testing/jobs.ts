@@ -4,12 +4,13 @@ import { JobStatus, SQLJob } from "../connection/sqlJob";
 import { getInstance } from "../base";
 import { ServerComponent } from "../connection/serverComponent";
 import { ServerTraceDest, ServerTraceLevel } from "../connection/types";
+import { Query } from "../connection/query";
 
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
   tests: [
     {name: `Backend check`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      const backendInstalled = await ServerComponent.initialise();
   
       // To run these tests, we need the backend server. If this test fails. Don't bother
       assert.strictEqual(backendInstalled, true);
@@ -32,6 +33,22 @@ export const JobsSuite: TestSuite = {
       newJob.close();
     }},
     
+    {name: `Verify client special registers are set`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      let qry = newJob.query(`SELECT V_CLIENT_APPLNAME, V_CLIENT_PROGRAMID FROM TABLE(QSYS2.GET_JOB_INFO('*')) limit 1`);
+      let qryResults = await qry.run();
+      assert.equal(qryResults.success, true);
+      assert.equal(qryResults.data.length, 1);
+      let dataRow = qryResults.data[0];
+      assert.equal((``+dataRow['V_CLIENT_APPLNAME']).startsWith(`vscode-db2i`), true);
+      assert.equal((``+dataRow['V_CLIENT_PROGRAMID']).startsWith(`VSCode`), true);
+
+      newJob.close();
+    }},
+
     {name: `Backend set trace options and retrieve`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
   
@@ -54,7 +71,7 @@ export const JobsSuite: TestSuite = {
       let newJob = new SQLJob();
       await newJob.connect();
       let trace = await newJob.getTraceData();
-      assert.equal(``, trace.tracedata);
+      assert.notEqual(undefined, trace.tracedata);
       newJob.close();
     }},
     
@@ -82,6 +99,94 @@ export const JobsSuite: TestSuite = {
 
       newJob.close();
     }},
+    {name: `Query with non-terse results`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
+      let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
+      await newJob.connect();
+
+      let rowsAtATime = 4;
+      let qry = newJob.query(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: false});
+      let qryResults = await qry.run(rowsAtATime);
+
+      assert.equal(qryResults.success, true);
+      let firstRow = qryResults.data[0];
+      let cusnum = firstRow[`CUSNUM`];
+      assert.equal(cusnum === undefined, false);
+      assert.equal(Array.isArray(firstRow), false);
+      newJob.close();
+    }},
+    {name: `Query with terse results`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
+      let newJob = new SQLJob({libraries: [`QIWS`], naming: `system`});
+      await newJob.connect();
+
+      let rowsAtATime = 4;
+      let qry = newJob.query(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: true});
+      let qryResults = await qry.run(rowsAtATime);
+
+      assert.equal(qryResults.success, true);
+      let firstRow = qryResults.data[0];
+      assert.equal(Array.isArray(firstRow), true);
+      newJob.close();
+    }},
+    {name: `Can round-trip Extended characters`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
+      let testString = `¯\\_(ツ)_/¯`
+      let newJob = new SQLJob();
+      await newJob.connect();
+      let qryResults = await newJob.query(`create table qtemp.weewoo (col1 varchar(1208) ccsid 1208)`).run();
+      assert.equal(qryResults.success, true);
+      qryResults = await newJob.query(`insert into qtemp.weewoo values('${testString}')`).run();
+      assert.equal(qryResults.success, true);
+      qryResults = await newJob.query(`select COL1 from qtemp.weewoo`).run();
+      assert.equal(qryResults.success, true);
+      let resultData = qryResults.data[0]['COL1'];
+      assert.equal(resultData, testString);
+      newJob.close();
+    }},
+    {name: `Auto close statements`, test: async () => {
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      const autoCloseAnyway = newJob.query(`select * from QIWS.QCUSTCDT`, {autoClose: true});
+      const noAutoClose = newJob.query(`select * from QIWS.QCUSTCDT`, {autoClose: false});
+      const neverRuns = newJob.query(`select * from QIWS.QCUSTCDT`, {autoClose: true});
+
+      assert.strictEqual(Query.getOpenIds(newJob).length, 3);
+
+      // If we ran this, two both autoClose statements would be cleaned up
+      // await Query.cleanup();
+
+      await Promise.all([autoCloseAnyway.run(1), noAutoClose.run(1)]);
+      assert.strictEqual(Query.getOpenIds(newJob).length, 3);
+      
+      // Now cleanup should auto close autoCloseAnyway and neverRuns,
+      // but not noAutoClose because it hasn't finished running
+      await Query.cleanup();
+
+      const leftOverIds = Query.getOpenIds(newJob);
+      assert.strictEqual(leftOverIds.length, 1);
+
+      assert.strictEqual(noAutoClose.getId(), leftOverIds[0]);
+
+      newJob.close();
+    }},
+
+    {name: `SQL with no result set`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+  
+      let newJob = new SQLJob();
+      await newJob.connect();
+
+      let result = await newJob.query(`create or replace table qtemp.tt as (select * from sysibm.sysdummy1) with data on replace delete rows`).run();
+      assert.equal(result.success, true);
+      assert.equal(result.has_results, false);
+      assert.equal(result.data, undefined);
+      newJob.close();
+    }},
 
     {name: `CL Command (success)`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
@@ -103,6 +208,7 @@ export const JobsSuite: TestSuite = {
       assert.equal(CPF2880, true);
       newJob.close();
     }},
+
     {name: `CL Command (error)`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
 

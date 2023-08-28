@@ -8,7 +8,7 @@ export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,
   tests: [
     {name: `Backend check`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise(false);
+      const backendInstalled = await ServerComponent.initialise();
   
       // To run these tests, we need the backend server. If this test fails. Don't bother
       assert.strictEqual(backendInstalled, true);
@@ -59,36 +59,6 @@ export const ManagerSuite: TestSuite = {
       // Check the job exists
       assert.strictEqual(JobManager.getRunningJobs().length, 2);
       assert.strictEqual(JobManager.selectedJob, 1);
-      
-      // End the jobs
-      await JobManager.endAll();
-      assert.strictEqual(JobManager.getRunningJobs().length, 0);
-      assert.strictEqual(JobManager.selectedJob, -1);
-    }},
-
-    {name: `runSQL method`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      // Ensure we have a blank manager first
-      await JobManager.endAll();
-      assert.strictEqual(JobManager.getRunningJobs().length, 0);
-      assert.strictEqual(JobManager.selectedJob, -1);
-
-      const query = `select * from qiws.qcustcdt`;
-
-      // Run query with no jobs should still work, using the standard API
-      const rowsA = await JobManager.runSQL(query);
-      assert.notStrictEqual(rowsA.length, 0);
-
-      await JobManager.newJob();
-
-      // Check the job exists
-      assert.strictEqual(JobManager.getRunningJobs().length, 1);
-      assert.strictEqual(JobManager.selectedJob, 0);
-
-      // Run query will run the statement using the selected job
-      const rowsB = await JobManager.runSQL(query);
-      assert.notStrictEqual(rowsB.length, 0);
       
       // End the jobs
       await JobManager.endAll();
