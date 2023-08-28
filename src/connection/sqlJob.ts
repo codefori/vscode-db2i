@@ -57,10 +57,17 @@ export class SQLJob {
     const connection = instance.getConnection();
     return new Promise((resolve, reject) => {
       // Setting QIBM_JAVA_STDIO_CONVERT and QIBM_PASE_DESCRIPTOR_STDIO to make sure all PASE and Java converters are off
-      connection.client.connection.exec(`QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B exec `+ServerComponent.getInitCommand(), {}, (err: any, stream: any, options: {encoding: `binary`}) => {
-        if (err)
+      const startingCommand = `QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B exec ` + ServerComponent.getInitCommand();
+
+      ServerComponent.writeOutput(startingCommand);
+
+      const a = connection.client.connection.exec(startingCommand, {}, (err: any, stream: any, options: {encoding: `binary`}) => {
+        if (err) {
           reject(err);
+          ServerComponent.writeOutput(err);
+        }
         let outString = ``;
+
         stream.on(`data`, (data: Buffer) => {
           outString += String(data);
           if (outString.endsWith(`\n`)) {
@@ -76,8 +83,11 @@ export class SQLJob {
             }
           }
         });
+
         resolve(stream);
-      })
+      });
+
+      console.log(a);
     })
   }
 
@@ -100,6 +110,18 @@ export class SQLJob {
 
   async connect(): Promise<ConnectionResult> {
     this.channel = await this.getChannel();
+
+    this.channel.on(`error`, () => {
+      this.dispose();
+    })
+
+    this.channel.on(`close`, (code: number) => {
+      this.dispose();
+
+      if (code !== 0) {
+        throw new Error(`Ended with ${code}`);
+      }
+    })
 
     this.status = JobStatus.Ready;
 
@@ -132,13 +154,6 @@ export class SQLJob {
       throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 
-    this.channel.on(`error`, () => {
-      this.dispose();
-    })
-
-    this.channel.on(`close`, () => {
-      this.dispose();
-    })
     this.id = connectResult.job;
     this.status = JobStatus.Ready;
 
