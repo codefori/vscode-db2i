@@ -46,22 +46,58 @@ export class SQLJob {
 
   id: string | undefined;
 
-
   public static getNewUniqueId(prefix: string = `id`): string {
     return prefix + (++SQLJob.uniqueIdCounter);
+  }
+
+  public static async useExec() {
+    let useExec = false;
+
+    const instance = getInstance();
+    const connection = instance.getConnection();
+
+    const bashPathAvailable = connection.remoteFeatures[`bash`];
+    if (bashPathAvailable) {
+      const commandShellResult = await connection.sendCommand({
+        command: `echo $SHELL`
+      });
+      if (!commandShellResult.stderr) {
+        let userDefaultShell = commandShellResult.stdout.trim();
+        if (userDefaultShell === bashPathAvailable) {
+          useExec = true;
+        }
+      }
+    }
+
+    return useExec;
   }
 
   constructor(public options: JDBCOptions = {}) {}
   private async getChannel() {
     const instance = getInstance();
     const connection = instance.getConnection();
+
+    let useExec = await SQLJob.useExec();
+
     return new Promise((resolve, reject) => {
       // Setting QIBM_JAVA_STDIO_CONVERT and QIBM_PASE_DESCRIPTOR_STDIO to make sure all PASE and Java converters are off
-      connection.client.connection.exec(`QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B exec `+ServerComponent.getInitCommand(), {}, (err: any, stream: any, options: {encoding: `binary`}) => {
-        if (err)
+      const startingCommand = `QIBM_JAVA_STDIO_CONVERT=N QIBM_PASE_DESCRIPTOR_STDIO=B QIBM_USE_DESCRIPTOR_STDIO=Y QIBM_MULTI_THREADED=Y ${useExec ? `exec ` : ``}` + ServerComponent.getInitCommand();
+
+      ServerComponent.writeOutput(startingCommand);
+
+      const a = connection.client.connection.exec(startingCommand, (err: any, stream: any, options: {encoding: `binary`}) => {
+        if (err) {
           reject(err);
+          ServerComponent.writeOutput(err);
+        }
+
         let outString = ``;
-        stream.on(`data`, (data: Buffer) => {
+
+        stream.stderr.on(`data`, (data: Buffer) => {
+          ServerComponent.writeOutput(data.toString());
+        })
+
+        stream.stdout.on(`data`, (data: Buffer) => {
           outString += String(data);
           if (outString.endsWith(`\n`)) {
             let thisMsg = outString;
@@ -76,8 +112,11 @@ export class SQLJob {
             }
           }
         });
+
         resolve(stream);
-      })
+      });
+
+      console.log(a);
     })
   }
 
@@ -101,7 +140,15 @@ export class SQLJob {
   async connect(): Promise<ConnectionResult> {
     this.channel = await this.getChannel();
 
-    this.status = JobStatus.Ready;
+    this.channel.on(`error`, (err) => {
+      ServerComponent.writeOutput(err);
+      this.dispose();
+    })
+
+    this.channel.on(`close`, (code: number) => {
+      ServerComponent.writeOutput(`Exited with code ${code}.`)
+      this.dispose();
+    })
 
     const props = Object
       .keys(this.options)
@@ -132,13 +179,10 @@ export class SQLJob {
       throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 
-    this.channel.on(`error`, () => {
-      this.dispose();
-    })
+    if (this.status === JobStatus.Ended) {
+      throw new Error(`Failed to connect properly.`);
+    }
 
-    this.channel.on(`close`, () => {
-      this.dispose();
-    })
     this.id = connectResult.job;
     this.status = JobStatus.Ready;
 
