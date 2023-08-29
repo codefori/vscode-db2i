@@ -540,22 +540,26 @@ describe(`Object references`, () => {
     expect(refsA[0].type).toBe(`INDEX`);
     expect(refsA[0].object.name).toBe(`XDEPT1`);
     expect(refsA[0].object.schema).toBeUndefined();
+    expect(refsA[0].object.system).toBeUndefined();
 
     expect(refsA[1].tokens.length).toBe(1);
     expect(refsA[1].type).toBeUndefined();
     expect(refsA[1].object.name).toBe(`DEPARTMENT`);
     expect(refsA[1].object.schema).toBeUndefined();
+    expect(refsA[1].object.system).toBeUndefined();
 
     expect(refsB.length).toBe(2);
     expect(refsB[0].tokens.length).toBe(1);
     expect(refsB[0].type).toBe(`INDEX`);
     expect(refsB[0].object.name).toBe(`XDEPT2`);
     expect(refsB[0].object.schema).toBeUndefined();
+    expect(refsB[0].object.system).toBeUndefined();
 
     expect(refsB[1].tokens.length).toBe(1);
     expect(refsB[1].type).toBeUndefined();
     expect(refsB[1].object.name).toBe(`DEPARTMENT`);
     expect(refsB[1].object.schema).toBeUndefined();
+    expect(refsB[1].object.system).toBeUndefined();
   });
 
   test(`CREATE INDEX: with and without UNIQUE, but qualified`, () => {
@@ -585,6 +589,7 @@ describe(`Object references`, () => {
     expect(refsA[0].type).toBe(`INDEX`);
     expect(refsA[0].object.name).toBe(`XDEPT1`);
     expect(refsA[0].object.schema).toBe(`myschema`);
+    expect(refsA[0].object.system).toBeUndefined();
 
     expect(refsA[1].tokens.length).toBe(3);
     expect(refsA[1].type).toBeUndefined();
@@ -605,7 +610,7 @@ describe(`Object references`, () => {
 
   test(`CREATE ALIAS`, () => {
     const content = [
-      `create or replace view tagtalk as (`,
+      `create or replace view tagtalk for system name tt as (`,
       `  select b.*, a.tag`,
       `    from hashtags as a`,
       `    left join talks as b`,
@@ -628,6 +633,7 @@ describe(`Object references`, () => {
     expect(defs[0].type).toBe(`view`);
     expect(defs[0].object.name).toBe(`tagtalk`);
     expect(defs[0].object.schema).toBeUndefined();
+    expect(defs[0].object.system).toBe(`tt`);
     expect(defs[0].alias).toBeUndefined();
 
     expect(defs[1].type).toBeUndefined();
@@ -684,6 +690,56 @@ describe(`Object references`, () => {
     expect(defs[3].type).toBeUndefined();
     expect(defs[3].object.name).toBe(`DETORD`);
     expect(defs[3].object.schema).toBeUndefined();
+    expect(defs[3].alias).toBeUndefined();
+  });
+
+  test(`CREATE VIEW: with references and alias`, () => {
+    const content = [
+      `CREATE VIEW ARTLSTDAT FOR SYSTEM NAME SHORT (`,
+      `  ARID ,`,
+      `  ARDESC ,`,
+      `  LASTORDER ,`,
+      `  QUANTITY )`,
+      `  AS`,
+      `  SELECT ARID, ARDESC,     MAX(ORDATE) AS LASTORDER , SUM(ODQTY) AS QUANTITY`,
+      `    FROM  ARTICLE,            "ORDER",            DETORD`,
+      `    WHERE ARID = ODARID AND ODORID = ORID GROUP BY ARID, ARDESC`,
+      `  ;`,
+    ].join(`\n`);
+  
+    const document = new Document(content);
+  
+    expect(document.statements.length).toBe(1);
+  
+    const view = document.statements[0];
+  
+    expect(view.type).toBe(StatementType.Create);
+  
+    const defs = view.getObjectReferences();
+  
+    expect(defs.length).toBe(4);
+    expect(defs[0].type).toBe(`VIEW`);
+    expect(defs[0].object.name).toBe(`ARTLSTDAT`);
+    expect(defs[0].object.schema).toBeUndefined();
+    expect(defs[0].object.system).toBe(`SHORT`);
+    expect(defs[0].alias).toBeUndefined();
+  
+    expect(defs[1].type).toBeUndefined();
+    expect(defs[1].object.name).toBe(`ARTICLE`);
+    expect(defs[1].object.schema).toBeUndefined();
+    expect(defs[1].object.system).toBeUndefined();
+    expect(defs[1].alias).toBeUndefined();
+  
+    expect(defs[2].type).toBeUndefined();
+    expect(defs[2].object.name).toBe(`"ORDER"`);
+    expect(defs[2].object.schema).toBeUndefined();
+    expect(defs[2].object.system).toBeUndefined();
+    expect(defs[2].alias).toBeUndefined();
+  
+    expect(defs[3].type).toBeUndefined();
+    expect(defs[3].object.name).toBe(`DETORD`);
+    expect(defs[3].object.schema).toBeUndefined();
+    expect(defs[3].object.system).toBeUndefined();
     expect(defs[3].alias).toBeUndefined();
   });
 });

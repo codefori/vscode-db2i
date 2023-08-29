@@ -91,8 +91,6 @@ test(`Block comments`, () => {
   const tokeniser = new SQLTokeniser();
   const tokens = tokeniser.tokenise(lines);
 
-  console.log(tokens);
-
   expect(tokens[0].type).toBe(`statementType`)
   expect(tokens[0].value).toBe(`Create`)
   expect(lines.substring(tokens[0].range.start, tokens[0].range.end)).toBe(`Create`)
