@@ -1,4 +1,4 @@
-import { updateCache } from "../language/providers/completionItemCache";
+import { changedCache} from "../language/providers/completionItemCache";
 import Document from "../language/sql/document";
 import { SQLJob } from "./sqlJob";
 import { CLCommandResult, JobLogEntry, QueryOptions, QueryResult, ServerResponse } from "./types";
@@ -99,12 +99,13 @@ export class Query<T> {
     }
     this.correlationId = queryResult.id;
     
+    // TODO: move to src/views/results/index.ts
     if (this.sql.toUpperCase().startsWith("CREATE")) {
       const sqlDoc = new Document(this.sql);
       const currentStatement = sqlDoc.getStatementGroups()[0].statements;
       const refs = currentStatement[0].getObjectReferences();
       for (const ref of refs) {
-        updateCache.add(ref.object.schema);
+        changedCache.add(ref.object.schema);
       }
     }
     return queryResult;

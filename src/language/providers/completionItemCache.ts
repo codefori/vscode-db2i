@@ -1,7 +1,7 @@
 import { CompletionItem } from "vscode";
 import LRU from "lru-cache";
 
-export let updateCache: Set<string> = new Set<string>();
+export let changedCache: Set<string> = new Set<string>();
 
 export interface CompletionItemCacheObj {
   cacheType: "columns" | "all";

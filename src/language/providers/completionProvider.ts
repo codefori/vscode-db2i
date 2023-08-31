@@ -3,8 +3,9 @@ import Database, { SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import Document from "../sql/document";
 import { ObjectRef } from "../sql/types";
-import { updateCache } from "./completionItemCache";
+import { changedCache} from "./completionItemCache";
 import CompletionItemCache from "./completionItemCache";
+import Statement from "../../database/statement";
 
 const completionItemCache = new CompletionItemCache();
 
@@ -59,7 +60,7 @@ function getColumnAtributes(column: TableColumn): string {
     `IS_IDENTITY: ${column.IS_IDENTITY}`,
     `IS_NULLABLE: ${column.IS_NULLABLE}`,
   ];
-  return lines.join(`\n`);
+  return lines.join(`\n `);
 }
 
 async function getTableItems(
@@ -67,6 +68,7 @@ async function getTableItems(
   name: string
 ): Promise<CompletionItem[]> {
   if (!completionItemCache.has(schema + name)) {
+    schema = Statement.noQuotes(Statement.delimName(schema, true));
     const items = await Table.getItems(schema, name);
     const completionItems = items.map((i) =>
       createCompletionItem(
@@ -85,9 +87,10 @@ async function getObjectCompletions(
   curSchema: string,
   sqlTypes: { [index: string]: CompletionType }
 ) {
-  const schemaUpdate: boolean = updateCache.delete(curSchema);
+  const schemaUpdate: boolean = changedCache  .delete(curSchema);
   if (!completionItemCache.has(curSchema) || schemaUpdate) {
     const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
+      curSchema = Statement.noQuotes(Statement.delimName(curSchema, true));
       const data = await Database.getObjects(curSchema, value.type);
       return data.map((table) =>
         createCompletionItem(
@@ -100,20 +103,26 @@ async function getObjectCompletions(
       );
     });
 
-    const results = await Promise.all(promises);
-    const list = results.flat();
+    const results = await Promise.allSettled(promises);
+    const list = results
+      .filter((result) => result.status == "fulfilled")
+      .map((result) => (result as PromiseFulfilledResult<any>).value)
+      .flat();
     completionItemCache.set(curSchema, list);
   }
   return completionItemCache.get(curSchema);
 }
 
 async function getCompletionItemsForTriggerDot(
-  objectRefs,
-  currentStatement,
-  offset
+  objectRefs: ObjectRef[],
+  currentStatement, // Statement from ../../database/statement
+  offset: number
 ): Promise<CompletionItem[]> {
   let list: CompletionItem[] = [];
   const curRef = currentStatement.getReferenceByOffset(offset);
+  if (curRef === undefined) {
+    return;
+  }
   const curSchema = curRef.object.schema;
 
   let curRefIdentifier: ObjectRef;
@@ -145,16 +154,18 @@ async function getCompletionItemsForTriggerDot(
   return list;
 }
 
-async function getCompletionItemsForOtherTriggers(objectRefs) {
+async function getCompletionItemsForRefs(objectRefs: ObjectRef[]) {
   const promises = objectRefs.map((ref) =>
     ref.object.name && ref.object.schema
       ? getTableItems(ref.object.schema, ref.object.name)
       : Promise.resolve([])
   );
 
-  const completionItemsArray = await Promise.all(promises);
-
-  return completionItemsArray.flat();
+  const results = await Promise.allSettled(promises);
+  return results
+    .filter((result) => result.status == "fulfilled")
+    .map((result) => (result as PromiseFulfilledResult<any>).value)
+    .flat();
 }
 
 export const completionProvider = languages.registerCompletionItemProvider(
@@ -177,7 +188,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
 
       // if s is undefined, assume ctrl+ space trigger
       if (s === undefined) {
-        return getCompletionItemsForOtherTriggers(objectRefs);
+        return getCompletionItemsForRefs(objectRefs);
       }
 
       if (trigger === "." || s.type === `dot`) {
@@ -188,7 +199,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
           offset
         );
       }
-      return getCompletionItemsForOtherTriggers(objectRefs);
+      return getCompletionItemsForRefs(objectRefs);
     },
   },
   `.`

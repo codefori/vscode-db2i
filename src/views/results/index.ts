@@ -9,6 +9,7 @@ import { JobManager } from "../../config";
 import { Query, QueryState } from "../../connection/query";
 import { updateStatusBar } from "../jobManager/statusBar";
 import Document from "../../language/sql/document";
+import { changedCache } from "../../language/providers/completionItemCache";
 
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
@@ -247,6 +248,16 @@ export function parseStatement(editor: vscode.TextEditor): StatementInfo {
     text = document.getText();
 
     const sqlDocument = new Document(text);
+    // const sqlDocumentRefs: string[] = sqlDocument.statements.map((statement) =>
+    //   statement.type.toUpperCase()
+    // );
+    // if (sqlDocumentRefs.includes("CREATE")) {
+    //   const currentStatement = sqlDocument.getStatementGroups()[0].statements;
+    //   const refs = currentStatement[0].getObjectReferences();
+    //   for (const ref of refs) {
+    //     changedCache.add(ref.object.schema);
+    //   }
+    // }
 
     const group = sqlDocument.getGroupByOffset(cursor);
 
