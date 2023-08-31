@@ -192,7 +192,6 @@ export const completionProvider = languages.registerCompletionItemProvider(
       }
 
       if (trigger === "." || s.type === `dot`) {
-        const defs = sqlDoc.getDefinitions();
         return getCompletionItemsForTriggerDot(
           objectRefs,
           currentStatement,
