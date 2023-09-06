@@ -10,6 +10,7 @@ import { Query, QueryState } from "../../connection/query";
 import { updateStatusBar } from "../jobManager/statusBar";
 import Document from "../../language/sql/document";
 import { changedCache } from "../../language/providers/completionItemCache";
+import { ObjectRef, StatementType } from "../../language/sql/types";
 
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
@@ -121,6 +122,17 @@ class ResultSetPanelProvider {
   }
 }
 
+export type StatementQualifier = "statement"|"json"|"csv"|"cl"|"sql";
+
+export interface StatementInfo {
+  content: string,
+  qualifier: StatementQualifier,
+  open?: boolean,
+  history?: boolean,
+  type?: StatementType,
+  refs?: ObjectRef[]
+}
+
 export function initialise(context: vscode.ExtensionContext) {
   let resultSetProvider = new ResultSetPanelProvider();
 
@@ -151,12 +163,18 @@ export function initialise(context: vscode.ExtensionContext) {
             await vscode.window.showTextDocument(textDoc);
           }
 
+          if (statement.type === StatementType.Create) {
+            const ref = statement.refs[0];
+
+            changedCache.add(ref.object.schema);
+          }
+
           if (statement.content.trim().length > 0) {
             try {
-              if (statement.type === `cl`) {
+              if (statement.qualifier === `cl`) {
                 resultSetProvider.setScrolling(statement.content, true);
               } else {
-                if (statement.type === `statement`) {
+                if (statement.qualifier === `statement`) {
                   // If it's a basic statement, we can let it scroll!
                   resultSetProvider.setScrolling(statement.content);
 
@@ -165,13 +183,13 @@ export function initialise(context: vscode.ExtensionContext) {
                   const data = await JobManager.runSQL(statement.content, undefined);
 
                   if (data.length > 0) {
-                    switch (statement.type) {
+                    switch (statement.qualifier) {
 
                     case `csv`:
                     case `json`:
                     case `sql`:
                       let content = ``;
-                      switch (statement.type) {
+                      switch (statement.qualifier) {
                       case `csv`: content = csv.stringify(data, {
                         header: true,
                         quoted_string: true,
@@ -197,7 +215,7 @@ export function initialise(context: vscode.ExtensionContext) {
                         break;
                       }
 
-                      const textDoc = await vscode.workspace.openTextDocument({ language: statement.type, content });
+                      const textDoc = await vscode.workspace.openTextDocument({ language: statement.qualifier, content });
                       await vscode.window.showTextDocument(textDoc);
                       break;
                     }
@@ -208,7 +226,7 @@ export function initialise(context: vscode.ExtensionContext) {
                 }
               }
 
-              if (statement.type === `statement`) {
+              if (statement.qualifier === `statement`) {
                 vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement.content);
               }
 
@@ -220,7 +238,7 @@ export function initialise(context: vscode.ExtensionContext) {
                 errorText = e.message || `Error running SQL statement.`;
               }
 
-              if (statement.type === `statement` && statement.history !== false) {
+              if (statement.qualifier === `statement` && statement.history !== false) {
                 resultSetProvider.setError(errorText);
               } else {
                 vscode.window.showErrorMessage(errorText);
@@ -238,8 +256,10 @@ export function parseStatement(editor: vscode.TextEditor): StatementInfo {
 
   let text = document.getText(editor.selection).trim();
   let content = ``;
+  let statementType: StatementType|undefined;
+  let statementRefs: ObjectRef[]|undefined;
 
-  let type: StatementType = `statement`;
+  let qualifier: StatementQualifier = `statement`;
 
   if (text.length > 0) {
     content = text;
@@ -248,20 +268,14 @@ export function parseStatement(editor: vscode.TextEditor): StatementInfo {
     text = document.getText();
 
     const sqlDocument = new Document(text);
-    // const sqlDocumentRefs: string[] = sqlDocument.statements.map((statement) =>
-    //   statement.type.toUpperCase()
-    // );
-    // if (sqlDocumentRefs.includes("CREATE")) {
-    //   const currentStatement = sqlDocument.getStatementGroups()[0].statements;
-    //   const refs = currentStatement[0].getObjectReferences();
-    //   for (const ref of refs) {
-    //     changedCache.add(ref.object.schema);
-    //   }
-    // }
-
     const group = sqlDocument.getGroupByOffset(cursor);
 
     if (group) {
+      if (group.statements[0]) {
+        statementType = group.statements[0].type;
+        statementRefs = group.statements[0].getObjectReferences();
+      }
+
       content = text.substring(group.range.start, group.range.end);
       editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
     }
@@ -273,13 +287,15 @@ export function parseStatement(editor: vscode.TextEditor): StatementInfo {
         content = content.substring(mode.length + 1).trim();
 
         //@ts-ignore We know the type.
-        type = mode;
+        qualifier = mode;
       }
     });
   }
 
   return {
-    type: type,
-    content
+    qualifier: qualifier,
+    content,
+    type: statementType,
+    refs: statementRefs
   };
 }

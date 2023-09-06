@@ -1,4 +1,3 @@
-
 interface TableColumn {
   COLUMN_NAME: string,
   SYSTEM_COLUMN_NAME: string,
@@ -24,15 +23,6 @@ interface SQLParm {
   IS_NULLABLE: "Y" | "N",
   DEFAULT?: string,
   LONG_COMMENT?: string
-}
-
-type StatementType = "statement"|"json"|"csv"|"cl"|"sql";
-
-interface StatementInfo {
-  content: string,
-  type: StatementType,
-  open?: boolean,
-  history?: boolean
 }
 
 interface BasicSQLObject {

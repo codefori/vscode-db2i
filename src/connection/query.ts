@@ -99,15 +99,6 @@ export class Query<T> {
     }
     this.correlationId = queryResult.id;
     
-    // TODO: move to src/views/results/index.ts
-    if (this.sql.toUpperCase().startsWith("CREATE")) {
-      const sqlDoc = new Document(this.sql);
-      const currentStatement = sqlDoc.getStatementGroups()[0].statements;
-      const refs = currentStatement[0].getObjectReferences();
-      for (const ref of refs) {
-        changedCache.add(ref.object.schema);
-      }
-    }
     return queryResult;
   }
 
