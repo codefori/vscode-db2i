@@ -68,8 +68,9 @@ async function getTableItems(
   name: string
 ): Promise<CompletionItem[]> {
   schema = Statement.noQuotes(Statement.delimName(schema, true));
-  const tableUpdate: boolean = changedCache.delete((schema + name).toUpperCase()); 
-  if (!completionItemCache.has(schema + name) || tableUpdate) {
+  const databaseObj = (schema + name).toUpperCase();
+  const tableUpdate: boolean = changedCache.delete(databaseObj); 
+  if (!completionItemCache.has(databaseObj) || tableUpdate) {
     const items = await Table.getItems(schema, name);
     const completionItems = items.map((i) =>
       createCompletionItem(
@@ -79,9 +80,9 @@ async function getTableItems(
         `Schema: ${schema}\nTable: ${name}\n`
       )
     );
-    completionItemCache.set(schema + name, completionItems);
+    completionItemCache.set(databaseObj, completionItems);
   }
-  return completionItemCache.get(schema + name);
+  return completionItemCache.get(databaseObj);
 }
 
 async function getObjectCompletions(
@@ -95,7 +96,7 @@ async function getObjectCompletions(
       const data = await Database.getObjects(curSchema, value.type);
       return data.map((table) =>
         createCompletionItem(
-          table.name,
+          Statement.prettyName(table.name),
           value.icon,
           `Type: ${value.label}`,
           `Schema: ${table.schema}`,
