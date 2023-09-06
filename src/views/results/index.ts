@@ -163,10 +163,14 @@ export function initialise(context: vscode.ExtensionContext) {
             await vscode.window.showTextDocument(textDoc);
           }
 
-          if (statement.type === StatementType.Create) {
+          if (
+            statement.type === StatementType.Create || statement.type === StatementType.Alter) {
             const ref = statement.refs[0];
-
-            changedCache.add(ref.object.schema);
+            const databaseObj =
+              statement.type === StatementType.Create
+                ? ref.object.schema
+                : ref.object.schema + ref.object.name;
+            changedCache.add(databaseObj.toUpperCase());
           }
 
           if (statement.content.trim().length > 0) {
