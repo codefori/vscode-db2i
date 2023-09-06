@@ -150,21 +150,21 @@ export default class Statement {
 				let postName: number|undefined;
 
 				if (tokenIs(this.tokens[1], `keyword`, `OR`) && tokenIs(this.tokens[2], `keyword`, `REPLACE`)) {
-					object = this.getRefAtToken(4);
+					object = this.getRefAtToken(4, true);
 					if (object) {
 						postName = object.tokens.length+4;
 						object.type = this.tokens[3].value;
 					}
 				} else
 				if (tokenIs(this.tokens[1], `keyword`, `UNIQUE`)) {
-					object = this.getRefAtToken(3);
+					object = this.getRefAtToken(3, true);
 					if (object) {
 						postName = object.tokens.length+3;
 						object.type = this.tokens[2].value;
 					}
 				
 				} else {
-					object = this.getRefAtToken(2);
+					object = this.getRefAtToken(2, true);
 					if (object) {
 						postName = object.tokens.length+2;
 						object.type = this.tokens[1].value
@@ -257,7 +257,7 @@ export default class Statement {
 		return list;
 	}
 
-	private getRefAtToken(i: number): ObjectRef|undefined {
+	private getRefAtToken(i: number, withSystemName = false): ObjectRef|undefined {
 		let sqlObj: ObjectRef;
 
 		let nameIndex = i;
@@ -306,6 +306,14 @@ export default class Statement {
 
 			sqlObj.tokens = this.tokens.slice(i, endIndex+1);
 		};
+
+		if (withSystemName) {
+			if (tokenIs(this.tokens[endIndex+1], `keyword`, `FOR`) && tokenIs(this.tokens[endIndex+2], `word`, `SYSTEM`) && tokenIs(this.tokens[endIndex+3], `word`, `NAME`)) {
+				if (this.tokens[endIndex+4] && NameTypes.includes(this.tokens[endIndex+4].type)) {
+					sqlObj.object.system = this.tokens[endIndex+4].value;
+				}
+			}
+		}
 
 		return sqlObj;
 	}

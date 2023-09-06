@@ -45,6 +45,7 @@ export interface Token {
 export interface QualifiedObject {
   schema?: string;
   name?: string;
+	system?: string;
 }
 
 export interface ObjectRef {
