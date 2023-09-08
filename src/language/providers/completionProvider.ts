@@ -6,6 +6,7 @@ import { ObjectRef } from "../sql/types";
 import { changedCache } from "./completionItemCache";
 import CompletionItemCache from "./completionItemCache";
 import Statement from "../../database/statement";
+import * as LanguageStatement from "../sql/statement"
 
 const completionItemCache = new CompletionItemCache();
 
@@ -120,7 +121,7 @@ async function getObjectCompletions(
 
 async function getCompletionItemsForTriggerDot(
   objectRefs: ObjectRef[],
-  currentStatement, // Statement from ../../database/statement
+  currentStatement: LanguageStatement.default, // Statement from ../../database/statement
   offset: number
 ): Promise<CompletionItem[]> {
   let list: CompletionItem[] = [];
@@ -128,22 +129,20 @@ async function getCompletionItemsForTriggerDot(
   if (curRef === undefined) {
     return;
   }
+
+  //select * from sample.data as a, sample.
   const curSchema = curRef.object.schema;
+  const isOnlySchema = curRef.object.name === undefined;
 
   let curRefIdentifier: ObjectRef;
-  let isAlias: boolean = false;
-  for (const ref of objectRefs) {
-    if (curSchema === ref.object.schema || curSchema === ref.alias) {
-      curRefIdentifier = ref;
-      // check if ref is an alias
-      if (curRefIdentifier.alias && curRefIdentifier.object.name) {
-        isAlias = true;
-      }
-    }
+
+  if (isOnlySchema) {
+    // We need to check if this is an alias reference
+    curRefIdentifier = objectRefs.find(ref => ref.alias && ref.object.name && ref.alias.toUpperCase() === curSchema.toUpperCase());
   }
 
   // grab completion items (column names) if alias and name are defined
-  if (isAlias) {
+  if (curRefIdentifier) {
     const completionItems = await getTableItems(
       curRefIdentifier.object.schema,
       curRefIdentifier.object.name
