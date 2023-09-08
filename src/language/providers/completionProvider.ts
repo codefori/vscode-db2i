@@ -6,7 +6,9 @@ import { ObjectRef } from "../sql/types";
 import { changedCache } from "./completionItemCache";
 import CompletionItemCache from "./completionItemCache";
 import Statement from "../../database/statement";
-import * as LanguageStatement from "../sql/statement"
+import * as LanguageStatement from "../sql/statement";
+import Schemas from "../../database/schemas";
+import { getInstance, loadBase } from "../../base";
 
 const completionItemCache = new CompletionItemCache();
 
@@ -138,7 +140,12 @@ async function getCompletionItemsForTriggerDot(
 
   if (isOnlySchema) {
     // We need to check if this is an alias reference
-    curRefIdentifier = objectRefs.find(ref => ref.alias && ref.object.name && ref.alias.toUpperCase() === curSchema.toUpperCase());
+    curRefIdentifier = objectRefs.find(
+      (ref) =>
+        ref.alias &&
+        ref.object.name &&
+        ref.alias.toUpperCase() === curSchema.toUpperCase()
+    );
   }
 
   // grab completion items (column names) if alias and name are defined
@@ -159,6 +166,27 @@ async function getCompletionItemsForTriggerDot(
 }
 
 async function getCompletionItemsForRefs(objectRefs: ObjectRef[]) {
+  if (!objectRefs?.length ? true : false) {
+    if (completionItemCache.has(`SCHEMAS-FOR-SYSTEM`)) {
+      return completionItemCache.get(`SCHEMAS-FOR-SYSTEM`);
+    }
+    // Get the list of all available schemas
+    const allSchemas: BasicSQLObject[] = await Schemas.getObjects(
+      undefined,
+      `schemas`
+    );
+    const completionItems: CompletionItem[] = allSchemas.map((i) =>
+      createCompletionItem(
+        Statement.prettyName(i.name),
+        CompletionItemKind.Module,
+        `Type: Schema`,
+        `Text: ${i.text}`
+      )
+    );
+
+    completionItemCache.set(`SCHEMAS-FOR-SYSTEM`, completionItems);
+    return completionItems;
+  }
   const promises = objectRefs.map((ref) =>
     ref.object.name && ref.object.schema
       ? getTableItems(ref.object.schema, ref.object.name)
