@@ -3,7 +3,7 @@ import Database, { SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import Document from "../sql/document";
 import { ObjectRef } from "../sql/types";
-import { changedCache} from "./completionItemCache";
+import { changedCache } from "./completionItemCache";
 import CompletionItemCache from "./completionItemCache";
 import Statement from "../../database/statement";
 
@@ -52,7 +52,6 @@ function createCompletionItem(
 }
 
 function getColumnAtributes(column: TableColumn): string {
-  
   const lines: string[] = [
     `Field: ${column.COLUMN_NAME}`,
     `Type: ${column.DATA_TYPE}`,
@@ -67,14 +66,18 @@ async function getTableItems(
   schema: string,
   name: string
 ): Promise<CompletionItem[]> {
-  schema = Statement.noQuotes(Statement.delimName(schema, true));
   const databaseObj = (schema + name).toUpperCase();
-  const tableUpdate: boolean = changedCache.delete(databaseObj); 
+  const tableUpdate: boolean = changedCache.delete(databaseObj);
   if (!completionItemCache.has(databaseObj) || tableUpdate) {
+    schema = Statement.noQuotes(Statement.delimName(schema, true));
+    name = Statement.noQuotes(Statement.delimName(name, true));
     const items = await Table.getItems(schema, name);
+    if (!items?.length ? true : false) {
+      return;
+    }
     const completionItems = items.map((i) =>
       createCompletionItem(
-        i.COLUMN_NAME,
+        Statement.prettyName(i.COLUMN_NAME),
         CompletionItemKind.Field,
         getColumnAtributes(i),
         `Schema: ${schema}\nTable: ${name}\n`
@@ -89,7 +92,7 @@ async function getObjectCompletions(
   curSchema: string,
   sqlTypes: { [index: string]: CompletionType }
 ) {
-  const schemaUpdate: boolean = changedCache  .delete(curSchema.toUpperCase());
+  const schemaUpdate: boolean = changedCache.delete(curSchema.toUpperCase());
   if (!completionItemCache.has(curSchema) || schemaUpdate) {
     const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
       curSchema = Statement.noQuotes(Statement.delimName(curSchema, true));
@@ -200,7 +203,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
           offset
         );
       }
-      return getCompletionItemsForRefs(objectRefs);
+      return;
     },
   },
   `.`
