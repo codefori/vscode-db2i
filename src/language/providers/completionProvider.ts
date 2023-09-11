@@ -9,6 +9,7 @@ import Statement from "../../database/statement";
 import * as LanguageStatement from "../sql/statement";
 import Schemas from "../../database/schemas";
 import { getInstance, loadBase } from "../../base";
+import { JobManager } from "../../config";
 
 const completionItemCache = new CompletionItemCache();
 
@@ -230,6 +231,17 @@ export const completionProvider = languages.registerCompletionItemProvider(
       const objectRefs = currentStatement
         ? currentStatement.getObjectReferences()
         : [];
+
+      const currentJob = JobManager.getSelection();
+      if (currentJob) {
+        for (let ref of objectRefs) {
+          // If we have a reference to an object, but there is no schema
+          // then let's default to the current job schema
+          if (!ref.object.schema) {
+            ref.object.schema = currentJob.job.options.libraries[0] || `QGPL`
+          }
+        }
+      }
 
       const s = currentStatement
         ? currentStatement.getTokenByOffset(offset)
