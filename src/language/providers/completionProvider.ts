@@ -187,17 +187,34 @@ async function getCompletionItemsForRefs(objectRefs: ObjectRef[]) {
     completionItemCache.set(`SCHEMAS-FOR-SYSTEM`, completionItems);
     return completionItems;
   }
-  const promises = objectRefs.map((ref) =>
+  
+  const promises: Promise<CompletionItem[]>[] = objectRefs.map((ref) =>
     ref.object.name && ref.object.schema
       ? getTableItems(ref.object.schema, ref.object.name)
       : Promise.resolve([])
   );
 
   const results = await Promise.allSettled(promises);
-  return results
+
+  let completionItems = results
     .filter((result) => result.status == "fulfilled")
     .map((result) => (result as PromiseFulfilledResult<any>).value)
     .flat();
+
+  // Let's also add the alias names that we have in the current statement
+  completionItems.push(...objectRefs.filter(ref => ref.alias).map(ref => 
+    createCompletionItem(
+      ref.alias,
+      CompletionItemKind.Reference,
+      ``,
+      [
+        ref.object.schema ? `Schema: ${ref.object.schema}` : undefined,
+        ref.object.name ? `Object: ${ref.object.name}` : undefined
+      ].filter(x => x).join(`\n`)
+    )
+  ))
+
+  return completionItems
 }
 
 export const completionProvider = languages.registerCompletionItemProvider(
