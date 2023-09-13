@@ -247,19 +247,15 @@ export const completionProvider = languages.registerCompletionItemProvider(
         ? currentStatement.getTokenByOffset(offset)
         : null;
 
-      // if s is undefined, assume ctrl+ space trigger
-      if (s === undefined) {
-        return getCompletionItemsForRefs(objectRefs);
-      }
-
-      if (trigger === "." || s.type === `dot`) {
+      if (trigger === "." || (s && s.type === `dot`)) {
         return getCompletionItemsForTriggerDot(
           objectRefs,
           currentStatement,
           offset
         );
       }
-      return;
+
+      return getCompletionItemsForRefs(objectRefs);
     },
   },
   `.`
