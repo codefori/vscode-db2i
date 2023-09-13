@@ -186,6 +186,7 @@ export default class Statement {
 							break;
 
 						case `VIEW`:
+						case `TABLE`:
 							const asKeyword = this.tokens.findIndex(token => tokenIs(token, `keyword`, `AS`));
 
 							if (asKeyword > 0) {
