@@ -76,9 +76,12 @@ async function getTableItems(
     schema = Statement.noQuotes(Statement.delimName(schema, true));
     name = Statement.noQuotes(Statement.delimName(name, true));
     const items = await Table.getItems(schema, name);
+
     if (!items?.length ? true : false) {
-      return;
+      completionItemCache.set(databaseObj, []);
+      return [];
     }
+
     const completionItems = items.map((i) =>
       createCompletionItem(
         Statement.prettyName(i.COLUMN_NAME),
