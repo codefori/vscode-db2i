@@ -166,56 +166,82 @@ async function getCompletionItemsForTriggerDot(
   return list;
 }
 
-async function getCompletionItemsForRefs(objectRefs: ObjectRef[]) {
-  if (!objectRefs?.length ? true : false) {
-    if (completionItemCache.has(`SCHEMAS-FOR-SYSTEM`)) {
-      return completionItemCache.get(`SCHEMAS-FOR-SYSTEM`);
-    }
-    // Get the list of all available schemas
-    const allSchemas: BasicSQLObject[] = await Schemas.getObjects(
-      undefined,
-      `schemas`
-    );
-    const completionItems: CompletionItem[] = allSchemas.map((i) =>
-      createCompletionItem(
-        Statement.prettyName(i.name),
-        CompletionItemKind.Module,
-        `Type: Schema`,
-        `Text: ${i.text}`
-      )
-    );
-
-    completionItemCache.set(`SCHEMAS-FOR-SYSTEM`, completionItems);
-    return completionItems;
+async function getCachedSchemas() {
+  if (completionItemCache.has(`SCHEMAS-FOR-SYSTEM`)) {
+    return completionItemCache.get(`SCHEMAS-FOR-SYSTEM`);
   }
-  
-  const promises: Promise<CompletionItem[]>[] = objectRefs.map((ref) =>
+
+  const allSchemas: BasicSQLObject[] = await Schemas.getObjects(
+    undefined,
+    `schemas`
+  );
+  const completionItems: CompletionItem[] = allSchemas.map((schema) =>
+    createCompletionItem(
+      Statement.prettyName(schema.name),
+      CompletionItemKind.Module,
+      `Type: Schema`,
+      `Text: ${schema.text}`
+    )
+  );
+
+  completionItemCache.set(`SCHEMAS-FOR-SYSTEM`, completionItems);
+  return completionItems;
+}
+
+function createCompletionItemForAlias(ref: ObjectRef) {
+  return createCompletionItem(
+    ref.alias,
+    CompletionItemKind.Reference,
+    "",
+    [
+      ref.object.schema ? `Schema: ${ref.object.schema}` : undefined,
+      ref.object.name ? `Object: ${ref.object.name}` : undefined,
+    ]
+      .filter(Boolean)
+      .join(`\n`)
+  );
+}
+
+async function getObjectCompletionsForRefs(objectRefs: ObjectRef[]) {
+  const objectCompletionPromises = objectRefs.map((ref) =>
+    getObjectCompletions(ref.object.schema, completionTypes)
+  );
+
+  const results = await Promise.allSettled(objectCompletionPromises);
+
+  return results
+    .filter((result) => result.status === "fulfilled")
+    .flatMap((result) => (result as PromiseFulfilledResult<any>).value);
+}
+
+async function getCompletionItemsForRefs(objectRefs: ObjectRef[]) {
+  if (!objectRefs?.length) {
+    return await getCachedSchemas();
+  }
+
+  const tableItemPromises = objectRefs.map((ref) =>
     ref.object.name && ref.object.schema
       ? getTableItems(ref.object.schema, ref.object.name)
       : Promise.resolve([])
   );
 
-  const results = await Promise.allSettled(promises);
+  const results = await Promise.allSettled(tableItemPromises);
 
   let completionItems = results
-    .filter((result) => result.status == "fulfilled")
-    .map((result) => (result as PromiseFulfilledResult<any>).value)
-    .flat();
+    .filter((result) => result.status === "fulfilled")
+    .flatMap((result) => (result as PromiseFulfilledResult<any>).value);
 
-  // Let's also add the alias names that we have in the current statement
-  completionItems.push(...objectRefs.filter(ref => ref.alias).map(ref => 
-    createCompletionItem(
-      ref.alias,
-      CompletionItemKind.Reference,
-      ``,
-      [
-        ref.object.schema ? `Schema: ${ref.object.schema}` : undefined,
-        ref.object.name ? `Object: ${ref.object.name}` : undefined
-      ].filter(x => x).join(`\n`)
-    )
-  ))
+  const aliasItems = objectRefs
+    .filter((ref) => ref.alias)
+    .map((ref) => createCompletionItemForAlias(ref));
 
-  return completionItems
+  completionItems.push(...aliasItems);
+
+  if (completionItems.includes(undefined)) {
+    return await getObjectCompletionsForRefs(objectRefs);
+  }
+
+  return completionItems;
 }
 
 export const completionProvider = languages.registerCompletionItemProvider(
@@ -238,7 +264,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
           // If we have a reference to an object, but there is no schema
           // then let's default to the current job schema
           if (!ref.object.schema) {
-            ref.object.schema = currentJob.job.options.libraries[0] || `QGPL`
+            ref.object.schema = currentJob.job.options.libraries[0] || `QGPL`;
           }
         }
       }
