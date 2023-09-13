@@ -1,17 +1,19 @@
 import { CompletionItem, CompletionItemKind, languages } from "vscode";
-import Database, { SQLType } from "../../database/schemas";
+import { JobManager } from "../../config";
+import {
+  default as Database,
+  SQLType,
+  default as Schemas,
+} from "../../database/schemas";
+import Statement from "../../database/statement";
 import Table from "../../database/table";
 import Document from "../sql/document";
-import { ObjectRef } from "../sql/types";
-import { changedCache } from "./completionItemCache";
-import CompletionItemCache from "./completionItemCache";
-import Statement from "../../database/statement";
 import * as LanguageStatement from "../sql/statement";
-import Schemas from "../../database/schemas";
-import { getInstance, loadBase } from "../../base";
-import { JobManager } from "../../config";
+import { ObjectRef, StatementType } from "../sql/types";
+import CompletionItemCache, { changedCache } from "./completionItemCache";
 
 const completionItemCache = new CompletionItemCache();
+let DEFAULT_SCHEMA = undefined;
 
 export interface CompletionType {
   order: string;
@@ -57,7 +59,7 @@ function createCompletionItem(
 
 function getColumnAtributes(column: TableColumn): string {
   const lines: string[] = [
-    `Field: ${column.COLUMN_NAME}`,
+    `Column: ${column.COLUMN_NAME}`,
     `Type: ${column.DATA_TYPE}`,
     `HAS_DEFAULT: ${column.HAS_DEFAULT}`,
     `IS_IDENTITY: ${column.IS_IDENTITY}`,
@@ -123,6 +125,48 @@ async function getObjectCompletions(
     completionItemCache.set(curSchema, list);
   }
   return completionItemCache.get(curSchema);
+}
+
+async function getCompletionItemsForSchema(
+  schema: string
+): Promise<CompletionItem[]> {
+  const data = await Database.getObjects(schema, "procedures");
+  return data.map((item) =>
+    createCompletionItem(
+      item.name,
+      CompletionItemKind.Method,
+      `Type: Procedure`,
+      `Schema: ${item.schema}`
+    )
+  );
+}
+
+async function getProcedures(
+  refs: ObjectRef[],
+  defaultSchema?: string
+): Promise<CompletionItem[]> {
+  // Handle the case where refs is empty and defaultSchema is provided
+  if (refs.length === 0 && defaultSchema) {
+    const sanitizedSchema = Statement.noQuotes(
+      Statement.delimName(defaultSchema, true)
+    );
+    return getCompletionItemsForSchema(sanitizedSchema);
+  }
+
+  // Handle the general case
+  const promises = refs.map(async (ref) => {
+    const sanitizedSchema = Statement.noQuotes(
+      Statement.delimName(ref.object.schema, true)
+    );
+    return getCompletionItemsForSchema(sanitizedSchema);
+  });
+
+  const results = await Promise.allSettled(promises);
+  return results
+    .filter((result) => result.status === "fulfilled")
+    .flatMap(
+      (result) => (result as PromiseFulfilledResult<CompletionItem[]>).value
+    );
 }
 
 async function getCompletionItemsForTriggerDot(
@@ -195,7 +239,7 @@ function createCompletionItemForAlias(ref: ObjectRef) {
   return createCompletionItem(
     ref.alias,
     CompletionItemKind.Reference,
-    "",
+    "Type: Alias",
     [
       ref.object.schema ? `Schema: ${ref.object.schema}` : undefined,
       ref.object.name ? `Object: ${ref.object.name}` : undefined,
@@ -217,7 +261,10 @@ async function getObjectCompletionsForRefs(objectRefs: ObjectRef[]) {
     .flatMap((result) => (result as PromiseFulfilledResult<any>).value);
 }
 
-async function getCompletionItemsForRefs(objectRefs: ObjectRef[]) {
+async function getCompletionItemsForRefs(
+  objectRefs: ObjectRef[],
+  currentStament: LanguageStatement.default
+) {
   if (!objectRefs?.length) {
     return await getCachedSchemas();
   }
@@ -240,11 +287,34 @@ async function getCompletionItemsForRefs(objectRefs: ObjectRef[]) {
 
   completionItems.push(...aliasItems);
 
-  if (completionItems.includes(undefined)) {
+  if (completionItems.includes(undefined) || completionItems.length === 0) {
     return await getObjectCompletionsForRefs(objectRefs);
   }
 
   return completionItems;
+}
+
+async function getCompletionItems(
+  trigger: string,
+  objectRefs: ObjectRef[],
+  currentStatement: LanguageStatement.default,
+  offset?: number
+) {
+  if (currentStatement.type === StatementType.Call) {
+    return getProcedures(objectRefs, DEFAULT_SCHEMA);
+  }
+
+  const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
+
+  if (trigger === "." || (s && s.type === `dot`)) {
+    return getCompletionItemsForTriggerDot(
+      objectRefs,
+      currentStatement,
+      offset
+    );
+  }
+
+  return getCompletionItemsForRefs(objectRefs, currentStatement);
 }
 
 export const completionProvider = languages.registerCompletionItemProvider(
@@ -263,6 +333,9 @@ export const completionProvider = languages.registerCompletionItemProvider(
 
       const currentJob = JobManager.getSelection();
       if (currentJob) {
+        if (objectRefs.length === 0) {
+          DEFAULT_SCHEMA = currentJob.job.options.libraries[0] || `QGPL`;
+        }
         for (let ref of objectRefs) {
           // If we have a reference to an object, but there is no schema
           // then let's default to the current job schema
@@ -272,19 +345,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
         }
       }
 
-      const s = currentStatement
-        ? currentStatement.getTokenByOffset(offset)
-        : null;
-
-      if (trigger === "." || (s && s.type === `dot`)) {
-        return getCompletionItemsForTriggerDot(
-          objectRefs,
-          currentStatement,
-          offset
-        );
-      }
-
-      return getCompletionItemsForRefs(objectRefs);
+      return getCompletionItems(trigger, objectRefs, currentStatement, offset);
     },
   },
   `.`
