@@ -15,6 +15,7 @@ describe(`Basic statements`, () => {
     const document = new Document(`select * from sample;`);
   
     expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Select);
     expect(document.statements[0].tokens.length).toBe(4);
   });
   
@@ -886,20 +887,86 @@ describe(`PL body tests`, () => {
 
   test(`WITH: no explicit columns`, () => {
     const lines = [
-      `with cteme(n1,n2,n3) as (`,
-      `  select * from qsys2.sysixadv`,
-      `  --     |`,
-      `)`,
-    ].join(`\r\n`);
+      `with Temp01 as`,
+      `(select s.shipmentID, s.customerID, s.amount`,
+      `   from shipments as s`,
+      `  where s.shipdate =`,
+      `      (select BillingDate from BillingDate)),`,
+      `Temp02 as`,
+      `  (select sum(t1.amount) as TotalShipped`,
+      `    from Temp01 as t1),`,
+      `Temp03 as`,
+      `  (select t1.shipmentID, t1.customerID, c.name, t1.amount, `,
+      `          dec(round(t1.amount / t2.TotalShipped * 100,2),5,2`,
+      `          ) as Percentage`,
+      `    from Temp01 as t1`,
+      `    cross join Temp02 as t2`,
+      `    join customers as c`,
+      `      on t1.customerID = c.account)`,
+      `/* select t3.* from Temp03 as t3`,
+      `order by t3.shipmentID; */`,
+      `select * from Temp02`,
+    ].join(`\n`);
 
     const document = new Document(lines);
     const statements = document.statements;
 
+    expect(statements.length).toBe(1);
+    
     const statement = statements[0];
-    const objs = statement.getObjectReferences();
-    expect(statement.type).toBe(StatementType.Select);
+    expect(statement.type).toBe(StatementType.With);
 
-    expect(objs[0].object.schema).toBe(`qsys2`);
-    expect(objs[0].object.name).toBe(`sysixadv`);
+    const refs = statement.getObjectReferences();
+    const ctes = statement.getCTEReferences();
+
+    expect(refs.length).toBe(1);
+    expect(refs[0].object.name).toBe(`Temp02`);
+
+    expect(ctes.length).toBe(3);
+    expect(ctes[0].name).toBe(`Temp01`);
+    expect(ctes[0].parameters.length).toBe(0);
+
+    expect(ctes[1].name).toBe(`Temp02`);
+    expect(ctes[1].parameters.length).toBe(0);
+
+    expect(ctes[2].name).toBe(`Temp03`);
+    expect(ctes[2].parameters.length).toBe(0);
+    const temp03Stmt = ctes[2].statement.getObjectReferences();
+    expect(temp03Stmt.length).toBe(2);
+    expect(temp03Stmt[0].object.name).toBe(`Temp01`);
+    expect(temp03Stmt[1].object.name).toBe(`Temp02`);
+  })
+
+  test(`WITH: explicit columns`, () => {
+    const lines = [
+      `with cteme(n1,n2,n3) as (`,
+      `  select * from qsys2.sysixadv`,
+      `  --     |`,
+      `)`,
+      `select * from cteme`
+    ].join(`\r\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.With);
+
+    const objs = statement.getObjectReferences();
+    expect(objs.length).toBe(1);
+    expect(objs[0].object.schema).toBe(undefined);
+    expect(objs[0].object.name).toBe(`cteme`);
+
+    const ctes = statement.getCTEReferences();
+    expect(ctes.length).toBe(1);
+    expect(ctes[0].name).toBe(`cteme`);
+    expect(ctes[0].parameters.join()).toBe([`n1`, `n2`, `n3`].join());
+
+    const cteSubselect = ctes[0].statement;
+    const cteObjs = cteSubselect.getObjectReferences();
+    expect(cteObjs.length).toBe(1);
+    expect(cteObjs[0].object.schema).toBe(`qsys2`);
+    expect(cteObjs[0].object.name).toBe(`sysixadv`);
   })
 });

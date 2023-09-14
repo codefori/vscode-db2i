@@ -5,6 +5,7 @@ export enum StatementType {
 	Create = "Create",
 	Insert = "Insert",
 	Select = "Select",
+	With = "With",
 	Update = "Update",
 	Delete = "Delete",
 	Declare = "Declare",
@@ -18,7 +19,7 @@ export enum StatementType {
 export const StatementTypeWord = {
 	'CREATE': StatementType.Create,
 	'SELECT': StatementType.Select,
-	'WITH': StatementType.Select,
+	'WITH': StatementType.With,
 	'INSERT': StatementType.Insert,
 	'UPDATE': StatementType.Update,
 	'DELETE': StatementType.Delete,

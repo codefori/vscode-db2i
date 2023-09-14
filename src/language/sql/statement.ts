@@ -18,8 +18,16 @@ export default class Statement {
 			this.type = StatementTypeWord[wordValue];
 		}
 		
-		if (this.type !== StatementType.Create) {
-			this.tokens = SQLTokeniser.findScalars(this.tokens);
+		switch (this.type) {
+			case StatementType.With:
+				this.tokens = SQLTokeniser.createBlocks(this.tokens);
+				break;
+			case StatementType.Create:
+				// No scalar transformation here..
+				break;
+			default:
+				this.tokens = SQLTokeniser.findScalars(this.tokens);
+				break;
 		}
 	}
 
@@ -95,6 +103,44 @@ export default class Statement {
 		}
 	}
 
+	getCTEReferences() {
+		let cteList: {name: string, parameters: string[], statement: Statement}[] = [];
+					
+		const newTokens = this.tokens.filter(newToken => newToken.type !== `newline`);
+
+		for (let i = 0; i < newTokens.length; i++) {
+			if (tokenIs(newTokens[i], `word`)) {
+				let cteName = newTokens[i].value!;
+				let parameters: string[] = [];
+				let statementBlockI = i+1;
+
+				if (tokenIs(newTokens[i+1], `block`) && tokenIs(newTokens[i+2], `keyword`, `AS`)) {
+					parameters = newTokens[i+1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
+					statementBlockI = i+3;
+				} else if (tokenIs(newTokens[i+1], `keyword`, `AS`)) {
+					statementBlockI = i+2;
+				}
+
+				const statementBlock = newTokens[statementBlockI];
+				if (tokenIs(statementBlock, `block`)) {
+					cteList.push({
+						name: cteName,
+						parameters,
+						statement: new Statement(Statement.trimTokens(statementBlock.block), statementBlock.range)
+					})
+				}
+
+				i = statementBlockI;
+			}
+
+			if (tokenIs(newTokens[i], `statementType`, `SELECT`)) {
+				break;
+			}
+		}
+
+		return cteList;
+	}
+
 	getObjectReferences(): ObjectRef[] {
 		let list: ObjectRef[] = [];
 
@@ -142,13 +188,14 @@ export default class Statement {
 				}
 				break;
 
+			case StatementType.With:
+				basicQueryFinder(0);
+				break;
+
 			case StatementType.Insert:
 			case StatementType.Select:
 			case StatementType.Delete:
-				// SELECT
-
-				// This is the same loop used in CREATE->TABLE|VIEW
-				basicQueryFinder(0)
+				basicQueryFinder(0);
 				break;
 
 			case StatementType.Create:
