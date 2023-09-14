@@ -67,6 +67,20 @@ function getColumnAtributes(column: TableColumn): string {
   return lines.join(`\n `);
 }
 
+function getAllColumns(name: string, schema: string, items: CompletionItem[]) {
+  const allCols = createCompletionItem(
+    `${name}: All Columns`,
+    CompletionItemKind.Enum,
+    `All columns for table: ${name}`,
+    `Schema: ${schema}`,
+    `a@allCols`
+  );
+  
+  allCols.sortText = 'a@allCols';
+  allCols.insertText = items.map(item => item.label).join(", ");
+  return allCols;
+}
+
 async function getTableItems(
   schema: string,
   name: string
@@ -92,6 +106,8 @@ async function getTableItems(
         `a@objectcolumn`
       )
     );
+    const allCols = getAllColumns(name, schema, completionItems);
+    completionItems.push(allCols);
     completionItemCache.set(databaseObj, completionItems);
   }
   return completionItemCache.get(databaseObj);
