@@ -9,11 +9,10 @@ import Statement from "../../database/statement";
 import Table from "../../database/table";
 import Document from "../sql/document";
 import * as LanguageStatement from "../sql/statement";
-import { ObjectRef, StatementType } from "../sql/types";
+import { CTEReference, ObjectRef, StatementType } from "../sql/types";
 import CompletionItemCache, { changedCache } from "./completionItemCache";
 
 const completionItemCache = new CompletionItemCache();
-let DEFAULT_SCHEMA = undefined;
 
 export interface CompletionType {
   order: string;
@@ -24,19 +23,19 @@ export interface CompletionType {
 
 const completionTypes: { [index: string]: CompletionType } = {
   tables: {
-    order: `a`,
+    order: `b`,
     label: `table`,
     type: `tables`,
     icon: CompletionItemKind.File,
   },
   views: {
-    order: `b`,
+    order: `c`,
     label: `view`,
     type: `views`,
     icon: CompletionItemKind.Interface,
   },
   aliases: {
-    order: `c`,
+    order: `d`,
     label: `alias`,
     type: `aliases`,
     icon: CompletionItemKind.Reference,
@@ -89,7 +88,8 @@ async function getTableItems(
         Statement.prettyName(i.COLUMN_NAME),
         CompletionItemKind.Field,
         getColumnAtributes(i),
-        `Schema: ${schema}\nTable: ${name}\n`
+        `Schema: ${schema}\nTable: ${name}\n`,
+        `a@objectcolumn`
       )
     );
     completionItemCache.set(databaseObj, completionItems);
@@ -97,15 +97,18 @@ async function getTableItems(
   return completionItemCache.get(databaseObj);
 }
 
+/**
+ * Gets the completion items for objects in a schema
+ */
 async function getObjectCompletions(
-  curSchema: string,
+  forSchema: string,
   sqlTypes: { [index: string]: CompletionType }
-) {
-  const schemaUpdate: boolean = changedCache.delete(curSchema.toUpperCase());
-  if (!completionItemCache.has(curSchema) || schemaUpdate) {
+): Promise<CompletionItem[]> {
+  const schemaUpdate: boolean = changedCache.delete(forSchema.toUpperCase());
+  if (!completionItemCache.has(forSchema) || schemaUpdate) {
     const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
-      curSchema = Statement.noQuotes(Statement.delimName(curSchema, true));
-      const data = await Database.getObjects(curSchema, value.type);
+      forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
+      const data = await Database.getObjects(forSchema, value.type);
       return data.map((table) =>
         createCompletionItem(
           Statement.prettyName(table.name),
@@ -122,9 +125,9 @@ async function getObjectCompletions(
       .filter((result) => result.status == "fulfilled")
       .map((result) => (result as PromiseFulfilledResult<any>).value)
       .flat();
-    completionItemCache.set(curSchema, list);
+    completionItemCache.set(forSchema, list);
   }
-  return completionItemCache.get(curSchema);
+  return completionItemCache.get(forSchema);
 }
 
 async function getCompletionItemsForSchema(
@@ -170,12 +173,12 @@ async function getProcedures(
 }
 
 async function getCompletionItemsForTriggerDot(
-  objectRefs: ObjectRef[],
   currentStatement: LanguageStatement.default, // Statement from ../../database/statement
   offset: number,
   trigger: string
 ): Promise<CompletionItem[]> {
   let list: CompletionItem[] = [];
+
   const curRef = currentStatement.getReferenceByOffset(offset);
   if (curRef === undefined) {
     return;
@@ -186,6 +189,15 @@ async function getCompletionItemsForTriggerDot(
   const isOnlySchema = curRef.object.name === undefined;
 
   let curRefIdentifier: ObjectRef;
+
+  const objectRefs = currentStatement.getObjectReferences();
+
+  // Set the default schema for all references without one
+  for (let ref of objectRefs) {
+    if (!ref.object.schema) {
+      ref.object.schema = getDefaultSchema();
+    }
+  }
 
   if (isOnlySchema) {
     // We need to check if this is an alias reference
@@ -203,18 +215,43 @@ async function getCompletionItemsForTriggerDot(
     if (trigger === "/") {
       return;
     }
-    const completionItems = await getTableItems(
-      curRefIdentifier.object.schema,
-      curRefIdentifier.object.name
-    );
-    list.push(...completionItems);
+
+    let currentCte: CTEReference;
+    // If we're writing a SELECT/WITH, then also make suggestions based on the CTE
+    if (currentStatement.type === StatementType.With) {
+      const cteList = currentStatement.getCTEReferences();
+      currentCte = cteList.find(cte => cte.name.toUpperCase() === curRefIdentifier.object.name.toUpperCase());
+
+      if (currentCte) {
+        list.push(...currentCte.columns.map(col => createCompletionItem(
+          col,
+          CompletionItemKind.Property,
+          `CTE: ${currentCte.name}`,
+          undefined,
+          `a@cte`
+        )));
+      }
+    }
+
+    // Else.. go do a table lookup
+    if (!currentCte) {
+      const completionItems = await getTableItems(
+        curRefIdentifier.object.schema,
+        curRefIdentifier.object.name
+      );
+
+      list.push(...completionItems);
+    }
   } else {
+    
+
     const objectCompletions = await getObjectCompletions(
       curSchema,
       completionTypes
     );
     list.push(...objectCompletions);
   }
+
   return list;
 }
 
@@ -254,43 +291,58 @@ function createCompletionItemForAlias(ref: ObjectRef) {
   );
 }
 
-async function getObjectCompletionsForRefs(objectRefs: ObjectRef[]) {
-  const objectCompletionPromises = objectRefs.map((ref) =>
-    getObjectCompletions(ref.object.schema, completionTypes)
-  );
+async function getCompletionItemsForRefs(currentStatement: LanguageStatement.default, cteColumns?: string[]) {
+  const objectRefs = currentStatement.getObjectReferences();
+  const cteList = currentStatement.getCTEReferences();
 
-  const results = await Promise.allSettled(objectCompletionPromises);
+  var completionItems: CompletionItem[] = [];
 
-  return results
-    .filter((result) => result.status === "fulfilled")
-    .flatMap((result) => (result as PromiseFulfilledResult<any>).value);
-}
-
-async function getCompletionItemsForRefs(objectRefs: ObjectRef[]) {
-  if (!objectRefs?.length) {
-    return await getCachedSchemas();
+  // Get all the schemas
+  if (objectRefs.length === 0 && cteList.length === 0) {
+    completionItems.push(...await getCachedSchemas());
   }
 
+  // Set the default schema for all references without one
+  for (let ref of objectRefs) {
+    if (!ref.object.schema) {
+      ref.object.schema = getDefaultSchema();
+    }
+  }
+
+  // Fetch all the columns for tables that have references in the statement
   const tableItemPromises = objectRefs.map((ref) =>
     ref.object.name && ref.object.schema
       ? getTableItems(ref.object.schema, ref.object.name)
       : Promise.resolve([])
   );
-
   const results = await Promise.allSettled(tableItemPromises);
-
-  let completionItems = results
+  completionItems.push(...results
     .filter((result) => result.status === "fulfilled")
-    .flatMap((result) => (result as PromiseFulfilledResult<any>).value);
+    .flatMap((result) => (result as PromiseFulfilledResult<any>).value));
 
+  if (cteColumns) {
+    completionItems.push(...cteColumns.map(col => createCompletionItem(
+        col,
+        CompletionItemKind.Field,
+        undefined,
+        `CTE column`,
+        `a@objectcolumn`
+    )))
+  }
+
+  // If there are any locals refs with the `AS` keyword, add that
   const aliasItems = objectRefs
     .filter((ref) => ref.alias)
     .map((ref) => createCompletionItemForAlias(ref));
-
   completionItems.push(...aliasItems);
 
-  if (completionItems.includes(undefined) || completionItems.length === 0) {
-    return await getObjectCompletionsForRefs(objectRefs);
+  // Lastly, get all the completion items for objects in each referenced schema
+  completionItems.push(...await getObjectCompletions(getDefaultSchema(), completionTypes));
+
+  // If this is a `WITH` statement, then add the CTE names
+  if (currentStatement.type === StatementType.With) {
+    const cteList = currentStatement.getCTEReferences();
+    completionItems.push(...cteList.map(cte => createCompletionItem(cte.name, CompletionItemKind.Interface)))
   }
 
   return completionItems;
@@ -298,26 +350,34 @@ async function getCompletionItemsForRefs(objectRefs: ObjectRef[]) {
 
 async function getCompletionItems(
   trigger: string,
-  objectRefs: ObjectRef[],
-  currentStatement: LanguageStatement.default,
+  currentStatement: LanguageStatement.default|undefined,
   offset?: number
 ) {
-  if (currentStatement.type === StatementType.Call) {
-    return getProcedures(objectRefs, DEFAULT_SCHEMA);
+  if (currentStatement && currentStatement.type === StatementType.Call) {
+    return getProcedures(currentStatement.getObjectReferences(), getDefaultSchema());
   }
+
+  // Determine if writing a statement inside of a CTE, if they are, set that as the current statement
+  let insideCte: CTEReference|undefined;
+  if (offset && currentStatement.type === StatementType.With) {
+    let ctes = currentStatement.getCTEReferences();
+    insideCte = ctes.find(cte => offset >= cte.statement.range.start && offset <= cte.statement.range.end);
+    if (insideCte) currentStatement = insideCte.statement;
+  }
+
+  // TODO: if they're inside a CTE, then also prompt the expecting columns
 
   const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
 
   if (trigger === "." || (s && s.type === `dot`) || trigger === "/") {
     return getCompletionItemsForTriggerDot(
-      objectRefs,
       currentStatement,
       offset,
       trigger
     );
   }
 
-  return getCompletionItemsForRefs(objectRefs);
+  return getCompletionItemsForRefs(currentStatement, insideCte ? insideCte.columns : undefined);
 }
 
 export const completionProvider = languages.registerCompletionItemProvider(
@@ -330,27 +390,17 @@ export const completionProvider = languages.registerCompletionItemProvider(
 
       const sqlDoc = new Document(content);
       const currentStatement = sqlDoc.getStatementByOffset(offset);
-      const objectRefs = currentStatement
-        ? currentStatement.getObjectReferences()
-        : [];
 
-      const currentJob = JobManager.getSelection();
-      if (currentJob) {
-        if (objectRefs.length === 0) {
-          DEFAULT_SCHEMA = currentJob.job.options.libraries[0] || `QGPL`;
-        }
-        for (let ref of objectRefs) {
-          // If we have a reference to an object, but there is no schema
-          // then let's default to the current job schema
-          if (!ref.object.schema) {
-            ref.object.schema = currentJob.job.options.libraries[0] || `QGPL`;
-          }
-        }
+      if (currentStatement) {
+        return getCompletionItems(trigger, currentStatement, offset);
       }
-
-      return getCompletionItems(trigger, objectRefs, currentStatement, offset);
     },
   },
   `.`,
   "/"
 );
+
+const getDefaultSchema = (): string => {
+  const currentJob = JobManager.getSelection();
+  return currentJob && currentJob.job.options.libraries[0] ? currentJob.job.options.libraries[0] : `QGPL`;
+}
