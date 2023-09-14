@@ -883,4 +883,23 @@ describe(`PL body tests`, () => {
     expect(callStatement.type).toBe(StatementType.Call);
     expect(callStatement.isBlockOpener()).toBe(false);
   });
+
+  test(`WITH: no explicit columns`, () => {
+    const lines = [
+      `with cteme(n1,n2,n3) as (`,
+      `  select * from qsys2.sysixadv`,
+      `  --     |`,
+      `)`,
+    ].join(`\r\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+
+    const statement = statements[0];
+    const objs = statement.getObjectReferences();
+    expect(statement.type).toBe(StatementType.Select);
+
+    expect(objs[0].object.schema).toBe(`qsys2`);
+    expect(objs[0].object.name).toBe(`sysixadv`);
+  })
 });
