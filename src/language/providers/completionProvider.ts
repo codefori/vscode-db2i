@@ -172,7 +172,8 @@ async function getProcedures(
 async function getCompletionItemsForTriggerDot(
   objectRefs: ObjectRef[],
   currentStatement: LanguageStatement.default, // Statement from ../../database/statement
-  offset: number
+  offset: number,
+  trigger: string
 ): Promise<CompletionItem[]> {
   let list: CompletionItem[] = [];
   const curRef = currentStatement.getReferenceByOffset(offset);
@@ -198,6 +199,10 @@ async function getCompletionItemsForTriggerDot(
 
   // grab completion items (column names) if alias and name are defined
   if (curRefIdentifier) {
+    // invalid case: select DDD/thecolumn from sample/department as DDD
+    if (trigger === "/") {
+      return;
+    }
     const completionItems = await getTableItems(
       curRefIdentifier.object.schema,
       curRefIdentifier.object.name
@@ -261,10 +266,7 @@ async function getObjectCompletionsForRefs(objectRefs: ObjectRef[]) {
     .flatMap((result) => (result as PromiseFulfilledResult<any>).value);
 }
 
-async function getCompletionItemsForRefs(
-  objectRefs: ObjectRef[],
-  currentStament: LanguageStatement.default
-) {
+async function getCompletionItemsForRefs(objectRefs: ObjectRef[]) {
   if (!objectRefs?.length) {
     return await getCachedSchemas();
   }
@@ -306,15 +308,16 @@ async function getCompletionItems(
 
   const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
 
-  if (trigger === "." || (s && s.type === `dot`)) {
+  if (trigger === "." || (s && s.type === `dot`) || trigger === "/") {
     return getCompletionItemsForTriggerDot(
       objectRefs,
       currentStatement,
-      offset
+      offset,
+      trigger
     );
   }
 
-  return getCompletionItemsForRefs(objectRefs, currentStatement);
+  return getCompletionItemsForRefs(objectRefs);
 }
 
 export const completionProvider = languages.registerCompletionItemProvider(
@@ -348,5 +351,6 @@ export const completionProvider = languages.registerCompletionItemProvider(
       return getCompletionItems(trigger, objectRefs, currentStatement, offset);
     },
   },
-  `.`
+  `.`,
+  "/"
 );

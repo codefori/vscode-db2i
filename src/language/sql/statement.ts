@@ -65,7 +65,7 @@ export default class Statement {
 		// Reset to end
 		if (i >= 0) {
 			currentType = this.tokens[i].type;
-			if (currentType === `dot`) prevMustBe = `name`;
+			if (currentType === `dot` || currentType === `forwardslash`) prevMustBe = `name`;
 			else if (NameTypes.includes(currentType)) prevMustBe = `dot`;
 		} else {
 			i = this.tokens.length-1;
