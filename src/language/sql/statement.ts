@@ -101,6 +101,20 @@ export default class Statement {
 		const doAdd = (ref?: ObjectRef) => {
 			if (ref) list.push(ref);
 		}
+
+		const basicQueryFinder = (startIndex: number): void => {
+			for (let i = startIndex; i < this.tokens.length; i++) {
+				if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
+					inFromClause = true;
+				} else if (inFromClause && tokenIs(this.tokens[i], `clause`) || tokenIs(this.tokens[i], `join`) || tokenIs(this.tokens[i], `closebracket`)) {
+					inFromClause = false;
+				}
+
+				if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
+					doAdd(this.getRefAtToken(i+1));
+				}
+			}
+		}
 		
 		let inFromClause = false;
 
@@ -132,17 +146,9 @@ export default class Statement {
 			case StatementType.Select:
 			case StatementType.Delete:
 				// SELECT
-				for (let i = 0; i < this.tokens.length; i++) {
-					if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
-						inFromClause = true;
-					} else if (inFromClause && tokenIs(this.tokens[i], `clause`) || tokenIs(this.tokens[i], `join`) || tokenIs(this.tokens[i], `closebracket`)) {
-						inFromClause = false;
-					}
 
-					if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
-						doAdd(this.getRefAtToken(i+1));
-					}
-				}
+				// This is the same loop used in CREATE->TABLE|VIEW
+				basicQueryFinder(0)
 				break;
 
 			case StatementType.Create:
@@ -190,17 +196,7 @@ export default class Statement {
 							const asKeyword = this.tokens.findIndex(token => tokenIs(token, `keyword`, `AS`));
 
 							if (asKeyword > 0) {
-								for (let i = asKeyword; i < this.tokens.length; i++) {
-									if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
-										inFromClause = true;
-									} else if (inFromClause && (tokenIs(this.tokens[i], `clause`) || tokenIs(this.tokens[i], `join`) || tokenIs(this.tokens[i], `closebracket`))) {
-										inFromClause = false;
-									}
-				
-									if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
-										doAdd(this.getRefAtToken(i+1));
-									}
-								}
+								basicQueryFinder(asKeyword);
 							}
 							break;
 					}
