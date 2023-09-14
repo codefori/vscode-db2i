@@ -31,6 +31,12 @@ export const StatementTypeWord = {
 	'ALTER': StatementType.Alter
 };
 
+export interface CTEReference {
+	name: string;
+	columns: string[];
+	statement: Statement
+};
+
 export interface IRange {
   start: number;
   end: number;

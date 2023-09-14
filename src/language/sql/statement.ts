@@ -1,5 +1,5 @@
 import SQLTokeniser, { NameTypes } from "./tokens";
-import { IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
+import { CTEReference, IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
 
 const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 	return (token && token.type === type && (value ? token.value?.toUpperCase() === value : true));
@@ -103,8 +103,10 @@ export default class Statement {
 		}
 	}
 
-	getCTEReferences() {
-		let cteList: {name: string, parameters: string[], statement: Statement}[] = [];
+	getCTEReferences(): CTEReference[] {
+		if (this.type !== StatementType.With) return [];
+		
+		let cteList: CTEReference[] = [];
 					
 		const newTokens = this.tokens.filter(newToken => newToken.type !== `newline`);
 
@@ -125,7 +127,7 @@ export default class Statement {
 				if (tokenIs(statementBlock, `block`)) {
 					cteList.push({
 						name: cteName,
-						parameters,
+						columns: parameters,
 						statement: new Statement(Statement.trimTokens(statementBlock.block), statementBlock.range)
 					})
 				}

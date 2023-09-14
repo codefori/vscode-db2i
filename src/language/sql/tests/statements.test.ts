@@ -924,13 +924,13 @@ describe(`PL body tests`, () => {
 
     expect(ctes.length).toBe(3);
     expect(ctes[0].name).toBe(`Temp01`);
-    expect(ctes[0].parameters.length).toBe(0);
+    expect(ctes[0].columns.length).toBe(0);
 
     expect(ctes[1].name).toBe(`Temp02`);
-    expect(ctes[1].parameters.length).toBe(0);
+    expect(ctes[1].columns.length).toBe(0);
 
     expect(ctes[2].name).toBe(`Temp03`);
-    expect(ctes[2].parameters.length).toBe(0);
+    expect(ctes[2].columns.length).toBe(0);
     const temp03Stmt = ctes[2].statement.getObjectReferences();
     expect(temp03Stmt.length).toBe(2);
     expect(temp03Stmt[0].object.name).toBe(`Temp01`);
@@ -961,7 +961,7 @@ describe(`PL body tests`, () => {
     const ctes = statement.getCTEReferences();
     expect(ctes.length).toBe(1);
     expect(ctes[0].name).toBe(`cteme`);
-    expect(ctes[0].parameters.join()).toBe([`n1`, `n2`, `n3`].join());
+    expect(ctes[0].columns.join()).toBe([`n1`, `n2`, `n3`].join());
 
     const cteSubselect = ctes[0].statement;
     const cteObjs = cteSubselect.getObjectReferences();
