@@ -1,7 +1,7 @@
 import { assert, describe, expect, test } from 'vitest'
 import SQLTokeniser from '../tokens'
 import Document from '../document';
-import { StatementType } from '../types';
+import { ClauseType, StatementType } from '../types';
 
 describe(`Basic statements`, () => {
   test('One statement, no end', () => {
@@ -28,6 +28,9 @@ describe(`Basic statements`, () => {
     expect(document.statements.length).toBe(2);
     expect(document.statements[0].tokens.length).toBe(4);
     expect(document.statements[1].tokens.length).toBe(6);
+
+    expect(document.statements[0].getClauseForOffset(5)).toBe(ClauseType.Unknown);
+    expect(document.statements[0].getClauseForOffset(10)).toBe(ClauseType.From);
   });
   
   test('Two statements, both end', () => {
@@ -197,6 +200,12 @@ describe(`Object references`, () => {
 
     const refs = statement.getObjectReferences();
     expect(refs.length).toBe(3);
+
+    expect(statement.getClauseForOffset(10)).toBe(ClauseType.Unknown);
+    expect(statement.getClauseForOffset(125)).toBe(ClauseType.From);
+    expect(statement.getClauseForOffset(160)).toBe(ClauseType.Where);
+    expect(statement.getClauseForOffset(200)).toBe(ClauseType.From);
+    expect(statement.getClauseForOffset(230)).toBe(ClauseType.Where);
   })
 
   test(`SELECT JOIN: inner join`, () => {
@@ -374,6 +383,10 @@ describe(`Object references`, () => {
     expect(proj.object.name).toBe(`PROJECT`);
     expect(proj.object.schema).toBeUndefined;
     expect(proj.alias).toBe(`b`);
+
+    expect(statement.getClauseForOffset(10)).toBe(ClauseType.Unknown);
+    expect(statement.getClauseForOffset(90)).toBe(ClauseType.From);
+    expect(statement.getClauseForOffset(160)).toBe(ClauseType.Where);
   });
 
   test(`INSERT: simple inserts`, () => {
