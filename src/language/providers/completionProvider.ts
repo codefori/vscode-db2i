@@ -355,6 +355,21 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   if (currentStatement.type === StatementType.With) {
     const cteList = currentStatement.getCTEReferences();
     completionItems.push(...cteList.map(cte => createCompletionItem(cte.name, CompletionItemKind.Interface)))
+
+    // If any of those CTEs do not have an alias then show the columns as normal
+    for (const cte of cteList) {
+      const hasAlias = objectRefs.some(ref => ref.object.name.toUpperCase() === cte.name.toUpperCase() && ref.alias !== undefined);
+
+      if (!hasAlias) {
+        completionItems.push(...cte.columns.map(col => createCompletionItem(
+          col,
+          CompletionItemKind.Field,
+          undefined,
+          `Table: ${cte.name}\n`,
+          `a@objectcolumn`
+        )))
+      }
+    }
   }
 
   return completionItems;
