@@ -336,7 +336,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   const results = await Promise.allSettled(tableItemPromises);
 
   // push table columns if the clause type is unknown
-  if (curClause === ClauseType.Unknown && tokenAtOffset === undefined) {
+  if (curClause !== ClauseType.From) {
     completionItems.push(
       ...results
         .filter((result) => result.status === "fulfilled")
