@@ -202,7 +202,6 @@ async function getCompletionItemsForTriggerDot(
 
   //select * from sample.data as a, sample.
   const curSchema = curRef.object.schema;
-  const isOnlySchema = curRef.object.name === undefined;
 
   let curRefIdentifier: ObjectRef;
 
@@ -215,15 +214,12 @@ async function getCompletionItemsForTriggerDot(
     }
   }
 
-  if (isOnlySchema) {
-    // We need to check if this is an alias reference
-    curRefIdentifier = objectRefs.find(
-      (ref) =>
-        ref.alias &&
-        ref.object.name &&
-        ref.alias.toUpperCase() === curSchema.toUpperCase()
-    );
-  }
+  curRefIdentifier = objectRefs.find(
+    (ref) =>
+      ref.alias &&
+      ref.object.name &&
+      ref.alias.toUpperCase() === curSchema.toUpperCase()
+  );
 
   // grab completion items (column names) if alias and name are defined
   if (curRefIdentifier) {
