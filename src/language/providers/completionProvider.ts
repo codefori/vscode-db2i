@@ -293,13 +293,14 @@ function createCompletionItemForAlias(ref: ObjectRef) {
   return createCompletionItem(
     ref.alias,
     CompletionItemKind.Reference,
-    "Type: Alias",
+    "Correlation Name",
     [
       ref.object.schema ? `Schema: ${ref.object.schema}` : undefined,
       ref.object.name ? `Object: ${ref.object.name}` : undefined,
     ]
       .filter(Boolean)
-      .join(`\n`)
+      .join(`\n`),
+    "a@alias"
   );
 }
 
@@ -353,6 +354,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
 
   // If this is a `WITH` statement, then add the CTE names
   if (currentStatement.type === StatementType.With) {
+    // First, let's add all CTE references to the items
     const cteList = currentStatement.getCTEReferences();
     completionItems.push(...cteList.map(cte => createCompletionItem(cte.name, CompletionItemKind.Interface)))
 
