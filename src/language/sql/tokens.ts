@@ -31,7 +31,7 @@ export default class SQLTokeniser {
     {
       name: `CLAUSE`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`WHERE`, `HAVING`, `GROUP`, `LIMIT`, `OFFSET`, `ORDER`].includes(value.toUpperCase());
+        return [`FROM`, `INTO`, `WHERE`, `HAVING`, `GROUP`, `LIMIT`, `OFFSET`, `ORDER`].includes(value.toUpperCase());
       } }],
       becomes: `clause`,
     },
@@ -57,7 +57,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `FOR`, `OR`, `REPLACE`, `FROM`, `INTO`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`].includes(value.toUpperCase());
+        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },

@@ -31,6 +31,29 @@ export const StatementTypeWord = {
 	'ALTER': StatementType.Alter
 };
 
+export enum ClauseType {
+	Unknown = "Unknown",
+	From = "From",
+	Into = "Into",
+	Where = "Where",
+	Having = "Having",
+	Group = "Group",
+	Limit = "Limit",
+	Offset = "Offset",
+	Order = "Order"
+}
+
+export const ClauseTypeWord = {
+	'FROM': ClauseType.From,
+	'INTO': ClauseType.Into,
+	'WHERE': ClauseType.Where,
+	'HAVING': ClauseType.Having,
+	'GROUP': ClauseType.Group,
+	'LIMIT': ClauseType.Limit,
+	'OFFSET': ClauseType.Offset,
+	'ORDER': ClauseType.Order
+}
+
 export interface CTEReference {
 	name: string;
 	columns: string[];

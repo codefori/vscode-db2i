@@ -1,5 +1,5 @@
 import SQLTokeniser, { NameTypes } from "./tokens";
-import { CTEReference, IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
+import { CTEReference, ClauseType, ClauseTypeWord, IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
 
 const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 	return (token && token.type === type && (value ? token.value?.toUpperCase() === value : true));
@@ -7,7 +7,6 @@ const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 
 export default class Statement {
 	public type: StatementType = StatementType.Unknown;
-	private beginBlock = false;
 
   constructor(public tokens: Token[], public range: IRange) {
 		const first = tokens[0];
@@ -62,6 +61,22 @@ export default class Statement {
 		}
 
 		return blockSearch(this.tokens);
+	}
+
+	getClauseForOffset(offset: number): ClauseType {
+		let currentClause = ClauseType.Unknown;
+		
+		for (let i = 0; i < this.tokens.length; i++) {
+			if (offset < this.tokens[i].range.start) {
+				break;
+			}
+			
+			if (tokenIs(this.tokens[i], `clause`)) {
+				currentClause = ClauseTypeWord[this.tokens[i].value!.toUpperCase()]
+			}
+		}
+
+		return currentClause;
 	}
 
 	getReferenceByOffset(offset: number) {
@@ -152,13 +167,13 @@ export default class Statement {
 
 		const basicQueryFinder = (startIndex: number): void => {
 			for (let i = startIndex; i < this.tokens.length; i++) {
-				if (tokenIs(this.tokens[i], `keyword`, `FROM`)) {
+				if (tokenIs(this.tokens[i], `clause`, `FROM`)) {
 					inFromClause = true;
 				} else if (inFromClause && tokenIs(this.tokens[i], `clause`) || tokenIs(this.tokens[i], `join`) || tokenIs(this.tokens[i], `closebracket`)) {
 					inFromClause = false;
 				}
 
-				if (tokenIs(this.tokens[i], `keyword`, `FROM`) || tokenIs(this.tokens[i], `keyword`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
+				if (tokenIs(this.tokens[i], `clause`, `FROM`) || tokenIs(this.tokens[i], `clause`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
 					doAdd(this.getRefAtToken(i+1));
 				}
 			}
