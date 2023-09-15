@@ -9,7 +9,7 @@ import Statement from "../../database/statement";
 import Table from "../../database/table";
 import Document from "../sql/document";
 import * as LanguageStatement from "../sql/statement";
-import { CTEReference, ObjectRef, StatementType } from "../sql/types";
+import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
 import CompletionItemCache, { changedCache } from "./completionItemCache";
 
 const completionItemCache = new CompletionItemCache();
@@ -304,15 +304,20 @@ function createCompletionItemForAlias(ref: ObjectRef) {
   );
 }
 
-async function getCompletionItemsForRefs(currentStatement: LanguageStatement.default, cteColumns?: string[]) {
+async function getCompletionItemsForRefs(currentStatement: LanguageStatement.default, offset: number, cteColumns?: string[]) {
   const objectRefs = currentStatement.getObjectReferences();
   const cteList = currentStatement.getCTEReferences();
 
   var completionItems: CompletionItem[] = [];
 
+  const curClause = currentStatement.getClauseForOffset(offset);
+  const tokenAtOffset = currentStatement.getTokenByOffset(offset);
+  let emptyObjectRefs: Boolean = false;
+
   // Get all the schemas
   if (objectRefs.length === 0 && cteList.length === 0) {
-    completionItems.push(...await getCachedSchemas());
+    emptyObjectRefs = true;
+    completionItems.push(...(await getCachedSchemas()));
   }
 
   // Set the default schema for all references without one
@@ -329,18 +334,28 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
       : Promise.resolve([])
   );
   const results = await Promise.allSettled(tableItemPromises);
-  completionItems.push(...results
-    .filter((result) => result.status === "fulfilled")
-    .flatMap((result) => (result as PromiseFulfilledResult<any>).value));
+
+  // push table columns if the clause type is unknown
+  if (curClause === ClauseType.Unknown && tokenAtOffset === undefined) {
+    completionItems.push(
+      ...results
+        .filter((result) => result.status === "fulfilled")
+        .flatMap((result) => (result as PromiseFulfilledResult<any>).value)
+    );
+  }
 
   if (cteColumns) {
-    completionItems.push(...cteColumns.map(col => createCompletionItem(
-        col,
-        CompletionItemKind.Field,
-        undefined,
-        `CTE column`,
-        `a@objectcolumn`
-    )))
+    completionItems.push(
+      ...cteColumns.map((col) =>
+        createCompletionItem(
+          col,
+          CompletionItemKind.Field,
+          undefined,
+          `CTE column`,
+          `a@objectcolumn`
+        )
+      )
+    );
   }
 
   // If there are any locals refs with the `AS` keyword, add that
@@ -349,27 +364,54 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
     .map((ref) => createCompletionItemForAlias(ref));
   completionItems.push(...aliasItems);
 
-  // Lastly, get all the completion items for objects in each referenced schema
-  completionItems.push(...await getObjectCompletions(getDefaultSchema(), completionTypes));
+  // get completions for objects
+  if (tokenAtOffset === undefined && (emptyObjectRefs || curClause !== ClauseType.Unknown)) {
+    // get all the completion items for objects in each referenced schema
+    completionItems.push(
+      ...(await getObjectCompletions(getDefaultSchema(), completionTypes))
+    );
+  } else {
+    // content assist invoked during incomplete reference
+    // example: select * from sample.emp
+    // --                               |
+    const curSchema: string = objectRefs[objectRefs.length - 1].object.schema;
+    if (curClause !== ClauseType.Unknown && tokenAtOffset && curSchema) {
+      completionItems.push(
+        ...(await getObjectCompletions(curSchema, completionTypes))
+      );
+    }
+  }
 
   // If this is a `WITH` statement, then add the CTE names
   if (currentStatement.type === StatementType.With) {
     // First, let's add all CTE references to the items
     const cteList = currentStatement.getCTEReferences();
-    completionItems.push(...cteList.map(cte => createCompletionItem(cte.name, CompletionItemKind.Interface)))
+    completionItems.push(
+      ...cteList.map((cte) =>
+        createCompletionItem(cte.name, CompletionItemKind.Interface)
+      )
+    );
 
     // If any of those CTEs do not have an alias then show the columns as normal
     for (const cte of cteList) {
-      const hasAlias = objectRefs.some(ref => ref.object.name.toUpperCase() === cte.name.toUpperCase() && ref.alias !== undefined);
+      const hasAlias = objectRefs.some(
+        (ref) =>
+          ref.object.name.toUpperCase() === cte.name.toUpperCase() &&
+          ref.alias !== undefined
+      );
 
       if (!hasAlias) {
-        completionItems.push(...cte.columns.map(col => createCompletionItem(
-          col,
-          CompletionItemKind.Field,
-          undefined,
-          `Table: ${cte.name}\n`,
-          `a@objectcolumn`
-        )))
+        completionItems.push(
+          ...cte.columns.map((col) =>
+            createCompletionItem(
+              col,
+              CompletionItemKind.Field,
+              undefined,
+              `Table: ${cte.name}\n`,
+              `a@objectcolumn`
+            )
+          )
+        );
       }
     }
   }
@@ -406,7 +448,7 @@ async function getCompletionItems(
     );
   }
 
-  return getCompletionItemsForRefs(currentStatement, insideCte ? insideCte.columns : undefined);
+  return getCompletionItemsForRefs(currentStatement, offset, insideCte ? insideCte.columns : undefined);
 }
 
 export const completionProvider = languages.registerCompletionItemProvider(
