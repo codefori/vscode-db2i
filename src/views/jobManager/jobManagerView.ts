@@ -9,6 +9,7 @@ import { ServerComponent } from "../../connection/serverComponent";
 import { updateStatusBar } from "./statusBar";
 import { TransactionEndType } from "../../connection/sqlJob";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
+import { getInstance } from "../../base";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -125,6 +126,42 @@ export class JobManagerView implements TreeDataProvider<any> {
             }
           })
         }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.toggleDbMonitor`, async (node?: SQLJobItem) => {
+        if (node) {
+          const id = node.label as string;
+          const selected = await JobManager.getJob(id);
+
+          const instance = getInstance();
+          const config = instance.getConfig();
+
+          if (selected.job.isMonitoring()) {
+            await selected.job.endDbMonitor();
+            window.showInformationMessage(`Disabled database monitor for ${selected.job.id}`);
+          } else {
+            const defaultOutfile = `${config.currentLibrary}/DBMONOUT`;
+
+            const chosenOutfile = await window.showInputBox({
+              title: `STRDBMON Outfile`,
+              prompt: `Enter qualified path for DBMON outfile.`,
+              value: defaultOutfile,
+              valueSelection: [config.currentLibrary.length+1, defaultOutfile.length],
+              validateInput: (v) => {
+                if (v.length > 21) return `Path too long`;
+                if (!v.includes(`/`)) return `Path must be qualified.`;
+                return;
+              }
+            });
+
+            if (chosenOutfile) {
+              await selected.job.startDbMonitor(chosenOutfile);
+              window.showInformationMessage(`Enabled database monitor for ${selected.job.id}`);
+            }
+          }
+        }
+
+        this.refresh();
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.enableTracing`, async (node?: SQLJobItem) => {
@@ -260,7 +297,7 @@ export class SQLJobItem extends vscode.TreeItem {
     super(jobInfo.name, TreeItemCollapsibleState.None);
 
     this.contextValue = `sqlJob`;
-    this.description = jobInfo.job.id;
+    this.description = jobInfo.job.id + (jobInfo.job.isMonitoring() ? ` (Monitoring)` : ``);
 
     this.command = {
       command: selectJobCommand,

@@ -31,7 +31,6 @@ const TransactionCountQuery = [
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
 export class SQLJob {
-
   private static uniqueIdCounter: number = 0;
   private channel: any;
   private responseEmitter: EventEmitter = new EventEmitter();
@@ -39,6 +38,7 @@ export class SQLJob {
 
   private traceFile: string|undefined;
   private isTracingChannelData: boolean = false;
+  private monitoring: boolean = false;
 
   //currently unused but we will inevitably need a unique ID assigned to each instance
   // since server job names can be reused in some circumstances
@@ -281,6 +281,30 @@ export class SQLJob {
     }
 
     return this.query<JobLogEntry>(query).run();
+  }
+
+  isMonitoring() {
+    return this.monitoring;
+  }
+
+  async startDbMonitor(outfile: string) {
+    if (!this.monitoring) {
+      const cmd = this.clcommand(`STRDBMON OUTFILE(${outfile})`);
+      await cmd.run();
+      this.monitoring = true;
+    } else {
+      throw new Error("Monitor already enabled.");
+    }
+  }
+
+  async endDbMonitor() {
+    if (this.monitoring) {
+      const cmd = this.clcommand(`ENDDBMON`);
+      await cmd.run();
+      this.monitoring = false;
+    } else {
+      throw new Error("Monitor is not enabled.");
+    }
   }
   
   getUniqueId() {
