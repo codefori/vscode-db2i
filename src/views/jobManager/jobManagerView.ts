@@ -305,6 +305,10 @@ export class SQLJobItem extends vscode.TreeItem {
       title: `Switch job`
     };
 
-    this.iconPath = new vscode.ThemeIcon(active ? `layers-active` : `layers`, (active ? activeColor : undefined));
+    let icon = active ? `layers-active` : `layers`;
+
+    if (jobInfo.job.isMonitoring()) icon = `eye`;
+
+    this.iconPath = new vscode.ThemeIcon(icon, (active ? activeColor : undefined));
   }
 }
