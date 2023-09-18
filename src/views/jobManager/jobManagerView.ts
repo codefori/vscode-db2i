@@ -141,21 +141,23 @@ export class JobManagerView implements TreeDataProvider<any> {
             window.showInformationMessage(`Disabled database monitor for ${selected.job.id}`);
           } else {
             const defaultOutfile = `${config.currentLibrary}/DBMONOUT`;
+            const defaultCommand = `STRDBMON OUTFILE(${defaultOutfile})`;
 
-            const chosenOutfile = await window.showInputBox({
-              title: `STRDBMON Outfile`,
-              prompt: `Enter qualified path for DBMON outfile.`,
-              value: defaultOutfile,
-              valueSelection: [config.currentLibrary.length+1, defaultOutfile.length],
+            const userCommand = await window.showInputBox({
+              title: `STRDBMON Command`,
+              prompt: `Enter full command for STRDBMON`,
+              value: defaultCommand,
+              valueSelection: [17, 17+defaultOutfile.length],
               validateInput: (v) => {
-                if (v.length > 21) return `Path too long`;
-                if (!v.includes(`/`)) return `Path must be qualified.`;
+                const vUpper = v.toUpperCase();
+                if (!vUpper.toUpperCase().startsWith(`STRDBMON`)) return `Command must be STRDBMON.`
+                if (!vUpper.includes(`OUTFILE`)) return `Requires OUTFILE parameter.`;
                 return;
               }
             });
 
-            if (chosenOutfile) {
-              await selected.job.startDbMonitor(chosenOutfile);
+            if (userCommand) {
+              await selected.job.startDbMonitor(userCommand);
               window.showInformationMessage(`Enabled database monitor for ${selected.job.id}`);
             }
           }

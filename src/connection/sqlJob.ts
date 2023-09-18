@@ -287,11 +287,13 @@ export class SQLJob {
     return this.monitoring;
   }
 
-  async startDbMonitor(outfile: string) {
+  async startDbMonitor(fullCommand?: string) {
     if (!this.monitoring) {
-      const cmd = this.clcommand(`STRDBMON OUTFILE(${outfile})`);
-      await cmd.run();
-      this.monitoring = true;
+      if (fullCommand.toUpperCase().startsWith(`STRDBMON`)) {
+        const cmd = this.clcommand(fullCommand);
+        await cmd.run();
+        this.monitoring = true;
+      }
     } else {
       throw new Error("Monitor already enabled.");
     }
