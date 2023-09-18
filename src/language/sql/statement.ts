@@ -104,7 +104,7 @@ export default class Statement {
 
 		depth = 0;
 
-		for (let x = i; x >= 0; x++) {
+		for (let x = i; x <= this.tokens.length; x++) {
 			if (tokenIs(this.tokens[x], `openbracket`)) {
 				depth++;
 			} else
@@ -238,7 +238,7 @@ export default class Statement {
 					let object = this.getRefAtToken(2);
 
 					if (object) {
-						object.type = this.tokens[1].value;
+						object.createType = this.tokens[1].value;
 
 						doAdd(object);
 
@@ -266,31 +266,31 @@ export default class Statement {
 				let postName: number|undefined;
 
 				if (tokenIs(this.tokens[1], `keyword`, `OR`) && tokenIs(this.tokens[2], `keyword`, `REPLACE`)) {
-					object = this.getRefAtToken(4, true);
+					object = this.getRefAtToken(4, {withSystemName: true});
 					if (object) {
 						postName = object.tokens.length+4;
-						object.type = this.tokens[3].value;
+						object.createType = this.tokens[3].value;
 					}
 				} else
 				if (tokenIs(this.tokens[1], `keyword`, `UNIQUE`)) {
-					object = this.getRefAtToken(3, true);
+					object = this.getRefAtToken(3, {withSystemName: true});
 					if (object) {
 						postName = object.tokens.length+3;
-						object.type = this.tokens[2].value;
+						object.createType = this.tokens[2].value;
 					}
 				
 				} else {
-					object = this.getRefAtToken(2, true);
+					object = this.getRefAtToken(2, {withSystemName: true});
 					if (object) {
 						postName = object.tokens.length+2;
-						object.type = this.tokens[1].value
+						object.createType = this.tokens[1].value
 					}
 				}
 
 				doAdd(object);
 
 				if (object && postName) {
-					switch (object.type?.toUpperCase()) {
+					switch (object.createType?.toUpperCase()) {
 						case `INDEX`:
 							// If the type is `INDEX`, the next reference is the `ON` keyword
 							for (let i = postName; i < this.tokens.length; i++) {
@@ -321,7 +321,7 @@ export default class Statement {
 						tokens: this.tokens.slice(1, 3)
 					}
 
-					def.type = `Handler`;
+					def.createType = `Handler`;
 					doAdd(def);
 
 				} else
@@ -332,7 +332,7 @@ export default class Statement {
 				if (tokenIs(this.tokens[1], `word`, `GLOBAL`) && tokenIs(this.tokens[2], `word`, `TEMPORARY`), tokenIs(this.tokens[3], `word`, `TABLE`)) {
 					// Handle DECLARE GLOBAL TEMP TABLE x.x ()...
 					let def: ObjectRef = this.getRefAtToken(4);
-					def.type = `Temporary Table`;
+					def.createType = `Temporary Table`;
 					doAdd(def);
 
 				} else
@@ -344,11 +344,11 @@ export default class Statement {
 					}
 
 					if (tokenIs(this.tokens[2], `keyword`, `CURSOR`)) {
-						def.type = `Cursor`;
+						def.createType = `Cursor`;
 					} else {
 						let defaultIndex = this.tokens.findIndex(t => tokenIs(t, `keyword`, `DEFAULT`));
 
-						def.type = this.tokens
+						def.createType = this.tokens
 							.slice(
 								2, 
 								defaultIndex >= 0 ? defaultIndex : undefined
@@ -364,7 +364,7 @@ export default class Statement {
 		return list;
 	}
 
-	private getRefAtToken(i: number, withSystemName = false): ObjectRef|undefined {
+	private getRefAtToken(i: number, options: {withSystemName?: boolean} = {}): ObjectRef|undefined {
 		let sqlObj: ObjectRef;
 
 		let nameIndex = i;
@@ -372,49 +372,70 @@ export default class Statement {
 
 		let endIndex = i;
 
-		if (nameToken && NameTypes.includes(this.tokens[i].type)) {
-			nameIndex = i;
-			endIndex = i;
+		let isUDTF = false;
 
-			sqlObj = {
-				tokens: [],
-				object: {
-					name: nameToken.value
-				}
-			}
+		if (tokenIs(nameToken, `function`, `TABLE`)) {
+			isUDTF = true;
+		}
 
-			if (tokenIs(this.tokens[i+1], `dot`) || tokenIs(this.tokens[i+1], `forwardslash`)) {
-				nameIndex = i+2;
+		if (isUDTF) {
+			sqlObj = this.getRefAtToken(i+2);
+			if (sqlObj) {
+				sqlObj.isUDTF = true;
+				const blockTokens = this.getBlockAt(sqlObj.tokens[0].range.end);
+				nameIndex = i + 2 + blockTokens.length;
 				nameToken = this.tokens[nameIndex];
 
-				endIndex = nameToken ? nameIndex : i+1;
+			} else {
+				nameIndex = -1;
+				nameToken = undefined;
+			}
+
+		} else {
+			if (nameToken && NameTypes.includes(this.tokens[i].type)) {
+				nameIndex = i;
+				endIndex = i;
 
 				sqlObj = {
 					tokens: [],
 					object: {
-						schema: this.tokens[i].value,
-						name: nameToken && NameTypes.includes(nameToken.type) ? nameToken.value : undefined
+						name: nameToken.value
 					}
-				};
-
-			}
-
-			// If the next token is not a clause.. we might have the alias
-			if (nameToken && this.tokens[nameIndex+1]) {
-				if (tokenIs(this.tokens[nameIndex+1], `keyword`, `AS`) && tokenIs(this.tokens[nameIndex+2], `word`)) {
-					endIndex = nameIndex+2;
-					sqlObj.alias = this.tokens[nameIndex+2].value;
-				} else
-				if (tokenIs(this.tokens[nameIndex+1], `word`)) {
-					endIndex = nameIndex+1;
-					sqlObj.alias = this.tokens[nameIndex+1].value;
 				}
+
+				if (tokenIs(this.tokens[i+1], `dot`) || tokenIs(this.tokens[i+1], `forwardslash`)) {
+					nameIndex = i+2;
+					nameToken = this.tokens[nameIndex];
+
+					endIndex = nameToken ? nameIndex : i+1;
+
+					sqlObj = {
+						tokens: [],
+						object: {
+							schema: this.tokens[i].value,
+							name: nameToken && NameTypes.includes(nameToken.type) ? nameToken.value : undefined
+						}
+					};
+
+				}
+			};
+		}
+			
+		// If the next token is not a clause.. we might have the alias
+		if (nameToken && this.tokens[nameIndex+1]) {
+			if (tokenIs(this.tokens[nameIndex+1], `keyword`, `AS`) && tokenIs(this.tokens[nameIndex+2], `word`)) {
+				endIndex = nameIndex+2;
+				sqlObj.alias = this.tokens[nameIndex+2].value;
+			} else
+			if (tokenIs(this.tokens[nameIndex+1], `word`)) {
+				endIndex = nameIndex+1;
+				sqlObj.alias = this.tokens[nameIndex+1].value;
 			}
+		}
 
-			sqlObj.tokens = this.tokens.slice(i, endIndex+1);
-		};
+		sqlObj.tokens = this.tokens.slice(i, endIndex+1);
 
-		if (withSystemName) {
+		if (options.withSystemName) {
 			if (tokenIs(this.tokens[endIndex+1], `keyword`, `FOR`) && tokenIs(this.tokens[endIndex+2], `word`, `SYSTEM`) && tokenIs(this.tokens[endIndex+3], `word`, `NAME`)) {
 				if (this.tokens[endIndex+4] && NameTypes.includes(this.tokens[endIndex+4].type)) {
 					sqlObj.object.system = this.tokens[endIndex+4].value;

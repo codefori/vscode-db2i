@@ -131,7 +131,7 @@ describe(`Definition tests`, () => {
     expect(defs.length).toBe(3);
 
     const aliasDef = defs[0];
-    expect(aliasDef.type).toBe(`ALIAS`);
+    expect(aliasDef.createType).toBe(`ALIAS`);
     expect(aliasDef.object.schema).toBe(`"TestDelimiters"`);
     expect(aliasDef.object.name).toBe(`"Delimited Alias"`);
     expect(aliasDef.children.length).toBe(0);
@@ -168,7 +168,7 @@ describe(`Definition tests`, () => {
     expect(defs.length).toBe(1);
 
     const procDef = defs[0];
-    expect(procDef.type).toBe(`PROCEDURE`);
+    expect(procDef.createType).toBe(`PROCEDURE`);
     expect(procDef.object.schema).toBe(`ILEDITOR`);
     expect(procDef.object.name).toBe(`TELLMEWHATICANDOBETTER`);
 
@@ -178,19 +178,19 @@ describe(`Definition tests`, () => {
 
     const tableCount = children[0];
     expect(tableCount.object.name).toBe(`tableCount`);
-    expect(tableCount.type).toBe(`integer`);
+    expect(tableCount.createType).toBe(`integer`);
 
     const columnClauseCount = children[1];
     expect(columnClauseCount.object.name).toBe(`columnClauseCount`);
-    expect(columnClauseCount.type).toBe(`integer`);
+    expect(columnClauseCount.createType).toBe(`integer`);
 
     const hadTables = children[2];
     expect(hadTables.object.name).toBe(`hadTables`);
-    expect(hadTables.type).toBe(`Char(1)`);
+    expect(hadTables.createType).toBe(`Char(1)`);
 
     const ResultSet = children[5];
     expect(ResultSet.object.name).toBe(`ResultSet`);
-    expect(ResultSet.type).toBe(`Cursor`);
+    expect(ResultSet.createType).toBe(`Cursor`);
   });
 
   test(`Function with children: Handlers, variable`, () => {
@@ -255,7 +255,7 @@ describe(`Definition tests`, () => {
 
     const theFunction = defs[0];
 
-    expect(theFunction.type).toBe(`FUNCTION`);
+    expect(theFunction.createType).toBe(`FUNCTION`);
     expect(theFunction.object.schema).toBe(`SYSTOOLS`);
     expect(theFunction.object.name).toBe(`SPOOLED_FILE_DATA`);
 
@@ -265,14 +265,14 @@ describe(`Definition tests`, () => {
 
     const bigInt = children[0];
     expect(bigInt.object.name).toBe(`ERROR_V`);
-    expect(bigInt.type).toBe(`BIGINT`);
+    expect(bigInt.createType).toBe(`BIGINT`);
 
     const handlerA = children[1];
     expect(handlerA.object.name).toBe(`CONTINUE`);
-    expect(handlerA.type).toBe(`Handler`);
+    expect(handlerA.createType).toBe(`Handler`);
 
     const handlerB = children[2];
     expect(handlerB.object.name).toBe(`CONTINUE`);
-    expect(handlerB.type).toBe(`Handler`);
+    expect(handlerB.createType).toBe(`Handler`);
   })
 });

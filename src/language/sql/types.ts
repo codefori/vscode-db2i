@@ -83,8 +83,10 @@ export interface ObjectRef {
   object: QualifiedObject;
   alias?: string;
 
+	isUDTF?: boolean;
+
 	/** only used within create statements */
-	type?: string;
+	createType?: string;
 }
 
 export interface StatementGroup {
