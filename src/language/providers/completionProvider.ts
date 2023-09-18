@@ -12,6 +12,7 @@ import * as LanguageStatement from "../sql/statement";
 import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
 import CompletionItemCache, { changedCache } from "./completionItemCache";
 import Callable from "../../database/callable";
+import { ServerComponent } from "../../connection/serverComponent";
 
 const completionItemCache = new CompletionItemCache();
 
@@ -494,15 +495,17 @@ export const completionProvider = languages.registerCompletionItemProvider(
   `sql`,
   {
     async provideCompletionItems(document, position, token, context) {
-      const trigger = context.triggerCharacter;
-      const content = document.getText();
-      const offset = document.offsetAt(position);
+      if (ServerComponent.isInstalled()) {
+        const trigger = context.triggerCharacter;
+        const content = document.getText();
+        const offset = document.offsetAt(position);
 
-      const sqlDoc = new Document(content);
-      const currentStatement = sqlDoc.getStatementByOffset(offset);
+        const sqlDoc = new Document(content);
+        const currentStatement = sqlDoc.getStatementByOffset(offset);
 
-      if (currentStatement) {
-        return getCompletionItems(trigger, currentStatement, offset);
+        if (currentStatement) {
+          return getCompletionItems(trigger, currentStatement, offset);
+        }
       }
     },
   },
