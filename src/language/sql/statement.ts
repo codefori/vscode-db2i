@@ -79,6 +79,53 @@ export default class Statement {
 		return currentClause;
 	}
 
+	// select * from table(qsys2.mti_info());
+	getBlockAt(offset: number): Token[] {
+		let start = -1;
+		let end = -1;
+
+		// Get the current token for the provided offset
+		let i = this.tokens.findIndex(token => offset >= token.range.start && offset <= token.range.end);
+
+		let depth = 0;
+
+		for (let x = i; x >= 0; x--) {
+			if (tokenIs(this.tokens[x], `openbracket`)) {
+				if (depth === 0) {
+					start = x+1;
+					break;
+				} else {
+					depth--;
+				}
+			} else
+			if (tokenIs(this.tokens[x], `closebracket`)) {
+				depth++;
+			}
+		}
+
+		depth = 0;
+
+		for (let x = i; x >= 0; x++) {
+			if (tokenIs(this.tokens[x], `openbracket`)) {
+				depth++;
+			} else
+			if (tokenIs(this.tokens[x], `closebracket`)) {
+				if (depth === 0) {
+					end = x;
+					break;
+				} else {
+					depth--;
+				}
+			}
+		}
+
+		if (start === -1 || end === -1) {
+			return []
+		} else {
+			return this.tokens.slice(start, end)
+		}
+	}
+
 	getReferenceByOffset(offset: number) {
 		let i = this.tokens.findIndex(token => offset >= token.range.start && offset <= token.range.end);
 

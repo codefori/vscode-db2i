@@ -887,6 +887,10 @@ describe(`PL body tests`, () => {
     expect(medianResultSetProc.type).toBe(StatementType.Create);
     expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
+    const parameterTokens = medianResultSetProc.getBlockAt(46);
+    expect(parameterTokens.length).toBeGreaterThan(0);
+    expect(parameterTokens.map(t => t.type).join()).toBe([`word`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join())
+
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
 
