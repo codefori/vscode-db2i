@@ -1,4 +1,4 @@
-import vscode from "vscode"
+import vscode, { window } from "vscode"
 
 import * as csv from "csv/sync";
 
@@ -179,6 +179,34 @@ export function initialise(context: vscode.ExtensionContext) {
                 resultSetProvider.setScrolling(statement.content, true);
               } else {
                 if (statement.qualifier === `statement`) {
+                  const sqlDoc = new Document(statement.content);
+                  const statements = sqlDoc.statements;
+                  let offset= 0;
+                  for (const sqlStatement of statements) {
+                    const tokens = sqlStatement.tokens;
+                    for (const token of tokens) {
+                      if (token.value === `?` || token.value.startsWith(`:`)) {
+                        const isParamMarker: boolean = token.value === `?` ? true : false; 
+                        const prompt = isParamMarker ? `Enter value for parameter marker` : `Enter value for ${token.value.substring(1)}`
+                        const currentParam = await window.showInputBox({
+                          title: `Parameter Prompt`,
+                          prompt: prompt
+                        });
+                        
+                        // Adjust the token's start and end range by the current offset
+                        const adjustedStart = token.range.start + offset;
+                        const adjustedEnd = token.range.end + offset;
+        
+                        // Compute the new offset based on the length of the parameter that's being inserted
+                        offset += currentParam.length - (adjustedEnd - adjustedStart);
+                        
+                        // TODO: handle parameter marker data types
+                        const curContent = statement.content;
+                        statement.content = curContent.substring(0, adjustedStart) + currentParam + curContent.substring(adjustedEnd);
+                      }
+                    }
+                  }
+
                   // If it's a basic statement, we can let it scroll!
                   resultSetProvider.setScrolling(statement.content);
 
