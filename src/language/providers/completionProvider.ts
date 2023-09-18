@@ -213,9 +213,11 @@ async function getProcedures(
 
   // Handle the general case
   const promises = refs.map(async (ref) => {
+    const schema = ref.object.schema || defaultSchema;
     const sanitizedSchema = Statement.noQuotes(
-      Statement.delimName(ref.object.schema, true)
+      Statement.delimName(schema, true)
     );
+
     return getCompletionItemsForSchema(sanitizedSchema);
   });
 
