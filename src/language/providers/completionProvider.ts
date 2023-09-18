@@ -11,6 +11,7 @@ import Document from "../sql/document";
 import * as LanguageStatement from "../sql/statement";
 import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
 import CompletionItemCache, { changedCache } from "./completionItemCache";
+import Callable from "../../database/callable";
 
 const completionItemCache = new CompletionItemCache();
 
@@ -56,7 +57,17 @@ function createCompletionItem(
   return item;
 }
 
-function getColumnAtributes(column: TableColumn): string {
+function getParmAttributes(parm: SQLParm): string {
+  const lines: string[] = [
+    `Column: ${parm.PARAMETER_NAME}`,
+    `Type: ${parm.DATA_TYPE}`,
+    `HAS_DEFAULT: ${parm.DEFAULT || `-`}`,
+    `IS_NULLABLE: ${parm.IS_NULLABLE}`,
+  ];
+  return lines.join(`\n `);
+}
+
+function getColumnAttributes(column: TableColumn): string {
   const lines: string[] = [
     `Column: ${column.COLUMN_NAME}`,
     `Type: ${column.DATA_TYPE}`,
@@ -81,31 +92,58 @@ function getAllColumns(name: string, schema: string, items: CompletionItem[]) {
   return allCols;
 }
 
-async function getTableItems(
+async function getObjectColumns(
   schema: string,
-  name: string
+  name: string,
+  isUDTF = false
 ): Promise<CompletionItem[]> {
+
   const databaseObj = (schema + name).toUpperCase();
   const tableUpdate: boolean = changedCache.delete(databaseObj);
+
   if (!completionItemCache.has(databaseObj) || tableUpdate) {
     schema = Statement.noQuotes(Statement.delimName(schema, true));
     name = Statement.noQuotes(Statement.delimName(name, true));
-    const items = await Table.getItems(schema, name);
 
-    if (!items?.length ? true : false) {
-      completionItemCache.set(databaseObj, []);
-      return [];
+    let completionItems: CompletionItem[] = [];
+    
+    if (isUDTF) {
+      const resultSet = await Callable.getResultColumns(schema, name);
+      
+      if (!resultSet?.length ? true : false) {
+        completionItemCache.set(databaseObj, []);
+        return [];
+      }
+      
+      completionItems = resultSet.map((i) =>
+        createCompletionItem(
+          Statement.prettyName(i.PARAMETER_NAME),
+          CompletionItemKind.Field,
+          getParmAttributes(i),
+          `Schema: ${schema}\nObject: ${name}\n`,
+          `a@objectcolumn`
+        )
+      );
+
+    } else {
+      const columns = await Table.getItems(schema, name);
+
+      if (!columns?.length ? true : false) {
+        completionItemCache.set(databaseObj, []);
+        return [];
+      }
+
+      completionItems = columns.map((i) =>
+        createCompletionItem(
+          Statement.prettyName(i.COLUMN_NAME),
+          CompletionItemKind.Field,
+          getColumnAttributes(i),
+          `Schema: ${schema}\nTable: ${name}\n`,
+          `a@objectcolumn`
+        )
+      );
     }
-
-    const completionItems = items.map((i) =>
-      createCompletionItem(
-        Statement.prettyName(i.COLUMN_NAME),
-        CompletionItemKind.Field,
-        getColumnAtributes(i),
-        `Schema: ${schema}\nTable: ${name}\n`,
-        `a@objectcolumn`
-      )
-    );
+    
     const allCols = getAllColumns(name, schema, completionItems);
     completionItems.push(allCols);
     completionItemCache.set(databaseObj, completionItems);
@@ -247,9 +285,10 @@ async function getCompletionItemsForTriggerDot(
 
     // Else.. go do a table lookup
     if (!currentCte) {
-      const completionItems = await getTableItems(
+      const completionItems = await getObjectColumns(
         curRefIdentifier.object.schema,
-        curRefIdentifier.object.name
+        curRefIdentifier.object.name,
+        curRefIdentifier.isUDTF
       );
 
       list.push(...completionItems);
@@ -330,7 +369,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   // Fetch all the columns for tables that have references in the statement
   const tableItemPromises = objectRefs.map((ref) =>
     ref.object.name && ref.object.schema
-      ? getTableItems(ref.object.schema, ref.object.name)
+      ? getObjectColumns(ref.object.schema, ref.object.name, ref.isUDTF)
       : Promise.resolve([])
   );
   const results = await Promise.allSettled(tableItemPromises);
