@@ -465,7 +465,10 @@ async function getCompletionItems(
   offset?: number
 ) {
   if (currentStatement && currentStatement.type === StatementType.Call) {
-    return getProcedures(currentStatement.getObjectReferences(), getDefaultSchema());
+    const curClause = currentStatement.getClauseForOffset(offset);
+    if (curClause === ClauseType.Unknown) {
+      return getProcedures(currentStatement.getObjectReferences(), getDefaultSchema());
+    }
   }
 
   // Determine if writing a statement inside of a CTE, if they are, set that as the current statement
