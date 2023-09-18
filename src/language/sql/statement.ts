@@ -79,7 +79,6 @@ export default class Statement {
 		return currentClause;
 	}
 
-	// select * from table(qsys2.mti_info());
 	getBlockAt(offset: number): Token[] {
 		let start = -1;
 		let end = -1;
