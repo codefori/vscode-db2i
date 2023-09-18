@@ -433,12 +433,14 @@ export default class Statement {
 			}
 		}
 
-		sqlObj.tokens = this.tokens.slice(i, endIndex+1);
+		if (sqlObj) {
+			sqlObj.tokens = this.tokens.slice(i, endIndex+1);
 
-		if (options.withSystemName) {
-			if (tokenIs(this.tokens[endIndex+1], `keyword`, `FOR`) && tokenIs(this.tokens[endIndex+2], `word`, `SYSTEM`) && tokenIs(this.tokens[endIndex+3], `word`, `NAME`)) {
-				if (this.tokens[endIndex+4] && NameTypes.includes(this.tokens[endIndex+4].type)) {
-					sqlObj.object.system = this.tokens[endIndex+4].value;
+			if (options.withSystemName) {
+				if (tokenIs(this.tokens[endIndex+1], `keyword`, `FOR`) && tokenIs(this.tokens[endIndex+2], `word`, `SYSTEM`) && tokenIs(this.tokens[endIndex+3], `word`, `NAME`)) {
+					if (this.tokens[endIndex+4] && NameTypes.includes(this.tokens[endIndex+4].type)) {
+						sqlObj.object.system = this.tokens[endIndex+4].value;
+					}
 				}
 			}
 		}
