@@ -367,14 +367,14 @@ export default class Statement {
 	private getRefAtToken(i: number, options: {withSystemName?: boolean} = {}): ObjectRef|undefined {
 		let sqlObj: ObjectRef;
 
-		let nameIndex = i;
-		let nameToken = this.tokens[i];
+		let nextIndex = i;
+		let nextToken = this.tokens[i];
 
 		let endIndex = i;
 
 		let isUDTF = false;
 
-		if (tokenIs(nameToken, `function`, `TABLE`)) {
+		if (tokenIs(nextToken, `function`, `TABLE`)) {
 			isUDTF = true;
 		}
 
@@ -383,37 +383,37 @@ export default class Statement {
 			if (sqlObj) {
 				sqlObj.isUDTF = true;
 				const blockTokens = this.getBlockAt(sqlObj.tokens[0].range.end);
-				nameIndex = i + 2 + blockTokens.length;
-				nameToken = this.tokens[nameIndex];
+				nextIndex = i + 2 + blockTokens.length;
+				nextToken = this.tokens[nextIndex];
 
 			} else {
-				nameIndex = -1;
-				nameToken = undefined;
+				nextIndex = -1;
+				nextToken = undefined;
 			}
 
 		} else {
-			if (nameToken && NameTypes.includes(this.tokens[i].type)) {
-				nameIndex = i;
+			if (nextToken && NameTypes.includes(this.tokens[i].type)) {
+				nextIndex = i;
 				endIndex = i;
 
 				sqlObj = {
 					tokens: [],
 					object: {
-						name: nameToken.value
+						name: nextToken.value
 					}
 				}
 
 				if (tokenIs(this.tokens[i+1], `dot`) || tokenIs(this.tokens[i+1], `forwardslash`)) {
-					nameIndex = i+2;
-					nameToken = this.tokens[nameIndex];
+					nextIndex = i+2;
+					nextToken = this.tokens[nextIndex];
 
-					endIndex = nameToken ? nameIndex : i+1;
+					endIndex = nextToken ? nextIndex : i+1;
 
 					sqlObj = {
 						tokens: [],
 						object: {
 							schema: this.tokens[i].value,
-							name: nameToken && NameTypes.includes(nameToken.type) ? nameToken.value : undefined
+							name: nextToken && NameTypes.includes(nextToken.type) ? nextToken.value : undefined
 						}
 					};
 
@@ -423,14 +423,14 @@ export default class Statement {
 			
 		if (sqlObj) {
 			// If the next token is not a clause.. we might have the alias
-			if (nameToken && this.tokens[nameIndex+1]) {
-				if (tokenIs(this.tokens[nameIndex+1], `keyword`, `AS`) && tokenIs(this.tokens[nameIndex+2], `word`)) {
-					endIndex = nameIndex+2;
-					sqlObj.alias = this.tokens[nameIndex+2].value;
+			if (nextToken && this.tokens[nextIndex+1]) {
+				if (tokenIs(this.tokens[nextIndex+1], `keyword`, `AS`) && tokenIs(this.tokens[nextIndex+2], `word`)) {
+					endIndex = nextIndex+2;
+					sqlObj.alias = this.tokens[nextIndex+2].value;
 				} else
-				if (tokenIs(this.tokens[nameIndex+1], `word`)) {
-					endIndex = nameIndex+1;
-					sqlObj.alias = this.tokens[nameIndex+1].value;
+				if (tokenIs(this.tokens[nextIndex+1], `word`)) {
+					endIndex = nextIndex+1;
+					sqlObj.alias = this.tokens[nextIndex+1].value;
 				}
 			}
 
