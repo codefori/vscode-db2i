@@ -16,6 +16,8 @@ export default class Statement {
 
 			this.type = StatementTypeWord[wordValue];
 		}
+
+		this.tokens = this.tokens.filter(newToken => newToken.type !== `newline`)
 		
 		switch (this.type) {
 			case StatementType.With:
@@ -168,23 +170,21 @@ export default class Statement {
 		if (this.type !== StatementType.With) return [];
 		
 		let cteList: CTEReference[] = [];
-					
-		const newTokens = this.tokens.filter(newToken => newToken.type !== `newline`);
 
-		for (let i = 0; i < newTokens.length; i++) {
-			if (tokenIs(newTokens[i], `word`)) {
-				let cteName = newTokens[i].value!;
+		for (let i = 0; i < this.tokens.length; i++) {
+			if (tokenIs(this.tokens[i], `word`)) {
+				let cteName = this.tokens[i].value!;
 				let parameters: string[] = [];
 				let statementBlockI = i+1;
 
-				if (tokenIs(newTokens[i+1], `block`) && tokenIs(newTokens[i+2], `keyword`, `AS`)) {
-					parameters = newTokens[i+1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
+				if (tokenIs(this.tokens[i+1], `block`) && tokenIs(this.tokens[i+2], `keyword`, `AS`)) {
+					parameters = this.tokens[i+1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
 					statementBlockI = i+3;
-				} else if (tokenIs(newTokens[i+1], `keyword`, `AS`)) {
+				} else if (tokenIs(this.tokens[i+1], `keyword`, `AS`)) {
 					statementBlockI = i+2;
 				}
 
-				const statementBlock = newTokens[statementBlockI];
+				const statementBlock = this.tokens[statementBlockI];
 				if (tokenIs(statementBlock, `block`)) {
 					cteList.push({
 						name: cteName,
@@ -196,7 +196,7 @@ export default class Statement {
 				i = statementBlockI;
 			}
 
-			if (tokenIs(newTokens[i], `statementType`, `SELECT`)) {
+			if (tokenIs(this.tokens[i], `statementType`, `SELECT`)) {
 				break;
 			}
 		}
@@ -220,7 +220,11 @@ export default class Statement {
 				}
 
 				if (tokenIs(this.tokens[i], `clause`, `FROM`) || tokenIs(this.tokens[i], `clause`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
-					doAdd(this.getRefAtToken(i+1));
+					const sqlObj = this.getRefAtToken(i+1);
+					if (sqlObj) {
+						doAdd(sqlObj);
+						i += sqlObj.tokens.length;
+					}
 				}
 			}
 		}
@@ -235,7 +239,7 @@ export default class Statement {
 
 			case StatementType.Alter:
 				if (this.tokens.length >= 3) {
-					let object = this.getRefAtToken(2);
+					let object = this.getRefAtToken(2, {withSystemName: true});
 
 					if (object) {
 						object.createType = this.tokens[1].value;
@@ -244,7 +248,7 @@ export default class Statement {
 
 						for (let i = object.tokens.length+2; i < this.tokens.length; i++) {
 							if (tokenIs(this.tokens[i], `keyword`, `REFERENCES`)) {
-								doAdd(this.getRefAtToken(i+1));
+								doAdd(this.getRefAtToken(i+1, {withSystemName: true}));
 							}
 						}
 					}
@@ -383,6 +387,7 @@ export default class Statement {
 			if (sqlObj) {
 				sqlObj.isUDTF = true;
 				const blockTokens = this.getBlockAt(sqlObj.tokens[0].range.end);
+				sqlObj.tokens = blockTokens;
 				nextIndex = i + 2 + blockTokens.length;
 				nextToken = this.tokens[nextIndex];
 
@@ -422,19 +427,24 @@ export default class Statement {
 		}
 			
 		if (sqlObj) {
-			// If the next token is not a clause.. we might have the alias
-			if (nextToken && this.tokens[nextIndex+1]) {
-				if (tokenIs(this.tokens[nextIndex+1], `keyword`, `AS`) && tokenIs(this.tokens[nextIndex+2], `word`)) {
-					endIndex = nextIndex+2;
-					sqlObj.alias = this.tokens[nextIndex+2].value;
-				} else
-				if (tokenIs(this.tokens[nextIndex+1], `word`)) {
-					endIndex = nextIndex+1;
-					sqlObj.alias = this.tokens[nextIndex+1].value;
+
+			if (options.withSystemName !== true) {
+				// If the next token is not a clause.. we might have the alias
+				if (nextToken && this.tokens[nextIndex+1]) {
+					if (tokenIs(this.tokens[nextIndex+1], `keyword`, `AS`) && tokenIs(this.tokens[nextIndex+2], `word`)) {
+						endIndex = nextIndex+2;
+						sqlObj.alias = this.tokens[nextIndex+2].value;
+					} else
+					if (tokenIs(this.tokens[nextIndex+1], `word`)) {
+						endIndex = nextIndex+1;
+						sqlObj.alias = this.tokens[nextIndex+1].value;
+					}
 				}
 			}
 
-			sqlObj.tokens = this.tokens.slice(i, endIndex+1);
+			if (!isUDTF) {
+				sqlObj.tokens = this.tokens.slice(i, endIndex+1);
+			}
 
 			if (options.withSystemName) {
 				if (tokenIs(this.tokens[endIndex+1], `keyword`, `FOR`) && tokenIs(this.tokens[endIndex+2], `word`, `SYSTEM`) && tokenIs(this.tokens[endIndex+3], `word`, `NAME`)) {

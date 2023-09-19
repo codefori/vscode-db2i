@@ -1039,5 +1039,29 @@ describe(`PL body tests`, () => {
     expect(objs[0].object.name).toBe(`mti_info`);
     expect(objs[0].alias).toBe(`x`);
     expect(objs[0].isUDTF).toBe(true);
+  });
+
+  test(`SELECT & STOP`, () => {
+    const lines = [ 
+      `--`,
+      `-- What did Tim do?`,
+      `--`,
+      `select count(*) as tims_batch_job_count`,
+      `  from table (`,
+      `      qsys2. ACTIVE_JOB_INFO(JOB_NAME_FILTER       => 'TIMDIDIT', `,
+      `                      SUBSYSTEM_LIST_FILTER => 'QBATCH')`,
+      `    );`,
+      `stop;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(2);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Select);
+
+    const objs = statement.getObjectReferences();
+    expect(objs.length).toBe(1);
   })
 });
