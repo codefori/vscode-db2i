@@ -42,6 +42,12 @@ const completionTypes: { [index: string]: CompletionType } = {
     type: `aliases`,
     icon: CompletionItemKind.Reference,
   },
+  functions: {
+    order: `e`,
+    label: `function`,
+    type: `functions`, 
+    icon: CompletionItemKind.Method
+  }
 };
 
 function createCompletionItem(
