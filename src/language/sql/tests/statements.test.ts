@@ -1063,5 +1063,7 @@ describe(`PL body tests`, () => {
 
     const objs = statement.getObjectReferences();
     expect(objs.length).toBe(1);
+    expect(objs[0].object.schema).toBe(`qsys2`);
+    expect(objs[0].object.name).toBe(`ACTIVE_JOB_INFO`);
   })
 });
