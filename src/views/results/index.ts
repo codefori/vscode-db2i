@@ -167,10 +167,10 @@ export function initialise(context: vscode.ExtensionContext) {
             statement.type === StatementType.Create || statement.type === StatementType.Alter) {
             const ref = statement.refs[0];
             const databaseObj =
-              statement.type === StatementType.Create
-                ? ref.object.schema
+              statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
+                ? ref.object.schema || ``
                 : ref.object.schema + ref.object.name;
-            changedCache.add(databaseObj.toUpperCase());
+            changedCache.add((databaseObj || ``).toUpperCase());
           }
 
           if (statement.content.trim().length > 0) {
