@@ -130,7 +130,7 @@ export default function getSystemTab(options: JDBCOptions) {
     .addSelect(`database name`, `Database name`, [
       {text: `System Base`, description: `*SYSBAS`, value: ``, selected: options["database name"] === ``},
       ...Object.values(connection.aspInfo).map(asp => ({text: asp, description: asp, value: asp, selected: options["database name"] === asp}))
-    ])
+    ], formatDescription(dbNameText))
     .addSelect(
       `decfloat rounding mode`,
       `Decfloat rounding mode`,
