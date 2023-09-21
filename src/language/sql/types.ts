@@ -5,6 +5,7 @@ export enum StatementType {
 	Create = "Create",
 	Insert = "Insert",
 	Select = "Select",
+	With = "With",
 	Update = "Update",
 	Delete = "Delete",
 	Declare = "Declare",
@@ -18,7 +19,7 @@ export enum StatementType {
 export const StatementTypeWord = {
 	'CREATE': StatementType.Create,
 	'SELECT': StatementType.Select,
-	'WITH': StatementType.Select,
+	'WITH': StatementType.With,
 	'INSERT': StatementType.Insert,
 	'UPDATE': StatementType.Update,
 	'DELETE': StatementType.Delete,
@@ -28,6 +29,35 @@ export const StatementTypeWord = {
 	'CALL': StatementType.Call,
 	'BEGIN': StatementType.Begin,
 	'ALTER': StatementType.Alter
+};
+
+export enum ClauseType {
+	Unknown = "Unknown",
+	From = "From",
+	Into = "Into",
+	Where = "Where",
+	Having = "Having",
+	Group = "Group",
+	Limit = "Limit",
+	Offset = "Offset",
+	Order = "Order"
+}
+
+export const ClauseTypeWord = {
+	'FROM': ClauseType.From,
+	'INTO': ClauseType.Into,
+	'WHERE': ClauseType.Where,
+	'HAVING': ClauseType.Having,
+	'GROUP': ClauseType.Group,
+	'LIMIT': ClauseType.Limit,
+	'OFFSET': ClauseType.Offset,
+	'ORDER': ClauseType.Order
+}
+
+export interface CTEReference {
+	name: string;
+	columns: string[];
+	statement: Statement
 };
 
 export interface IRange {
@@ -53,8 +83,10 @@ export interface ObjectRef {
   object: QualifiedObject;
   alias?: string;
 
+	isUDTF?: boolean;
+
 	/** only used within create statements */
-	type?: string;
+	createType?: string;
 }
 
 export interface StatementGroup {
