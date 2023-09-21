@@ -1,7 +1,7 @@
 import { assert, describe, expect, test } from 'vitest'
 import SQLTokeniser from '../tokens'
 import Document from '../document';
-import { StatementType } from '../types';
+import { ClauseType, StatementType } from '../types';
 
 describe(`Basic statements`, () => {
   test('One statement, no end', () => {
@@ -15,6 +15,7 @@ describe(`Basic statements`, () => {
     const document = new Document(`select * from sample;`);
   
     expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Select);
     expect(document.statements[0].tokens.length).toBe(4);
   });
   
@@ -27,6 +28,9 @@ describe(`Basic statements`, () => {
     expect(document.statements.length).toBe(2);
     expect(document.statements[0].tokens.length).toBe(4);
     expect(document.statements[1].tokens.length).toBe(6);
+
+    expect(document.statements[0].getClauseForOffset(5)).toBe(ClauseType.Unknown);
+    expect(document.statements[0].getClauseForOffset(10)).toBe(ClauseType.From);
   });
   
   test('Two statements, both end', () => {
@@ -196,6 +200,12 @@ describe(`Object references`, () => {
 
     const refs = statement.getObjectReferences();
     expect(refs.length).toBe(3);
+
+    expect(statement.getClauseForOffset(10)).toBe(ClauseType.Unknown);
+    expect(statement.getClauseForOffset(125)).toBe(ClauseType.From);
+    expect(statement.getClauseForOffset(160)).toBe(ClauseType.Where);
+    expect(statement.getClauseForOffset(200)).toBe(ClauseType.From);
+    expect(statement.getClauseForOffset(230)).toBe(ClauseType.Where);
   })
 
   test(`SELECT JOIN: inner join`, () => {
@@ -373,6 +383,10 @@ describe(`Object references`, () => {
     expect(proj.object.name).toBe(`PROJECT`);
     expect(proj.object.schema).toBeUndefined;
     expect(proj.alias).toBe(`b`);
+
+    expect(statement.getClauseForOffset(10)).toBe(ClauseType.Unknown);
+    expect(statement.getClauseForOffset(90)).toBe(ClauseType.From);
+    expect(statement.getClauseForOffset(160)).toBe(ClauseType.Where);
   });
 
   test(`INSERT: simple inserts`, () => {
@@ -537,26 +551,26 @@ describe(`Object references`, () => {
 
     expect(refsA.length).toBe(2);
     expect(refsA[0].tokens.length).toBe(1);
-    expect(refsA[0].type).toBe(`INDEX`);
+    expect(refsA[0].createType).toBe(`INDEX`);
     expect(refsA[0].object.name).toBe(`XDEPT1`);
     expect(refsA[0].object.schema).toBeUndefined();
     expect(refsA[0].object.system).toBeUndefined();
 
     expect(refsA[1].tokens.length).toBe(1);
-    expect(refsA[1].type).toBeUndefined();
+    expect(refsA[1].createType).toBeUndefined();
     expect(refsA[1].object.name).toBe(`DEPARTMENT`);
     expect(refsA[1].object.schema).toBeUndefined();
     expect(refsA[1].object.system).toBeUndefined();
 
     expect(refsB.length).toBe(2);
     expect(refsB[0].tokens.length).toBe(1);
-    expect(refsB[0].type).toBe(`INDEX`);
+    expect(refsB[0].createType).toBe(`INDEX`);
     expect(refsB[0].object.name).toBe(`XDEPT2`);
     expect(refsB[0].object.schema).toBeUndefined();
     expect(refsB[0].object.system).toBeUndefined();
 
     expect(refsB[1].tokens.length).toBe(1);
-    expect(refsB[1].type).toBeUndefined();
+    expect(refsB[1].createType).toBeUndefined();
     expect(refsB[1].object.name).toBe(`DEPARTMENT`);
     expect(refsB[1].object.schema).toBeUndefined();
     expect(refsB[1].object.system).toBeUndefined();
@@ -586,24 +600,24 @@ describe(`Object references`, () => {
 
     expect(refsA.length).toBe(2);
     expect(refsA[0].tokens.length).toBe(3);
-    expect(refsA[0].type).toBe(`INDEX`);
+    expect(refsA[0].createType).toBe(`INDEX`);
     expect(refsA[0].object.name).toBe(`XDEPT1`);
     expect(refsA[0].object.schema).toBe(`myschema`);
     expect(refsA[0].object.system).toBeUndefined();
 
     expect(refsA[1].tokens.length).toBe(3);
-    expect(refsA[1].type).toBeUndefined();
+    expect(refsA[1].createType).toBeUndefined();
     expect(refsA[1].object.name).toBe(`DEPARTMENT`);
     expect(refsA[1].object.schema).toBe(`other`);
 
     expect(refsB.length).toBe(2);
     expect(refsB[0].tokens.length).toBe(3);
-    expect(refsB[0].type).toBe(`INDEX`);
+    expect(refsB[0].createType).toBe(`INDEX`);
     expect(refsB[0].object.name).toBe(`XDEPT2`);
     expect(refsB[0].object.schema).toBe(`myschema`);
 
     expect(refsB[1].tokens.length).toBe(3);
-    expect(refsB[1].type).toBeUndefined();
+    expect(refsB[1].createType).toBeUndefined();
     expect(refsB[1].object.name).toBe(`DEPARTMENT`);
     expect(refsB[1].object.schema).toBe(`other`);
   });
@@ -630,18 +644,18 @@ describe(`Object references`, () => {
 
     expect(defs.length).toBe(3);
 
-    expect(defs[0].type).toBe(`view`);
+    expect(defs[0].createType).toBe(`view`);
     expect(defs[0].object.name).toBe(`tagtalk`);
     expect(defs[0].object.schema).toBeUndefined();
     expect(defs[0].object.system).toBe(`tt`);
     expect(defs[0].alias).toBeUndefined();
 
-    expect(defs[1].type).toBeUndefined();
+    expect(defs[1].createType).toBeUndefined();
     expect(defs[1].object.name).toBe(`hashtags`);
     expect(defs[1].object.schema).toBeUndefined();
     expect(defs[1].alias).toBe(`a`);
 
-    expect(defs[2].type).toBeUndefined();
+    expect(defs[2].createType).toBeUndefined();
     expect(defs[2].object.name).toBe(`talks`);
     expect(defs[2].object.schema).toBeUndefined();
     expect(defs[2].alias).toBe(`b`);
@@ -672,22 +686,22 @@ describe(`Object references`, () => {
     const defs = view.getObjectReferences();
   
     expect(defs.length).toBe(4);
-    expect(defs[0].type).toBe(`VIEW`);
+    expect(defs[0].createType).toBe(`VIEW`);
     expect(defs[0].object.name).toBe(`ARTLSTDAT`);
     expect(defs[0].object.schema).toBeUndefined();
     expect(defs[0].alias).toBeUndefined();
   
-    expect(defs[1].type).toBeUndefined();
+    expect(defs[1].createType).toBeUndefined();
     expect(defs[1].object.name).toBe(`ARTICLE`);
     expect(defs[1].object.schema).toBeUndefined();
     expect(defs[1].alias).toBeUndefined();
   
-    expect(defs[2].type).toBeUndefined();
+    expect(defs[2].createType).toBeUndefined();
     expect(defs[2].object.name).toBe(`"ORDER"`);
     expect(defs[2].object.schema).toBeUndefined();
     expect(defs[2].alias).toBeUndefined();
   
-    expect(defs[3].type).toBeUndefined();
+    expect(defs[3].createType).toBeUndefined();
     expect(defs[3].object.name).toBe(`DETORD`);
     expect(defs[3].object.schema).toBeUndefined();
     expect(defs[3].alias).toBeUndefined();
@@ -718,25 +732,25 @@ describe(`Object references`, () => {
     const defs = view.getObjectReferences();
   
     expect(defs.length).toBe(4);
-    expect(defs[0].type).toBe(`VIEW`);
+    expect(defs[0].createType).toBe(`VIEW`);
     expect(defs[0].object.name).toBe(`ARTLSTDAT`);
     expect(defs[0].object.schema).toBeUndefined();
     expect(defs[0].object.system).toBe(`SHORT`);
     expect(defs[0].alias).toBeUndefined();
   
-    expect(defs[1].type).toBeUndefined();
+    expect(defs[1].createType).toBeUndefined();
     expect(defs[1].object.name).toBe(`ARTICLE`);
     expect(defs[1].object.schema).toBeUndefined();
     expect(defs[1].object.system).toBeUndefined();
     expect(defs[1].alias).toBeUndefined();
   
-    expect(defs[2].type).toBeUndefined();
+    expect(defs[2].createType).toBeUndefined();
     expect(defs[2].object.name).toBe(`"ORDER"`);
     expect(defs[2].object.schema).toBeUndefined();
     expect(defs[2].object.system).toBeUndefined();
     expect(defs[2].alias).toBeUndefined();
   
-    expect(defs[3].type).toBeUndefined();
+    expect(defs[3].createType).toBeUndefined();
     expect(defs[3].object.name).toBe(`DETORD`);
     expect(defs[3].object.schema).toBeUndefined();
     expect(defs[3].object.system).toBeUndefined();
@@ -873,6 +887,10 @@ describe(`PL body tests`, () => {
     expect(medianResultSetProc.type).toBe(StatementType.Create);
     expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
+    const parameterTokens = medianResultSetProc.getBlockAt(46);
+    expect(parameterTokens.length).toBeGreaterThan(0);
+    expect(parameterTokens.map(t => t.type).join()).toBe([`word`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join())
+
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
 
@@ -883,4 +901,169 @@ describe(`PL body tests`, () => {
     expect(callStatement.type).toBe(StatementType.Call);
     expect(callStatement.isBlockOpener()).toBe(false);
   });
+
+  test(`WITH: no explicit columns`, () => {
+    const lines = [
+      `with Temp01 as`,
+      `(select s.shipmentID, s.customerID, s.amount`,
+      `   from shipments as s`,
+      `  where s.shipdate =`,
+      `      (select BillingDate from BillingDate)),`,
+      `Temp02 as`,
+      `  (select sum(t1.amount) as TotalShipped`,
+      `    from Temp01 as t1),`,
+      `Temp03 as`,
+      `  (select t1.shipmentID, t1.customerID, c.name, t1.amount, `,
+      `          dec(round(t1.amount / t2.TotalShipped * 100,2),5,2`,
+      `          ) as Percentage`,
+      `    from Temp01 as t1`,
+      `    cross join Temp02 as t2`,
+      `    join customers as c`,
+      `      on t1.customerID = c.account)`,
+      `/* select t3.* from Temp03 as t3`,
+      `order by t3.shipmentID; */`,
+      `select * from Temp02`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+
+    expect(statements.length).toBe(1);
+    
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.With);
+
+    const refs = statement.getObjectReferences();
+    const ctes = statement.getCTEReferences();
+
+    expect(refs.length).toBe(1);
+    expect(refs[0].object.name).toBe(`Temp02`);
+
+    expect(ctes.length).toBe(3);
+    expect(ctes[0].name).toBe(`Temp01`);
+    expect(ctes[0].columns.length).toBe(0);
+
+    expect(ctes[1].name).toBe(`Temp02`);
+    expect(ctes[1].columns.length).toBe(0);
+
+    expect(ctes[2].name).toBe(`Temp03`);
+    expect(ctes[2].columns.length).toBe(0);
+    const temp03Stmt = ctes[2].statement.getObjectReferences();
+    expect(temp03Stmt.length).toBe(2);
+    expect(temp03Stmt[0].object.name).toBe(`Temp01`);
+    expect(temp03Stmt[1].object.name).toBe(`Temp02`);
+  })
+
+  test(`WITH: explicit columns`, () => {
+    const lines = [
+      `with cteme(n1,n2,n3) as (`,
+      `  select * from qsys2.sysixadv`,
+      `  --     |`,
+      `)`,
+      `select * from cteme`
+    ].join(`\r\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.With);
+
+    const objs = statement.getObjectReferences();
+    expect(objs.length).toBe(1);
+    expect(objs[0].object.schema).toBe(undefined);
+    expect(objs[0].object.name).toBe(`cteme`);
+
+    const ctes = statement.getCTEReferences();
+    expect(ctes.length).toBe(1);
+    expect(ctes[0].name).toBe(`cteme`);
+    expect(ctes[0].columns.join()).toBe([`n1`, `n2`, `n3`].join());
+
+    const cteSubselect = ctes[0].statement;
+    const cteObjs = cteSubselect.getObjectReferences();
+    expect(cteObjs.length).toBe(1);
+    expect(cteObjs[0].object.schema).toBe(`qsys2`);
+    expect(cteObjs[0].object.name).toBe(`sysixadv`);
+  });
+
+  test(`SELECT: table function`, () => {
+    const lines = `select * from table(qsys2.mti_info());`;
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Select);
+
+    const objs = statement.getObjectReferences();
+    expect(objs.length).toBe(1);
+    expect(objs[0].object.schema).toBe(`qsys2`);
+    expect(objs[0].object.name).toBe(`mti_info`);
+    expect(objs[0].isUDTF).toBe(true);
+    expect(objs[0].alias).toBeUndefined();
+  });
+
+  test(`SELECT: table function with name (no AS)`, () => {
+    const lines = `select * from table(qsys2.mti_info()) x;`;
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Select);
+
+    const objs = statement.getObjectReferences();
+    expect(objs.length).toBe(1);
+    expect(objs[0].object.schema).toBe(`qsys2`);
+    expect(objs[0].object.name).toBe(`mti_info`);
+    expect(objs[0].alias).toBe(`x`);
+    expect(objs[0].isUDTF).toBe(true);
+  });
+
+  test(`SELECT: table function with name (with AS)`, () => {
+    const lines = `select * from table(qsys2.mti_info()) as x;`;
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Select);
+
+    const objs = statement.getObjectReferences();
+    expect(objs.length).toBe(1);
+    expect(objs[0].object.schema).toBe(`qsys2`);
+    expect(objs[0].object.name).toBe(`mti_info`);
+    expect(objs[0].alias).toBe(`x`);
+    expect(objs[0].isUDTF).toBe(true);
+  });
+
+  test(`SELECT & STOP`, () => {
+    const lines = [ 
+      `--`,
+      `-- What did Tim do?`,
+      `--`,
+      `select count(*) as tims_batch_job_count`,
+      `  from table (`,
+      `      qsys2. ACTIVE_JOB_INFO(JOB_NAME_FILTER       => 'TIMDIDIT', `,
+      `                      SUBSYSTEM_LIST_FILTER => 'QBATCH')`,
+      `    );`,
+      `stop;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(2);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Select);
+
+    const objs = statement.getObjectReferences();
+    expect(objs.length).toBe(1);
+    expect(objs[0].object.schema).toBe(`qsys2`);
+    expect(objs[0].object.name).toBe(`ACTIVE_JOB_INFO`);
+  })
 });

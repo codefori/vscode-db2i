@@ -116,75 +116,30 @@
     "body": "current_implicit_xmlparse_option",
     "description": "The whitespace handling options to be used for XML data when implicitly parsed without validation."
   },
-  "current path": {
-    "prefix": "current path",
-    "body": "current path",
-    "description": "The SQL path used to resolve unqualified data type names, procedure names, and function names in dynamically prepared SQL statements."
-  },
   "current_path": {
     "prefix": "current_path",
     "body": "current_path",
     "description": "The SQL path used to resolve unqualified data type names, procedure names, and function names in dynamically prepared SQL statements."
-  },
-  "current function path": {
-    "prefix": "current function path",
-    "body": "current function path",
-    "description": "The SQL path used to resolve unqualified data type names, procedure names, and function names in dynamically prepared SQL statements."
-  },
-  "current schema": {
-    "prefix": "current schema",
-    "body": "current schema",
-    "description": "The schema name used to qualify unqualified database object references where applicable in dynamically prepared SQL statements."
-  },
-  "current server": {
-    "prefix": "current server",
-    "body": "current server",
-    "description": "The name of the relational database currently being used."
   },
   "current_server": {
     "prefix": "current_server",
     "body": "current_server",
     "description": "The name of the relational database currently being used."
   },
-  "current temporal system_time": {
-    "prefix": "current temporal system_time",
-    "body": "current temporal system_time",
-    "description": "The timestamp to use when querying a system_period temporal table."
-  },
-  "current time": {
-    "prefix": "current time",
-    "body": "current time",
-    "description": "The current time."
-  },
   "current_time": {
     "prefix": "current_time",
     "body": "current_time",
     "description": "The current time."
-  },
-  "current timestamp": {
-    "prefix": "current timestamp",
-    "body": "current timestamp",
-    "description": "The current date and time in timestamp format."
   },
   "current_timestamp": {
     "prefix": "current_timestamp",
     "body": "current_timestamp",
     "description": "The current date and time in timestamp format."
   },
-  "current timezone": {
-    "prefix": "current timezone",
-    "body": "current timezone",
-    "description": "A duration of time that links local time to Universal Time Coordinated (UTC) using the formula: `local time - CURRENT TIMEZONE = UTC`. It is taken from the system value QUTCOFFSET."
-  },
   "current_timezone": {
     "prefix": "current_timezone",
     "body": "current_timezone",
     "description": "A duration of time that links local time to Universal Time Coordinated (UTC) using the formula: `local time - CURRENT TIMEZONE = UTC`. It is taken from the system value QUTCOFFSET."
-  },
-  "current user": {
-    "prefix": "current user",
-    "body": "current user",
-    "description": "The primary authorization identifier of the job."
   },
   "current_user": {
     "prefix": "current_user",
@@ -206,4 +161,50 @@
     "body": "system_user",
     "description": "The authorization identifier (user profile) of the user connected to the database."
   },
+  // "current path": {
+  //   "prefix": "current path",
+  //   "body": "current path",
+  //   "description": "The SQL path used to resolve unqualified data type names, procedure names, and function names in dynamically prepared SQL statements."
+  // },
+  // "current function path": {
+  //   "prefix": "current function path",
+  //   "body": "current function path",
+  //   "description": "The SQL path used to resolve unqualified data type names, procedure names, and function names in dynamically prepared SQL statements."
+  // },
+  // "current schema": {
+  //   "prefix": "current schema",
+  //   "body": "current schema",
+  //   "description": "The schema name used to qualify unqualified database object references where applicable in dynamically prepared SQL statements."
+  // },
+  // "current server": {
+  //   "prefix": "current server",
+  //   "body": "current server",
+  //   "description": "The name of the relational database currently being used."
+  // },
+  // "current temporal system_time": {
+  //   "prefix": "current temporal system_time",
+  //   "body": "current temporal system_time",
+  //   "description": "The timestamp to use when querying a system_period temporal table."
+  // },
+  // "current time": {
+  //   "prefix": "current time",
+  //   "body": "current time",
+  //   "description": "The current time."
+  // },
+  // "current timestamp": {
+  //   "prefix": "current timestamp",
+  //   "body": "current timestamp",
+  //   "description": "The current date and time in timestamp format."
+  // },
+  // "current timezone": {
+  //   "prefix": "current timezone",
+  //   "body": "current timezone",
+  //   "description": "A duration of time that links local time to Universal Time Coordinated (UTC) using the formula: `local time - CURRENT TIMEZONE = UTC`. It is taken from the system value QUTCOFFSET."
+  // },
+  // "current user": {
+  //   "prefix": "current user",
+  //   "body": "current user",
+  //   "description": "The primary authorization identifier of the job."
+  // },
+
 }
