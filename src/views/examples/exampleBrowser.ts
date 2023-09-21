@@ -1,9 +1,9 @@
 import { EventEmitter, MarkdownString, workspace } from "vscode";
 import { window } from "vscode";
 import { CancellationToken, Event, ExtensionContext, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands } from "vscode";
-import { SQLExample, Examples } from "./examples";
-import { OSData, fetchSystemInfo } from "../config";
-import { getInstance } from "../base";
+import { SQLExample, Examples } from ".";
+import { OSData, fetchSystemInfo } from "../../config";
+import { getInstance } from "../../base";
 
 const openExampleCommand = `vscode-db2i.examples.open`;
 

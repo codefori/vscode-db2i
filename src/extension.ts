@@ -9,7 +9,7 @@ import * as resultsProvider from "./views/results";
 import {loadBase} from "./base";
 import { setupConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
-import { ExampleBrowser } from "./views/exampleBrowser";
+import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { languageInit } from "./language";
 import { initialise } from "./testing";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
