@@ -1,5 +1,5 @@
 import { JDBCOptions } from "../../../connection/types";
-import { loadBase } from "../../../base";
+import { getInstance, loadBase } from "../../../base";
 import { formatDescription } from ".";
 
 const autoCommitText = `
@@ -26,6 +26,7 @@ an independent ASP or the system default database. The following criteria determ
 export default function getSystemTab(options: JDBCOptions) {
   const base = loadBase();
   const tab = base.customUI();
+  const connection = getInstance().getConnection()
 
   tab
     // System properties -------------------------------------------------------------------------------------------------
@@ -126,9 +127,10 @@ export default function getSystemTab(options: JDBCOptions) {
     //   ],
     //   formatDescription(autoCommitText)
     // )
-    .addInput(`database name`, `Database name`, formatDescription(dbNameText), {
-      default: options["database name"],
-    })
+    .addSelect(`database name`, `Database name`, [
+      {text: `System Base`, description: `*SYSBAS`, value: ``, selected: options["database name"] === ``},
+      ...Object.values(connection.aspInfo).map(asp => ({text: asp, description: asp, value: asp, selected: options["database name"] === asp}))
+    ], formatDescription(dbNameText))
     .addSelect(
       `decfloat rounding mode`,
       `Decfloat rounding mode`,
