@@ -13,6 +13,7 @@ import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types
 import CompletionItemCache, { changedCache } from "./completionItemCache";
 import Callable from "../../database/callable";
 import { ServerComponent } from "../../connection/serverComponent";
+import { env } from "process";
 
 const completionItemCache = new CompletionItemCache();
 
@@ -62,6 +63,10 @@ function createCompletionItem(
   item.documentation = documentation;
   item.sortText = sortText;
   return item;
+}
+
+function isEnabled() {
+  return (env.DB2I_DISABLE_CA !== `true`);
 }
 
 function getParmAttributes(parm: SQLParm): string {
@@ -506,7 +511,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
   `sql`,
   {
     async provideCompletionItems(document, position, token, context) {
-      if (ServerComponent.isInstalled()) {
+      if (ServerComponent.isInstalled() && isEnabled()) {
         const trigger = context.triggerCharacter;
         const content = document.getText();
         const offset = document.offsetAt(position);
