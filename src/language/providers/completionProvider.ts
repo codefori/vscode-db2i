@@ -13,6 +13,7 @@ import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types
 import CompletionItemCache, { changedCache } from "./completionItemCache";
 import Callable from "../../database/callable";
 import { ServerComponent } from "../../connection/serverComponent";
+import { env } from "process";
 
 const completionItemCache = new CompletionItemCache();
 
@@ -42,6 +43,12 @@ const completionTypes: { [index: string]: CompletionType } = {
     type: `aliases`,
     icon: CompletionItemKind.Reference,
   },
+  functions: {
+    order: `e`,
+    label: `function`,
+    type: `functions`, 
+    icon: CompletionItemKind.Method
+  }
 };
 
 function createCompletionItem(
@@ -56,6 +63,10 @@ function createCompletionItem(
   item.documentation = documentation;
   item.sortText = sortText;
   return item;
+}
+
+function isEnabled() {
+  return (env.DB2I_DISABLE_CA !== `true`);
 }
 
 function getParmAttributes(parm: SQLParm): string {
@@ -213,9 +224,11 @@ async function getProcedures(
 
   // Handle the general case
   const promises = refs.map(async (ref) => {
+    const schema = ref.object.schema || defaultSchema;
     const sanitizedSchema = Statement.noQuotes(
-      Statement.delimName(ref.object.schema, true)
+      Statement.delimName(schema, true)
     );
+
     return getCompletionItemsForSchema(sanitizedSchema);
   });
 
@@ -465,7 +478,10 @@ async function getCompletionItems(
   offset?: number
 ) {
   if (currentStatement && currentStatement.type === StatementType.Call) {
-    return getProcedures(currentStatement.getObjectReferences(), getDefaultSchema());
+    const curClause = currentStatement.getClauseForOffset(offset);
+    if (curClause === ClauseType.Unknown) {
+      return getProcedures(currentStatement.getObjectReferences(), getDefaultSchema());
+    }
   }
 
   // Determine if writing a statement inside of a CTE, if they are, set that as the current statement
@@ -495,7 +511,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
   `sql`,
   {
     async provideCompletionItems(document, position, token, context) {
-      if (ServerComponent.isInstalled()) {
+      if (ServerComponent.isInstalled() && isEnabled()) {
         const trigger = context.triggerCharacter;
         const content = document.getText();
         const offset = document.offsetAt(position);
