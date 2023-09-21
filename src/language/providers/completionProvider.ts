@@ -79,10 +79,23 @@ function getParmAttributes(parm: SQLParm): string {
   return lines.join(`\n `);
 }
 
+function prepareColumnType(column: TableColumn): string {
+  if (column.CHARACTER_MAXIMUM_LENGTH) {
+    return`${column.DATA_TYPE}(${column.CHARACTER_MAXIMUM_LENGTH})`;
+  }
+
+  if (column.NUMERIC_PRECISION !== null && column.NUMERIC_SCALE !== null) {
+    return `${column.DATA_TYPE}(${column.NUMERIC_PRECISION}, ${column.NUMERIC_SCALE})`;
+  }
+
+  return `${column.DATA_TYPE}`
+}
+
+
 function getColumnAttributes(column: TableColumn): string {
   const lines: string[] = [
     `Column: ${column.COLUMN_NAME}`,
-    `Type: ${column.DATA_TYPE}`,
+    `Type: ${prepareColumnType(column)}`,
     `HAS_DEFAULT: ${column.HAS_DEFAULT}`,
     `IS_IDENTITY: ${column.IS_IDENTITY}`,
     `IS_NULLABLE: ${column.IS_NULLABLE}`,
