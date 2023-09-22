@@ -171,10 +171,10 @@ export default class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject|SchemaItem) => { //table
         if (object) {
           let content: string|undefined;
-          if (object instanceof SQLObject) {
+          if (`name` in object) {
             content = getAdvisedIndexesStatement(object.schema, object.name);
           }
-          else if (object instanceof SchemaItem) {
+          else {
             content = getAdvisedIndexesStatement(object.schema);
           }
           
@@ -190,7 +190,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.clearAdvisedIndexes`, async (object: SQLObject|SchemaItem) => {
         if (object) {
-          const isObject = object instanceof SQLObject;
+          const isObject = `name` in object;
           let result;
 
           result = await vscode.window.showWarningMessage(`Are you sure you want to clear all of the advised index rows from the Index Advisor for ${object.schema}${isObject ? `${object.name}` : ''}?`,  {
