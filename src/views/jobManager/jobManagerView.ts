@@ -153,7 +153,7 @@ export class JobManagerView implements TreeDataProvider<any> {
             })).then(doc => {
               vscode.window.showTextDocument(doc);
             });
-            
+
           } else {
             // This likely means IN_MEM was used
             const trace = await selected.job.getTraceData();
