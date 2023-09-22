@@ -1,3 +1,5 @@
+import { changedCache} from "../language/providers/completionItemCache";
+import Document from "../language/sql/document";
 import { SQLJob } from "./sqlJob";
 import { CLCommandResult, JobLogEntry, QueryOptions, QueryResult, ServerResponse } from "./types";
 export enum QueryState {
@@ -96,6 +98,7 @@ export class Query<T> {
       throw new Error(queryResult.error || `Failed to run query (unknown error)`);
     }
     this.correlationId = queryResult.id;
+    
     return queryResult;
   }
 

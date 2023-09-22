@@ -14,7 +14,8 @@ export const NameTypes = [`word`, `sqlName`, `function`];
 enum ReadState {
   NORMAL,
   IN_STRING,
-  IN_COMMENT,
+  IN_SIMPLE_COMMENT,
+  IN_BLOCK_COMMENT,
   IN_NAME
 }
 
@@ -30,7 +31,7 @@ export default class SQLTokeniser {
     {
       name: `CLAUSE`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`WHERE`, `HAVING`, `GROUP`, `LIMIT`, `OFFSET`, `ORDER`].includes(value.toUpperCase());
+        return [`FROM`, `INTO`, `WHERE`, `HAVING`, `GROUP`, `LIMIT`, `OFFSET`, `ORDER`].includes(value.toUpperCase());
       } }],
       becomes: `clause`,
     },
@@ -56,7 +57,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `OR`, `REPLACE`, `FROM`, `INTO`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`].includes(value.toUpperCase());
+        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },
@@ -101,6 +102,9 @@ export default class SQLTokeniser {
   readonly startCommentString: string = `--`;
   readonly endCommentString = `\n`;
 
+  readonly startCommentBlock = `/*`;
+  readonly endCommentBlock = `*/`;
+
   constructor() { }
 
   tokenise(content: string) {
@@ -117,17 +121,29 @@ export default class SQLTokeniser {
       // Handle when the comment character is found
       if (state === ReadState.NORMAL && content[i] && content[i + 1] && content.substring(i, i + 2) === this.startCommentString) {
         commentStart = i;
-        state = ReadState.IN_COMMENT;
+        state = ReadState.IN_SIMPLE_COMMENT;
 
         // Handle when the end of line is there and we're in a comment
-      } else if (state === ReadState.IN_COMMENT && content[i] === this.endCommentString) {
+      } else if (state === ReadState.IN_SIMPLE_COMMENT && content[i] === this.endCommentString) {
         const preNewLine = i - 1;
         content = content.substring(0, commentStart) + ` `.repeat(preNewLine - commentStart) + content.substring(preNewLine);
         i--; // So we process the newline next
         state = ReadState.NORMAL;
 
-        // Ignore characters when we're in a comment
-      } else if (state === ReadState.IN_COMMENT) {
+      // Handle block comment
+      } else if (state === ReadState.NORMAL && content[i] && content[i + 1] && content.substring(i, i + 2) === this.startCommentBlock) {
+        commentStart = i;
+        state = ReadState.IN_BLOCK_COMMENT;
+
+        // Handle when the end of line is there and we're in a comment
+      } else if (state === ReadState.IN_BLOCK_COMMENT && content[i] && content[i + 1] && content.substring(i, i + 2) === this.endCommentBlock) {
+        const endOfBlock = i + 1;
+        content = content.substring(0, commentStart) + ` `.repeat(endOfBlock - commentStart) + content.substring(endOfBlock);
+        i++;
+        state = ReadState.NORMAL;
+
+      // Handle block comment
+      } else if (state === ReadState.IN_SIMPLE_COMMENT || state === ReadState.IN_BLOCK_COMMENT) {
         continue;
 
         // Handle when we're in a string

@@ -9,6 +9,7 @@ import Configuration from "../../configuration";
 import Types from "../types";
 import Statement from "../../database/statement";
 import { copyUI } from "./copyUI";
+import { getAdvisedIndexesStatement } from "./statements";
 
 const viewItem = {
   "tables": `table`,
@@ -169,7 +170,7 @@ export default class schemaBrowser {
       
       vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject) => { //table
         if (object) {
-          const content = `SELECT * FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}' ORDER BY TIMES_ADVISED DESC`;
+          const content = getAdvisedIndexesStatement(object.schema, object.name);
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             type: `statement`,

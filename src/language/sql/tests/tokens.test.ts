@@ -67,3 +67,31 @@ test(`Delimited names`, () => {
   expect (tokens[4].type === `sqlName`);
   expect (tokens[4].value === `"Delimited Table"`);
 });
+
+test(`Block comments`, () => {
+  const lines = [
+      `/*%METADATA                                                     */`,
+      `/* %TEXT                                                        */`,
+      `/*%EMETADATA                                                    */`,
+      ``,
+      `Create Trigger ORD701_Insert_order`,
+      `After Insert  on order`,
+      `Referencing  New As N`,
+      ``,
+      `For Each Row`,
+      `Program Name ORD701`,
+      `set option sqlPath = *LIBL`,
+      `Begin`,
+      ``,
+      `  Update Customer set culastord = n.ordate`,
+      `         where cuid = N.orcuid;`,
+      `End`,
+  ].join(` `);
+
+  const tokeniser = new SQLTokeniser();
+  const tokens = tokeniser.tokenise(lines);
+
+  expect(tokens[0].type).toBe(`statementType`)
+  expect(tokens[0].value).toBe(`Create`)
+  expect(lines.substring(tokens[0].range.start, tokens[0].range.end)).toBe(`Create`)
+});

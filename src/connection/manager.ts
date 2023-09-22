@@ -70,7 +70,7 @@ export class SQLJobManager {
   }
 
   closeJobByName(name: string) {
-    const id = this.jobs.findIndex(info => info.name);
+    const id = this.jobs.findIndex(info => info.name === name);
     return this.closeJob(id);
   }
 

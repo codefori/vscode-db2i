@@ -10,6 +10,7 @@ import { loadBase } from "./base";
 import { JobManager, setupConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/exampleBrowser";
+import { languageInit } from "./language";
 import { initialise } from "./testing";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { ServerComponent } from "./connection/serverComponent";
@@ -34,6 +35,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   loadBase();
 
   context.subscriptions.push(
+    ...languageInit(),
     ServerComponent.initOutputChannel(),
     vscode.window.registerTreeDataProvider(
       `jobManager`,

@@ -7,7 +7,7 @@ import { Config } from "../config";
 import path from "path";
 import { OutputChannel, commands, window } from "vscode";
 
-import { writeFile } from "fs/promises";
+import { writeFile, unlink } from "fs/promises";
 import os from "os";
 
 const octokit = new Octokit();
@@ -134,6 +134,9 @@ export class ServerComponent {
               await downloadFile(url, tempFile);
 
               await connection.uploadFiles([{local: tempFile, remote: remotePath}]);
+
+              // Clean up the temp file
+              unlink(tempFile);
 
               await Config.setServerComponentName(basename);
 
