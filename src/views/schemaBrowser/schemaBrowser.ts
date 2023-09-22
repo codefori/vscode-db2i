@@ -151,7 +151,7 @@ export default class schemaBrowser {
 
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
-            type: `statement`,
+            qualifier: `statement`,
             open: false,
           });
         }
@@ -162,32 +162,44 @@ export default class schemaBrowser {
           const content = `SELECT * FROM QSYS2.SYSINDEXSTAT WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}'`;
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
-            type: `statement`,
+            qualifier: `statement`,
             open: false,
           });
         }
       }),
       
-      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject) => { //table
+      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject|SchemaItem) => { //table
         if (object) {
-          const content = getAdvisedIndexesStatement(object.schema, object.name);
-          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-            content,
-            type: `statement`,
-            open: false,
-          });
+          let content: string|undefined;
+          if (object instanceof SQLObject) {
+            content = getAdvisedIndexesStatement(object.schema, object.name);
+          }
+          else if (object instanceof SchemaItem) {
+            content = getAdvisedIndexesStatement(object.schema);
+          }
+          
+          if (content) {
+            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+              content,
+              qualifier: `statement`,
+              open: false,
+            });
+          }
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.clearAdvisedIndexes`, async (object: SQLObject) => {
+      vscode.commands.registerCommand(`vscode-db2i.clearAdvisedIndexes`, async (object: SQLObject|SchemaItem) => {
         if (object) {
-          const result = await vscode.window.showWarningMessage(`Are you sure you want to clear all of the advised index rows from the Index Advisor for ${object.name}?`,  {
+          const isObject = object instanceof SQLObject;
+          let result;
+
+          result = await vscode.window.showWarningMessage(`Are you sure you want to clear all of the advised index rows from the Index Advisor for ${object.schema}${isObject ? `${object.name}` : ''}?`,  {
             modal: true,
           }, 'No', 'Yes');
           
           if(result === 'Yes') {
             try {
-              await Table.clearAdvisedIndexes(object.schema, object.name);
+              await Schemas.clearAdvisedIndexes(object.schema, isObject ? object.name : undefined);
             } catch (e) {
               vscode.window.showErrorMessage(e.message);
             }
@@ -304,7 +316,7 @@ export default class schemaBrowser {
           const content = `SELECT * FROM ${Statement.delimName(object.schema)}.${Statement.delimName(object.name)} as a`;
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
-            type: `statement`,
+            qualifier: `statement`,
             open: true,
           });
         }
