@@ -13,7 +13,7 @@ const typeMap = {
   'aliases': [`A`]
 };
 
-export default class Database {
+export default class Schemas {
   /**
    * @param schema Not user input
    */
@@ -170,5 +170,15 @@ export default class Database {
 
   static isRoutineType(type: string): boolean {
     return type === `function` || type === `procedure`;
+  }
+
+  static clearAdvisedIndexes(schema: string, name?: string) {
+    let query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}'`;
+
+    if (name) {
+      query += `and TABLE_NAME = '${name}'`;
+    }
+
+    return getInstance().getContent().runSQL(query);
   }
 }
