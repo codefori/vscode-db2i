@@ -1,5 +1,5 @@
 
-import vscode, { ThemeIcon } from "vscode"
+import vscode, { ThemeIcon, TreeItem } from "vscode"
 import Schemas, { AllSQLTypes, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import { getInstance, loadBase } from "../../base";
@@ -350,7 +350,7 @@ export default class schemaBrowser {
 
           if (value !== undefined) {
             this.filters[node.schema] = value.trim() === `` ? undefined : value;
-            this.refresh();
+            this.refresh(node);
           }
         }
       })
@@ -364,8 +364,8 @@ export default class schemaBrowser {
     this.refresh();
   }
 
-  refresh() {
-    this.emitter.fire(undefined);
+  refresh(node?: TreeItem) {
+    this.emitter.fire(node);
   }
 
   private enableManageCommand(enabled: boolean) {
@@ -551,7 +551,7 @@ class SQLObject extends vscode.TreeItem {
    * For most objects this just returns the name, but for routines, which can be overloaded, it returns the specific name.
    */
   uniqueName(): string {
-    return Schemas.isRoutineType(this.type) ? this.specificName : this.name;
+    return Schemas.isRoutineType(this.type) ? this.specificName || this.name : this.name;
   }
 }
 
