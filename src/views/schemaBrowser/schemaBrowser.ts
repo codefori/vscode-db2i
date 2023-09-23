@@ -1,6 +1,6 @@
 
 import vscode, { ThemeIcon } from "vscode"
-import Schemas, { SQLType } from "../../database/schemas";
+import Schemas, { AllSQLTypes, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import { getInstance, loadBase } from "../../base";
 
@@ -42,6 +42,8 @@ export default class schemaBrowser {
   emitter: vscode.EventEmitter<any | undefined | null | void>;
   onDidChangeTreeData: vscode.Event<any | undefined | null | void>;
   cache: {[key: string]: object[]};
+
+  filters: {[schema: string]: string} = {};
 
   /**
    * @param {vscode.ExtensionContext} context
@@ -299,7 +301,7 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.getResultSet`, async (object) => {
+      vscode.commands.registerCommand(`vscode-db2i.getResultSet`, async (object: SQLObject) => {
         if (object && object instanceof SQLObject) {
           const content = `SELECT * FROM ${Statement.delimName(object.schema)}.${Statement.delimName(object.name)} as a`;
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
@@ -310,7 +312,7 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.setCurrentSchema`, async (node) => {
+      vscode.commands.registerCommand(`vscode-db2i.setCurrentSchema`, async (node: SchemaItem) => {
         if (node && node.contextValue === `schema`) {
           const schema = node.schema.toUpperCase();
 
@@ -323,6 +325,20 @@ export default class schemaBrowser {
           }
 
           vscode.window.showInformationMessage(`Current schema set to ${schema}.`);
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.setSchemaFilter`, async (node: SchemaItem) => {
+        if (node) {
+          const value = await vscode.window.showInputBox({
+            title: `Set filter for ${node.schema}`,
+            value: this.filters[node.schema],
+            prompt: `Show objects that start with this value. Blank to reset.`
+          });
+
+          if (value !== undefined) {
+            this.filters[node.schema] = value.trim() === `` ? undefined : value.toUpperCase();
+          }
         }
       })
     )
@@ -414,7 +430,18 @@ export default class schemaBrowser {
       const contextValue = element.contextValue;
 
       if (element instanceof Schema) {
-        items = getSchemaItems(element.schema);
+
+        const filterValue = this.filters[element.schema];
+        if (filterValue) {
+          const filteredObjects = await Schemas.getObjects(element.schema, AllSQLTypes, {filter: filterValue});
+          items = filteredObjects.map(obj => new SQLObject(obj));
+
+        } else {
+          // If no filter is provided, group objects by types
+          items = getSchemaItems(element.schema);
+        }
+
+
       } else
       if (element instanceof SchemaItem) {
         items = await this.fetchData(element.schema, contextValue as SQLType, false);
@@ -440,7 +467,7 @@ export default class schemaBrowser {
         });
 
         for (let schema of schemas) {
-          items.push(new Schema(schema));
+          items.push(new Schema(schema, this.filters[schema]));
         }
       } else {
         items.push(new Schema(`No connection. Refresh when ready.`));
@@ -453,12 +480,14 @@ export default class schemaBrowser {
 
 class Schema extends vscode.TreeItem {
   schema: string;
-  constructor(name: string) {
+  constructor(name: string, currentFilterLabel?: string) {
     super(name, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.contextValue = `schema`;
     this.schema = name;
     this.iconPath = new vscode.ThemeIcon(`database`);
+
+    this.description = currentFilterLabel ? `(${currentFilterLabel})` : undefined;
   }
 }
 

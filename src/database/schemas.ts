@@ -13,6 +13,8 @@ const typeMap = {
   'aliases': [`A`]
 };
 
+export const AllSQLTypes: SQLType[] = ["schemas", "tables", "views", "aliases", "constraints", "functions", "variables", "indexes", "procedures", "sequences", "packages", "triggers", "types"];
+
 export default class Database {
   /**
    * @param schema Not user input

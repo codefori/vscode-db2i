@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import vscode from "vscode"
-import schemaBrowser from "./views/schemaBrowser/schemaBrowser";
+import schemaBrowser from "./views/schemaBrowser/schemaBrowser.1";
 
 import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
