@@ -1,6 +1,6 @@
 
 import vscode, { ThemeIcon } from "vscode"
-import Schemas from "../../database/schemas";
+import Schemas, { SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import { getInstance, loadBase } from "../../base";
 
@@ -69,7 +69,7 @@ export default class schemaBrowser {
             location: vscode.ProgressLocation.Window,
             title: `Retrieving schemas for ${config.name}...`
           }, async () => {
-            allSchemas = await Schemas.getObjects(undefined, `schemas`);
+            allSchemas = await Schemas.getObjects(undefined, [`schemas`]);
           });
           // Create an array of SchemaQuickPickItem representing the currently selected schemas
           const selectedItems: SchemaQuickPickItem[] = allSchemas.filter(schema => currentSchemas.includes(Statement.delimName(schema.name))).map(object => new SchemaQuickPickItem(object));
@@ -350,13 +350,8 @@ export default class schemaBrowser {
     return Number(Configuration.get(`pageSize`)) || 100;
   }
 
-  /**
-   * 
-   * @param {string} schema 
-   * @param {string} type
-   * @param {boolean} [addRows] True when we need rows added
-   */
-  async fetchData(schema, type, addRows) {
+
+  async fetchData(schema: string, type: SQLType, addRows?: boolean) {
     const pageSize = this.getPageSize() + 1; //Get 1 extra item to see if we need to add a more button 
     const key = `${schema}-${type}`;
     let offset;
@@ -369,7 +364,7 @@ export default class schemaBrowser {
         offset = 0;
       }
 
-      const data = await Schemas.getObjects(schema, type, {
+      const data = await Schemas.getObjects(schema, [type], {
         limit: pageSize,
         offset
       });
@@ -422,7 +417,7 @@ export default class schemaBrowser {
         items = getSchemaItems(element.schema);
       } else
       if (element instanceof SchemaItem) {
-        items = await this.fetchData(element.schema, contextValue, false);
+        items = await this.fetchData(element.schema, contextValue as SQLType, false);
       } else
       if (element instanceof SQLObject) {
         const type = element.type;

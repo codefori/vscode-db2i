@@ -174,7 +174,7 @@ async function getObjectCompletions(
   if (!completionItemCache.has(forSchema) || schemaUpdate) {
     const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
       forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
-      const data = await Database.getObjects(forSchema, value.type);
+      const data = await Database.getObjects(forSchema, [value.type]);
       return data.map((table) =>
         createCompletionItem(
           Statement.prettyName(table.name),
@@ -199,7 +199,7 @@ async function getObjectCompletions(
 async function getCompletionItemsForSchema(
   schema: string
 ): Promise<CompletionItem[]> {
-  const data = await Database.getObjects(schema, "procedures");
+  const data = await Database.getObjects(schema, ["procedures"]);
   return data.map((item) =>
     createCompletionItem(
       item.name,
@@ -327,7 +327,7 @@ async function getCachedSchemas() {
 
   const allSchemas: BasicSQLObject[] = await Schemas.getObjects(
     undefined,
-    `schemas`
+    [`schemas`]
   );
   const completionItems: CompletionItem[] = allSchemas.map((schema) =>
     createCompletionItem(
