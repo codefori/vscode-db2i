@@ -496,12 +496,12 @@
         },
         {
           "command": "vscode-db2i.advisedIndexes",
-          "when": "viewItem == table",
+          "when": "viewItem == table || viewItem == schema",
           "group": "db2idxAdv@1"
         },
         {
           "command": "vscode-db2i.clearAdvisedIndexes",
-          "when": "viewItem == table",
+          "when": "viewItem == table || viewItem == schema",
           "group": "db2idxAdv@2"
         },
         {
