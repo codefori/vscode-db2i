@@ -337,7 +337,8 @@ export default class schemaBrowser {
           });
 
           if (value !== undefined) {
-            this.filters[node.schema] = value.trim() === `` ? undefined : value.toUpperCase();
+            this.filters[node.schema] = value.trim() === `` ? undefined : value;
+            this.refresh();
           }
         }
       })
@@ -431,8 +432,9 @@ export default class schemaBrowser {
 
       if (element instanceof Schema) {
 
-        const filterValue = this.filters[element.schema];
+        let filterValue = this.filters[element.schema];
         if (filterValue) {
+          filterValue = Statement.noQuotes(Statement.delimName(filterValue, true));
           const filteredObjects = await Schemas.getObjects(element.schema, AllSQLTypes, {filter: filterValue});
           items = filteredObjects.map(obj => new SQLObject(obj));
 
@@ -527,7 +529,7 @@ class SQLObject extends vscode.TreeItem {
     this.description = item.text;
     // For functions and procedures, set a tooltip that includes the specific name
     if (Schemas.isRoutineType(this.type)) {
-      this.tooltip = new vscode.MarkdownString(`${Statement.prettyName(item.name)} (*${Statement.prettyName(item.specificName)}*)`); // Name (Specific name)
+      this.tooltip = new vscode.MarkdownString(`${Statement.prettyName(item.name)} ${item.specificName ? `(*${Statement.prettyName(item.specificName)}*)` : ``}`); // Name (Specific name)
     }
     this.iconPath = itemIcons[type] ? new vscode.ThemeIcon(itemIcons[type]) : undefined;
   }
