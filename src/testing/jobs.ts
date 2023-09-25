@@ -418,5 +418,16 @@ export const JobsSuite: TestSuite = {
       console.log(`Old query method took ${oe - os} milliseconds.`);
       assert.equal((ne - ns) < (oe - os), true);
     }},
+
+    {name: `Explain API`, test: async () => {
+      const newJob = new SQLJob({"full open": true});
+      await newJob.connect();
+
+      const query = `select * from qiws.qcustcdt`;
+
+      const result = await newJob.explain(query);
+
+      console.log(result);
+    }}
   ]
 }

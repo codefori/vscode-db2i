@@ -12,6 +12,11 @@ export enum JobStatus {
   Ended = "ended"
 }
 
+export enum ExplainType {
+  Run,
+  DoNotRun
+}
+
 export enum TransactionEndType {
   COMMIT,
   ROLLBACK
@@ -207,6 +212,34 @@ export class SQLJob {
     }
 
     return version;
+  }
+
+  async explain(statement: string, type: ExplainType = ExplainType.Run) {
+    if (type !== ExplainType.Run) {
+      throw new Error("TODO: support more types of explains");
+    }
+
+    if (this.options["full open"] !== true) {
+      throw new Error("Job option 'full open' must be true.");
+    }
+
+    const explainRequest = {
+      id: SQLJob.getNewUniqueId(),
+      type: `dove`,
+      sql: statement
+    }
+
+    const result = await this.send(JSON.stringify(explainRequest));
+
+    const explainResult: any = JSON.parse(result);
+
+    if (explainResult.success !== true) {
+      this.dispose();
+      this.status = JobStatus.NotStarted;
+      throw new Error(explainResult.error || `Failed to explain.`);
+    }
+
+    return explainResult;
   }
 
   getTraceFilePath(): string|undefined {
