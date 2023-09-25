@@ -133,7 +133,7 @@ async function getObjectColumns(
     let completionItems: CompletionItem[] = [];
     
     if (isUDTF) {
-      const resultSet = await Callable.getResultColumns(schema, name);
+      const resultSet = await Callable.getResultColumns(schema, name, true);
       
       if (!resultSet?.length ? true : false) {
         completionItemCache.set(databaseObj, []);
