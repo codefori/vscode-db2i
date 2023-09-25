@@ -27,7 +27,7 @@ export default class Schemas {
       switch (type) {
         case `schemas`:
           selects.push([
-            `select '${type}' as OBJ_TYPE, SCHEMA_NAME as NAME, SCHEMA_TEXT as TEXT, SYSTEM_SCHEMA_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, `,
+            `select '${type}' as OBJ_TYPE, SCHEMA_NAME as NAME, SCHEMA_TEXT as TEXT, SYSTEM_SCHEMA_NAME as SYS_NAME, '' as SYS_SCHEMA, `,
             `  '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
             `from QSYS2.SYSSCHEMAS`,
             details.filter ? `where SCHEMA_NAME = '${details.filter}' or SYSTEM_SCHEMA_NAME = '${details.filter}'` : ``,
