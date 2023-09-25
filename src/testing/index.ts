@@ -5,11 +5,13 @@ import { getInstance } from "../base";
 import { ManagerSuite } from "./manager";
 import { JobsSuite } from "./jobs";
 import { DatabaseSuite } from "./database";
+import { DatabasePerformanceSuite } from "./databasePerformance";
 
 const suites : TestSuite[] = [
   JobsSuite,
   ManagerSuite,
   DatabaseSuite,
+  DatabasePerformanceSuite
 ]
 
 export type TestSuite = {
