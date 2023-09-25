@@ -37,15 +37,6 @@ export default class Table {
     return JobManager.runSQL(sql);
   }
 
-  /**
-   * @param schema Not user input
-   * @param name Not user input
-   */
-  static clearAdvisedIndexes(schema: string, name: string) {
-    const query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}' and TABLE_NAME = '${name}'`;
-    return getInstance().getContent().runSQL(query);
-  }
-
   static async clearFile(library: string, objectName: string): Promise<void> {
     const command = `CLRPFM ${library}/${objectName}`;
               
