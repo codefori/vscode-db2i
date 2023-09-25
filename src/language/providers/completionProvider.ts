@@ -72,17 +72,30 @@ function isEnabled() {
 function getParmAttributes(parm: SQLParm): string {
   const lines: string[] = [
     `Column: ${parm.PARAMETER_NAME}`,
-    `Type: ${parm.DATA_TYPE}`,
+    `Type: ${prepareParamType(parm)}`,
     `HAS_DEFAULT: ${parm.DEFAULT || `-`}`,
     `IS_NULLABLE: ${parm.IS_NULLABLE}`,
   ];
   return lines.join(`\n `);
 }
 
+function prepareParamType(param: TableColumn | SQLParm): string {
+  if (param.CHARACTER_MAXIMUM_LENGTH) {
+    return `${param.DATA_TYPE}(${param.CHARACTER_MAXIMUM_LENGTH})`;
+  }
+
+  if (param.NUMERIC_PRECISION !== null && param.NUMERIC_SCALE !== null) {
+    return `${param.DATA_TYPE}(${param.NUMERIC_PRECISION}, ${param.NUMERIC_SCALE})`;
+  }
+
+  return `${param.DATA_TYPE}`;
+}
+
+
 function getColumnAttributes(column: TableColumn): string {
   const lines: string[] = [
     `Column: ${column.COLUMN_NAME}`,
-    `Type: ${column.DATA_TYPE}`,
+    `Type: ${prepareParamType(column)}`,
     `HAS_DEFAULT: ${column.HAS_DEFAULT}`,
     `IS_IDENTITY: ${column.IS_IDENTITY}`,
     `IS_NULLABLE: ${column.IS_NULLABLE}`,
