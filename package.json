@@ -225,6 +225,12 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.setSchemaFilter",
+        "title": "Set filter",
+        "category": "Db2 for i",
+        "icon": "$(search)"
+      },
+      {
         "command": "vscode-db2i.pasteGenerator",
         "title": "Paste JSON as SQL",
         "category": "Db2 for i"
@@ -331,6 +337,10 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.setSchemaFilter",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.jobManager.closeJob",
           "when": "never"
         },
@@ -433,6 +443,11 @@
           "command": "vscode-db2i.setCurrentSchema",
           "when": "viewItem == schema",
           "group": "db2@1"
+        },
+        {
+          "command": "vscode-db2i.setSchemaFilter",
+          "when": "viewItem == schema",
+          "group": "inline"
         },
         {
           "command": "vscode-db2i.getResultSet",

@@ -92,19 +92,19 @@ export const DatabaseSuite: TestSuite = {
     }},
 
     {name: `Get tables, system name`, test: async () => {
-      const objects = await Database.getObjects(systemLibrary, `tables`);
+      const objects = await Database.getObjects(systemLibrary, [`tables`]);
 
       assert.notStrictEqual(objects.length, 0);
     }},
 
     {name: `Get tables, sqlSchema name`, test: async () => {
-      const objects = await Database.getObjects(Statement.noQuotes(sqlSchema), `tables`);
+      const objects = await Database.getObjects(Statement.noQuotes(sqlSchema), [`tables`]);
 
       assert.notStrictEqual(objects.length, 0);
     }},
 
     {name: `Get columns, system name`, test: async () => {
-      const objects = await Database.getObjects(systemLibrary, `tables`);
+      const objects = await Database.getObjects(systemLibrary, [`tables`]);
       assert.notStrictEqual(objects.length, 0);
 
       const cols = await Table.getItems(systemLibrary, objects[0].name);
@@ -112,7 +112,7 @@ export const DatabaseSuite: TestSuite = {
     }},
 
     {name: `Get columns, sqlSchema name`, test: async () => {
-      const objects = await Database.getObjects(Statement.noQuotes(sqlSchema), `tables`);
+      const objects = await Database.getObjects(Statement.noQuotes(sqlSchema), [`tables`]);
       assert.notStrictEqual(objects.length, 0);
 
       const cols = await Table.getItems(Statement.noQuotes(sqlSchema), objects[0].name);
@@ -120,7 +120,7 @@ export const DatabaseSuite: TestSuite = {
     }},
 
     {name: `Get view columns, system name`, test: async () => {
-      const objects = await Database.getObjects(systemLibrary, `views`);
+      const objects = await Database.getObjects(systemLibrary, [`views`]);
       assert.notStrictEqual(objects.length, 0);
 
       const cols = await View.getColumns(systemLibrary, objects[0].name);
@@ -128,7 +128,7 @@ export const DatabaseSuite: TestSuite = {
     }},
 
     {name: `Get view columns, sqlSchema name`, test: async () => {
-      const objects = await Database.getObjects(Statement.noQuotes(sqlSchema), `views`);
+      const objects = await Database.getObjects(Statement.noQuotes(sqlSchema), [`views`]);
       assert.notStrictEqual(objects.length, 0);
 
       const cols = await View.getColumns(Statement.noQuotes(sqlSchema), objects[0].name);
@@ -136,7 +136,7 @@ export const DatabaseSuite: TestSuite = {
     }},
 
     {name: `Generate SQL, system names`, test: async () => {
-      const objects = await Database.getObjects(systemLibrary, `tables`);
+      const objects = await Database.getObjects(systemLibrary, [`tables`]);
       assert.notStrictEqual(objects.length, 0);
 
       const result = await Database.generateSQL(systemLibrary, objects[0].name, `TABLE`);
@@ -144,7 +144,7 @@ export const DatabaseSuite: TestSuite = {
     }},
 
     {name: `Generate SQL, sql names`, test: async () => {
-      const objects = await Database.getObjects(Statement.noQuotes(sqlSchema), `tables`);
+      const objects = await Database.getObjects(Statement.noQuotes(sqlSchema), [`tables`]);
       assert.notStrictEqual(objects.length, 0);
 
       const result = await Database.generateSQL(Statement.noQuotes(sqlSchema), objects[0].name, `TABLE`);
@@ -195,7 +195,7 @@ export const DatabaseSuite: TestSuite = {
     }},
 
     {name: `Retrieve overloaded functions`, test: async () => {
-      const functions = await Database.getObjects(`OVERLOAD`, `functions`);
+      const functions = await Database.getObjects(`OVERLOAD`, [`functions`]);
       // Verify two functions with same name exist
       assert.strictEqual(functions.length, 2);
     }},
@@ -220,14 +220,14 @@ export const DatabaseSuite: TestSuite = {
     {name: `Delete overloaded function`, test: async () => {
       // Delete one of the overloaded functions
       await Database.deleteObject(`OVERLOAD`, `MULTI_FUNC_SQUARED`, `function`);
-      const functions = await Database.getObjects(`OVERLOAD`, `functions`);
+      const functions = await Database.getObjects(`OVERLOAD`, [`functions`]);
       // Verify only one function remains and it is not the one deleted
       assert.strictEqual(functions.length, 1);
       assert.strictEqual(functions[0].specificName, `MULTI_FUNC_PRODUCT`);
     }},
 
     {name: `Retrieve overloaded procedures`, test: async () => {
-      const procedures = await Database.getObjects(`OVERLOAD`, `procedures`);
+      const procedures = await Database.getObjects(`OVERLOAD`, [`procedures`]);
       // Verify two procedures with same name exist
       assert.strictEqual(procedures.length, 2);
     }},
@@ -252,7 +252,7 @@ export const DatabaseSuite: TestSuite = {
     {name: `Delete overloaded procedure`, test: async () => {
       // Delete one of the overloaded procedures
       await Database.deleteObject(`OVERLOAD`, `MULTI_PROC_ALL_MONITORS`, `procedure`);
-      const procedures = await Database.getObjects(`OVERLOAD`, `procedures`);
+      const procedures = await Database.getObjects(`OVERLOAD`, [`procedures`]);
       // Verify only one procedure remains and it is not the one deleted
       assert.strictEqual(procedures.length, 1);
       assert.strictEqual(procedures[0].specificName, `MULTI_PROC_MY_MONITORS`);
