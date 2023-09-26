@@ -1065,5 +1065,19 @@ describe(`PL body tests`, () => {
     expect(objs.length).toBe(1);
     expect(objs[0].object.schema).toBe(`qsys2`);
     expect(objs[0].object.name).toBe(`ACTIVE_JOB_INFO`);
-  })
+  });
+
+  test(`SELECT & STOP`, () => {
+    const lines = [ 
+      `--`,
+      `SET CURRENT SCHEMA boop;`
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Set);
+  });
 });

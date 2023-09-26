@@ -13,10 +13,12 @@ export enum StatementType {
 	Drop = "Drop",
 	End = "End",
 	Call = "Call",
-	Alter = "Alter"
+	Alter = "Alter",
+	Set = "Set"
 }
 
 export const StatementTypeWord = {
+	'SET': StatementType.Set,
 	'CREATE': StatementType.Create,
 	'SELECT': StatementType.Select,
 	'WITH': StatementType.With,
