@@ -13,7 +13,10 @@ export interface SQLExample {
   requirements?: ExampleSystemRequirements;
 };
 
-export const Examples: SQLExamplesList = {
+    // Unlike the bulk of the examples defined below, the services examples are retrieved dynamically
+    export const ServiceInfoLabel = `IBM i (SQL) Services`;
+
+export let Examples: SQLExamplesList = {
   "Data Definition Language (DDL)": [
     {
       "name": "Create Schema",
