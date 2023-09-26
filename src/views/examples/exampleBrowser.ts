@@ -61,6 +61,7 @@ export class ExampleBrowser implements TreeDataProvider<any> {
   }
 
   async getChildren(element?: ExampleGroupItem): Promise<any[]> {
+    // Unlike the bulk of the examples which are defined in views/examples/index.ts, the services examples are retrieved dynamically
     if (!Examples[ServiceInfoLabel]) {
       getServiceInfo().then(serviceExamples => {
         Examples[ServiceInfoLabel] = serviceExamples;
