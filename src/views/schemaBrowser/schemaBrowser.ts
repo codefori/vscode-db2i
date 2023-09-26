@@ -350,6 +350,8 @@ export default class schemaBrowser {
 
           if (value !== undefined) {
             this.filters[node.schema] = value.trim() === `` ? undefined : value;
+
+            updateSchemaNode(node, this.filters[node.schema]);
             this.refresh(node);
           }
         }
@@ -492,6 +494,11 @@ export default class schemaBrowser {
   }
 }
 
+function updateSchemaNode(node: Schema, newFilterValue?: string) {
+  node.iconPath = new vscode.ThemeIcon(newFilterValue ? `filter` : `database`);
+  node.description = newFilterValue ? `(${newFilterValue})` : undefined;
+}
+
 class Schema extends vscode.TreeItem {
   schema: string;
   constructor(name: string, currentFilterLabel?: string) {
@@ -499,9 +506,8 @@ class Schema extends vscode.TreeItem {
 
     this.contextValue = `schema`;
     this.schema = name;
-    this.iconPath = new vscode.ThemeIcon(`database`);
 
-    this.description = currentFilterLabel ? `(${currentFilterLabel})` : undefined;
+    updateSchemaNode(this, currentFilterLabel);
   }
 }
 
