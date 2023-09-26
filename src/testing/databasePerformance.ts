@@ -45,9 +45,7 @@ export const DatabasePerformanceSuite: TestSuite = {
       name: `time async get objects`,
       test: async () => {
         const start = performance.now();
-        const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
-          const data = await Database.getObjects(forSchema, [value.type]);
-        });
+        const promises = Object.entries(sqlTypes).map(([_, value]) => Database.getObjects(forSchema, [value.type]));
         const results = await Promise.allSettled(promises);
         const end = performance.now();
         console.log(`time get objects: ${end - start}ms`);
