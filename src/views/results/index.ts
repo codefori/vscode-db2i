@@ -1,9 +1,8 @@
 import vscode from "vscode"
 
 import * as csv from "csv/sync";
-
-import Configuration from "../../configuration"
 import * as html from "./html";
+
 import { getInstance } from "../../base";
 import { JobManager } from "../../config";
 import { Query, QueryState } from "../../connection/query";
@@ -163,15 +162,7 @@ export function initialise(context: vscode.ExtensionContext) {
             await vscode.window.showTextDocument(textDoc);
           }
 
-          if (
-            statement.type === StatementType.Create || statement.type === StatementType.Alter) {
-            const ref = statement.refs[0];
-            const databaseObj =
-              statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
-                ? ref.object.schema || ``
-                : ref.object.schema + ref.object.name;
-            changedCache.add((databaseObj || ``).toUpperCase());
-          }
+          statementMiddleware(statement);
 
           if (statement.content.trim().length > 0) {
             try {
@@ -254,9 +245,55 @@ export function initialise(context: vscode.ExtensionContext) {
   )
 }
 
+export function statementMiddleware(statement: StatementInfo) {
+  switch (statement.type) {
+
+    case StatementType.Create:
+    case StatementType.Alter:
+      const ref = statement.refs[0];
+      const databaseObj =
+        statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
+          ? ref.object.schema || ``
+          : ref.object.schema + ref.object.name;
+      changedCache.add((databaseObj || ``).toUpperCase());
+      break;
+
+    case StatementType.Set:
+      const selected = JobManager.getSelection();
+      if (selected) {
+        // SET -CURRENT- X -=- Y
+        let setterIndex = 1;
+
+        const sqlDocument = new Document(statement.content);
+        const setStatement = sqlDocument.getStatementGroups()[0].statements[0];
+
+        if (setStatement.tokens[1].value.toUpperCase() === `CURRENT`) {
+          setterIndex += 1;
+        }
+
+        let valueIndex = setterIndex + 1;
+
+        if (setStatement.tokens[valueIndex].type === `equal`) {
+          valueIndex += 1;
+        }
+
+        const variableValue = setStatement.tokens[setterIndex].value;
+        const setterValue = setStatement.tokens[valueIndex].value;
+
+        if (variableValue && setterValue) {
+          switch (variableValue.toUpperCase()) {
+            case `SCHEMA`:
+              selected.job.options.libraries[0] = variableValue;
+              break;
+          }
+        }
+      }
+      break;
+  }
+}
+
 export function parseStatement(editor: vscode.TextEditor): StatementInfo {
   const document = editor.document;
-  const eol = (document.eol === vscode.EndOfLine.LF ? `\n` : `\r\n`);
 
   let text = document.getText(editor.selection).trim();
   let content = ``;

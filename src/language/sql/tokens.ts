@@ -78,7 +78,7 @@ export default class SQLTokeniser {
     },
   ];
   readonly spaces = [`\t`, ` `];
-  readonly splitParts: string[] = [`(`, `)`, `/`, `.`, `*`, `-`, `+`, `;`, `"`, `&`, `%`, `,`, `|`, `\n`, `\r`, ...this.spaces];
+  readonly splitParts: string[] = [`(`, `)`, `/`, `.`, `*`, `-`, `+`, `;`, `"`, `&`, `%`, `,`, `|`, `=`, `\n`, `\r`, ...this.spaces];
   readonly types: { [part: string]: string } = {
     '(': `openbracket`,
     ')': `closebracket`,
@@ -93,6 +93,7 @@ export default class SQLTokeniser {
     '%': `percent`,
     ',': `comma`,
     '|': `pipe`,
+    '=': `equal`,
     '\n': `newline`,
     '\r': `newliner`,
   };
