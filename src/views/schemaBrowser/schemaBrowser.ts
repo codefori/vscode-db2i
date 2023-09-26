@@ -448,8 +448,8 @@ export default class schemaBrowser {
 
         let filterValue = this.filters[element.schema];
         if (filterValue) {
-          filterValue = Statement.noQuotes(Statement.delimName(filterValue, true));
-          const filteredObjects = await Schemas.getObjects(element.schema, AllSQLTypes, {filter: filterValue});
+          const validSchemaName = Statement.noQuotes(element.schema);
+          const filteredObjects = await Schemas.getObjects(validSchemaName, AllSQLTypes, {filter: filterValue});
           items = filteredObjects.map(obj => new SQLObject(obj));
 
         } else {
