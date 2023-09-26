@@ -23,6 +23,11 @@ export default class Schemas {
     let selects: string[] = [];
     let query : string;
 
+    if (details.filter) {
+      // This is so we can do a case insensitive filter
+      details.filter = details.filter.toUpperCase();
+    }
+
     // If there are multiple types, we build a union. It's important that the ordering of the columns in the selects are consistant:
     // OBJ_TYPE, NAME, TEXT, SYS_NAME, SYS_SCHEMA, SPECNAME, BASE_SCHEMA, BASE_OBJ
 
@@ -32,7 +37,7 @@ export default class Schemas {
           selects.push([
             `select '${type}' as OBJ_TYPE, SCHEMA_NAME as NAME, SCHEMA_TEXT as TEXT, SYSTEM_SCHEMA_NAME as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
             `from QSYS2.SYSSCHEMAS`,
-            details.filter ? `where SCHEMA_NAME = '${details.filter}' or SYSTEM_SCHEMA_NAME = '${details.filter}'` : ``,
+            details.filter ? `where UPPER(SCHEMA_NAME) = '${details.filter}' or UPPER(SYSTEM_SCHEMA_NAME) = '${details.filter}'` : ``,
             `order by QSYS2.DELIMIT_NAME(SCHEMA_NAME) asc`
           ].join(` `));
             break;
@@ -43,7 +48,7 @@ export default class Schemas {
         selects.push([
           `select '${type}' as OBJ_TYPE, TABLE_NAME as NAME, TABLE_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, BASE_TABLE_SCHEMA as BASE_SCHEMA, BASE_TABLE_NAME as BASE_OBJ`,
           `from QSYS2.SYSTABLES`,
-          `where TABLE_SCHEMA = '${schema}' and TABLE_TYPE in (${typeMap[type].map(item => `'${item}'`).join(`, `)}) ${details.filter ? `and TABLE_NAME like '%${details.filter}%'`: ``}`,
+          `where TABLE_SCHEMA = '${schema}' and TABLE_TYPE in (${typeMap[type].map(item => `'${item}'`).join(`, `)}) ${details.filter ? `and UPPER(TABLE_NAME) like '%${details.filter}%'`: ``}`,
           `order by TABLE_NAME asc`
         ].join(` `));
         break;
@@ -52,7 +57,7 @@ export default class Schemas {
         selects.push([
           `select '${type}' as OBJ_TYPE, CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
           `from QSYS2.SYSCST`,
-          `where CONSTRAINT_SCHEMA = '${schema}' ${details.filter ? `and CONSTRAINT_NAME like '%${details.filter}%'`: ``}`,
+          `where CONSTRAINT_SCHEMA = '${schema}' ${details.filter ? `and UPPER(CONSTRAINT_NAME) like '%${details.filter}%'`: ``}`,
           `order by CONSTRAINT_NAME asc`
         ].join(` `));
         break;
@@ -61,7 +66,7 @@ export default class Schemas {
         selects.push([
           `select '${type}' as OBJ_TYPE, ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
           `from QSYS2.SYSFUNCS`,
-          `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and ROUTINE_NAME like '%${details.filter}%'`: ``} and FUNCTION_ORIGIN in ('E','U')`,
+          `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and UPPER(ROUTINE_NAME) like '%${details.filter}%'`: ``} and FUNCTION_ORIGIN in ('E','U')`,
           `order by ROUTINE_NAME asc`
         ].join(` `));
         break;
@@ -70,7 +75,7 @@ export default class Schemas {
         selects.push([
           `select '${type}' as OBJ_TYPE, VARIABLE_NAME as NAME, VARIABLE_TEXT as TEXT, SYSTEM_VAR_NAME as SYS_NAME, SYSTEM_VAR_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
           `from QSYS2.SYSVARIABLES`,
-          `where VARIABLE_SCHEMA = '${schema}' ${details.filter ? `and VARIABLE_NAME like '%${details.filter}%'`: ``}`,
+          `where VARIABLE_SCHEMA = '${schema}' ${details.filter ? `and UPPER(VARIABLE_NAME) like '%${details.filter}%'`: ``}`,
           `order by VARIABLE_NAME asc`
         ].join(` `));
         break;
@@ -79,7 +84,7 @@ export default class Schemas {
         selects.push([
           `select '${type}' as OBJ_TYPE, INDEX_NAME as NAME, INDEX_TEXT as TEXT, SYSTEM_INDEX_NAME as SYS_NAME, SYSTEM_INDEX_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
           `from QSYS2.SYSINDEXES`,
-          `where INDEX_SCHEMA = '${schema}' ${details.filter ? `and INDEX_NAME like '%${details.filter}%'`: ``}`,
+          `where INDEX_SCHEMA = '${schema}' ${details.filter ? `and UPPER(INDEX_NAME) like '%${details.filter}%'`: ``}`,
           `order by INDEX_NAME asc`
         ].join(` `));
         break;
@@ -88,7 +93,7 @@ export default class Schemas {
         selects.push([
           `select '${type}' as OBJ_TYPE, ROUTINE_NAME as NAME, ROUTINE_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
           `from QSYS2.SYSPROCS`,
-          `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and ROUTINE_NAME like '%${details.filter}%'`: ``}`,
+          `where ROUTINE_SCHEMA = '${schema}' ${details.filter ? `and UPPER(ROUTINE_NAME) like '%${details.filter}%'`: ``}`,
           `order by ROUTINE_NAME asc`
         ].join(` `));
         break;
@@ -97,7 +102,7 @@ export default class Schemas {
         selects.push([
           `select '${type}' as OBJ_TYPE, SEQUENCE_NAME as NAME, SEQUENCE_TEXT as TEXT, SYSTEM_SEQ_NAME as SYS_NAME, SYSTEM_SEQ_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
           `from QSYS2.SYSSEQUENCES`,
-          `where SEQUENCE_SCHEMA = '${schema}' ${details.filter ? `and SEQUENCE_NAME like '%${details.filter}%'`: ``}`,
+          `where SEQUENCE_SCHEMA = '${schema}' ${details.filter ? `and UPPER(SEQUENCE_NAME) like '%${details.filter}%'`: ``}`,
           `order by SEQUENCE_NAME asc`
         ].join(` `));
         break;
@@ -116,7 +121,7 @@ export default class Schemas {
         selects.push([
           `select '${type}' as OBJ_TYPE, TRIGGER_NAME as NAME, TRIGGER_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, EVENT_OBJECT_SCHEMA as BASE_SCHEMA, EVENT_OBJECT_TABLE as BASE_OBJ`,
           `from QSYS2.SYSTRIGGERS`,
-          `where TRIGGER_SCHEMA = '${schema}' ${details.filter ? `and TRIGGER_NAME like '%${details.filter}%'`: ``}`,
+          `where TRIGGER_SCHEMA = '${schema}' ${details.filter ? `and UPPER(TRIGGER_NAME) like '%${details.filter}%'`: ``}`,
           `order by TRIGGER_NAME asc`
         ].join(` `));
         break;
@@ -125,7 +130,7 @@ export default class Schemas {
         selects.push([
           `select '${type}' as OBJ_TYPE, USER_DEFINED_TYPE_NAME as NAME, TYPE_TEXT as TEXT, SYSTEM_TYPE_NAME as SYS_NAME, SYSTEM_TYPE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
           `from QSYS2.SYSTYPES`,
-          `where USER_DEFINED_TYPE_SCHEMA = '${schema}' ${details.filter ? `and USER_DEFINED_TYPE_NAME like '%${details.filter}%'`: ``}`,
+          `where USER_DEFINED_TYPE_SCHEMA = '${schema}' ${details.filter ? `and UPPER(USER_DEFINED_TYPE_NAME) like '%${details.filter}%'`: ``}`,
           `order by USER_DEFINED_TYPE_NAME asc`
         ].join(` `));
         break;
