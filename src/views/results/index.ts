@@ -255,7 +255,7 @@ export function statementMiddleware(statement: StatementInfo) {
     case StatementType.Alter:
       const ref = statement.refs[0];
       const databaseObj =
-        statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
+        statement.type === StatementType.Create && ref.createType.toUpperCase() === `SCHEMA`
           ? ref.object.schema || ``
           : ref.object.schema + ref.object.name;
       changedCache.add((databaseObj || ``).toUpperCase());
