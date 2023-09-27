@@ -247,7 +247,6 @@ export function initialise(context: vscode.ExtensionContext) {
 
 export function statementMiddleware(statement: StatementInfo) {
   switch (statement.type) {
-
     case StatementType.Create:
     case StatementType.Alter:
       const ref = statement.refs[0];
@@ -261,32 +260,7 @@ export function statementMiddleware(statement: StatementInfo) {
     case StatementType.Set:
       const selected = JobManager.getSelection();
       if (selected) {
-        // SET -CURRENT- X -=- Y
-        let setterIndex = 1;
-
-        const sqlDocument = new Document(statement.content);
-        const setStatement = sqlDocument.getStatementGroups()[0].statements[0];
-
-        if (setStatement.tokens[1].value.toUpperCase() === `CURRENT`) {
-          setterIndex += 1;
-        }
-
-        let valueIndex = setterIndex + 1;
-
-        if (setStatement.tokens[valueIndex].type === `equal`) {
-          valueIndex += 1;
-        }
-
-        const variableValue = setStatement.tokens[setterIndex].value;
-        const setterValue = setStatement.tokens[valueIndex].value;
-
-        if (variableValue && setterValue) {
-          switch (variableValue.toUpperCase()) {
-            case `SCHEMA`:
-              selected.job.options.libraries[0] = variableValue;
-              break;
-          }
-        }
+        selected.job.updateInternalConfig();
       }
       break;
   }

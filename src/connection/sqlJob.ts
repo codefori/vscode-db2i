@@ -31,7 +31,6 @@ const TransactionCountQuery = [
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
 export class SQLJob {
-
   private static uniqueIdCounter: number = 0;
   private channel: any;
   private responseEmitter: EventEmitter = new EventEmitter();
@@ -281,6 +280,16 @@ export class SQLJob {
     }
 
     return this.query<JobLogEntry>(query).run();
+  }
+
+  async updateInternalConfig() {
+    const statement = `VALUES (CURRENT SCHEMA)`;
+    const result = await this.query<any>(statement).run();
+    const [data] = result.data;
+
+    let newSchema = data['00001'];
+
+    this.options.libraries[0] = newSchema;
   }
   
   getUniqueId() {
