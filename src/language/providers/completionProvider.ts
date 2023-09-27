@@ -14,6 +14,7 @@ import CompletionItemCache, { changedCache } from "./completionItemCache";
 import Callable from "../../database/callable";
 import { ServerComponent } from "../../connection/serverComponent";
 import { env } from "process";
+import { getInstance } from "../../base";
 
 const completionItemCache = new CompletionItemCache();
 
@@ -524,7 +525,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
   `sql`,
   {
     async provideCompletionItems(document, position, token, context) {
-      if (ServerComponent.isInstalled() && isEnabled()) {
+      if (ServerComponent.isInstalled() && isEnabled() && JobManager.getSelection()) {
         const trigger = context.triggerCharacter;
         const content = document.getText();
         const offset = document.offsetAt(position);
@@ -543,6 +544,12 @@ export const completionProvider = languages.registerCompletionItemProvider(
 );
 
 const getDefaultSchema = (): string => {
+  const instance = getInstance();
+  const config = instance.getConfig();
+
   const currentJob = JobManager.getSelection();
-  return currentJob && currentJob.job.options.libraries[0] ? currentJob.job.options.libraries[0] : `QGPL`;
+  const currentSchema = currentJob ? currentJob.job.options.libraries[0] : undefined;
+  
+  const schema = currentJob && currentSchema !== `*LIBL` && currentSchema !== undefined ? currentJob.job.options.libraries[0] : (config.currentLibrary || `QGPL`);
+  return schema;
 }

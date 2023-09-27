@@ -10,6 +10,7 @@ import Types from "../types";
 import Statement from "../../database/statement";
 import { copyUI } from "./copyUI";
 import { getAdvisedIndexesStatement } from "./statements";
+import { StatementType } from "../../language/sql/types";
 
 const viewItem = {
   "tables": `table`,
@@ -326,17 +327,14 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.setCurrentSchema`, async (node: SchemaItem) => {
         if (node && node.contextValue === `schema`) {
-          const schema = node.schema.toUpperCase();
+          const schema = node.schema;
 
-          const config = getInstance().getConfig();
-          const currentLibrary = config.currentLibrary.toUpperCase();
-  
-          if (schema && schema !== currentLibrary) {
-            config.currentLibrary = schema;
-            await getInstance().setConfig(config);
-          }
-
-          vscode.window.showInformationMessage(`Current schema set to ${schema}.`);
+          const content = `SET CURRENT SCHEMA ${schema}`;
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            qualifier: `statement`,
+            type: StatementType.Set
+          });
         }
       }),
 

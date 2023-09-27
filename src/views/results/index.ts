@@ -162,14 +162,14 @@ export function initialise(context: vscode.ExtensionContext) {
             await vscode.window.showTextDocument(textDoc);
           }
 
-          statementMiddleware(statement);
-
           if (statement.content.trim().length > 0) {
             try {
               if (statement.qualifier === `cl`) {
                 resultSetProvider.setScrolling(statement.content, true);
               } else {
-                if (statement.qualifier === `statement`) {
+                if (statement.qualifier === `statement` && statement.type !== StatementType.Set) {
+                  statementMiddleware(statement);
+
                   // If it's a basic statement, we can let it scroll!
                   resultSetProvider.setScrolling(statement.content);
 
@@ -177,7 +177,7 @@ export function initialise(context: vscode.ExtensionContext) {
                   // Otherwise... it's a bit complicated.
                   const data = await JobManager.runSQL(statement.content, undefined);
 
-                  if (data.length > 0) {
+                  if (data && data.length > 0) {
                     switch (statement.qualifier) {
 
                     case `csv`:
@@ -217,6 +217,10 @@ export function initialise(context: vscode.ExtensionContext) {
 
                   } else {
                     vscode.window.showInformationMessage(`Query executed with no data returned.`);
+                  }
+
+                  if (statement.type === StatementType.Set) {
+                    statementMiddleware(statement);
                   }
                 }
               }
