@@ -9,12 +9,17 @@ import { OutputChannel, commands, window } from "vscode";
 
 import { writeFile, unlink } from "fs/promises";
 import os from "os";
+import Configuration from "../configuration";
 
 const octokit = new Octokit();
 
 // During development, you can set the SERVER_VERSION in .vscode/launch.json
 // Otherwise, fall back to the working version
 const SERVER_VERSION = process.env[`SERVER_VERSION`] || `v1.2.0`;
+
+function shouldAutoUpdate() {
+  return (process.env.DB2I_AUTOUPDATE_SC === `true`);
+}
 
 const ExecutablePathDir = `$HOME/.vscode/`;
 
@@ -115,9 +120,24 @@ export class ServerComponent {
         const lastInstalledName = Config.getServerComponentName();
 
         if (lastInstalledName !== basename || this.installed === false) {
-          const updateQuestion = await window.showInformationMessage(`An update to the database server component is required: ${basename}`, `Update`);
+          let doUpdate = false;
 
-          if (updateQuestion === `Update`) {
+          // First, check if our environment has been configured to auto update
+          if (shouldAutoUpdate()) doUpdate = true;
+
+          // Then, check our user config to see if we should do an auto update
+          if (!doUpdate) {
+            const userAutoUpdate = Configuration.get<boolean>(`autoUpdateServerComponent`);
+            if (userAutoUpdate) doUpdate = true;
+          }
+
+          // Latest, ask the user if they want to update
+          if (!doUpdate) {
+            const updateQuestion = await window.showInformationMessage(`An update to the database server component is required: ${basename}`, `Update`);
+            if (updateQuestion === `Update`) doUpdate = true;
+          }
+
+          if (doUpdate) {
             // This means we're currently running a different version, 
             // or maybe not at all (currentlyInstalled can be undefined)
 

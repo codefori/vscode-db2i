@@ -60,6 +60,11 @@
           "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",
           "default": "ask"
         },
+        "vscode-db2i.autoUpdateServerComponent": {
+          "type": "boolean",
+          "description": "If true, the server component will automatically update without asking the user.",
+          "default": false
+        },
         "vscode-db2i.jobConfigs": {
           "type": "object",
           "description": "Saved configs for",
