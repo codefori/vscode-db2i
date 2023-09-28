@@ -116,7 +116,7 @@ export class ServerComponent {
 
         if (lastInstalledName !== basename || this.installed === false) {
           const updateQuestion = await window.showInformationMessage(
-            `Update required for Database`, 
+            `Database Extension update required`, 
             {
               modal: true,
               detail: `An update to the database server component is required: ${basename}`
