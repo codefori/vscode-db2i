@@ -3,8 +3,11 @@ import SQLTokeniser from "./tokens";
 import { Definition, IRange, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
 
 export default class Document {
+  private content: string;
   statements: Statement[];
+
   constructor(content: string) {
+    this.content = content;
     this.statements = [];
 
     const tokeniser = new SQLTokeniser();
@@ -162,6 +165,38 @@ export default class Document {
       const end = (groups[i + 1] ? groups[i + 1].range.start : statement.range.end);
       return (offset >= statement.range.start && offset < end) || (i === (groups.length - 1) && offset >= end);
     })
+  }
+
+  removeEmbeddedAreas(statement: Statement) {
+    const ranges = statement.getEmbeddedStatementAreas();
+
+    let newContent = this.content.substring(statement.range.start, statement.range.end);
+    let parameterCount = 0;
+
+    const startRange = statement.range.start;
+
+    // We do it in reverse so the substring ranges doesn't change
+    for (let x = ranges.length-1; x >= 0; x--) {
+      const area = ranges[x];
+
+      let start = area.range.start - startRange, end = area.range.end - startRange;
+
+      switch (area.type) {
+        case `marker`:
+          newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
+          parameterCount++;
+          break;
+
+        case `remove`:
+          newContent = newContent.substring(0, start) + newContent.substring(end+1);
+          break;
+      }
+    }
+
+    return {
+      content: newContent,
+      parameterCount
+    };
   }
 }
 
