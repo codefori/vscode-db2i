@@ -1,9 +1,9 @@
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-import { Definition, IRange, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
+import { Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
 
 export default class Document {
-  private content: string;
+  content: string;
   statements: Statement[];
 
   constructor(content: string) {
@@ -167,23 +167,27 @@ export default class Document {
     })
   }
 
-  removeEmbeddedAreas(statement: Statement) {
-    const ranges = statement.getEmbeddedStatementAreas();
+  removeEmbeddedAreas(statement: Statement, snippetString?: boolean): ParsedEmbeddedStatement {
+    const areas = statement.getEmbeddedStatementAreas();
 
+    const totalParameters = areas.filter(a => a.type === `marker`).length;
     let newContent = this.content.substring(statement.range.start, statement.range.end);
     let parameterCount = 0;
 
     const startRange = statement.range.start;
 
     // We do it in reverse so the substring ranges doesn't change
-    for (let x = ranges.length-1; x >= 0; x--) {
-      const area = ranges[x];
+    for (let x = areas.length-1; x >= 0; x--) {
+      const area = areas[x];
 
       let start = area.range.start - startRange, end = area.range.end - startRange;
 
       switch (area.type) {
         case `marker`:
-          newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
+          const markerContent = newContent.substring(start, end);
+
+          newContent = newContent.substring(0, start) + (snippetString ? `\${${totalParameters-parameterCount}:${markerContent}}` : `?`) + newContent.substring(end) + (snippetString ? `$0` : ``);
+      
           parameterCount++;
           break;
 
