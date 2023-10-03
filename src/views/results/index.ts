@@ -1,4 +1,4 @@
-import vscode, { SnippetString } from "vscode"
+import vscode, { SnippetString, ViewColumn } from "vscode"
 
 import * as csv from "csv/sync";
 
@@ -129,6 +129,8 @@ export interface StatementInfo {
   content: string,
   qualifier: StatementQualifier,
   open?: boolean,
+  viewColumn?: ViewColumn,
+  viewFocus?: boolean,
   history?: boolean
 }
 
@@ -160,7 +162,7 @@ export function initialise(context: vscode.ExtensionContext) {
 
           if (statementDetail.open) {
             const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content: statementDetail.content });
-            editor = await vscode.window.showTextDocument(textDoc);
+            editor = await vscode.window.showTextDocument(textDoc, statementDetail.viewColumn, statementDetail.viewFocus);
           }
 
           if (editor) {
