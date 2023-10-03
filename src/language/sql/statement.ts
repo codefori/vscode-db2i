@@ -477,6 +477,7 @@ export default class Statement {
 				case `statementType`:
 					if (declareStmt) continue;
 
+					// If we're in a DECLARE, it's likely a cursor definition
 					if (currentToken.value.toLowerCase() === `declare`) {
 						declareStmt = currentToken;
 					}
@@ -485,6 +486,7 @@ export default class Statement {
 				case `clause`:
 					if (declareStmt) continue;
 
+					// We need to remove the INTO clause completely.
 					if (currentToken.value.toLowerCase() === `into`) {
 						intoClause = currentToken;
 					} else if (intoClause) {
@@ -520,6 +522,10 @@ export default class Statement {
 					let followingTokenI = i+1;
 					let endToken: Token;
 
+					// Handles when we have a host variable
+					// This logic supports qualified host variables
+					// i.e. :myvar or :mystruct.subf
+
 					let followingToken = this.tokens[followingTokenI];
 					while (followingToken && followingToken.type === nextMustBe) {
 						switch (followingToken.type) {
@@ -549,6 +555,7 @@ export default class Statement {
 
 				default:
 					if (i === 0 && tokenIs(currentToken, `word`, `EXEC`)) {
+						// We check and remove the starting `EXEC SQL`
 						if (tokenIs(this.tokens[i+1], `word`, `SQL`)) {
 							ranges.push({
 								type: `remove`,
@@ -560,6 +567,8 @@ export default class Statement {
 						}
 					} else 
 					if (declareStmt && tokenIs(currentToken, `keyword`, `FOR`)) {
+						// If we're a DECLARE, and we found the FOR keyword, the next
+						// set of tokens should be the select.
 						ranges.push({
 							type: `remove`,
 							range: {
