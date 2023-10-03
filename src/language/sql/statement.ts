@@ -460,19 +460,31 @@ export default class Statement {
 
 	/** 
 	 * Gets areas of statement that are likely from embedded statements
+	 * EXEC SQL
 	 * INTO area
 	 * Host variables
-	 * EXEC SQL
+	 * DECLARE .. CURSOR FOR
 	 */
 	getEmbeddedStatementAreas() {
 		let ranges: {type: "remove"|"marker", range: IRange}[] = [];
 		let intoClause: Token|undefined;
+		let declareStmt: Token|undefined;
 
 		for (let i = 0; i < this.tokens.length; i++) {
 			const currentToken = this.tokens[i];
 
 			switch (currentToken.type) {
+				case `statementType`:
+					if (declareStmt) continue;
+
+					if (currentToken.value.toLowerCase() === `declare`) {
+						declareStmt = currentToken;
+					}
+					break;
+
 				case `clause`:
+					if (declareStmt) continue;
+
 					if (currentToken.value.toLowerCase() === `into`) {
 						intoClause = currentToken;
 					} else if (intoClause) {
@@ -492,6 +504,7 @@ export default class Statement {
 
 				case `questionmark`:
 					if (intoClause) continue;
+					if (declareStmt) continue;
 
 					ranges.push({
 						type: `marker`,
@@ -501,6 +514,7 @@ export default class Statement {
 
 				case `colon`:
 					if (intoClause) continue;
+					if (declareStmt) continue;
 
 					let nextMustBe: "word"|"dot" = `word`;
 					let followingTokenI = i+1;
@@ -544,6 +558,17 @@ export default class Statement {
 								}
 							});
 						}
+					} else 
+					if (declareStmt && tokenIs(currentToken, `keyword`, `FOR`)) {
+						ranges.push({
+							type: `remove`,
+							range: {
+								start: declareStmt.range.start,
+								end: currentToken.range.end
+							}
+						});
+
+						declareStmt = undefined;
 					}
 					break;
 			}
