@@ -290,6 +290,12 @@
         "icon": "$(edit)"
       },
       {
+        "command": "vscode-db2i.jobManager.editSelfCodes",
+        "title": "Edit SELFCODES",
+        "category": "Db2 for i",
+        "icon": "$(bracket-error)"
+      },
+      {
         "command": "vscode-db2i.jobManager.copyJobId",
         "title": "Copy Job Name",
         "category": "Db2 for i",
@@ -346,6 +352,10 @@
         },
         {
           "command": "vscode-db2i.jobManager.editJobProps",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editSelfCodes",
           "when": "never"
         },
         {
@@ -516,6 +526,11 @@
         },
         {
           "command": "vscode-db2i.jobManager.editJobProps",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editSelfCodes",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
         },

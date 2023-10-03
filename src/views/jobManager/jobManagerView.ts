@@ -9,6 +9,8 @@ import { ServerComponent } from "../../connection/serverComponent";
 import { updateStatusBar } from "./statusBar";
 import { SQLJob, TransactionEndType } from "../../connection/sqlJob";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
+import { selfCodesMap } from "./selfCodes/selfCodes";
+import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -124,6 +126,35 @@ export class JobManagerView implements TreeDataProvider<any> {
               })
             }
           })
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.editSelfCodes`, async (node?: SQLJobItem) => {
+        const id = node ? node.label as string : undefined;
+        let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected) {
+          try {
+            const selfCodeItems = selfCodesMap.map(code => new SelfCodesQuickPickItem(code));
+  
+            const quickPick = vscode.window.createQuickPick();
+            quickPick.title = `Select SELFCODES`;
+            quickPick.canSelectMany = true;
+            quickPick.matchOnDetail = true;
+            quickPick.items = [
+              {kind: vscode.QuickPickItemKind.Separator, label: "Ryan's Favorites"},
+              ...selfCodeItems,
+              {kind: vscode.QuickPickItemKind.Separator, label: "All Available SELFCODES"}
+            ];
+  
+            quickPick.onDidAccept(() => {
+              const selections = quickPick.selectedItems;
+              quickPick.hide()
+            })
+            quickPick.onDidHide(() => quickPick.dispose());
+            quickPick.show();
+          } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+          }
         }
       }),
 
