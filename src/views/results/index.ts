@@ -156,7 +156,7 @@ export function initialise(context: vscode.ExtensionContext) {
         if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
           await resultSetProvider.ensureActivation();
 
-          const statementDetail = parseStatement(editor, options);
+          const statementDetail = parseStatement(editor, optionsIsValid ? options : undefined);
 
           if (statementDetail.open) {
             const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content: statementDetail.content });
