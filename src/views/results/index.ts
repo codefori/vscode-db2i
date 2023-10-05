@@ -169,7 +169,7 @@ export function initialise(context: vscode.ExtensionContext) {
             const group = statementDetail.group;
             editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
 
-            if (group.statements.length === 1 && statementDetail.embeddedInfo.parameterCount > 0) {
+            if (group.statements.length === 1 && statementDetail.embeddedInfo.changed) {
               editor.insertSnippet(
                 new SnippetString(statementDetail.embeddedInfo.content)
               )

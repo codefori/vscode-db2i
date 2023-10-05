@@ -198,6 +198,7 @@ export default class Document {
     }
 
     return {
+      changed: areas.length > 0,
       content: newContent,
       parameterCount
     };

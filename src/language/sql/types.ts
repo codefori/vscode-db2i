@@ -100,6 +100,7 @@ export interface Definition extends ObjectRef {
 }
 
 export interface ParsedEmbeddedStatement {
+	changed: boolean;
 	content: string;
 	parameterCount: number;
 }
