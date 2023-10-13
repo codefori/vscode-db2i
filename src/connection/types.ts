@@ -77,6 +77,8 @@ export interface ColumnMetaData {
 export type Rows = {[column: string]: string|number|boolean}[];
 
 export interface JDBCOptions {
+  // selfcodes
+  selfcodes?: string[];
   // Format properties
   "naming"?: "sql" | "system";
   "date format"?:

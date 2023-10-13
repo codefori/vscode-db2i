@@ -10,7 +10,7 @@ import { updateStatusBar } from "./statusBar";
 import { SQLJob, TransactionEndType } from "../../connection/sqlJob";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { selfCodesMap } from "./selfCodes/selfCodes";
-import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
+import { SelfCodesQuickPickItem, setSelfCodes } from "./selfCodes/selfCodesBrowser";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -134,22 +134,48 @@ export class JobManagerView implements TreeDataProvider<any> {
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
           try {
-            const selfCodeItems = selfCodesMap.map(code => new SelfCodesQuickPickItem(code));
-  
+            const currentSelfCodes = selected.job.options.selfcodes;
+            const selfCodeItems: SelfCodesQuickPickItem[] = selfCodesMap.map(
+              (code) => new SelfCodesQuickPickItem(code)
+            );
+            const currentSelfCodeItems: SelfCodesQuickPickItem[] =
+              selfCodeItems.filter((item) =>
+                currentSelfCodes ? currentSelfCodes.includes(item.label) : false
+              );
+
             const quickPick = vscode.window.createQuickPick();
             quickPick.title = `Select SELFCODES`;
             quickPick.canSelectMany = true;
             quickPick.matchOnDetail = true;
             quickPick.items = [
-              {kind: vscode.QuickPickItemKind.Separator, label: "Ryan's Favorites"},
-              ...selfCodeItems,
-              {kind: vscode.QuickPickItemKind.Separator, label: "All Available SELFCODES"}
+              {
+                kind: vscode.QuickPickItemKind.Separator,
+                label: "Currently selected schemas",
+              },
+              ...currentSelfCodeItems,
+              {
+                kind: vscode.QuickPickItemKind.Separator,
+                label: "All Available SELFCODES",
+              },
+              ...selfCodeItems.filter((item) =>
+                currentSelfCodeItems
+                  ? !currentSelfCodeItems.includes(item)
+                  : true
+              ),
             ];
-  
-            quickPick.onDidAccept(() => {
+
+            quickPick.selectedItems = currentSelfCodeItems;
+
+            quickPick.onDidAccept(async () => {
               const selections = quickPick.selectedItems;
-              quickPick.hide()
-            })
+              // SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('-514, -204, -501, +30, -199');
+              if (selections) {
+                const codes: string[] = selections.map((code) => code.label);
+                setSelfCodes(codes);
+                selected.job.options.selfcodes = codes;
+              }
+              quickPick.hide();
+            });
             quickPick.onDidHide(() => quickPick.dispose());
             quickPick.show();
           } catch (e) {
