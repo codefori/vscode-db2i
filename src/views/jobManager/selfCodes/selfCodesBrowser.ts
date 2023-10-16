@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { SelfCodeObject } from './selfCodes';
-import { JDBCOptions } from '../../../connection/types';
 import { JobManager } from '../../../config';
+import { SelfCodeObject } from './selfCodes';
 
 export class SelfCodesQuickPickItem implements vscode.QuickPickItem {
   label: string;

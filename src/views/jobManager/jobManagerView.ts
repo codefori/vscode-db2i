@@ -150,7 +150,7 @@ export class JobManagerView implements TreeDataProvider<any> {
             quickPick.items = [
               {
                 kind: vscode.QuickPickItemKind.Separator,
-                label: "Currently selected schemas",
+                label: "Currently selected SELFCODES",
               },
               ...currentSelfCodeItems,
               {
