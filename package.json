@@ -318,6 +318,11 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.jobManager.getSelfErrors",
+        "title": "Get SELFCODES Errors",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.jobManager.newConfig",
         "title": "Save settings to config",
         "category": "Db2 for i",
@@ -368,6 +373,10 @@
         },
         {
           "command": "vscode-db2i.jobManager.enableTracing",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getSelfErrors",
           "when": "never"
         },
         {
@@ -553,6 +562,11 @@
           "command": "vscode-db2i.jobManager.getTrace",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "trace@2"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getSelfErrors",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "trace@3"
         },
         {
           "command": "vscode-db2i.jobManager.newConfig",
