@@ -20,17 +20,22 @@ async function work() {
       }
     });
 
-    console.log(result);
-
     const newAsset = result.data.assets.find(asset => asset.name.endsWith(`.jar`));
 
     if (newAsset) {
+      console.log(`Asset found: ${newAsset.name}`);
+
       const url = newAsset.browser_download_url;
       const basename = newAsset.name;
 
       const dist = path.join(`.`, `dist`, basename);
 
       await downloadFile(url, dist);
+
+      console.log(`Asset downloaded.`);
+
+    } else {
+      console.log(`Release found but no asset found.`);
     }
 
 

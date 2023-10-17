@@ -24,4 +24,5 @@ As of 0.3.0, the Db2 for i extension requires a server component. The component 
 1. This project requires VS Code and Node.js.
 2. fork & clone repo
 3. `npm i`
+4. `npm run dsc` (to fetch the Server Component)
 4. 'Run Extension' from vscode debug.
