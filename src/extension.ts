@@ -28,6 +28,8 @@ export interface Db2i {
 
 export function activate(context: vscode.ExtensionContext): Db2i {
 
+  console.log(context.extensionPath);
+  
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
   console.log(`Congratulations, your extension "vscode-db2i" is now active!`);
