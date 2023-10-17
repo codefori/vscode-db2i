@@ -11,9 +11,6 @@ import { SERVER_VERSION_FILE } from "./SCVersion";
 
 const octokit = new Octokit();
 
-// During development, you can set the SERVER_VERSION in .vscode/launch.json
-// Otherwise, fall back to the working version
-
 const ExecutablePathDir = `$HOME/.vscode/`;
 
 export enum UpdateStatus {
