@@ -92,7 +92,7 @@ export const ManagerSuite: TestSuite = {
 
       await JobManager.endAll();
     }},
-    {name: `Get SELFCODES Errors`, test: async () => {
+    {name: `Get SELF codes Errors`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
 
       // Ensure we have a blank manager first

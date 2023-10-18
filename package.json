@@ -291,7 +291,7 @@
       },
       {
         "command": "vscode-db2i.jobManager.editSelfCodes",
-        "title": "Edit SELFCODES",
+        "title": "Edit SELF codes",
         "category": "Db2 for i",
         "icon": "$(bracket-error)"
       },
@@ -319,7 +319,7 @@
       },
       {
         "command": "vscode-db2i.jobManager.getSelfErrors",
-        "title": "Get SELFCODES Errors",
+        "title": "Get SELF codes Errors",
         "category": "Db2 for i"
       },
       {

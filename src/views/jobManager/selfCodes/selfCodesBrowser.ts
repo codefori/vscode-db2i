@@ -17,7 +17,7 @@ export async function setSelfCodes(codes: string[]) {
   try {
     await JobManager.runSQL(`SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('${codes.join(', ')}')`);
 
-    vscode.window.showInformationMessage(`Applied SELFCODES: ${codes}`);
+    vscode.window.showInformationMessage(`Applied SELF codes: ${codes}`);
   } catch (e) {
     vscode.window.showErrorMessage(e.message);
   }
