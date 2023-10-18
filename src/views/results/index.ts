@@ -246,7 +246,7 @@ export function initialise(context: vscode.ExtensionContext) {
                 }
               }
 
-              if (statementDetail.qualifier === `statement` && statementDetail.history) {
+              if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {
                 vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
               }
 
