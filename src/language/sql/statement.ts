@@ -458,6 +458,100 @@ export default class Statement {
 		return sqlObj;
 	}
 
+	/** 
+	 * Gets areas of statement that are likely from embedded statements
+	 * INTO area
+	 * Host variables
+	 * EXEC SQL
+	 */
+	getEmbeddedStatementAreas() {
+		let ranges: {type: "remove"|"marker", range: IRange}[] = [];
+		let intoClause: Token|undefined;
+
+		for (let i = 0; i < this.tokens.length; i++) {
+			const currentToken = this.tokens[i];
+
+			switch (currentToken.type) {
+				case `clause`:
+					if (currentToken.value.toLowerCase() === `into`) {
+						intoClause = currentToken;
+					} else if (intoClause) {
+						const endToken = this.tokens[i-1];
+
+						ranges.push({
+							type: `remove`,
+							range: {
+								start: intoClause.range.start,
+								end: endToken.range.end
+							}
+						});
+
+						intoClause = undefined;
+					}
+					break;
+
+				case `questionmark`:
+					if (intoClause) continue;
+
+					ranges.push({
+						type: `marker`,
+						range: currentToken.range
+					});
+					break;
+
+				case `colon`:
+					if (intoClause) continue;
+
+					let nextMustBe: "word"|"dot" = `word`;
+					let followingTokenI = i+1;
+					let endToken: Token;
+
+					let followingToken = this.tokens[followingTokenI];
+					while (followingToken && followingToken.type === nextMustBe) {
+						switch (followingToken.type) {
+							case `word`: nextMustBe = `dot`; break;
+							case `dot`: nextMustBe = `word`; break;
+						}
+
+						endToken = followingToken;
+
+						followingTokenI++;
+						followingToken = this.tokens[followingTokenI];
+					}
+
+					if (endToken) {
+						ranges.push({
+							type: `marker`,
+							range: {
+								start: currentToken.range.start,
+								end: endToken.range.end
+							}
+						});
+
+						i = followingTokenI;
+					}
+
+					break;
+
+				default:
+					if (i === 0 && tokenIs(currentToken, `word`, `EXEC`)) {
+						if (tokenIs(this.tokens[i+1], `word`, `SQL`)) {
+							ranges.push({
+								type: `remove`,
+								range: {
+									start: currentToken.range.start,
+									end: this.tokens[i+1].range.end
+								}
+							});
+						}
+					}
+					break;
+			}
+		}
+
+		return ranges;
+	}
+
 	static trimTokens(tokens: Token[]) {
     if (tokens.length > 0) {
       let realFirstToken = tokens.findIndex(t => t.type !== `newline`);
