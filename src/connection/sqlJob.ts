@@ -230,6 +230,16 @@ export class SQLJob {
     return rpy;
   }
 
+  async setSelfCodes(codes: string[]) {
+    try {
+      const query: string = `SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('${codes.join(', ')}')`
+      await this.query<any>(query).run();
+      this.options.selfcodes = codes;
+    } catch (e) {
+      throw e;
+    }
+  }
+
   async setTraceConfig(dest: ServerTraceDest, level: ServerTraceLevel): Promise<SetConfigResult> {
     const reqObj = {
       id: SQLJob.getNewUniqueId(),

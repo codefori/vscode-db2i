@@ -12,13 +12,3 @@ export class SelfCodesQuickPickItem implements vscode.QuickPickItem {
     this.description = object.message;
   }
 }
-
-export async function setSelfCodes(codes: string[]) {
-  try {
-    await JobManager.runSQL(`SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('${codes.join(', ')}')`);
-
-    vscode.window.showInformationMessage(`Applied SELF codes: ${codes}`);
-  } catch (e) {
-    vscode.window.showErrorMessage(e.message);
-  }
-}

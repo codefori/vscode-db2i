@@ -1,16 +1,15 @@
-import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri, commands, env, window, workspace } from "vscode";
-import { TreeDataProvider } from "vscode";
-import { Config, JobManager } from "../../config";
-import { JobInfo, SQLJobManager } from "../../connection/manager";
+import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
+import { JobManager } from "../../config";
+import { JobInfo } from "../../connection/manager";
+import { ServerComponent } from "../../connection/serverComponent";
+import { SQLJob, TransactionEndType } from "../../connection/sqlJob";
+import { ServerTraceDest, ServerTraceLevel } from "../../connection/types";
+import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
-import { ServerTraceDest, ServerTraceLevel } from "../../connection/types";
-import { ServerComponent } from "../../connection/serverComponent";
-import { updateStatusBar } from "./statusBar";
-import { SQLJob, TransactionEndType } from "../../connection/sqlJob";
-import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { selfCodesMap } from "./selfCodes/selfCodes";
-import { SelfCodesQuickPickItem, setSelfCodes } from "./selfCodes/selfCodesBrowser";
+import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
+import { updateStatusBar } from "./statusBar";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -171,8 +170,8 @@ export class JobManagerView implements TreeDataProvider<any> {
               // SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('-514, -204, -501, +30, -199');
               if (selections) {
                 const codes: string[] = selections.map((code) => code.label);
-                setSelfCodes(codes);
-                selected.job.options.selfcodes = codes;
+                selected.job.setSelfCodes(codes);
+                vscode.window.showInformationMessage(`Applied SELF codes: ${codes}`);
               }
               quickPick.hide();
             });

@@ -2,8 +2,7 @@ import assert from "assert";
 import { TestSuite } from ".";
 import { JobManager } from "../config";
 import { ServerComponent } from "../connection/serverComponent";
-import { JobStatus } from "../connection/sqlJob";
-import { setSelfCodes } from "../views/jobManager/selfCodes/selfCodesBrowser";
+import { JobStatus, SQLJob } from "../connection/sqlJob";
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,
@@ -109,7 +108,7 @@ export const ManagerSuite: TestSuite = {
       const curJob = JobManager.getRunningJobs();
 
       // set self codes
-      setSelfCodes(['138', '180'])
+      curJob[0].job.setSelfCodes(['138', '180'])
 
       // SQL0138, get left-most 1001 characters of C2. C2 is only 100 characters long, so SQL0138 is produced
       const sqlTestChar = `SELECT LEFT(C2, 1001) FROM SELFTEST.MYTBL`
