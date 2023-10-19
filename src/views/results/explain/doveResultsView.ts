@@ -15,6 +15,10 @@ export class DoveResultsView implements TreeDataProvider<any> {
     commands.executeCommand(`setContext`, `vscode-db2i:explaining`, true);
   }
 
+  getRootExplainNode() {
+    return this.topNode.explainNode;
+  }
+
   close() {
     commands.executeCommand(`setContext`, `vscode-db2i:explaining`, false);
   }

@@ -353,6 +353,12 @@
         "title": "See detail",
         "category": "Db2 for i",
         "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.dove.export",
+        "title": "Export current VE data",
+        "category": "Db2 for i",
+        "icon": "$(file)"
       }
     ],
     "menus": {
@@ -404,6 +410,10 @@
         {
           "command": "vscode-db2i.dove.nodeDetail",
           "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.export",
+          "when": "vscode-db2i:explaining == true"
         }
       ],
       "editor/context": [
@@ -465,6 +475,11 @@
           "command": "vscode-db2i.jobManager.endAll",
           "group": "navigation",
           "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.dove.export",
+          "group": "navigation",
+          "when": "view == vscode-db2i.dove.nodes"
         },
         {
           "command": "vscode-db2i.dove.close",
