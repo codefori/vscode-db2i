@@ -1,20 +1,11 @@
 import { JDBCOptions } from "../../../connection/types";
-import { getInstance, loadBase } from "../../../base";
+import { getInstance } from "../../../base";
 import { formatDescription } from ".";
 import { CustomUI } from "@halcyontech/vscode-ibmi-types/api/CustomUI";
 
-const dbNameText = `
-Specifies the database to use for a connection to an independent auxiliary storage pool (ASP). When you specify
+const dbNameText = `Specifies the database to use for a connection to an independent auxiliary storage pool (ASP). When you specify
 a database name, the name must exist in the relational database directory on the system and correspond to either 
-an independent ASP or the system default database. The following criteria determine which database is accessed:
-
-- When this property is used to specify a database which corresponds to an independent ASP, 
-  the connection is made to the independent ASP. When the specified database does not exist, the connection fails.
-- When this property is used to specify *SYSBAS as the database name, the system default database is used.
-- When this property is omitted, the initial ASP group specified in the job description for the user profile 
-  is used. When the job description does not specify an initial ASP group, the system default database is used.
-
-`;
+an independent ASP or the system default database.`;
 
 export default function getSimpleView(ui: CustomUI, options: JDBCOptions) {
   const connection = getInstance().getConnection()
