@@ -1,9 +1,10 @@
 import { EventEmitter, MarkdownString, workspace } from "vscode";
 import { window } from "vscode";
 import { CancellationToken, Event, ExtensionContext, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands } from "vscode";
-import { SQLExample, Examples } from "./examples";
-import { OSData, fetchSystemInfo } from "../config";
-import { getInstance } from "../base";
+import { SQLExample, Examples, ServiceInfoLabel } from ".";
+import { OSData, fetchSystemInfo } from "../../config";
+import { getInstance } from "../../base";
+import { getServiceInfo } from "../../database/serviceInfo";
 
 const openExampleCommand = `vscode-db2i.examples.open`;
 
@@ -59,7 +60,15 @@ export class ExampleBrowser implements TreeDataProvider<any> {
     return element;
   }
 
-  getChildren(element?: ExampleGroupItem): ProviderResult<any[]> {
+  async getChildren(element?: ExampleGroupItem): Promise<any[]> {
+    // Unlike the bulk of the examples which are defined in views/examples/index.ts, the services examples are retrieved dynamically
+    if (!Examples[ServiceInfoLabel]) {
+      getServiceInfo().then(serviceExamples => {
+        Examples[ServiceInfoLabel] = serviceExamples;
+        this.refresh();
+      })
+    }
+
     if (this.currentFilter) {
       // If there is a filter, then show all examples that include this criteria
       let items: SQLExampleItem[] = [];

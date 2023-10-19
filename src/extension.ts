@@ -6,19 +6,27 @@ import schemaBrowser from "./views/schemaBrowser/schemaBrowser";
 import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
-import {loadBase} from "./base";
-import { setupConfig } from "./config";
+import { loadBase } from "./base";
+import { JobManager, setupConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
-import { ExampleBrowser } from "./views/exampleBrowser";
+import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { languageInit } from "./language";
 import { initialise } from "./testing";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { ServerComponent } from "./connection/serverComponent";
+import { SQLJobManager } from "./connection/manager";
+import { JDBCOptions } from "./connection/types";
+import { SQLJob } from "./connection/sqlJob";
+
+export interface Db2i {
+  sqlJobManager: SQLJobManager,
+  sqlJob: (options?: JDBCOptions) => SQLJob
+}
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext): Db2i {
 
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
@@ -57,7 +65,9 @@ export function activate(context: vscode.ExtensionContext) {
     // Run tests if not in production build
     initialise(context);
   }
+
+  return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new SQLJob(options) };
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }

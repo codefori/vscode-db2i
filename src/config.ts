@@ -6,6 +6,7 @@ import { ServerComponent, UpdateStatus } from "./connection/serverComponent";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import Configuration from "./configuration";
 import { ConfigManager } from "./views/jobManager/ConfigManager";
+import { Examples, ServiceInfoLabel } from "./views/examples";
 
 interface IBMiLevels {
   version: number;
@@ -67,6 +68,9 @@ export function setupConfig(context: ExtensionContext) {
   getInstance().onEvent(`disconnected`, async () => {
     JobManagerView.setVisible(false);
     await JobManager.endAll();
+
+    // Remove old service examples
+    delete Examples[ServiceInfoLabel];
   });
 }
 

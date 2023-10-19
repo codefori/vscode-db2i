@@ -78,6 +78,10 @@ export class SQLJobManager {
     return this.jobs[this.selectedJob];
   }
 
+  getAllJobs(): JobInfo[] {
+    return this.jobs;
+  }
+
   getJob(name: string): JobInfo | undefined {
     return this.jobs.find(info => info.name === name);
   }
@@ -114,7 +118,7 @@ export class SQLJobManager {
     const selected = this.jobs[this.selectedJob]
     if (ServerComponent.isInstalled() && selected) {
       return selected.job.query<T>(query, opts);
-      
+
     } else if (!ServerComponent.isInstalled()) {
       let updateResult = await ServerComponent.checkForUpdate();
       if (UpdateStatus.JUST_UPDATED === updateResult) {

@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "preview": true,
   "engines": {
     "vscode": "^1.70.0"
@@ -225,6 +225,12 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.setSchemaFilter",
+        "title": "Set filter",
+        "category": "Db2 for i",
+        "icon": "$(search)"
+      },
+      {
         "command": "vscode-db2i.pasteGenerator",
         "title": "Paste JSON as SQL",
         "category": "Db2 for i"
@@ -331,6 +337,10 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.setSchemaFilter",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.jobManager.closeJob",
           "when": "never"
         },
@@ -433,6 +443,11 @@
           "command": "vscode-db2i.setCurrentSchema",
           "when": "viewItem == schema",
           "group": "db2@1"
+        },
+        {
+          "command": "vscode-db2i.setSchemaFilter",
+          "when": "viewItem == schema",
+          "group": "inline"
         },
         {
           "command": "vscode-db2i.getResultSet",
@@ -549,7 +564,8 @@
     "package": "vsce package",
     "vscode:prepublish": "webpack --mode production",
     "webpack": "webpack --mode development",
-    "webpack-dev": "webpack --mode development --watch"
+    "webpack-dev": "webpack --mode development --watch",
+    "typings": "npx -p typescript tsc ./src/extension.ts --declaration --allowJs --emitDeclarationOnly --outDir types --esModuleInterop -t es2019 --moduleResolution node"
   },
   "devDependencies": {
     "@halcyontech/vscode-ibmi-types": "^2.0.0",

@@ -1067,3 +1067,251 @@ describe(`PL body tests`, () => {
     expect(objs[0].object.name).toBe(`ACTIVE_JOB_INFO`);
   })
 });
+
+describe(`Parameter statement tests`, () => {
+  test(`Single questionmark parameter test`, () => {
+    const document = new Document(`select * from sample where x = ?`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(1);
+  });
+
+  test(`Single host parameter test`, () => {
+    const document = new Document(`select * from sample where x = :value`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(1);
+  });
+
+  test(`Single host qualified parameter test`, () => {
+    const document = new Document(`select * from sample where x = :struct.value`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(1);
+  });
+
+  test(`Single INTO clause test`, () => {
+    const document = new Document(`select abcd into :myvar from sample where x = 1`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(1);
+  });
+
+  test(`Single INTO clause and host qualified parameter test`, () => {
+    const document = new Document(`select * into :myds from sample where x = :struct.value`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(2);
+  });
+
+  test(`Double questionmark parameter test`, () => {
+    const document = new Document(`select * from sample where x = ? and y=?`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(2);
+  });
+
+  test(`Double host parameter test`, () => {
+    const document = new Document(`select * from sample where x = :value and y=:whoop`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(2);
+  });
+
+  test(`Double host qualified parameter test`, () => {
+    const document = new Document(`select * from sample where x = :struct.value or y=:struct.val`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(2);
+  });
+
+  test(`Single questionmark parameter content test`, () => {
+    const sql = `select * from sample where x = ?`;
+    const document = new Document(sql);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(sql);
+  });
+
+  test(`Single host parameter content test`, () => {
+    const document = new Document(`select * from sample where x = :value`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select * from sample where x = ?`);
+  });
+
+  test(`Single host qualified parameter content test`, () => {
+    const document = new Document(`select * from sample where x = :struct.value`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select * from sample where x = ?`);
+  });
+
+  test(`Double questionmark parameter content test`, () => {
+    const document = new Document(`select * from sample where x = ? and y=?`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select * from sample where x = ? and y=?`);
+  });
+
+  test(`Double host parameter content test`, () => {
+    const document = new Document(`select * from sample where x = :value and y=:whoop`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select * from sample where x = ? and y=?`);
+  });
+
+  test(`Double host qualified parameter content test`, () => {
+    const document = new Document(`select * from sample where x = :struct.value or y=:struct.val`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select * from sample where x = ? or y=?`);
+  });
+
+  test(`Single INTO clause content test`, () => {
+    const document = new Document(`select abcd into :myvar from sample where x = 1`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select abcd from sample where x = 1`);
+  });
+
+  test(`Single INTO clause and host qualified parameter content test`, () => {
+    const document = new Document(`select * into :myds from sample where x = :struct.value`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select * from sample where x = ?`);
+  });
+
+  test(`Double INTO clause and single host qualified parameter content test`, () => {
+    const document = new Document(`select x,y into :myds.x,:myds.y from sample where x = :struct.value`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select x,y from sample where x = ?`);
+  });
+
+  test(`Double INTO clause and single host qualified parameter content test`, () => {
+    const document = new Document(`Exec Sql select x,y into :myds.x,:myds.y from sample where x = :struct.value`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select x,y from sample where x = ?`);
+  });
+
+  test(`Exec with basic DECLARE`, () => {
+    const lines = [
+      `EXEC SQL DECLARE empCur CURSOR FOR`,
+      `  SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+      `  FROM EMPLOYEE`,
+      `  WHERE WORKDEPT = :DEPTNO`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.parameterCount).toBe(1);
+    expect(result.content).toBe([
+      `  SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+      `  FROM EMPLOYEE`,
+      `  WHERE WORKDEPT = ?`
+    ].join(`\n`));
+  });
+
+  test(`Exec with basic DECLARE`, () => {
+    const lines = [
+      `EXEC SQL`,
+      `DECLARE cursor-name SCROLL CURSOR FOR`,
+      `SELECT column-1, column-2`,
+      `  FROM table-name`,
+      `  WHERE column-1 = expression`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.parameterCount).toBe(0);
+    expect(result.content).toBe([
+      `SELECT column-1, column-2`,
+      `  FROM table-name`,
+      `  WHERE column-1 = expression`,
+    ].join(`\n`));
+  });
+});

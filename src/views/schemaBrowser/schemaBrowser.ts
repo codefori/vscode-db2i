@@ -1,6 +1,6 @@
 
-import vscode, { ThemeIcon } from "vscode"
-import Schemas from "../../database/schemas";
+import vscode, { ThemeIcon, TreeItem } from "vscode"
+import Schemas, { AllSQLTypes, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import { getInstance, loadBase } from "../../base";
 
@@ -43,6 +43,8 @@ export default class schemaBrowser {
   onDidChangeTreeData: vscode.Event<any | undefined | null | void>;
   cache: {[key: string]: object[]};
 
+  filters: {[schema: string]: string} = {};
+
   /**
    * @param {vscode.ExtensionContext} context
    */
@@ -69,7 +71,7 @@ export default class schemaBrowser {
             location: vscode.ProgressLocation.Window,
             title: `Retrieving schemas for ${config.name}...`
           }, async () => {
-            allSchemas = await Schemas.getObjects(undefined, `schemas`);
+            allSchemas = await Schemas.getObjects(undefined, [`schemas`]);
           });
           // Create an array of SchemaQuickPickItem representing the currently selected schemas
           const selectedItems: SchemaQuickPickItem[] = allSchemas.filter(schema => currentSchemas.includes(Statement.delimName(schema.name))).map(object => new SchemaQuickPickItem(object));
@@ -311,7 +313,7 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.getResultSet`, async (object) => {
+      vscode.commands.registerCommand(`vscode-db2i.getResultSet`, async (object: SQLObject) => {
         if (object && object instanceof SQLObject) {
           const content = `SELECT * FROM ${Statement.delimName(object.schema)}.${Statement.delimName(object.name)} as a`;
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
@@ -322,7 +324,7 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.setCurrentSchema`, async (node) => {
+      vscode.commands.registerCommand(`vscode-db2i.setCurrentSchema`, async (node: SchemaItem) => {
         if (node && node.contextValue === `schema`) {
           const schema = node.schema.toUpperCase();
 
@@ -336,6 +338,23 @@ export default class schemaBrowser {
 
           vscode.window.showInformationMessage(`Current schema set to ${schema}.`);
         }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.setSchemaFilter`, async (node: SchemaItem) => {
+        if (node) {
+          const value = await vscode.window.showInputBox({
+            title: `Set filter for ${node.schema}`,
+            value: this.filters[node.schema],
+            prompt: `Show objects that start with this value. Blank to reset.`
+          });
+
+          if (value !== undefined) {
+            this.filters[node.schema] = value.trim() === `` ? undefined : value;
+
+            updateSchemaNode(node, this.filters[node.schema]);
+            this.refresh(node);
+          }
+        }
       })
     )
 
@@ -347,8 +366,8 @@ export default class schemaBrowser {
     this.refresh();
   }
 
-  refresh() {
-    this.emitter.fire(undefined);
+  refresh(node?: TreeItem) {
+    this.emitter.fire(node);
   }
 
   private enableManageCommand(enabled: boolean) {
@@ -362,13 +381,8 @@ export default class schemaBrowser {
     return Number(Configuration.get(`pageSize`)) || 100;
   }
 
-  /**
-   * 
-   * @param {string} schema 
-   * @param {string} type
-   * @param {boolean} [addRows] True when we need rows added
-   */
-  async fetchData(schema, type, addRows) {
+
+  async fetchData(schema: string, type: SQLType, addRows?: boolean) {
     const pageSize = this.getPageSize() + 1; //Get 1 extra item to see if we need to add a more button 
     const key = `${schema}-${type}`;
     let offset;
@@ -381,7 +395,7 @@ export default class schemaBrowser {
         offset = 0;
       }
 
-      const data = await Schemas.getObjects(schema, type, {
+      const data = await Schemas.getObjects(schema, [type], {
         limit: pageSize,
         offset
       });
@@ -431,10 +445,22 @@ export default class schemaBrowser {
       const contextValue = element.contextValue;
 
       if (element instanceof Schema) {
-        items = getSchemaItems(element.schema);
+
+        let filterValue = this.filters[element.schema];
+        if (filterValue) {
+          const validSchemaName = Statement.noQuotes(element.schema);
+          const filteredObjects = await Schemas.getObjects(validSchemaName, AllSQLTypes, {filter: filterValue});
+          items = filteredObjects.map(obj => new SQLObject(obj));
+
+        } else {
+          // If no filter is provided, group objects by types
+          items = getSchemaItems(element.schema);
+        }
+
+
       } else
       if (element instanceof SchemaItem) {
-        items = await this.fetchData(element.schema, contextValue, false);
+        items = await this.fetchData(element.schema, contextValue as SQLType, false);
       } else
       if (element instanceof SQLObject) {
         const type = element.type;
@@ -457,7 +483,7 @@ export default class schemaBrowser {
         });
 
         for (let schema of schemas) {
-          items.push(new Schema(schema));
+          items.push(new Schema(schema, this.filters[schema]));
         }
       } else {
         items.push(new Schema(`No connection. Refresh when ready.`));
@@ -468,14 +494,20 @@ export default class schemaBrowser {
   }
 }
 
+function updateSchemaNode(node: Schema, newFilterValue?: string) {
+  node.iconPath = new vscode.ThemeIcon(newFilterValue ? `filter` : `database`);
+  node.description = newFilterValue ? `(${newFilterValue})` : undefined;
+}
+
 class Schema extends vscode.TreeItem {
   schema: string;
-  constructor(name: string) {
+  constructor(name: string, currentFilterLabel?: string) {
     super(name, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.contextValue = `schema`;
     this.schema = name;
-    this.iconPath = new vscode.ThemeIcon(`database`);
+
+    updateSchemaNode(this, currentFilterLabel);
   }
 }
 
@@ -515,7 +547,7 @@ class SQLObject extends vscode.TreeItem {
     this.description = item.text;
     // For functions and procedures, set a tooltip that includes the specific name
     if (Schemas.isRoutineType(this.type)) {
-      this.tooltip = new vscode.MarkdownString(`${Statement.prettyName(item.name)} (*${Statement.prettyName(item.specificName)}*)`); // Name (Specific name)
+      this.tooltip = new vscode.MarkdownString(`${Statement.prettyName(item.name)} ${item.specificName ? `(*${Statement.prettyName(item.specificName)}*)` : ``}`); // Name (Specific name)
     }
     this.iconPath = itemIcons[type] ? new vscode.ThemeIcon(itemIcons[type]) : undefined;
   }
@@ -525,7 +557,7 @@ class SQLObject extends vscode.TreeItem {
    * For most objects this just returns the name, but for routines, which can be overloaded, it returns the specific name.
    */
   uniqueName(): string {
-    return Schemas.isRoutineType(this.type) ? this.specificName : this.name;
+    return Schemas.isRoutineType(this.type) ? this.specificName || this.name : this.name;
   }
 }
 
