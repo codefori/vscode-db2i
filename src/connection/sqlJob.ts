@@ -1,7 +1,7 @@
 import { CommandResult } from "@halcyontech/vscode-ibmi-types";
 import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
-import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions } from "./types";
+import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions, ExplainResults } from "./types";
 import { Query } from "./query";
 import { EventEmitter } from "stream";
 
@@ -214,7 +214,7 @@ export class SQLJob {
     return version;
   }
 
-  async explain(statement: string, type: ExplainType = ExplainType.Run) {
+  async explain(statement: string, type: ExplainType = ExplainType.Run): Promise<ExplainResults<any>> {
     if (type !== ExplainType.Run) {
       throw new Error("TODO: support more types of explains");
     }
@@ -226,12 +226,13 @@ export class SQLJob {
     const explainRequest = {
       id: SQLJob.getNewUniqueId(),
       type: `dove`,
-      sql: statement
+      sql: statement,
+      run: type === ExplainType.Run
     }
 
     const result = await this.send(JSON.stringify(explainRequest));
 
-    const explainResult: any = JSON.parse(result);
+    const explainResult: ExplainResults<any> = JSON.parse(result);
 
     if (explainResult.success !== true) {
       this.dispose();

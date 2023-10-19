@@ -92,6 +92,19 @@
           "name": "Results",
           "when": "code-for-ibmi:connected == true",
           "contextualTitle": "IBM i"
+        },
+        {
+          "type": "tree",
+          "id": "vscode-db2i.dove.nodes",
+          "name": "Visual Explain",
+          "when": "vscode-db2i:explaining == true",
+          "contextualTitle": "IBM i"
+        },
+        {
+          "type": "tree",
+          "id": "vscode-db2i.dove.node",
+          "name": "Node Detail",
+          "when": "vscode-db2i:explainingNode == true"
         }
       ],
       "db2-explorer": [
@@ -328,6 +341,18 @@
         "title": "Delete configuration",
         "category": "Db2 for i",
         "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.dove.close",
+        "title": "Close detail",
+        "category": "Db2 for i",
+        "icon": "$(close-all)"
+      },
+      {
+        "command": "vscode-db2i.dove.nodeDetail",
+        "title": "See detail",
+        "category": "Db2 for i",
+        "icon": "$(info)"
       }
     ],
     "menus": {
@@ -374,6 +399,10 @@
         },
         {
           "command": "vscode-db2i.jobManager.deleteConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.nodeDetail",
           "when": "never"
         }
       ],
@@ -436,6 +465,11 @@
           "command": "vscode-db2i.jobManager.endAll",
           "group": "navigation",
           "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.dove.close",
+          "group": "navigation",
+          "when": "view == vscode-db2i.dove.nodes"
         }
       ],
       "view/item/context": [
@@ -552,6 +586,11 @@
         {
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "view == jobManager && viewItem == savedConfig",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.dove.nodeDetail",
+          "when": "view == vscode-db2i.dove.nodes && viewItem == explainTreeItem",
           "group": "inline"
         }
       ]

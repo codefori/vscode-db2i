@@ -5,7 +5,7 @@ import { getInstance } from "../base";
 import { ServerComponent } from "../connection/serverComponent";
 import { ServerTraceDest, ServerTraceLevel } from "../connection/types";
 import { Query } from "../connection/query";
-import { ExplainTree } from "../views/explain/nodes";
+import { ExplainTree } from "../views/results/nodes";
 
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
