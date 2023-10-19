@@ -250,9 +250,15 @@
       },
       {
         "command": "vscode-db2i.runEditorStatement",
-        "title": "Run selected statement",
+        "title": "Run statement",
         "category": "Db2 for i",
         "icon": "$(notebook-execute)"
+      },
+      {
+        "command": "vscode-db2i.explainEditorStatement",
+        "title": "Explain statement",
+        "category": "Db2 for i",
+        "icon": "$(debug-alt)"
       },
       {
         "command": "vscode-db2i.queryHistory.remove",
@@ -427,12 +433,12 @@
         {
           "command": "vscode-db2i.runEditorStatement",
           "when": "editorLangId == sql",
-          "group": "navigation@2"
+          "group": "navigation@sql"
         },
         {
-          "command": "code-for-ibmi.changeCurrentLibrary",
+          "command": "vscode-db2i.explainEditorStatement",
           "when": "editorLangId == sql",
-          "group": "navigation@3"
+          "group": "navigation@sql"
         }
       ],
       "view/title": [
