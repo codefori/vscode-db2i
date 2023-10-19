@@ -1267,4 +1267,51 @@ describe(`Parameter statement tests`, () => {
     const result = document.removeEmbeddedAreas(statement);
     expect(result.content).toBe(`select x,y from sample where x = ?`);
   });
+
+  test(`Exec with basic DECLARE`, () => {
+    const lines = [
+      `EXEC SQL DECLARE empCur CURSOR FOR`,
+      `  SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+      `  FROM EMPLOYEE`,
+      `  WHERE WORKDEPT = :DEPTNO`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.parameterCount).toBe(1);
+    expect(result.content).toBe([
+      `  SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+      `  FROM EMPLOYEE`,
+      `  WHERE WORKDEPT = ?`
+    ].join(`\n`));
+  });
+
+  test(`Exec with basic DECLARE`, () => {
+    const lines = [
+      `EXEC SQL`,
+      `DECLARE cursor-name SCROLL CURSOR FOR`,
+      `SELECT column-1, column-2`,
+      `  FROM table-name`,
+      `  WHERE column-1 = expression`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.parameterCount).toBe(0);
+    expect(result.content).toBe([
+      `SELECT column-1, column-2`,
+      `  FROM table-name`,
+      `  WHERE column-1 = expression`,
+    ].join(`\n`));
+  });
 });

@@ -98,3 +98,9 @@ export interface Definition extends ObjectRef {
 	range: IRange;
 	children: Definition[];
 }
+
+export interface ParsedEmbeddedStatement {
+	changed: boolean;
+	content: string;
+	parameterCount: number;
+}
