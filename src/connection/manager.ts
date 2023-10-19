@@ -25,7 +25,7 @@ export class SQLJobManager {
 
       const newJob = predefinedJob || (new SQLJob({
         libraries: [config.currentLibrary, ...config.libraryList],
-        naming: `system`,
+        naming: `sql`,
         "full open": false,
         "transaction isolation": "none",
         "query optimize goal": "1",
