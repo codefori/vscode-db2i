@@ -8,9 +8,9 @@ import Document from "../../language/sql/document";
 import { changedCache } from "../../language/providers/completionItemCache";
 import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import Statement from "../../language/sql/statement";
-import { ExplainTree } from "./nodes";
-import { DoveResultsView, ExplainTreeItem } from "./doveResultsView";
-import { DoveNodeView } from "./doveNodeView";
+import { ExplainTree } from "./explain/nodes";
+import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
+import { DoveNodeView } from "./explain/doveNodeView";
 import { ResultSetPanelProvider } from "./resultSetPanelProvider";
 
 export type StatementQualifier = "statement" | "explain" | "json" | "csv" | "cl" | "sql";
