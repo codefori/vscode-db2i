@@ -3,6 +3,7 @@ import { TestSuite } from ".";
 import { JobManager } from "../config";
 import { ServerComponent } from "../connection/serverComponent";
 import { JobStatus, SQLJob } from "../connection/sqlJob";
+import { testSelfCodes } from "../views/jobManager/selfCodes/selfCodesTest";
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,
@@ -107,29 +108,7 @@ export const ManagerSuite: TestSuite = {
 
       const curJob = JobManager.getRunningJobs();
 
-      // set self codes
-      curJob[0].job.setSelfCodes(['138', '180'])
-
-      // SQL0138, get left-most 1001 characters of C2. C2 is only 100 characters long, so SQL0138 is produced
-      const sqlTestChar = `SELECT LEFT(C2, 1001) FROM SELFTEST.MYTBL`
-
-      await JobManager.runSQL(sqlTestChar);
-
-      const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${curJob[0].job.id}'`;
-
-      const data = await JobManager.runSQL(content);
-
-      assert.strictEqual(data.length, 1);
-
-      // SQL0180, invalid format for date given
-      const sqltestDate = `VALUES DATE('120-1231-12312')`;
-
-      await JobManager.runSQL(sqltestDate);
-
-      const newData = await JobManager.runSQL(content);
-
-      assert.strictEqual(newData.length, 2);
-
-    }}
+    }},
+    ...testSelfCodes()
   ]
 }
