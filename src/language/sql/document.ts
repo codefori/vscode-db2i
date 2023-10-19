@@ -1,10 +1,13 @@
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-import { Definition, IRange, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
+import { Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
 
 export default class Document {
+  content: string;
   statements: Statement[];
+
   constructor(content: string) {
+    this.content = content;
     this.statements = [];
 
     const tokeniser = new SQLTokeniser();
@@ -162,6 +165,43 @@ export default class Document {
       const end = (groups[i + 1] ? groups[i + 1].range.start : statement.range.end);
       return (offset >= statement.range.start && offset < end) || (i === (groups.length - 1) && offset >= end);
     })
+  }
+
+  removeEmbeddedAreas(statement: Statement, snippetString?: boolean): ParsedEmbeddedStatement {
+    const areas = statement.getEmbeddedStatementAreas();
+
+    const totalParameters = areas.filter(a => a.type === `marker`).length;
+    let newContent = this.content.substring(statement.range.start, statement.range.end);
+    let parameterCount = 0;
+
+    const startRange = statement.range.start;
+
+    // We do it in reverse so the substring ranges doesn't change
+    for (let x = areas.length-1; x >= 0; x--) {
+      const area = areas[x];
+
+      let start = area.range.start - startRange, end = area.range.end - startRange;
+
+      switch (area.type) {
+        case `marker`:
+          const markerContent = newContent.substring(start, end);
+
+          newContent = newContent.substring(0, start) + (snippetString ? `\${${totalParameters-parameterCount}:${markerContent}}` : `?`) + newContent.substring(end) + (snippetString ? `$0` : ``);
+      
+          parameterCount++;
+          break;
+
+        case `remove`:
+          newContent = newContent.substring(0, start) + newContent.substring(end+1);
+          break;
+      }
+    }
+
+    return {
+      changed: areas.length > 0,
+      content: newContent,
+      parameterCount
+    };
   }
 }
 

@@ -458,6 +458,134 @@ export default class Statement {
 		return sqlObj;
 	}
 
+	/** 
+	 * Gets areas of statement that are likely from embedded statements
+	 * EXEC SQL
+	 * INTO area
+	 * Host variables
+	 * DECLARE .. CURSOR FOR
+	 */
+	getEmbeddedStatementAreas() {
+		let ranges: {type: "remove"|"marker", range: IRange}[] = [];
+		let intoClause: Token|undefined;
+		let declareStmt: Token|undefined;
+
+		for (let i = 0; i < this.tokens.length; i++) {
+			const currentToken = this.tokens[i];
+
+			switch (currentToken.type) {
+				case `statementType`:
+					if (declareStmt) continue;
+
+					// If we're in a DECLARE, it's likely a cursor definition
+					if (currentToken.value.toLowerCase() === `declare`) {
+						declareStmt = currentToken;
+					}
+					break;
+
+				case `clause`:
+					if (declareStmt) continue;
+
+					// We need to remove the INTO clause completely.
+					if (currentToken.value.toLowerCase() === `into`) {
+						intoClause = currentToken;
+					} else if (intoClause) {
+						const endToken = this.tokens[i-1];
+
+						ranges.push({
+							type: `remove`,
+							range: {
+								start: intoClause.range.start,
+								end: endToken.range.end
+							}
+						});
+
+						intoClause = undefined;
+					}
+					break;
+
+				case `questionmark`:
+					if (intoClause) continue;
+					if (declareStmt) continue;
+
+					ranges.push({
+						type: `marker`,
+						range: currentToken.range
+					});
+					break;
+
+				case `colon`:
+					if (intoClause) continue;
+					if (declareStmt) continue;
+
+					let nextMustBe: "word"|"dot" = `word`;
+					let followingTokenI = i+1;
+					let endToken: Token;
+
+					// Handles when we have a host variable
+					// This logic supports qualified host variables
+					// i.e. :myvar or :mystruct.subf
+
+					let followingToken = this.tokens[followingTokenI];
+					while (followingToken && followingToken.type === nextMustBe) {
+						switch (followingToken.type) {
+							case `word`: nextMustBe = `dot`; break;
+							case `dot`: nextMustBe = `word`; break;
+						}
+
+						endToken = followingToken;
+
+						followingTokenI++;
+						followingToken = this.tokens[followingTokenI];
+					}
+
+					if (endToken) {
+						ranges.push({
+							type: `marker`,
+							range: {
+								start: currentToken.range.start,
+								end: endToken.range.end
+							}
+						});
+
+						i = followingTokenI;
+					}
+
+					break;
+
+				default:
+					if (i === 0 && tokenIs(currentToken, `word`, `EXEC`)) {
+						// We check and remove the starting `EXEC SQL`
+						if (tokenIs(this.tokens[i+1], `word`, `SQL`)) {
+							ranges.push({
+								type: `remove`,
+								range: {
+									start: currentToken.range.start,
+									end: this.tokens[i+1].range.end
+								}
+							});
+						}
+					} else 
+					if (declareStmt && tokenIs(currentToken, `keyword`, `FOR`)) {
+						// If we're a DECLARE, and we found the FOR keyword, the next
+						// set of tokens should be the select.
+						ranges.push({
+							type: `remove`,
+							range: {
+								start: declareStmt.range.start,
+								end: currentToken.range.end
+							}
+						});
+
+						declareStmt = undefined;
+					}
+					break;
+			}
+		}
+
+		return ranges;
+	}
+
 	static trimTokens(tokens: Token[]) {
     if (tokens.length > 0) {
       let realFirstToken = tokens.findIndex(t => t.type !== `newline`);
