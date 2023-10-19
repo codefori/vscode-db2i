@@ -31,7 +31,7 @@ export const selfCodeTests = [
   {
     name: "SQL0203 - C2 without table name",
     code: "203",
-    sql: "SELECT SELFTEST.MYTBL.C2 FROM SELFTEST.MYTBL T1 JOIN SELFTEST.MYTBL2 T2 ON T1.C1 = T2.C1",
+    sql: "SELECT C2 FROM SELFTEST.MYTBL T1 JOIN SELFTEST.MYTBL2 T2 ON T1.C1 = T2.C1",
   },
   {
     name: "SQL0204 - Table doesn't exist",
@@ -80,8 +80,11 @@ export function testSelfCodes(): TestCase[] {
 
         const curJob = JobManager.getRunningJobs();
         curJob[0].job.setSelfCodes([test.code]);
-
-        const result = await JobManager.runSQL(test.sql);
+        try {
+          const result = await JobManager.runSQL(test.sql);
+        } catch (e) {
+          // handle the exception here
+        }
 
         const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${curJob[0].job.id}'`;
         const data = await JobManager.runSQL(content);

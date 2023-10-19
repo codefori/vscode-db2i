@@ -231,8 +231,9 @@ export class SQLJob {
   }
 
   async setSelfCodes(codes: string[]) {
+    const signedCodes: String[] = codes.map(code => [code, `-${code}`]).flat();
     try {
-      const query: string = `SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('${codes.join(', ')}')`
+      const query: string = `SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('${signedCodes.join(', ')}')`
       await this.query<any>(query).run();
       this.options.selfcodes = codes;
     } catch (e) {
