@@ -15,8 +15,8 @@ export interface VersionCheckResult extends ServerResponse {
 }
 
 export interface ExplainResults<T> extends QueryResult<T> {
-  veMetadata: QueryMetaData,
-  veData: any;
+  vemetadata: QueryMetaData,
+  vedata: any;
 }
 
 export interface GetTraceDataResult extends ServerResponse {

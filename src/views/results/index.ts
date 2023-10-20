@@ -69,6 +69,9 @@ async function runHandler(options?: StatementInfo) {
   const optionsIsValid = (options && options.content !== undefined);
   let editor = vscode.window.activeTextEditor;
 
+  doveResultsView.close();
+  doveNodeView.close();
+
   if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
     await resultSetProvider.ensureActivation();
 
@@ -124,11 +127,13 @@ async function runHandler(options?: StatementInfo) {
                   resultSetProvider.setLoadingText(`Explaining..`);
 
                   const explained = await selectedJob.job.explain(statementDetail.content);
-                  const tree = new ExplainTree(explained.data);
+                  const tree = new ExplainTree(explained.vedata);
                   const topLevel = tree.get();
+
                   doveResultsView.setRootNode(topLevel);
 
-                  // resultSetProvider.setScrolling(statementDetail.content, false, explained.id);
+                  // TODO: handle when explain without running
+                  resultSetProvider.setScrolling(statementDetail.content, false, explained.id);
 
                 } catch (e) {
                   resultSetProvider.setError(e.message);

@@ -14,7 +14,7 @@ const octokit = new Octokit();
 
 // During development, you can set the SERVER_VERSION in .vscode/launch.json
 // Otherwise, fall back to the working version
-const SERVER_VERSION = process.env[`SERVER_VERSION`] || `v1.3.0`;
+const SERVER_VERSION = process.env[`SERVER_VERSION`] || `v1.4.0`;
 
 const ExecutablePathDir = `$HOME/.vscode/`;
 
