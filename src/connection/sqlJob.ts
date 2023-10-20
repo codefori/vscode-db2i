@@ -127,6 +127,7 @@ export class SQLJob {
 
   async send(content: string): Promise<string> {
     if (this.isTracingChannelData) ServerComponent.writeOutput(content);
+
     let req: ReqRespFmt = JSON.parse(content);
     this.channel.stdin.write(content + `\n`);
     this.status = JobStatus.Active;
@@ -143,6 +144,8 @@ export class SQLJob {
   }
 
   async connect(): Promise<ConnectionResult> {
+    this.isTracingChannelData = true;
+
     this.channel = await this.getChannel();
 
     this.channel.on(`error`, (err) => {
@@ -169,7 +172,8 @@ export class SQLJob {
     const connectionObject = {
       id: SQLJob.getNewUniqueId(),
       type: `connect`,
-      technique: (getInstance().getConnection().qccsid === 65535 || this.options["database name"]) ? `tcp` : `cli`, //TODO: investigate why QCCSID 65535 breaks CLI and if there is any workaround
+      //technique: (getInstance().getConnection().qccsid === 65535 || this.options["database name"]) ? `tcp` : `cli`, //TODO: investigate why QCCSID 65535 breaks CLI and if there is any workaround
+      technique: `tcp`, // TODO: DOVE does not work in cli mode
       application: `vscode-db2i ${DB2I_VERSION}`,
       props: props.length > 0 ? props : undefined
     }
@@ -191,8 +195,11 @@ export class SQLJob {
     this.id = connectResult.job;
     this.status = JobStatus.Ready;
 
+    this.isTracingChannelData = false;
+
     return connectResult;
   }
+
   query<T>(sql: string, opts?: QueryOptions): Query<T> {
     return new Query(this, sql, opts);
   }
