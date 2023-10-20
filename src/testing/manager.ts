@@ -91,24 +91,6 @@ export const ManagerSuite: TestSuite = {
       assert.strictEqual(JobManager.getSelection().name, runningJobs[0].name);
 
       await JobManager.endAll();
-    }},
-    {name: `Get SELF codes Errors`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      // Ensure we have a blank manager first
-      await JobManager.endAll();
-      assert.strictEqual(JobManager.getRunningJobs().length, 0);
-      assert.strictEqual(JobManager.selectedJob, -1);
-
-      // Add a new job
-      await JobManager.newJob();
-
-      // Check the job exists
-      assert.strictEqual(JobManager.getRunningJobs().length, 1);
-
-      const curJob = JobManager.getRunningJobs();
-
-    }},
-    ...testSelfCodes()
+    }}
   ]
 }

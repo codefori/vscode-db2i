@@ -1,6 +1,6 @@
-import { assert } from "vitest";
-import { JobManager } from "../../../config";
+import { SQLJob } from "../../../connection/sqlJob";
 import { TestCase } from "../../../testing";
+import assert from "assert";
 
 export const selfCodeTests = [
   {
@@ -67,29 +67,17 @@ export function testSelfCodes(): TestCase[] {
     const testCase: TestCase = {
       name: `Self code Error for test ${test.name}`,
       test: async () => {
-        // Ensure we have a blank manager first
-        await JobManager.endAll();
-        assert.strictEqual(JobManager.getRunningJobs().length, 0);
-        assert.strictEqual(JobManager.selectedJob, -1);
-
-        // Add a new job
-        await JobManager.newJob();
-
-        // Check the job exists
-        assert.strictEqual(JobManager.getRunningJobs().length, 1);
-
-        const curJob = JobManager.getRunningJobs();
-        curJob[0].job.setSelfCodes([test.code]);
+        let newJob = new SQLJob();
+        await newJob.connect();
+        await newJob.setSelfCodes([test.code]);
         try {
-          const result = await JobManager.runSQL(test.sql);
-        } catch (e) {
-          // handle the exception here
-        }
+          await newJob.query(test.sql).run();
+        } catch (e) {}
 
-        const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${curJob[0].job.id}'`;
-        const data = await JobManager.runSQL(content);
-
-        assert.strictEqual(data.length, 1);
+        const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${newJob.id}'`;
+        let errors = await newJob.query(content).run();
+        assert.strictEqual(errors.data.length, 1);
+        newJob.close();
       },
     };
     tests.push(testCase);

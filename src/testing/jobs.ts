@@ -5,6 +5,7 @@ import { getInstance } from "../base";
 import { ServerComponent } from "../connection/serverComponent";
 import { ServerTraceDest, ServerTraceLevel } from "../connection/types";
 import { Query } from "../connection/query";
+import { testSelfCodes } from "../views/jobManager/selfCodes/selfCodesTest";
 
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
@@ -418,5 +419,6 @@ export const JobsSuite: TestSuite = {
       console.log(`Old query method took ${oe - os} milliseconds.`);
       assert.equal((ne - ns) < (oe - os), true);
     }},
+    ...testSelfCodes()
   ]
 }
