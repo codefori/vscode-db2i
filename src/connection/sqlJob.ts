@@ -219,9 +219,9 @@ export class SQLJob {
       throw new Error("TODO: support more types of explains");
     }
 
-    if (this.options["full open"] !== true) {
-      throw new Error("Job option 'full open' must be true.");
-    }
+    // if (this.options["full open"] !== true) {
+    //   throw new Error("Job option 'full open' must be true.");
+    // }
 
     const explainRequest = {
       id: SQLJob.getNewUniqueId(),
