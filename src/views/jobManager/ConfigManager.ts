@@ -45,7 +45,11 @@ export class ConfigManager {
           await window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
             try {
               progress.report({ message: `Spinning up SQL job...` });
-              await JobManager.newJob(new SQLJob(options), name);
+              const newJob: SQLJob = new SQLJob(options);
+              await JobManager.newJob(newJob, name);
+              if (options.selfcodes) {
+                newJob.setSelfCodes(options.selfcodes);
+              }
             } catch (e) {
               window.showErrorMessage(e.message);
             }
