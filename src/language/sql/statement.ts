@@ -9,15 +9,19 @@ export default class Statement {
 	public type: StatementType = StatementType.Unknown;
 
   constructor(public tokens: Token[], public range: IRange) {
-		const first = tokens[0];
+		this.tokens = this.tokens.filter(newToken => newToken.type !== `newline`);
+		
+		let first = this.tokens[0];
+
+		if (tokenIs(first, `word`, `EXEC`) && tokenIs(this.tokens[1], `word`, `SQL`) && this) {
+			first = this.tokens[3];
+		}
 
 		if (tokenIs(first, `statementType`) || tokenIs(first, `keyword`, `END`) || tokenIs(first, `keyword`, `BEGIN`)) {
 			const wordValue = first.value?.toUpperCase();
 
 			this.type = StatementTypeWord[wordValue];
 		}
-
-		this.tokens = this.tokens.filter(newToken => newToken.type !== `newline`)
 		
 		switch (this.type) {
 			case StatementType.With:
@@ -466,6 +470,9 @@ export default class Statement {
 	 * DECLARE .. CURSOR FOR
 	 */
 	getEmbeddedStatementAreas() {
+		// Only these statements support the INTO clause in embedded SQL really
+		const validIntoStatements: StatementType[] = [StatementType.Unknown, StatementType.With, StatementType.Select];
+
 		let ranges: {type: "remove"|"marker", range: IRange}[] = [];
 		let intoClause: Token|undefined;
 		let declareStmt: Token|undefined;
@@ -484,6 +491,7 @@ export default class Statement {
 					break;
 
 				case `clause`:
+					if (!validIntoStatements.includes(this.type)) continue;
 					if (declareStmt) continue;
 
 					// We need to remove the INTO clause completely.
