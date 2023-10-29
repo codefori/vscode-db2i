@@ -1314,4 +1314,18 @@ describe(`Parameter statement tests`, () => {
       `  WHERE column-1 = expression`,
     ].join(`\n`));
   });
+
+  test(`Insert with INTO clause`, () => {
+    const content = `INSERT INTO  COOLSTUFF.DLRGPSNEW (DLRID, LOCATION) SELECT ID, QSYS2.ST_POINT(GPSLON, GPSLAT) FROM COOLSTUFF.DLRGPS2`;
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.parameterCount).toBe(0);
+    expect(result.content).toBe(content);
+  });
 });
