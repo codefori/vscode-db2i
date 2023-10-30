@@ -8,6 +8,7 @@ export default class Statement {
     return format(sql, {
       language: `db2`, // Defaults to "sql" (see the above list of supported dialects)
       linesBetweenQueries: 2, // Defaults to 1
+      keywordCase: "lower"
     });
   }
 
