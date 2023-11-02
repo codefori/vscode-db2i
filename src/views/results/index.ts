@@ -180,13 +180,15 @@ export function initialise(context: vscode.ExtensionContext) {
           const statement = statementDetail.statement;
 
           if (statement.type === StatementType.Create || statement.type === StatementType.Alter) {
-            const refs = statement.getObjectReferences();            
-            const ref = refs[0];
-            const databaseObj =
-              statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
-                ? ref.object.schema || ``
-                : ref.object.schema + ref.object.name;
-            changedCache.add((databaseObj || ``).toUpperCase());
+            const refs = statement.getObjectReferences();
+            if (refs.length > 0) {            
+              const ref = refs[0];
+              const databaseObj =
+                statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
+                  ? ref.object.schema || ``
+                  : ref.object.schema + ref.object.name;
+              changedCache.add((databaseObj || ``).toUpperCase());
+            }
           }
 
           if (statementDetail.content.trim().length > 0) {
