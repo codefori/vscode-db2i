@@ -622,6 +622,29 @@ describe(`Object references`, () => {
     expect(refsB[1].object.schema).toBe(`other`);
   });
 
+  test(`CREATE TABLE: for system name`, () => {
+    const content = [
+      `--  Employee Master`,
+      `--  Generated on:               11/03/21 14:32:20`,
+      `CREATE OR REPLACE TABLE super_long_dept_name FOR SYSTEM NAME DEPT (`,
+      `--  SQL150B   10   REUSEDLT(*NO) in table EMPMST in PAYROLL1 ignored.`,
+      `  COL_B CHAR(1) CCSID 37 NOT NULL DEFAULT '' ,`,
+      `  PRIMARY KEY( COL_B ) );`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+  
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.Create);
+
+    const [mainRef] = statement.getObjectReferences();
+    expect(mainRef.object.name).toBe(`super_long_dept_name`);
+    expect(mainRef.object.system).toBe(`DEPT`);
+  })
+
   test(`CREATE ALIAS`, () => {
     const content = [
       `create or replace view tagtalk for system name tt as (`,
