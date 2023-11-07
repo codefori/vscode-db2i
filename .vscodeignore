@@ -11,3 +11,5 @@ media/main.png
 node_modules
 src
 types
+.github
+src/dsc.ts
