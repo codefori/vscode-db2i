@@ -9,8 +9,6 @@ import { OutputChannel, extensions, window } from "vscode";
 import { stat } from "fs/promises";
 import { SERVER_VERSION_FILE } from "./SCVersion";
 
-const octokit = new Octokit();
-
 const ExecutablePathDir = `$HOME/.vscode/`;
 
 export enum UpdateStatus {
