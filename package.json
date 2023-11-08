@@ -65,6 +65,16 @@
           "description": "Saved configs for",
           "default": {},
           "additionalProperties": true
+        },
+        "vscode-db2i.sqlFormat.keywordCase": {
+          "type": "string",
+          "description": "SQL formatting options: Lowercase or uppercase SQL keywords",
+          "default": "lower",
+          "enum": ["lower", "upper"],
+          "enumDescriptions": [
+            "Format reserved SQL keywords in lowercase",
+            "Format reserved SQL keywords in uppercase"
+          ]
         }
       }
     },
