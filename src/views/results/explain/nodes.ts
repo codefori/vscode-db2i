@@ -53,21 +53,40 @@ export class ExplainTree {
     };
   
     for (const data of nodeData) {
-      const nodeType = data.IFA_COLTYP;
+      // TODO: list of column types
+      const nodeDataType = data.IFA_COLTYP;
       const nodeTitle = data.IFA_COLHDG;
-      const nodeValue = data.IFA_TYPOUT === `N` ? data.IFA_NUMOUT : data.IFA_CHROUT;
+      const nodeValue = data.IFA_TYPOUT === ValueType.NUMERIC ? data.IFA_NUMOUT : data.IFA_CHROUT;
   
-      switch (nodeType) {
-      case 10:
+      switch (nodeDataType) {
+      case RecordType.NEW_ICON:
         currentNode.title = nodeValue;
         break;
-      case 11:
+      case RecordType.CHILD_COUNT:
         currentNode.childrenNodes = nodeValue;
         break;
+      case RecordType.CHILD_ICON:
+        // TODO: what do we do with this?
+        break;
+      case RecordType.HEADING:
+          // If not the first node, add a blank node before the heading to space things out a bit
+          if (currentNode.props.length > 0) {
+            currentNode.props.push({
+              type: 0,
+              title: ``,
+              value: ``
+            });
+          }
+          currentNode.props.push({
+            type: nodeDataType,
+            title: nodeTitle,
+            value: ``
+          });
+          break;
       default:
         if (nodeValue || nodeValue === 0) {
           currentNode.props.push({
-            type: nodeType,
+            type: nodeDataType,
             title: nodeTitle,
             value: nodeValue
           });
@@ -86,4 +105,27 @@ export class ExplainTree {
   
     return currentNode;
   }
+}
+
+/**
+ * Record type indicators from the type column ( IFA_COLTYP )
+ * @see https://www.ibm.com/docs/en/i/7.5?topic=ssw_ibm_i_75/apis/qqqvexpl.html#record_types
+ */
+export enum RecordType {
+  NEW_ICON      =  10,
+  CHILD_COUNT   =  11,
+  CHILD_ICON    =  12,
+  HEADING       = 111
+}
+
+/**
+ * Value type indicators from the  data type column ( IFA_TYPOUT )
+ */
+export enum ValueType {
+  CHARACTER              = `C`,
+  NUMERIC                = `N`,
+  LONG_STRING            = `X`,
+  DOUBLE_BYTE_STRING     = `Y`,
+  DOUBLE_BYTE_STRING_END = `D`,
+  INVISIBLE              = `I`
 }

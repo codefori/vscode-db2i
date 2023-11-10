@@ -1,5 +1,43 @@
-import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands } from "vscode";
+import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands, ThemeIcon, ThemeColor } from "vscode";
 import { ExplainNode } from "./nodes";
+
+/**
+ * Icon labels as defined by the API, along with the name of the icon to display
+ * @see https://www.ibm.com/docs/en/i/7.5?topic=ssw_ibm_i_75/apis/qqqvexpl.html#icon_labels
+ */
+const icons = {
+    // TODO: fill in the rest of the icons
+  "Table Probe":                            `list-selection`,
+  "Table Scan":                             `search`,
+  "Table Scan, Parallel":                   `search`,
+  "Index Scan - Key Selection":             ``,
+  "Index Scan - Key Selection, Parallel":   ``,
+  "Index Scan - Key Positioning":           ``,
+  "Index Scan - Key Positioning, Parallel": ``,
+  "Skip Sequential Table Scan":             ``,
+  "Skip Sequential Table Scan, Parallel":   ``,
+  "Encoded Vector Index":                   ``,
+  "Encoded Vector Index, Parallel":         ``,
+  "Dynamic Bitmap":                         ``,
+  "Temporary Table":                        ``,
+  "Temporary Hash Table":                   ``,
+  "Temporary Index":                        ``,
+  "Hash Join":                              ``,
+  "Nested Loop Join":                       ``,
+  "Index Grouping":                         ``,
+  "Hash Grouping":                          ``,
+  "Sort":                                   `sort-precedence`,
+  "Union Merge":                            ``,
+  "Subquery Merge":                         ``,
+  "Bitmap Merge":                           ``,
+  "Distinct":                               ``,
+  "Select":                                 ``,
+  "Final Select":                           `pass-filled`,
+  "Insert":                                 `pencil`,
+  "Update":                                 `replace`,
+  "Delete":                                 `trash`,
+  "Unknown":                                ``,
+}
 
 export class DoveResultsView implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<ExplainTreeItem | undefined | null | void> = new EventEmitter<ExplainTreeItem | undefined | null | void>();
@@ -55,7 +93,11 @@ export class ExplainTreeItem extends TreeItem {
     this.explainNode = node;
     this.contextValue = `explainTreeItem`;
 
-    // TODO: icons
+    // TODO: highlights
+
+    // TODO: testing icon colors
+    // this.iconPath = new ThemeIcon("flame", new ThemeColor("testing.iconFailed"));
+    this.iconPath = new ThemeIcon(icons[node.title]);
   }
 
   getChildren() {

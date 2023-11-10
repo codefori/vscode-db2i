@@ -124,7 +124,7 @@ async function runHandler(options?: StatementInfo) {
               const selectedJob = JobManager.getSelection();
               if (selectedJob) {
                 try {
-                  resultSetProvider.setLoadingText(`Explaining..`);
+                  resultSetProvider.setLoadingText(`Explaining...`);
 
                   const explained = await selectedJob.job.explain(statementDetail.content);
                   const tree = new ExplainTree(explained.vedata);
