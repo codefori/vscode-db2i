@@ -8,7 +8,7 @@ export default class Statement {
   static format(sql: string) {
     const keywordCase: KeywordCase = <KeywordCase>(Configuration.get(`sqlFormat.keywordCase`) || `lower`);
     return format(sql, {
-      language: `db2`, // Defaults to "sql" (see the above list of supported dialects)
+      language: `db2i`, // Defaults to "sql" (see the above list of supported dialects)
       linesBetweenQueries: 2, // Defaults to 1
       keywordCase: keywordCase
     });
