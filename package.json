@@ -68,6 +68,18 @@
         }
       }
     },
+    "notebooks": [
+			{
+				"id": "db2i-notebook",
+				"type": "db2i-notebook",
+				"displayName": "IBM i Notebook",
+				"selector": [
+					{
+						"filenamePattern": "*.inb"
+					}
+				]
+			}
+		],
     "viewsContainers": {
       "activitybar": [
         {
@@ -144,6 +156,12 @@
       }
     ],
     "commands": [
+      {
+				"command": "vscode-db2i.openNotebook",
+				"title": "New Notebook",
+				"category": "IBM i Notebooks",
+        "enablement": "code-for-ibmi:connected == true"
+			},
       {
         "command": "vscode-db2i.openSqlDocument",
         "title": "Open SQL Document",
@@ -586,9 +604,10 @@
   },
   "dependencies": {
     "csv": "^6.1.3",
+    "json-to-markdown-table": "^1.0.0",
+    "lru-cache": "^6.0.0",
     "node-fetch": "^3.3.1",
     "octokit": "^2.0.14",
-    "sql-formatter": "^4.0.2",
-    "lru-cache": "^6.0.0"
+    "sql-formatter": "^4.0.2"
   }
 }
