@@ -7,6 +7,7 @@ import { getInstance } from '../base';
 import { CommandResult } from '@halcyontech/vscode-ibmi-types';
 import { JobManager } from '../config';
 import { ChartType, chartTypes, generateChart } from './charts/bar';
+import { JobStatus } from '../connection/sqlJob';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -82,13 +83,14 @@ export class IBMiController {
               });
               const columns = results.metadata.columns.map(c => c.label);
 
-              items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columns), `text/markdown`));
-
               if (chartType) {
                 const possibleChart = generateChart(execution.executionOrder, chartType, columns, table);
                 if (possibleChart) {
                   items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
                 }
+
+              } else {
+                items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columns), `text/markdown`));
               }
               
             } else {
