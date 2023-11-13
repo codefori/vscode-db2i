@@ -6,7 +6,7 @@ import * as mdTable from 'json-to-markdown-table';
 import { getInstance } from '../base';
 import { CommandResult } from '@halcyontech/vscode-ibmi-types';
 import { JobManager } from '../config';
-import { generateBarChartHTML } from './charts/bar';
+import { ChartType, chartTypes, generateChart } from './charts/bar';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -58,7 +58,15 @@ export class IBMiController {
           try {
             const job = JobManager.getSelection();
             if (job) {
-              const query = job.job.query(cell.document.getText());
+              let content = cell.document.getText();
+
+              let chartType: ChartType|undefined = chartTypes.find(type => content.startsWith(`${type}:`));
+
+              if (chartType) {
+                content = content.substring(chartType.length + 1);
+              }
+
+              const query = job.job.query(content);
               const results = await query.run();
 
               const table = results.data;
@@ -70,12 +78,18 @@ export class IBMiController {
                   //@ts-ignore
                   if (!row[key]) { row[key] = `-`; }
                 });
-              });
 
+              });
               const columns = results.metadata.columns.map(c => c.label);
 
               items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columns), `text/markdown`));
-              // items.push(vscode.NotebookCellOutputItem.text(generateBarChartHTML(execution.executionOrder, columns, Object.values(table[0])), `text/html`));
+
+              if (chartType) {
+                const possibleChart = generateChart(execution.executionOrder, chartType, columns, table);
+                if (possibleChart) {
+                  items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
+                }
+              }
               
             } else {
               vscode.NotebookCellOutputItem.stderr(`No job selected in SQL Job Manager.`);
