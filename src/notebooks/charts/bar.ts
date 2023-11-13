@@ -16,14 +16,6 @@ export function generateBarChartHTML(id: number, labels: string[], data: any[]):
     <head>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js" integrity="sha512-6HrPqAvK+lZElIZ4mZ64fyxIBTsaX5zAFZg2V/2WT+iKPrFzTzvx6QAsLW2OaLwobhMYBog/+bvmIEEGXi0p1w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
       <script>
-        //Object.keys(window).forEach(key => {
-        //    if (/^on/.test(key)) {
-        //        window.addEventListener(key.slice(2), event => {
-        //            console.log(event);
-        //        });
-        //    }
-        //});
-
         if (!window.ibmicharts) {
           window.ibmicharts = {};
         }

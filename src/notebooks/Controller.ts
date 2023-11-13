@@ -46,7 +46,6 @@ export class IBMiController {
   private async _doExecution(cell: vscode.NotebookCell): Promise<void> {
     const instance = getInstance();
     const connection = instance?.getConnection();
-    const content = instance?.getContent();
     const items: vscode.NotebookCellOutputItem[] = [];
 
     const execution = this._controller.createNotebookCellExecution(cell);
