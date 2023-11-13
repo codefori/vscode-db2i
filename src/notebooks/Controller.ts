@@ -75,7 +75,6 @@ export class IBMiController {
               const columns = results.metadata.columns.map(c => c.label);
 
               items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columns), `text/markdown`));
-              items.push(vscode.NotebookCellOutputItem.json(table));
               // items.push(vscode.NotebookCellOutputItem.text(generateBarChartHTML(execution.executionOrder, columns, Object.values(table[0])), `text/html`));
               
             } else {
