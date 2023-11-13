@@ -152,7 +152,7 @@
         "command": "vscode-db2i.runEditorStatement",
         "key": "ctrl+r",
         "mac": "cmd+r",
-        "when": "editorLangId == sql"
+        "when": "editorLangId == sql && resourceExtname != .inb"
       }
     ],
     "commands": [
