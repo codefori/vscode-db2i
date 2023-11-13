@@ -14,13 +14,7 @@ export const notebookFromSqlUri = commands.registerCommand(`vscode-db2i.notebook
       const sqlDocument = new Document(content);
       const statements = sqlDocument.getStatementGroups().map(g => content.substring(g.range.start, g.range.end));
 
-      workspace.openNotebookDocument(
-        `db2i-notebook`,
-        {cells: statements.map(s => {return new NotebookCellData(NotebookCellKind.Code, s, `sql`)})}
-      )
-      .then(doc => {
-        window.showNotebookDocument(doc);
-      });
+      notebookFromStatements(statements)
 
     } catch (e) {
       window.showWarningMessage(`Failed to parse SQL file: ${e.message}`);
@@ -28,16 +22,14 @@ export const notebookFromSqlUri = commands.registerCommand(`vscode-db2i.notebook
   }
 });
 
-export const notebookFromStatements = commands.registerCommand(`vscode-db2i.notebook.fromStatements`, (statements?: string[]) => {
+export function notebookFromStatements(statements?: string[]) {
   if (statements) {
-    const uri = Uri.parse(`untitled:` + `notebook.inb`);
-
     workspace.openNotebookDocument(
-      uri.toString(),
+      `db2i-notebook`,
       {cells: statements.map(s => {return new NotebookCellData(NotebookCellKind.Code, s, `sql`)})}
     )
     .then(doc => {
       window.showNotebookDocument(doc);
     });
   }
-});
+};
