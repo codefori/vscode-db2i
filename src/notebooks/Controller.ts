@@ -6,6 +6,7 @@ import * as mdTable from 'json-to-markdown-table';
 import { getInstance } from '../base';
 import { CommandResult } from '@halcyontech/vscode-ibmi-types';
 import { JobManager } from '../config';
+import { generateBarChartHTML } from './charts/bar';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -75,6 +76,9 @@ export class IBMiController {
               const columns = results.metadata.columns.map(c => c.label);
 
               items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columns), `text/markdown`));
+              items.push(vscode.NotebookCellOutputItem.json(table));
+              // items.push(vscode.NotebookCellOutputItem.text(generateBarChartHTML(execution.executionOrder, columns, Object.values(table[0])), `text/html`));
+              
             } else {
               vscode.NotebookCellOutputItem.stderr(`No job selected in SQL Job Manager.`);
             }
