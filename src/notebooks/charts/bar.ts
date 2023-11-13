@@ -13,8 +13,8 @@ interface Dataset {
   borderWidth?: number;
 }
 
-export type ChartType = `bar`|`line`|`doughnut`|`pie`|`polarArea`|`radar`|`scatter`;
-export const chartTypes: ChartType[] = [`bar`, `line`, `doughnut`, `pie`, `polarArea`, `radar`, `scatter`];
+export type ChartType = `bar`|`line`|`doughnut`|`pie`|`polarArea`|`radar`;
+export const chartTypes: ChartType[] = [`bar`, `line`, `doughnut`, `pie`, `polarArea`, `radar`];
 
 export function generateChart(id: number, type: ChartType, columns: string[], rows: any[]): string|undefined {
   if (rows.length === 1) {
