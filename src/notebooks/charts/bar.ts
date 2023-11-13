@@ -51,9 +51,9 @@ function generateBarChartHTML(id: number, type: ChartType, labels, datasets: Dat
     datasets,
   };
 
+  // TODO: remove hardcoded version
   return /*html*/`
     <head>
-      // TODO: remove hardcoded version
       <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js" integrity="sha512-6HrPqAvK+lZElIZ4mZ64fyxIBTsaX5zAFZg2V/2WT+iKPrFzTzvx6QAsLW2OaLwobhMYBog/+bvmIEEGXi0p1w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
       <script>
         if (!window.ibmicharts) {
