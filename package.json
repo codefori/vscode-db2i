@@ -173,6 +173,12 @@
         "enablement": "code-for-ibmi:connected == true"
 			},
       {
+        "command": "vscode-db2i.notebook.fromSqlUri",
+        "title": "Open as Notebook",
+        "category": "IBM i Notebooks",
+        "icon": "$(notebook)"
+      },
+      {
         "command": "vscode-db2i.openSqlDocument",
         "title": "Open SQL Document",
         "category": "Db2 for i",
@@ -403,6 +409,10 @@
         {
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "never"
+        },
+        {
+          "command": "vscode-db2i.notebook.fromSqlUri",
+          "when": "never"
         }
       ],
       "editor/context": [
@@ -419,9 +429,9 @@
           "group": "navigation@2"
         },
         {
-          "command": "code-for-ibmi.changeCurrentLibrary",
+          "command": "vscode-db2i.notebook.fromSqlUri",
           "when": "editorLangId == sql",
-          "group": "navigation@3"
+          "group": "navigation@4"
         }
       ],
       "view/title": [

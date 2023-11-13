@@ -6,8 +6,7 @@ import * as mdTable from 'json-to-markdown-table';
 import { getInstance } from '../base';
 import { CommandResult } from '@halcyontech/vscode-ibmi-types';
 import { JobManager } from '../config';
-import { ChartType, chartTypes, generateChart } from './charts/bar';
-import { JobStatus } from '../connection/sqlJob';
+import { ChartType, chartTypes, generateChart } from './logic/bar';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;

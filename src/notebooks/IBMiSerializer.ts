@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TextDecoder, TextEncoder } from 'util';
 import { IBMiController } from './Controller';
+import { notebookFromSqlUri } from './logic/openAsNotebook';
 
 interface RawNotebookCell {
   language: string;
@@ -9,7 +10,7 @@ interface RawNotebookCell {
 }
 
 export function notebookInit() {
-  const openNotebook = vscode.commands.registerCommand(`vscode-db2i.openNotebook`, (node) => {
+  const openBlankNotebook = vscode.commands.registerCommand(`vscode-db2i.openNotebook`, (node) => {
     const uri = node ? node.resourceUri : vscode.Uri.parse(`untitled:` + `notebook.inb`);
 
     vscode.commands.executeCommand(`vscode.openWith`, uri, `db2i-notebook`);
@@ -18,7 +19,8 @@ export function notebookInit() {
   return [
     vscode.workspace.registerNotebookSerializer(`db2i-notebook`, new IBMiSerializer()),
     new IBMiController(),
-    openNotebook
+    notebookFromSqlUri,
+    openBlankNotebook
   ];
 }
 
