@@ -68,21 +68,25 @@ function generateBarChartHTML(id: number, type: ChartType, labels, datasets: Dat
           window.ibmicharts = {};
         }
 
-        window.addEventListener('message', (event) => {  
-                  
+        window.addEventListener('message', (event) => {          
           const theChart = window.ibmicharts['myChart${id}'];
           if (!theChart) {
             const chartEle = document.getElementById('myChart${id}');
             if (chartEle) {
-              window.ibmicharts['myChart${id}'] = new Chart(chartEle.getContext('2d'), {
-                type: '${type}',
-                data: ${JSON.stringify(chartData)},
-                options: {
-                  animation: {
-                    duration: 0
-                  }
-                },
-              });
+              try {
+                window.ibmicharts['myChart${id}'] = new Chart(chartEle.getContext('2d'), {
+                  type: '${type}',
+                  data: ${JSON.stringify(chartData)},
+                  options: {
+                    animation: {
+                      duration: 0
+                    }
+                  },
+                });
+              } catch (e) {
+                console.error(e);
+                document.getElementById('errorText${id}').innerText = 'Failed to render chart. Log appended to Dev Console.';
+              }
             }
           }
         });
@@ -90,6 +94,7 @@ function generateBarChartHTML(id: number, type: ChartType, labels, datasets: Dat
     </head>
     <body>
       <canvas id="myChart${id}"></canvas>
+      <p id="errorText${id}"></p>
     </body>
   `;
 }
