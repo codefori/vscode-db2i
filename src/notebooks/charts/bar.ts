@@ -28,15 +28,23 @@ export function generateChart(id: number, type: ChartType, columns: string[], ro
     let labels = [];
 
     const labelIndex = keys.findIndex(key => String(key).toUpperCase() === `LABEL`);
+    // We only continue if we can find a label for each row
     if (labelIndex >= 0) {
+
+      // Look through all the keys
       for (let i = 0; i < keys.length; i++) {
         if (i === labelIndex) {
+          // If this column matches the label, set the labels based on the rows of this column
           labels = rows.map(row => row[columns[i]]);
         } else {
-          datasets.push({
-            label: columns[i],
-            data: rows.map(row => row[columns[i]]),
-          });
+
+          // We only want to add columns that are numbers, so we ignore string columns
+          if ([`bigint`, `number`].includes(typeof rows[0][columns[i]])) {
+            datasets.push({
+              label: columns[i],
+              data: rows.map(row => row[columns[i]]),
+            });
+          }
         }
       }
 
