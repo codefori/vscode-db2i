@@ -69,22 +69,21 @@ function generateBarChartHTML(id: number, type: ChartType, labels, datasets: Dat
         }
 
         window.addEventListener('resize', (event) => {
+          
           const theChart = window.ibmicharts['myChart${id}'];
-          if (theChart) {
-            theChart.destroy();
-          }
-
-          const chartEle = document.getElementById('myChart${id}');
-          if (chartEle) {
-            window.ibmicharts['myChart${id}'] = new Chart(chartEle.getContext('2d'), {
-              type: '${type}',
-              data: ${JSON.stringify(chartData)},
-              options: {
-                animation: {
-                  duration: 0
-                }
-              },
-            });
+          if (!theChart) {
+            const chartEle = document.getElementById('myChart${id}');
+            if (chartEle) {
+              window.ibmicharts['myChart${id}'] = new Chart(chartEle.getContext('2d'), {
+                type: '${type}',
+                data: ${JSON.stringify(chartData)},
+                options: {
+                  animation: {
+                    duration: 0
+                  }
+                },
+              });
+            }
           }
         });
       </script>
