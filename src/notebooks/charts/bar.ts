@@ -59,7 +59,7 @@ function generateBarChartHTML(id: number, type: ChartType, labels, datasets: Dat
     datasets,
   };
 
-  // TODO: remove hardcoded version
+  // TODO: remove hardcoded version: https://github.com/codefori/vscode-db2i/compare/0.1.0...0.1.1
   return /*html*/`
     <head>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js" integrity="sha512-6HrPqAvK+lZElIZ4mZ64fyxIBTsaX5zAFZg2V/2WT+iKPrFzTzvx6QAsLW2OaLwobhMYBog/+bvmIEEGXi0p1w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -68,8 +68,8 @@ function generateBarChartHTML(id: number, type: ChartType, labels, datasets: Dat
           window.ibmicharts = {};
         }
 
-        window.addEventListener('resize', (event) => {
-          
+        window.addEventListener('message', (event) => {  
+                  
           const theChart = window.ibmicharts['myChart${id}'];
           if (!theChart) {
             const chartEle = document.getElementById('myChart${id}');
