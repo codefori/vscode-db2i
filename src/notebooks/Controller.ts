@@ -6,7 +6,7 @@ import * as mdTable from 'json-to-markdown-table';
 import { getInstance } from '../base';
 import { CommandResult } from '@halcyontech/vscode-ibmi-types';
 import { JobManager } from '../config';
-import { ChartType, chartTypes, generateChart } from './logic/charts';
+import { ChartDetail, ChartType, chartTypes, generateChart } from './logic/charts';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -58,14 +58,46 @@ export class IBMiController {
           try {
             const job = JobManager.getSelection();
             if (job) {
-              let content = cell.document.getText();
+              let content = cell.document.getText().trim();
 
-              let chartType: ChartType|undefined = chartTypes.find(type => content.startsWith(`${type}:`));
+              let chartDetail: ChartDetail = {};
 
+              // Strip out starting comments
+              if (content.startsWith(`--`)) {
+                const eol = cell.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+                const lines = content.split(eol);
+                const firstNonCommentLine = lines.findIndex(line => !line.startsWith(`--`));
+
+                const startingComments = lines.slice(0, firstNonCommentLine).map(line => line.substring(2).trim());
+                content = lines.slice(firstNonCommentLine).join(eol);
+
+                let settings = {};
+
+                for (let comment of startingComments) {
+                  const sep = comment.indexOf(`:`);
+                  const key = comment.substring(0, sep).trim();
+                  const value = comment.substring(sep + 1).trim();
+                  settings[key] = value;
+                }
+
+                // Chart settings defined by comments
+                if (settings[`chart`] && chartTypes.includes(settings[`chart`])) {
+                  chartDetail.type = settings[`chart`];
+                }
+
+                if (settings[`title`]) {
+                  chartDetail.title = settings[`title`];
+                }
+              }
+
+              // Perhaps the chart type is defined by the statement prefix
+              const chartType: ChartType|undefined = chartTypes.find(type => content.startsWith(`${type}:`));
               if (chartType) {
+                chartDetail.type = chartType;
                 content = content.substring(chartType.length + 1);
               }
 
+              // Execute the query
               const query = job.job.query(content);
               const results = await query.run();
 
@@ -78,12 +110,12 @@ export class IBMiController {
                   //@ts-ignore
                   if (!row[key]) { row[key] = `-`; }
                 });
-
               });
+
               const columns = results.metadata.columns.map(c => c.label);
 
-              if (chartType) {
-                const possibleChart = generateChart(execution.executionOrder, chartType, columns, table);
+              if (chartDetail.type) {
+                const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table);
                 if (possibleChart) {
                   items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
                 }

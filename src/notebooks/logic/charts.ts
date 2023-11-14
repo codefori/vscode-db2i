@@ -1,4 +1,8 @@
 
+export interface ChartDetail {
+  type?: ChartType;
+  title?: string;
+}
 
 interface ChartData {
   labels: string[];
@@ -13,15 +17,15 @@ interface Dataset {
   borderWidth?: number;
 }
 
-export type ChartType = `bar`|`line`|`doughnut`|`pie`|`polarArea`|`radar`;
+export type ChartType = `bar` | `line` | `doughnut` | `pie` | `polarArea` | `radar`;
 export const chartTypes: ChartType[] = [`bar`, `line`, `doughnut`, `pie`, `polarArea`, `radar`];
 
-export function generateChart(id: number, type: ChartType, columns: string[], rows: any[]): string|undefined {
+export function generateChart(id: number, detail: ChartDetail, columns: string[], rows: any[]): string | undefined {
   if (rows.length === 1) {
     const labels = columns;
     const data = Object.values(rows[0]);
-    return generateBarChartHTML(id, type, labels, [{data, label: `Data`}]);
-    
+    return generateBarChartHTML(id, detail, labels, [{ data, label: `Data` }]);
+
   } else if (rows.length > 1) {
     const datasets: Dataset[] = [];
     const keys = Object.keys(rows[0]);
@@ -48,12 +52,12 @@ export function generateChart(id: number, type: ChartType, columns: string[], ro
         }
       }
 
-      return generateBarChartHTML(id, type, labels, datasets);
+      return generateBarChartHTML(id, detail, labels, datasets);
     }
   }
 }
 
-function generateBarChartHTML(id: number, type: ChartType, labels, datasets: Dataset[]): string {
+function generateBarChartHTML(id: number, detail: ChartDetail, labels, datasets: Dataset[]): string {
   const chartData: ChartData = {
     labels,
     datasets,
@@ -75,11 +79,18 @@ function generateBarChartHTML(id: number, type: ChartType, labels, datasets: Dat
             if (chartEle) {
               try {
                 window.ibmicharts['myChart${id}'] = new Chart(chartEle.getContext('2d'), {
-                  type: '${type}',
+                  type: '${detail.type}',
                   data: ${JSON.stringify(chartData)},
                   options: {
                     animation: {
                       duration: 0
+                    },
+                    plugins: {
+                      title: {
+                        display: ${detail.title ? `true` : `false`},
+                        text: '${detail.title || `undefined`}',
+                        position: 'top'
+                      }
                     }
                   },
                 });
