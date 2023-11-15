@@ -11,6 +11,7 @@ import { updateStatusBar } from "../jobManager/statusBar";
 import Document from "../../language/sql/document";
 import { changedCache } from "../../language/providers/completionItemCache";
 import { ObjectRef, StatementType } from "../../language/sql/types";
+import { JobInfo } from "../../connection/manager";
 
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
@@ -135,6 +136,7 @@ export interface StatementInfo {
 
 export function initialise(context: vscode.ExtensionContext) {
   let resultSetProvider = new ResultSetPanelProvider();
+  let selfCodeErrorProvider = new ResultSetPanelProvider();
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider, {
@@ -229,6 +231,16 @@ export function initialise(context: vscode.ExtensionContext) {
                   }
                 }
               }
+
+              const selected: JobInfo = await JobManager.getSelection();
+              if (selected.job.options.selfcodes) {
+                const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
+
+                const data = await JobManager.runSQL(content);
+                console.log(data);
+                
+              }
+              
 
               if (statement.qualifier === `statement`) {
                 vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement.content);
