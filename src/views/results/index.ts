@@ -1,17 +1,16 @@
-import vscode from "vscode"
+import vscode from "vscode";
 
 import * as csv from "csv/sync";
 
-import Configuration from "../../configuration"
-import * as html from "./html";
 import { getInstance } from "../../base";
 import { JobManager } from "../../config";
-import { Query, QueryState } from "../../connection/query";
-import { updateStatusBar } from "../jobManager/statusBar";
-import Document from "../../language/sql/document";
-import { changedCache } from "../../language/providers/completionItemCache";
-import { ObjectRef, StatementType } from "../../language/sql/types";
 import { JobInfo } from "../../connection/manager";
+import { Query, QueryState } from "../../connection/query";
+import { changedCache } from "../../language/providers/completionItemCache";
+import Document from "../../language/sql/document";
+import { ObjectRef, StatementType } from "../../language/sql/types";
+import { updateStatusBar } from "../jobManager/statusBar";
+import * as html from "./html";
 
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
@@ -124,6 +123,7 @@ class ResultSetPanelProvider {
 }
 
 export type StatementQualifier = "statement"|"json"|"csv"|"cl"|"sql";
+export let selfCodeCache: any[] = [];
 
 export interface StatementInfo {
   content: string,
@@ -137,6 +137,12 @@ export interface StatementInfo {
 export function initialise(context: vscode.ExtensionContext) {
   let resultSetProvider = new ResultSetPanelProvider();
   let selfCodeErrorProvider = new ResultSetPanelProvider();
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(`vscode-db2i.selfCodeErrorPanel`, selfCodeErrorProvider, {
+      webviewOptions : {retainContextWhenHidden: true}
+    })
+  );
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider, {
@@ -235,9 +241,14 @@ export function initialise(context: vscode.ExtensionContext) {
               const selected: JobInfo = await JobManager.getSelection();
               if (selected.job.options.selfcodes) {
                 const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
+                selfCodeErrorProvider.setScrolling(content);
 
-                const data = await JobManager.runSQL(content);
-                console.log(data);
+                // TODO: when do we display error penel? 
+                // const data = await JobManager.runSQL(content);
+                // if (data) {
+                //   // selfCodeCache.length = 0;
+                //   // selfCodeCache.push(...data);
+                // }
                 
               }
               

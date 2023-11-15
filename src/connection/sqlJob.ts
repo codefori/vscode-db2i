@@ -4,6 +4,7 @@ import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions } from "./types";
 import { Query } from "./query";
 import { EventEmitter } from "stream";
+import { commands } from "vscode";
 
 export enum JobStatus {
   NotStarted = "notStarted",
@@ -186,6 +187,8 @@ export class SQLJob {
     this.id = connectResult.job;
     this.status = JobStatus.Ready;
 
+    commands.executeCommand(`setContext`, `vscode-db2i:hasSelfCodes`, false);
+
     return connectResult;
   }
   query<T>(sql: string, opts?: QueryOptions): Query<T> {
@@ -236,11 +239,15 @@ export class SQLJob {
       const query: string = `SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('${signedCodes.join(', ')}')`
       await this.query<any>(query).run();
       this.options.selfcodes = codes;
+      if (codes.length === 0) {
+        commands.executeCommand(`setContext`, `vscode-db2i:hasSelfCodes`, false);
+      } else {
+        commands.executeCommand(`setContext`, `vscode-db2i:hasSelfCodes`, true);
+      }
     } catch (e) {
       throw e;
     }
   }
-
   async setTraceConfig(dest: ServerTraceDest, level: ServerTraceLevel): Promise<SetConfigResult> {
     const reqObj = {
       id: SQLJob.getNewUniqueId(),

@@ -92,6 +92,13 @@
           "name": "Results",
           "when": "code-for-ibmi:connected == true",
           "contextualTitle": "IBM i"
+        },
+        {
+          "type": "webview",
+          "id": "vscode-db2i.selfCodeErrorPanel",
+          "name": "Self Code Errors",
+          "when": "code-for-ibmi:connected == true && vscode-db2i:hasSelfCodes == true",
+          "contextualTitle": "IBM i"
         }
       ],
       "db2-explorer": [
