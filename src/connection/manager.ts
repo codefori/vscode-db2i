@@ -90,6 +90,14 @@ export class SQLJobManager {
     const jobExists = this.jobs.findIndex(info => info.name === selectedName);
 
     this.selectedJob = jobExists;
+    if (jobExists >= 0) {
+      const curJob: JobInfo = this.jobs[jobExists];
+      if (curJob.job.options.selfcodes) {
+        curJob.job.setSelfCodes(curJob.job.options.selfcodes);
+      } else {
+        curJob.job.setSelfCodes([]);
+      }
+    }
 
     return (this.selectedJob >= 0);
   }
