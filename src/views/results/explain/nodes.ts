@@ -74,6 +74,10 @@ export class ExplainTree {
         case ValueType.NUMERIC:
           nodeValue = data.IFA_NUMOUT;
           break;
+        case ValueType.INVISIBLE:
+          // TODO: invisible attributes are not meant for display, but are associated with context actions defined for the node.
+          //       Until we implement context action support, ignore these attributes.
+          continue;
         case ValueType.CHARACTER:
         default:
           // If we were processing a long string, we've reached the end of the data, so wrap it up, clear the long string mode
