@@ -27,7 +27,9 @@ export class ExplainTree {
         this.order.push(nodeId)
       }
       
-      if (!this.flatNodes[nodeId]) this.flatNodes[nodeId] = [];
+      if (!this.flatNodes[nodeId]) {
+        this.flatNodes[nodeId] = [];
+      }
     
       this.flatNodes[nodeId].push(node);
     }
@@ -52,25 +54,49 @@ export class ExplainTree {
       props: []
     };
 
-    // The IFA_CHROUT column is VARCHAR(128), which means data that needs to be returned that exceeds that length must flow over to additional records
+    // The IFA_CHROUT column is VARCHAR(128) and the IFA_DBLBYT column is VARGRAPHIC(64).  When longer data needs to be returned in those columns,
+    // the IFA_TYPOUT field will contain values 'X' and 'Y' respectively, indicating that the value continues in subsequent result rows.  Row
+    // continuation is terminated in the 'X' case when any other value is found.  Double-byte string continuation, represented by 'Y' is terminated
+    // when a 'D' is found.
     let longString = ``;
+    let longDoubleByteString = ``;
     let processingLongString = false;
-
-    // TODO: add logic for processing records that follow a CHANGED_ATTRIBUTES_INDICATOR record
-    //       once such a record is encountered, all following records provide new values for
-    //       previously processed attributes, so we need to look back at currentNode.props to find
-    //       the right entry to update with a new value.  Fun!
+    let processingLongDoubleByteString = false;
+    // Delta attributes were originally designed for a refresh in Explain While Running, but SQE has decided to return these on the initial paint.
+    let processingDeltaAttributesForNode = false;
 
     for (const data of nodeData) {
       // TODO: list of column types
+      const nodeTitle = data.IFA_COLHDG;
+      // Ignore rows with no title
+      if (!nodeTitle) {
+        continue;
+      }
+
+      // When a DELTA_ATTRIBUTES_INDICATOR row is encountered, the rows following it provide new values for previously processed attributes,
+      // so we need to look back at currentNode.props to find the right entry to update with a new value.
+      if (DELTA_ATTRIBUTES_INDICATOR === nodeTitle) {
+        processingDeltaAttributesForNode = true;
+        continue;
+      }
 
       let nodeValue: any;
       switch (data.IFA_TYPOUT) {
         case ValueType.LONG_STRING:
-          // Type indicates a long string, meaning one or more following records continue the value
+          // Type indicates a long string so the value is continued in additional rows
           processingLongString = true;
           longString += data.IFA_CHROUT;
           continue;
+        case ValueType.DOUBLE_BYTE_STRING:
+          // Type indicates a long double-byte string so the value is continued in additional rows
+          processingLongDoubleByteString = true;
+          longDoubleByteString += data.IFA_DBLBYT;
+          continue;
+        case ValueType.DOUBLE_BYTE_STRING_END:
+          processingLongDoubleByteString = false;
+          nodeValue = longDoubleByteString + data.IFA_DBLBYT;
+          longDoubleByteString = ``;
+          break;
         case ValueType.NUMERIC:
           nodeValue = data.IFA_NUMOUT;
           break;
@@ -86,13 +112,16 @@ export class ExplainTree {
             longString = ``;
             processingLongString = false;
             break;
+          } else if (processingLongDoubleByteString) {
+            nodeValue = longDoubleByteString + data.IFA_DBLBYT;
+            longString = ``;
+            break;
           }
           nodeValue = data.IFA_CHROUT;
           break;
       }
 
       const nodeDataType = data.IFA_COLTYP;
-      const nodeTitle = data.IFA_COLHDG;
       switch (nodeDataType) {
         case RecordType.NEW_ICON:
           currentNode.title = nodeValue;
@@ -120,11 +149,16 @@ export class ExplainTree {
           break;
         default:
           if (nodeValue || nodeValue === 0) {
-            currentNode.props.push({
-              type: nodeDataType,
-              title: nodeTitle,
-              value: nodeValue
-            });
+            // If processing delta attributes, update the existing property entry, otherwise push a new one
+            if (processingDeltaAttributesForNode) {
+              currentNode.props.find(prop => prop.title === nodeTitle).value = nodeValue;
+            } else {
+              currentNode.props.push({
+                type: nodeDataType,
+                title: nodeTitle,
+                value: nodeValue
+              });
+            }
           }
       }
     }
