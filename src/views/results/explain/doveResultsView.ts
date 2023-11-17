@@ -93,6 +93,14 @@ export class ExplainTreeItem extends TreeItem {
     this.explainNode = node;
     this.contextValue = `explainTreeItem`;
 
+    // If the node is associated with a DB object, display the qualified object name in the description
+    if (node.objectSchema && node.objectName) {
+      this.description = node.objectSchema + `.` + node.objectName;
+    }
+
+    // TODO: the tooltip should be built using a MarkdownString, but every attempt results in 'Loading...' being displayed
+    this.tooltip = [node.title, node.tooltipProps.map<string>(prop => prop.title + `: ` + prop.value).join(`\n`)].join(`\n`);
+
     // TODO: highlights
 
     // TODO: testing icon colors

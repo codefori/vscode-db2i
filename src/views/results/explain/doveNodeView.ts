@@ -40,6 +40,7 @@ export class PropertyNode extends TreeItem {
     super(property.title);
 
     this.description = String(property.value);
+    this.tooltip = ``;
     // Differentiate section headings from the rest of the attributes
     if (property.type === RecordType.HEADING) {
       // TODO: can we do something more elegant than highlighting the text? https://stackoverflow.com/questions/74486107/how-to-color-tree-view-item-in-vscode-extension/74493474#74493474

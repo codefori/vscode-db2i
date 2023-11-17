@@ -1,9 +1,12 @@
 export interface ExplainNode {
   id: number;
   title: string;
+  objectSchema: string;
+  objectName: string;
   childrenNodes: number;
-  children: ExplainNode[],
-  props: ExplainProperty[]
+  children: ExplainNode[];
+  props: ExplainProperty[];
+  tooltipProps: ExplainProperty[];
 }
 
 export interface ExplainProperty {
@@ -49,9 +52,12 @@ export class ExplainTree {
     let currentNode: ExplainNode = {
       id: nodeId,
       title: ``,
+      objectSchema: ``,
+      objectName: ``,
       childrenNodes: 0,
       children: [],
-      props: []
+      props: [],
+      tooltipProps: []
     };
 
     // The IFA_CHROUT column is VARCHAR(128) and the IFA_DBLBYT column is VARGRAPHIC(64).  When longer data needs to be returned in those columns,
@@ -153,11 +159,21 @@ export class ExplainTree {
             if (processingDeltaAttributesForNode) {
               currentNode.props.find(prop => prop.title === nodeTitle).value = nodeValue;
             } else {
-              currentNode.props.push({
+              const newProperty: ExplainProperty = {
                 type: nodeDataType,
                 title: nodeTitle,
                 value: nodeValue
-              });
+              };
+              currentNode.props.push(newProperty);
+              if (data.IFA_FLYORD > 0) {
+                currentNode.tooltipProps.push(newProperty);
+              }
+            }
+            // If this property is tagged as an object attribute, set the value
+            switch (data.IFA_IFLAG) {
+              case `1`: currentNode.objectSchema = nodeValue; break;
+              case `2`: currentNode.objectName = nodeValue; break;
+              default: break;
             }
           }
       }
