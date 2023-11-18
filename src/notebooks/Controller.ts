@@ -114,13 +114,17 @@ export class IBMiController {
 
               const columns = results.metadata.columns.map(c => c.label);
 
+              let fallbackToTable = true;
+
               if (chartDetail.type) {
                 const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table);
                 if (possibleChart) {
                   items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
+                  fallbackToTable = false;
                 }
+              }
 
-              } else {
+              if (fallbackToTable) {
                 items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columns), `text/markdown`));
               }
               
