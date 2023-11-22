@@ -615,7 +615,89 @@
           "group": "inline"
         }
       ]
-    }
+    },
+    "colors": [
+      {
+        "id": "db2i.dove.resultsView.HighlightIndexAdvised",
+        "description": "Highlight color for index advised",
+        "defaults": {
+          "dark": "#acace0",
+          "light": "#8c8cbd",
+          "highContrast": "#acace0",
+          "highContrastLight": "#8c8cbd"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightActualExpensiveRows",
+        "description": "Highlight color for actual expensive rows",
+        "defaults": {
+          "dark": "#cc9933",
+          "light": "#cc9933",
+          "highContrast": "#cc9933",
+          "highContrastLight": "#cc9933"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightEstimatedExpensiveRows",
+        "description": "Highlight color for estimated expensive rows",
+        "defaults": {
+          "dark": "#ffffbf",
+          "light": "#ffffbf",
+          "highContrast": "#ffffbf",
+          "highContrastLight": "#ffffbf"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightEstimatedExpensiveTime",
+        "description": "Highlight color for estimated expensive time",
+        "defaults": {
+          "dark": "#f2bdbd",
+          "light": "#f2bdbd",
+          "highContrast": "#f2bdbd",
+          "highContrastLight": "#f2bdbd"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightLGP",
+        "description": "Highlight color for LGP",
+        "defaults": {
+          "dark": "#00ff00",
+          "light": "#00ff00",
+          "highContrast": "#00ff00",
+          "highContrastLight": "#00ff00"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightMQT",
+        "description": "Highlight color for MQT",
+        "defaults": {
+          "dark": "#ff8400",
+          "light": "#ff8400",
+          "highContrast": "#ff8400",
+          "highContrastLight": "#ff8400"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightRefreshedNode",
+        "description": "Highlight color for refreshed node",
+        "defaults": {
+          "dark": "#00ffff",
+          "light": "#00ffff",
+          "highContrast": "#00ffff",
+          "highContrastLight": "#00ffff"
+        }
+      },
+      {
+        "id": "db2i.dove.nodeView.AttributeSectionHeading",
+        "description": "Highlight color for node attributes section heading",
+        "defaults": {
+          "dark": "#bd8c8c",
+          "light": "#5976df",
+          "highContrast": "#bd8c8c",
+          "highContrastLight": "#5976df"
+        }
+      }
+    ]
   },
   "scripts": {
     "lint": "eslint .",

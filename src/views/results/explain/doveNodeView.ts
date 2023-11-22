@@ -1,9 +1,12 @@
-import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands, ThemeIcon, ThemeColor } from "vscode";
+import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, ThemeIcon, commands } from "vscode";
 import { ExplainNode, ExplainProperty, RecordType } from "./nodes";
+import { TreeNodeHighlights } from "./doveTreeDecorationProvider";
+
+type EventType = PropertyNode | undefined | null | void;
 
 export class DoveNodeView implements TreeDataProvider<any> {
-  private _onDidChangeTreeData: EventEmitter<PropertyNode | undefined | null | void> = new EventEmitter<PropertyNode | undefined | null | void>();
-  readonly onDidChangeTreeData: Event<PropertyNode | undefined | null | void> = this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData: EventEmitter<EventType> = new EventEmitter<EventType>();
+  readonly onDidChangeTreeData: Event<EventType> = this._onDidChangeTreeData.event;
 
   private propertyNodes: PropertyNode[];
 
@@ -40,15 +43,13 @@ export class PropertyNode extends TreeItem {
     super(property.title);
 
     this.description = String(property.value);
+     // Set an empty tooltip, otherwise 'Loading...' is displayed
     this.tooltip = ``;
-    // Differentiate section headings from the rest of the attributes
+    // Differentiate section headings from the rest of the attributes via node highlighting
     if (property.type === RecordType.HEADING) {
-      // TODO: can we do something more elegant than highlighting the text? https://stackoverflow.com/questions/74486107/how-to-color-tree-view-item-in-vscode-extension/74493474#74493474
-      this.label = { label: property.title, highlights: [[0, property.title.length]] };
+      const highlight = TreeNodeHighlights["attribute_heading"];
+      this.resourceUri = highlight.uri;
+      this.iconPath = new ThemeIcon("list-tree", highlight.color);
     }
-    // TODO: icons
-    // if (property.title !== ``) {
-    //   this.iconPath = new ThemeIcon("flame", new ThemeColor("testing.iconFailed"));
-    // }
   }
 }

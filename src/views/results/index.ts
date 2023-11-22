@@ -11,6 +11,7 @@ import Statement from "../../language/sql/statement";
 import { ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView } from "./explain/doveNodeView";
+import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider } from "./resultSetPanelProvider";
 
 export type StatementQualifier = "statement" | "explain" | "json" | "csv" | "cl" | "sql";
@@ -33,6 +34,7 @@ export interface ParsedStatementInfo extends StatementInfo {
 let resultSetProvider = new ResultSetPanelProvider();
 let doveResultsView = new DoveResultsView();
 let doveNodeView = new DoveNodeView();
+let doveTreeDecorationProvider = new DoveTreeDecorationProvider();
 
 export function initialise(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -42,6 +44,9 @@ export function initialise(context: vscode.ExtensionContext) {
 
     vscode.window.registerTreeDataProvider(`vscode-db2i.dove.nodes`, doveResultsView),
     vscode.window.registerTreeDataProvider(`vscode-db2i.dove.node`, doveNodeView),
+
+    vscode.window.registerFileDecorationProvider(doveTreeDecorationProvider),
+
     vscode.commands.registerCommand(`vscode-db2i.dove.close`, () => {
       doveResultsView.close();
       doveNodeView.close();
@@ -130,7 +135,7 @@ async function runHandler(options?: StatementInfo) {
                   const tree = new ExplainTree(explained.vedata);
                   const topLevel = tree.get();
 
-                  doveResultsView.setRootNode(topLevel);
+                  doveTreeDecorationProvider.updateTreeItems(doveResultsView.setRootNode(topLevel));
 
                   // TODO: handle when explain without running
                   resultSetProvider.setScrolling(statementDetail.content, false, explained.id);
