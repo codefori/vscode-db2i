@@ -1,3 +1,5 @@
+import Statement from "../../../database/statement";
+
 export interface ExplainNode {
   id: number;
   title: string;
@@ -171,8 +173,8 @@ export class ExplainTree {
             }
             // If this property is tagged as an object attribute, set the value
             switch (data.IFA_IFLAG) {
-              case `1`: currentNode.objectSchema = nodeValue; break;
-              case `2`: currentNode.objectName = nodeValue; break;
+              case `1`: currentNode.objectSchema = Statement.prettyName(nodeValue); break;
+              case `2`: currentNode.objectName = Statement.prettyName(nodeValue); break;
               default: break;
             }
           }
