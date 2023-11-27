@@ -658,8 +658,8 @@
         }
       },
       {
-        "id": "db2i.dove.resultsView.HighlightLGP",
-        "description": "Highlight color for LGP",
+        "id": "db2i.dove.resultsView.HighlightLPG",
+        "description": "Highlight color for LPG",
         "defaults": {
           "dark": "#00ff00",
           "light": "#00ff00",

@@ -113,7 +113,7 @@ export class ExplainTreeItem extends TreeItem {
     }
 
     // TODO: the tooltip should be built using a MarkdownString, but every attempt results in 'Loading...' being displayed
-    this.tooltip = [node.title, node.tooltipProps.map<string>(prop => prop.title + `: ` + prop.value).join(`\n`)].join(`\n`);
+    this.tooltip = [node.title, node.tooltipProps.map<string>(prop => prop.title + `: ` + prop.value).join(`\n`), `\n`].join(`\n`);
 
     // TODO: highlights - set the correct highlight resource Uri
     // Ex: this.resourceUri = TreeNodeHighlights["index_advised"].uri;

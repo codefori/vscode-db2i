@@ -28,7 +28,7 @@ export const TreeNodeHighlights: { [uriPath: string]: Highlight } = {
     "estimated_expensive_rows": newHighlight("estimated_expensive_rows", "db2i.dove.resultsView.HighlightEstimatedExpensiveRows"),
     "estimated_expensive_time": newHighlight("estimated_expensive_time", "db2i.dove.resultsView.HighlightEstimatedExpensiveTime"),
     // Lookahead Predicate Generation (LPG)
-    "lgp":                      newHighlight("lgp",                      "db2i.dove.resultsView.HighlightLGP"),
+    "lpg":                      newHighlight("lpg",                      "db2i.dove.resultsView.HighlightLPG"),
     "mqt":                      newHighlight("mqt",                      "db2i.dove.resultsView.HighlightMQT"),
     // Note: refreshed node would only ever be used if mode were Explain While Running
     "refreshed_node":           newHighlight("refreshed_node",           "db2i.dove.resultsView.HighlightRefreshedNode"),
@@ -56,8 +56,8 @@ export const TreeNodeHighlights: { [uriPath: string]: Highlight } = {
             if (color) {
                 return {
                     color: color,
-                     // badge: "⇐",
-                     // tooltip: ""
+                    // badge: "⇐",
+                    // tooltip: ""
                 }
             }
         }
