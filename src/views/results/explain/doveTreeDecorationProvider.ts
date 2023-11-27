@@ -27,8 +27,10 @@ export const TreeNodeHighlights: { [uriPath: string]: Highlight } = {
     "actual_expensive_rows":    newHighlight("actual_expensive_rows",    "db2i.dove.resultsView.HighlightActualExpensiveRows"),
     "estimated_expensive_rows": newHighlight("estimated_expensive_rows", "db2i.dove.resultsView.HighlightEstimatedExpensiveRows"),
     "estimated_expensive_time": newHighlight("estimated_expensive_time", "db2i.dove.resultsView.HighlightEstimatedExpensiveTime"),
+    // Lookahead Predicate Generation (LPG)
     "lgp":                      newHighlight("lgp",                      "db2i.dove.resultsView.HighlightLGP"),
     "mqt":                      newHighlight("mqt",                      "db2i.dove.resultsView.HighlightMQT"),
+    // Note: refreshed node would only ever be used if mode were Explain While Running
     "refreshed_node":           newHighlight("refreshed_node",           "db2i.dove.resultsView.HighlightRefreshedNode"),
     "attribute_heading":        newHighlight("attribute_heading",        "db2i.dove.nodeView.AttributeSectionHeading")
   }
@@ -42,7 +44,6 @@ export const TreeNodeHighlights: { [uriPath: string]: Highlight } = {
     constructor() {
         this.disposables = [];
         this.disposables.push(window.registerFileDecorationProvider(this));
-        window.registerFileDecorationProvider(this);
     }
 
     async updateTreeItems(treeItem: TreeItem): Promise<void> {
@@ -55,8 +56,8 @@ export const TreeNodeHighlights: { [uriPath: string]: Highlight } = {
             if (color) {
                 return {
                     color: color,
-                    // badge: "⇐",
-                    // tooltip: ""
+                     // badge: "⇐",
+                     // tooltip: ""
                 }
             }
         }

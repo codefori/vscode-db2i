@@ -34,7 +34,7 @@ export interface ParsedStatementInfo extends StatementInfo {
 let resultSetProvider = new ResultSetPanelProvider();
 let doveResultsView = new DoveResultsView();
 let doveNodeView = new DoveNodeView();
-let doveTreeDecorationProvider = new DoveTreeDecorationProvider();
+let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration providor
 
 export function initialise(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -44,8 +44,6 @@ export function initialise(context: vscode.ExtensionContext) {
 
     vscode.window.registerTreeDataProvider(`vscode-db2i.dove.nodes`, doveResultsView),
     vscode.window.registerTreeDataProvider(`vscode-db2i.dove.node`, doveNodeView),
-
-    vscode.window.registerFileDecorationProvider(doveTreeDecorationProvider),
 
     vscode.commands.registerCommand(`vscode-db2i.dove.close`, () => {
       doveResultsView.close();
