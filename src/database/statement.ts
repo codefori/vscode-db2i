@@ -2,16 +2,18 @@
 import { getInstance } from "../base";
 import Configuration from "../configuration";
 
-import {format, FormatOptionsWithLanguage, KeywordCase} from "sql-formatter"
+import {format, FormatOptionsWithLanguage, IdentifierCase, KeywordCase} from "sql-formatter"
 
 export default class Statement {
   static format(sql: string, options: FormatOptionsWithLanguage = {}) {
+    const identifierCase: IdentifierCase = <IdentifierCase>(Configuration.get(`sqlFormat.identifierCase`) || `preserve`);
     const keywordCase: KeywordCase = <KeywordCase>(Configuration.get(`sqlFormat.keywordCase`) || `lower`);
     return format(sql, {
       ...options,
       language: `db2i`, // Defaults to "sql" (see the above list of supported dialects)
       linesBetweenQueries: 2, // Defaults to 1
-      keywordCase: keywordCase
+      identifierCase: identifierCase,
+      keywordCase: keywordCase,
     });
   }
 

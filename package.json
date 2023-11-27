@@ -66,6 +66,17 @@
           "default": {},
           "additionalProperties": true
         },
+        "vscode-db2i.sqlFormat.identifierCase": {
+          "type": "string",
+          "description": "SQL formatting options: Lowercase or uppercase SQL identifiers",
+          "default": "preserve",
+          "enum": ["lower", "upper", "preserve"],
+          "enumDescriptions": [
+            "Format SQL identifiers in lowercase",
+            "Format SQL identifiers in uppercase",
+            "Preserve the current formatting of SQL identifiers"
+          ]
+        },
         "vscode-db2i.sqlFormat.keywordCase": {
           "type": "string",
           "description": "SQL formatting options: Lowercase or uppercase SQL keywords",
@@ -598,7 +609,7 @@
     "csv": "^6.1.3",
     "node-fetch": "^3.3.1",
     "octokit": "^2.0.14",
-    "sql-formatter": "^13.1.0",
+    "sql-formatter": "^14.0.0",
     "lru-cache": "^6.0.0"
   }
 }
