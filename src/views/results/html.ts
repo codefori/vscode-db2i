@@ -137,6 +137,15 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             });
           }
 
+          function isJsonString(str) {
+            try {
+              JSON.parse(str);
+              return true;
+            } catch (e) {
+              return false;
+            }
+          }
+
           function appendRows(tableId, arrayOfObjects) {
             var tBodyRef = document.getElementById(tableId).getElementsByTagName('tbody')[0];
 
@@ -147,10 +156,24 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
               for (const cell of row) {
                 // Insert a cell at the end of the row
                 var newCell = newRow.insertCell();
+                var cellVal = cell === undefined ? 'null' : cell;
 
-                // Append a text node to the cell
-                var newText = document.createTextNode(cell === undefined ? 'null' : cell);
-                newCell.appendChild(newText);
+                // check if cell contains JSON
+                if (isJsonString(cellVal)) {
+                  var formattedJson = JSON.stringify(JSON.parse(cellVal), null, 2);
+                  // Create a pre tag and apply inline styles for scrolling
+                  var pre = document.createElement('pre');
+                  pre.style.maxHeight = '100px'; // Adjust the height as needed
+                  pre.style.overflowY = 'auto';
+                  pre.style.margin = '0'; // To remove default margin of pre
+                  pre.textContent = formattedJson; // Using textContent to preserve text formatting
+                  newCell.appendChild(pre);
+                } else {
+                  // Append a text node to the cell
+                  var newText = document.createTextNode(cellVal);
+                  newCell.appendChild(newText);
+                }
+
               }
             }
 
