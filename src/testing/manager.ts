@@ -2,8 +2,7 @@ import assert from "assert";
 import { TestSuite } from ".";
 import { JobManager } from "../config";
 import { ServerComponent } from "../connection/serverComponent";
-import { JobStatus, SQLJob } from "../connection/sqlJob";
-import { testSelfCodes } from "../views/jobManager/selfCodes/selfCodesTest";
+import { JobStatus } from "../connection/sqlJob";
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,

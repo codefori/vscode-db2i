@@ -541,7 +541,7 @@
         {
           "command": "vscode-db2i.jobManager.editSelfCodes",
           "when": "view == jobManager && viewItem == sqlJob",
-          "group": "inline"
+          "group": "self@2"
         },
         {
           "command": "vscode-db2i.jobManager.copyJobId",
@@ -566,7 +566,7 @@
         {
           "command": "vscode-db2i.jobManager.getSelfErrors",
           "when": "view == jobManager && viewItem == sqlJob",
-          "group": "trace@3"
+          "group": "self@1"
         },
         {
           "command": "vscode-db2i.jobManager.newConfig",
