@@ -1,41 +1,22 @@
 import { window, Event, EventEmitter, TreeItem, ThemeColor, FileDecorationProvider, FileDecoration, Uri, Disposable } from "vscode";
+import { NodeHighlights, Highlighting } from "./nodes";
 
 /**
  * The Uri scheme for VE node highlights
  */
-const uriScheme = "db2i.dove";
+const doveUriScheme = "db2i.dove";
 
-interface Highlight {
-    uri: Uri,
-    color: ThemeColor
+/**
+ * Generates a {@link DoveTreeDecorationProvider} compatible Uri. The Uri scheme is set to {@link doveUriScheme}.
+ */
+export function toDoveTreeDecorationProviderUri(highlights: NodeHighlights): Uri {
+    return highlights.formatValue != 0 ? Uri.parse(doveUriScheme + ":" + highlights.formatValue, false) : null;
 }
 
 /**
- * @param uriPath the Uri path that identifies the highlight.  The scheme will always be {@link uriScheme}
- * @param themeColor defined in {@file package.json}
- * @returns an instance of {@link Highlight}
+ * Provides tree node decorations specific to Db2 for i Visual Explain.
  */
-function newHighlight(uriPath: string, themeColor: string): Highlight {
-    return {
-        uri:   Uri.parse(uriScheme + ":" + uriPath, false),
-        color: new ThemeColor(themeColor)
-    }
-};
-
-export const TreeNodeHighlights: { [uriPath: string]: Highlight } = {
-    "index_advised":            newHighlight("index_advised",            "db2i.dove.resultsView.HighlightIndexAdvised"),
-    "actual_expensive_rows":    newHighlight("actual_expensive_rows",    "db2i.dove.resultsView.HighlightActualExpensiveRows"),
-    "estimated_expensive_rows": newHighlight("estimated_expensive_rows", "db2i.dove.resultsView.HighlightEstimatedExpensiveRows"),
-    "estimated_expensive_time": newHighlight("estimated_expensive_time", "db2i.dove.resultsView.HighlightEstimatedExpensiveTime"),
-    // Lookahead Predicate Generation (LPG)
-    "lpg":                      newHighlight("lpg",                      "db2i.dove.resultsView.HighlightLPG"),
-    "mqt":                      newHighlight("mqt",                      "db2i.dove.resultsView.HighlightMQT"),
-    // Note: refreshed node would only ever be used if mode were Explain While Running
-    "refreshed_node":           newHighlight("refreshed_node",           "db2i.dove.resultsView.HighlightRefreshedNode"),
-    "attribute_heading":        newHighlight("attribute_heading",        "db2i.dove.nodeView.AttributeSectionHeading")
-  }
-  
-  export class DoveTreeDecorationProvider implements FileDecorationProvider {
+export class DoveTreeDecorationProvider implements FileDecorationProvider {
     private disposables: Array<Disposable> = [];
 
     readonly _onDidChangeFileDecorations: EventEmitter<Uri | Uri[]> = new EventEmitter<Uri | Uri[]>();
@@ -50,14 +31,32 @@ export const TreeNodeHighlights: { [uriPath: string]: Highlight } = {
         this._onDidChangeFileDecorations.fire(treeItem.resourceUri);
     }
 
+    /**
+     * @inheritdoc
+     * Provides tree node decorations specific to Db2 for i Visual Explain.
+     */
     async provideFileDecoration(uri: Uri): Promise<FileDecoration | undefined> {
-        if (uri?.scheme === uriScheme) {
-            let color: ThemeColor = TreeNodeHighlights[uri.fsPath]?.color;
-            if (color) {
+        // Only decorate tree items tagged with the VE scheme
+        if (uri?.scheme === doveUriScheme) {
+            // The Uri path should simply be a number that represents the highlight attributes
+            const value: number = Number(uri.fsPath);
+            if (!isNaN(value) && value > 0) {
+                const nodeHighlights = new NodeHighlights(value);
+                let color: ThemeColor;
+                let badge: string;
+                let tooltip: string;
+                // For attribute section headings, only the color needs to be applied, which is not controlled by the highlight preferences
+                if (nodeHighlights.isSet(Highlighting.ATTRIBUTE_SECTION_HEADING)) {
+                    color = Highlighting.Colors[Highlighting.ATTRIBUTE_SECTION_HEADING];
+                } else {
+                    color = nodeHighlights.getPriorityColor();
+                    badge = String(nodeHighlights.getCount()); // The number of highlights set for the node
+                    tooltip = "\n" + nodeHighlights.getNames().map(h => "🔥 " + Highlighting.Descriptions[Highlighting[h]]).join("\n");
+                }
                 return {
                     color: color,
-                    // badge: "⇐",
-                    // tooltip: ""
+                    badge: badge,
+                    tooltip: tooltip,
                 }
             }
         }

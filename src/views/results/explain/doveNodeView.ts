@@ -1,6 +1,6 @@
 import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, ThemeIcon, commands } from "vscode";
-import { ExplainNode, ExplainProperty, RecordType } from "./nodes";
-import { TreeNodeHighlights } from "./doveTreeDecorationProvider";
+import { ExplainNode, ExplainProperty, Highlighting, RecordType, NodeHighlights } from "./nodes";
+import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
 
 type EventType = PropertyNode | undefined | null | void;
 
@@ -41,15 +41,13 @@ export class DoveNodeView implements TreeDataProvider<any> {
 export class PropertyNode extends TreeItem {
   constructor(property: ExplainProperty) {
     super(property.title);
-
     this.description = String(property.value);
      // Set an empty tooltip, otherwise 'Loading...' is displayed
     this.tooltip = ``;
     // Differentiate section headings from the rest of the attributes via node highlighting
     if (property.type === RecordType.HEADING) {
-      const highlight = TreeNodeHighlights["attribute_heading"];
-      this.resourceUri = highlight.uri;
-      this.iconPath = new ThemeIcon("list-tree", highlight.color);
+      this.resourceUri = toDoveTreeDecorationProviderUri(new NodeHighlights().set(Highlighting.ATTRIBUTE_SECTION_HEADING));
+      this.iconPath = new ThemeIcon("list-tree", Highlighting.Colors[Highlighting.ATTRIBUTE_SECTION_HEADING]);
     }
   }
 }

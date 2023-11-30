@@ -648,6 +648,16 @@
         }
       },
       {
+        "id": "db2i.dove.resultsView.HighlightActualExpensiveTime",
+        "description": "Highlight color for actual expensive time",
+        "defaults": {
+          "dark": "#bc0f0f",
+          "light": "#bc0f0f",
+          "highContrast": "#bc0f0f",
+          "highContrastLight": "#bc0f0f"
+        }
+      },
+      {
         "id": "db2i.dove.resultsView.HighlightEstimatedExpensiveTime",
         "description": "Highlight color for estimated expensive time",
         "defaults": {
@@ -658,8 +668,8 @@
         }
       },
       {
-        "id": "db2i.dove.resultsView.HighlightLPG",
-        "description": "Highlight color for LPG",
+        "id": "db2i.dove.resultsView.HighlightLookaheadPredicateGeneration",
+        "description": "Highlight color for Lookahead Predicate Generation",
         "defaults": {
           "dark": "#00ff00",
           "light": "#00ff00",
@@ -668,8 +678,8 @@
         }
       },
       {
-        "id": "db2i.dove.resultsView.HighlightMQT",
-        "description": "Highlight color for MQT",
+        "id": "db2i.dove.resultsView.HighlightMaterializedQueryTable",
+        "description": "Highlight color for Materialized Query Table",
         "defaults": {
           "dark": "#ff8400",
           "light": "#ff8400",
@@ -689,7 +699,7 @@
       },
       {
         "id": "db2i.dove.nodeView.AttributeSectionHeading",
-        "description": "Highlight color for node attributes section heading",
+        "description": "Color for attributes section heading",
         "defaults": {
           "dark": "#bd8c8c",
           "light": "#5976df",

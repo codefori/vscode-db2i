@@ -1,6 +1,6 @@
 import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands, ThemeIcon } from "vscode";
 import { ExplainNode } from "./nodes";
-import { TreeNodeHighlights } from "./doveTreeDecorationProvider";
+import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
 
 /**
  * Icon labels as defined by the API, along with the name of the icon to display.
@@ -112,15 +112,10 @@ export class ExplainTreeItem extends TreeItem {
       this.description = node.objectSchema + `.` + node.objectName;
     }
 
-    // TODO: the tooltip should be built using a MarkdownString, but every attempt results in 'Loading...' being displayed
-    this.tooltip = [node.title, node.tooltipProps.map<string>(prop => prop.title + `: ` + prop.value).join(`\n`), `\n`].join(`\n`);
-
-    // TODO: highlights - set the correct highlight resource Uri
-    // Ex: this.resourceUri = TreeNodeHighlights["index_advised"].uri;
-
-    // TODO: testing icon colors --- this.iconPath = new ThemeIcon("flame", new ThemeColor("testing.iconFailed"));
-    const icon = icons[node.title] || `chevron-right`;
-    this.iconPath = new ThemeIcon(icon);
+    // TODO: ideally the tooltip would be built using a MarkdownString, but regardless of everything tried, 'Loading...' is always displayed
+    this.tooltip = [node.title, node.tooltipProps.map<string>(prop => prop.title + `: ` + prop.value).join(`\n`), ``].join(`\n`);
+    this.resourceUri = toDoveTreeDecorationProviderUri(node.highlights);
+    this.iconPath = new ThemeIcon(icons[node.title] || `server-process`, node.highlights.getPriorityColor()); // `circle-outline`
   }
 
   getChildren() {
