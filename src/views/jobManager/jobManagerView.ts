@@ -1,14 +1,15 @@
-import vscode, { MarkdownString, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri, commands, env, window, workspace } from "vscode";
-import { TreeDataProvider } from "vscode";
-import { Config, JobManager } from "../../config";
-import { JobInfo, SQLJobManager } from "../../connection/manager";
+import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
+import { JobManager } from "../../config";
+import { JobInfo } from "../../connection/manager";
+import { ServerComponent } from "../../connection/serverComponent";
+import { SQLJob, TransactionEndType } from "../../connection/sqlJob";
+import { ServerTraceDest, ServerTraceLevel } from "../../connection/types";
+import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
-import { ServerTraceDest, ServerTraceLevel } from "../../connection/types";
-import { ServerComponent } from "../../connection/serverComponent";
+import { selfCodesMap } from "./selfCodes/selfCodes";
+import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
-import { SQLJob, TransactionEndType } from "../../connection/sqlJob";
-import { ConfigGroup, ConfigManager } from "./ConfigManager";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -124,6 +125,76 @@ export class JobManagerView implements TreeDataProvider<any> {
               })
             }
           })
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.editSelfCodes`, async (node?: SQLJobItem) => {
+        const id = node ? node.label as string : undefined;
+        let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected) {
+          try {
+            const currentSelfCodes = selected.job.options.selfcodes;
+            const selfCodeItems: SelfCodesQuickPickItem[] = selfCodesMap.map(
+              (code) => new SelfCodesQuickPickItem(code)
+            );
+            const currentSelfCodeItems: SelfCodesQuickPickItem[] =
+              selfCodeItems.filter((item) =>
+                currentSelfCodes ? currentSelfCodes.includes(item.label) : false
+              );
+
+            const quickPick = vscode.window.createQuickPick();
+            quickPick.title = `Select SELF codes`;
+            quickPick.canSelectMany = true;
+            quickPick.matchOnDetail = true;
+            quickPick.items = [
+              {
+                kind: vscode.QuickPickItemKind.Separator,
+                label: "Currently selected SELF codes",
+              },
+              ...currentSelfCodeItems,
+              {
+                kind: vscode.QuickPickItemKind.Separator,
+                label: "All Available SELF codes",
+              },
+              ...selfCodeItems.filter((item) =>
+                currentSelfCodeItems
+                  ? !currentSelfCodeItems.includes(item)
+                  : true
+              ),
+            ];
+
+            quickPick.selectedItems = currentSelfCodeItems;
+
+            quickPick.onDidAccept(async () => {
+              const selections = quickPick.selectedItems;
+              // SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('-514, -204, -501, +30, -199');
+              if (selections) {
+                const codes: string[] = selections.map((code) => code.label);
+                selected.job.setSelfCodes(codes);
+                vscode.window.showInformationMessage(`Applied SELF codes: ${codes}`);
+              }
+              quickPick.hide();
+            });
+            quickPick.onDidHide(() => quickPick.dispose());
+            quickPick.show();
+          } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.getSelfErrors`, async (node?: SQLJobItem) => {
+        if (node) {
+          const id = node.label as string;
+          const selected = await JobManager.getJob(id);
+
+          const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
+
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            qualifier: `statement`,
+            open: false,
+          });
         }
       }),
 

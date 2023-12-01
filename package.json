@@ -311,6 +311,12 @@
         "icon": "$(edit)"
       },
       {
+        "command": "vscode-db2i.jobManager.editSelfCodes",
+        "title": "Edit SELF codes",
+        "category": "Db2 for i",
+        "icon": "$(bracket-error)"
+      },
+      {
         "command": "vscode-db2i.jobManager.copyJobId",
         "title": "Copy Job Name",
         "category": "Db2 for i",
@@ -330,6 +336,11 @@
       {
         "command": "vscode-db2i.jobManager.getTrace",
         "title": "Get Trace Data",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.jobManager.getSelfErrors",
+        "title": "Get SELF codes Errors",
         "category": "Db2 for i"
       },
       {
@@ -370,6 +381,10 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.jobManager.editSelfCodes",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.jobManager.copyJobId",
           "when": "never"
         },
@@ -379,6 +394,10 @@
         },
         {
           "command": "vscode-db2i.jobManager.enableTracing",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getSelfErrors",
           "when": "never"
         },
         {
@@ -541,6 +560,11 @@
           "group": "inline"
         },
         {
+          "command": "vscode-db2i.jobManager.editSelfCodes",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "self@2"
+        },
+        {
           "command": "vscode-db2i.jobManager.copyJobId",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
@@ -559,6 +583,11 @@
           "command": "vscode-db2i.jobManager.getTrace",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "trace@2"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getSelfErrors",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "self@1"
         },
         {
           "command": "vscode-db2i.jobManager.newConfig",

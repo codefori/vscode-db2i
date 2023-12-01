@@ -33,6 +33,7 @@ export async function updateStatusBar() {
 
       toolTipItems.push(`[$(info) View Job Log](command:vscode-db2i.jobManager.viewJobLog)`);
       toolTipItems.push(`[$(edit) Edit Connection Settings](command:vscode-db2i.jobManager.editJobProps)`);
+      toolTipItems.push(`[$(bracket-error) Edit SELF codes](command:vscode-db2i.jobManager.editSelfCodes)`);
     } else {
       text = `$(database) No job active`;
       toolTipItems.push(`[Start Job](command:vscode-db2i.jobManager.newJob)`);

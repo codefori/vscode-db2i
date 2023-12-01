@@ -1,10 +1,10 @@
 import assert from "assert";
 import { TestSuite } from ".";
-import { JobStatus, SQLJob } from "../connection/sqlJob";
 import { getInstance } from "../base";
-import { ServerComponent } from "../connection/serverComponent";
-import { ServerTraceDest, ServerTraceLevel } from "../connection/types";
 import { Query } from "../connection/query";
+import { ServerComponent } from "../connection/serverComponent";
+import { JobStatus, SQLJob } from "../connection/sqlJob";
+import { ServerTraceDest, ServerTraceLevel } from "../connection/types";
 
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
