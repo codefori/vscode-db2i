@@ -38,7 +38,7 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
 
     switch (newJob) {
     case `ask`:
-      return await askAboutNewJob();
+      return await askAboutNewJob(true);
 
     case `new`:
       await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
@@ -101,15 +101,28 @@ export async function fetchSystemInfo() {
   }
 }
 
-export async function askAboutNewJob(): Promise<boolean> {
-  const chosen = await window.showInformationMessage(`Would you like to start an SQL Job?`, `Yes`, `Always`, `No`);
-  if (chosen === `Yes` || chosen === `Always`) {
-    if (chosen === `Always`) {
-      await Configuration.set(`alwaysStartSQLJob`, `new`);
-    }
+export async function askAboutNewJob(startup?: boolean): Promise<boolean> {
+  const instance = getInstance();
+  const connection = instance.getConnection();
 
-    await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
-    return true;
+  if (connection) {
+    const options = startup ? [`Yes`, `Always`, `No`, `Never`] : [`Yes`, `No`];
+
+    const chosen = await window.showInformationMessage(`Would you like to start an SQL Job?`, ...options);
+    switch (chosen) {
+      case `Yes`: 
+      case `Always`:
+        if (chosen === `Always`) {
+          await Configuration.set(`alwaysStartSQLJob`, `new`);
+        }
+
+        await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
+        return true;
+
+      case `Never`:
+        await Configuration.set(`alwaysStartSQLJob`, `never`);
+        break;
+    }
   }
 
   return false;
