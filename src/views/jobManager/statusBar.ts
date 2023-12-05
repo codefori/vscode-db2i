@@ -5,7 +5,7 @@ import { getInstance } from "../../base";
 
 const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Left);
 
-export async function updateStatusBar() {
+export async function updateStatusBar(options: {newJob?: boolean} = {}) {
   const instance = getInstance();
   const connection = instance.getConnection();
 
@@ -16,6 +16,9 @@ export async function updateStatusBar() {
     let backgroundColour: ThemeColor|undefined = undefined;
     let toolTipItems = [];
 
+    if (options.newJob) {
+      text = `$(sync~spin) Spinning up job...`;
+    } else
     if (selected) {
       text = `$(database) ${selected.name}`;
 
@@ -40,11 +43,13 @@ export async function updateStatusBar() {
       toolTipItems.push(`[Start Job](command:vscode-db2i.jobManager.newJob)`);
     }
     
-    const toolTip = new MarkdownString(toolTipItems.join(`\n\n---\n\n`), true);
-    toolTip.isTrusted = true;
+    if (toolTipItems.length > 0) {
+      const toolTip = new MarkdownString(toolTipItems.join(`\n\n---\n\n`), true);
+      toolTip.isTrusted = true;
+      item.tooltip = toolTip;
+    }
     
     item.text = text;
-    item.tooltip = toolTip;
     item.backgroundColor = backgroundColour;
 
     item.show();

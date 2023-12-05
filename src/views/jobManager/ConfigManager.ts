@@ -1,7 +1,7 @@
 import { Disposable, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, window } from "vscode";
 import Configuration from "../../configuration";
 import { JDBCOptions } from "../../connection/types";
-import { SQLJobItem } from "./jobManagerView";
+import { JobManagerView, SQLJobItem } from "./jobManagerView";
 import { JobManager } from "../../config";
 import { SQLJob } from "../../connection/sqlJob";
 import { editJobUi } from "./editJob";
@@ -42,16 +42,7 @@ export class ConfigManager {
         const options = this.getConfig(name);
 
         if (options) {
-          await window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
-            try {
-              progress.report({ message: `Spinning up SQL job...` });
-              await JobManager.newJob(new SQLJob(options), name);
-            } catch (e) {
-              window.showErrorMessage(e.message);
-            }
-
-            this.refresh();
-          });
+          commands.executeCommand(`vscode-db2i.jobManager.newJob`, options, name);
         }
       }),
 
@@ -108,7 +99,8 @@ export class ConfigManager {
   }
 
   static getConfig(name: string): JDBCOptions | undefined {
-    return this.getSavedConfigs()[name];
+    const configs = this.getSavedConfigs(); // Returns a proxy
+    return Object.assign({}, configs[name]);
   }
 
   private static storeConfig(name: string, options: JDBCOptions) {
