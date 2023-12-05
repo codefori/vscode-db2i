@@ -41,7 +41,8 @@ export default class Statement {
 			return true;
 		}
 
-		if (this.type === StatementType.Create) {
+		// These statements can end with BEGIN, which signifies a block starter
+		if ([StatementType.Create, StatementType.Declare].includes(this.type)) {
 			const last = this.tokens[this.tokens.length-1];
 			if (tokenIs(last, `keyword`, `BEGIN`)) {
 				return true;
