@@ -19,7 +19,7 @@ export const head = /*html*/`
 
     #resultset th,
     #resultset td {
-      padding: 12px 15px;
+      padding: 5px 15px;
     }
     
     #resultset tbody tr {
