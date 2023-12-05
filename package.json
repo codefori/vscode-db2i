@@ -55,6 +55,11 @@
           "description": "Page size for Schema browser",
           "default": 500
         },
+        "vscode-db2i.collapsedResultSet": {
+          "type": "boolean",
+          "description": "Make larger cells collapsed by default",
+          "default": false
+        },
         "vscode-db2i.alwaysStartSQLJob": {
           "type": "string",
           "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",

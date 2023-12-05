@@ -1,5 +1,3 @@
-import { Server } from "http";
-
 export interface ServerResponse {
   id: string;
   success: boolean;
