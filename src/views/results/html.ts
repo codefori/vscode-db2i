@@ -1,5 +1,7 @@
 import { Webview } from "vscode";
-import { head } from "../html";
+import { getHeader } from "../html";
+
+import Configuration from "../../configuration";
 
 export function setLoadingText(webview: Webview, text: string) {
   webview.postMessage({
@@ -13,7 +15,7 @@ export function getLoadingHTML(): string {
     <!DOCTYPE html>
     <html lang="en">
       <head>
-        ${head}
+        ${getHeader()}
         <script>
           window.addEventListener("message", (event) => {
             const command = event.data.command;
@@ -37,11 +39,13 @@ export function getLoadingHTML(): string {
 }
 
 export function generateScroller(basicSelect: string, isCL: boolean): string {
+  const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
+
   return /*html*/`
     <!DOCTYPE html>
     <html lang="en">
       <head>
-        ${head}
+        ${getHeader({withCollapsed})}
         <script>
           /* 
           ${new Date().getTime()}
@@ -142,15 +146,20 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
 
             for (const row of arrayOfObjects) {
               // Insert a row at the end of table
-              var newRow = tBodyRef.insertRow();
+              var newRow = tBodyRef.insertRow()
 
               for (const cell of row) {
                 // Insert a cell at the end of the row
                 var newCell = newRow.insertCell();
 
                 // Append a text node to the cell
-                var newText = document.createTextNode(cell === undefined ? 'null' : cell);
-                newCell.appendChild(newText);
+
+                //TODO: handle cell formatting here
+                var newDiv = document.createElement("div");
+                newDiv.className = "hoverable";
+                newDiv.appendChild(document.createTextNode(cell === undefined ? 'null' : cell));
+
+                newCell.appendChild(newDiv);
               }
             }
 
@@ -171,5 +180,3 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
     </html>
   `;
 }
-
-interface ColumnDetail {title: string, columnDataKey: string|number, transform?: (row: object) => string|number};

@@ -1,9 +1,9 @@
-import { Server } from "http";
-
 export interface ServerResponse {
   id: string;
   success: boolean;
   error?: string;
+  sql_rc: number;
+  sql_state: string;
 }
 
 export interface ConnectionResult extends ServerResponse {
