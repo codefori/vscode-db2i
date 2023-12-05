@@ -7,6 +7,7 @@ import { JobManagerView } from "./views/jobManager/jobManagerView";
 import Configuration from "./configuration";
 import { ConfigManager } from "./views/jobManager/ConfigManager";
 import { Examples, ServiceInfoLabel } from "./views/examples";
+import { updateStatusBar } from "./views/jobManager/statusBar";
 
 interface IBMiLevels {
   version: number;
@@ -29,6 +30,8 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
   });
 
   await ServerComponent.checkForUpdate();
+
+  updateStatusBar();
 
   if (ServerComponent.isInstalled()) {
     JobManagerView.setVisible(true);
@@ -67,7 +70,8 @@ export function setupConfig(context: ExtensionContext) {
 
   getInstance().onEvent(`disconnected`, async () => {
     JobManagerView.setVisible(false);
-    await JobManager.endAll();
+    JobManager.endAll();
+    updateStatusBar();
 
     // Remove old service examples
     delete Examples[ServiceInfoLabel];

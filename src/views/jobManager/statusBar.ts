@@ -1,14 +1,15 @@
 import { MarkdownString, StatusBarAlignment, ThemeColor, languages, window } from "vscode";
 import { ServerComponent } from "../../connection/serverComponent";
-import { SQLJobManager } from "../../connection/manager";
 import { JobManager } from "../../config";
-
-const statusItem = languages.createLanguageStatusItem(`sqlStatus`, {language: `sql`});
+import { getInstance } from "../../base";
 
 const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Left);
 
 export async function updateStatusBar() {
-  if (ServerComponent.isInstalled()) {
+  const instance = getInstance();
+  const connection = instance.getConnection();
+
+  if (connection && ServerComponent.isInstalled()) {
     const selected = JobManager.getSelection();
 
     let text;
