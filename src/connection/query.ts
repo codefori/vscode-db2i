@@ -1,7 +1,6 @@
-import { changedCache} from "../language/providers/completionItemCache";
-import Document from "../language/sql/document";
+
 import { SQLJob } from "./sqlJob";
-import { CLCommandResult, JobLogEntry, QueryOptions, QueryResult, ServerResponse } from "./types";
+import { QueryOptions, QueryResult } from "./types";
 export enum QueryState {
   NOT_YET_RUN = 1,
   RUN_MORE_DATA_AVAILABLE = 2,
@@ -95,7 +94,14 @@ export class Query<T> {
 
     if (queryResult.success !== true && !this.isCLCommand) {
       this.state = QueryState.ERROR;
-      throw new Error(queryResult.error || `Failed to run query (unknown error)`);
+
+      let errorList = [queryResult.error, queryResult.sql_state, queryResult.sql_rc].filter(e => e !== undefined);
+
+      if (errorList.length === 0) {
+        errorList.push(`Failed to run query (unknown error)`);
+      }
+
+      throw new Error(errorList.join(', '));
     }
     this.correlationId = queryResult.id;
     
