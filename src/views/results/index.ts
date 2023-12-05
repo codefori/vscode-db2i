@@ -95,7 +95,7 @@ class ResultSetPanelProvider {
     }
   }
 
-  async setLoadingText(content) {
+  async setLoadingText(content: string) {
     await this.focus();
 
     if (!this.loadingState) {
@@ -146,6 +146,11 @@ export function initialise(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider, {
       webviewOptions: { retainContextWhenHidden: true },
+    }),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.reset`, async () => {
+      resultSetProvider.loadingState = false;
+      resultSetProvider.setLoadingText(`View will be active when a statement is executed.`);
     }),
 
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`,
