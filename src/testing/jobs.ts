@@ -5,6 +5,7 @@ import { Query } from "../connection/query";
 import { ServerComponent } from "../connection/serverComponent";
 import { JobStatus, SQLJob } from "../connection/sqlJob";
 import { ServerTraceDest, ServerTraceLevel } from "../connection/types";
+import { ExplainTree } from "../views/results/explain/nodes";
 
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
@@ -418,5 +419,20 @@ export const JobsSuite: TestSuite = {
       console.log(`Old query method took ${oe - os} milliseconds.`);
       assert.equal((ne - ns) < (oe - os), true);
     }},
+
+    {name: `Explain API`, test: async () => {
+      const newJob = new SQLJob({"full open": true});
+      await newJob.connect();
+
+      const query = `select * from qiws.qcustcdt`;
+
+      const result = await newJob.explain(query);
+
+      const tree = new ExplainTree(result.data);
+
+      const topLevel = tree.get();
+
+      assert.notStrictEqual(topLevel, undefined);
+    }}
   ]
 }

@@ -14,6 +14,11 @@ export interface VersionCheckResult extends ServerResponse {
   version: string;
 }
 
+export interface ExplainResults<T> extends QueryResult<T> {
+  vemetadata: QueryMetaData,
+  vedata: any;
+}
+
 export interface GetTraceDataResult extends ServerResponse {
   tracedata: string
 }

@@ -118,6 +118,19 @@
           "name": "Results",
           "when": "code-for-ibmi:connected == true",
           "contextualTitle": "IBM i"
+        },
+        {
+          "type": "tree",
+          "id": "vscode-db2i.dove.nodes",
+          "name": "Visual Explain",
+          "when": "vscode-db2i:explaining == true",
+          "contextualTitle": "IBM i"
+        },
+        {
+          "type": "tree",
+          "id": "vscode-db2i.dove.node",
+          "name": "Node Detail",
+          "when": "vscode-db2i:explainingNode == true"
         }
       ],
       "db2-explorer": [
@@ -263,9 +276,15 @@
       },
       {
         "command": "vscode-db2i.runEditorStatement",
-        "title": "Run selected statement",
+        "title": "Run statement",
         "category": "Db2 for i",
         "icon": "$(notebook-execute)"
+      },
+      {
+        "command": "vscode-db2i.explainEditorStatement",
+        "title": "Explain statement",
+        "category": "Db2 for i",
+        "icon": "$(debug-alt)"
       },
       {
         "command": "vscode-db2i.queryHistory.remove",
@@ -365,6 +384,24 @@
         "title": "Delete configuration",
         "category": "Db2 for i",
         "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.dove.close",
+        "title": "Close detail",
+        "category": "Db2 for i",
+        "icon": "$(close-all)"
+      },
+      {
+        "command": "vscode-db2i.dove.nodeDetail",
+        "title": "See detail",
+        "category": "Db2 for i",
+        "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.dove.export",
+        "title": "Export current VE data",
+        "category": "Db2 for i",
+        "icon": "$(file)"
       }
     ],
     "menus": {
@@ -420,6 +457,14 @@
         {
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.nodeDetail",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.export",
+          "when": "vscode-db2i:explaining == true"
         }
       ],
       "editor/context": [
@@ -433,12 +478,12 @@
         {
           "command": "vscode-db2i.runEditorStatement",
           "when": "editorLangId == sql",
-          "group": "navigation@2"
+          "group": "navigation@sql"
         },
         {
-          "command": "code-for-ibmi.changeCurrentLibrary",
+          "command": "vscode-db2i.explainEditorStatement",
           "when": "editorLangId == sql",
-          "group": "navigation@3"
+          "group": "navigation@sql"
         }
       ],
       "view/title": [
@@ -481,6 +526,16 @@
           "command": "vscode-db2i.jobManager.endAll",
           "group": "navigation",
           "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.dove.export",
+          "group": "navigation",
+          "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.close",
+          "group": "navigation",
+          "when": "view == vscode-db2i.dove.nodes"
         }
       ],
       "view/item/context": [
@@ -608,9 +663,106 @@
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "view == jobManager && viewItem == savedConfig",
           "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.dove.nodeDetail",
+          "when": "view == vscode-db2i.dove.nodes && viewItem == explainTreeItem",
+          "group": "inline"
         }
       ]
-    }
+    },
+    "colors": [
+      {
+        "id": "db2i.dove.resultsView.HighlightIndexAdvised",
+        "description": "Highlight color for index advised",
+        "defaults": {
+          "dark": "#acace0",
+          "light": "#8c8cbd",
+          "highContrast": "#acace0",
+          "highContrastLight": "#8c8cbd"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightActualExpensiveRows",
+        "description": "Highlight color for actual expensive rows",
+        "defaults": {
+          "dark": "#cc9933",
+          "light": "#cc9933",
+          "highContrast": "#cc9933",
+          "highContrastLight": "#cc9933"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightEstimatedExpensiveRows",
+        "description": "Highlight color for estimated expensive rows",
+        "defaults": {
+          "dark": "#ffffbf",
+          "light": "#ffffbf",
+          "highContrast": "#ffffbf",
+          "highContrastLight": "#ffffbf"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightActualExpensiveTime",
+        "description": "Highlight color for actual expensive time",
+        "defaults": {
+          "dark": "#bc0f0f",
+          "light": "#bc0f0f",
+          "highContrast": "#bc0f0f",
+          "highContrastLight": "#bc0f0f"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightEstimatedExpensiveTime",
+        "description": "Highlight color for estimated expensive time",
+        "defaults": {
+          "dark": "#f2bdbd",
+          "light": "#f2bdbd",
+          "highContrast": "#f2bdbd",
+          "highContrastLight": "#f2bdbd"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightLookaheadPredicateGeneration",
+        "description": "Highlight color for Lookahead Predicate Generation",
+        "defaults": {
+          "dark": "#00ff00",
+          "light": "#00ff00",
+          "highContrast": "#00ff00",
+          "highContrastLight": "#00ff00"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightMaterializedQueryTable",
+        "description": "Highlight color for Materialized Query Table",
+        "defaults": {
+          "dark": "#ff8400",
+          "light": "#ff8400",
+          "highContrast": "#ff8400",
+          "highContrastLight": "#ff8400"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightRefreshedNode",
+        "description": "Highlight color for refreshed node",
+        "defaults": {
+          "dark": "#00ffff",
+          "light": "#00ffff",
+          "highContrast": "#00ffff",
+          "highContrastLight": "#00ffff"
+        }
+      },
+      {
+        "id": "db2i.dove.nodeView.AttributeSectionHeading",
+        "description": "Color for attributes section heading",
+        "defaults": {
+          "dark": "#bd8c8c",
+          "light": "#5976df",
+          "highContrast": "#bd8c8c",
+          "highContrastLight": "#5976df"
+        }
+      }
+    ]
   },
   "scripts": {
     "lint": "eslint .",
