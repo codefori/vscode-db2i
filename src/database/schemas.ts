@@ -171,9 +171,8 @@ export default class Schemas {
     ].join(` `), { parameters : [object, schema, internalType] });
 
     const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
-    const formatted = Statement.format(generatedStatement);
-
-    return formatted;
+    
+    return generatedStatement;
   }
   
   static async deleteObject(schema: string, name:string, type: string): Promise<void> {
