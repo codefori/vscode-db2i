@@ -7,6 +7,7 @@ import { JobManagerView } from "./views/jobManager/jobManagerView";
 import Configuration from "./configuration";
 import { ConfigManager } from "./views/jobManager/ConfigManager";
 import { Examples, ServiceInfoLabel } from "./views/examples";
+import { updateStatusBar } from "./views/jobManager/statusBar";
 
 interface IBMiLevels {
   version: number;
@@ -30,6 +31,8 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
 
   await ServerComponent.checkForUpdate();
 
+  updateStatusBar();
+
   if (ServerComponent.isInstalled()) {
     JobManagerView.setVisible(true);
 
@@ -38,7 +41,7 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
 
     switch (newJob) {
     case `ask`:
-      return await askAboutNewJob();
+      return await askAboutNewJob(true);
 
     case `new`:
       await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
@@ -67,7 +70,8 @@ export function setupConfig(context: ExtensionContext) {
 
   getInstance().onEvent(`disconnected`, async () => {
     JobManagerView.setVisible(false);
-    await JobManager.endAll();
+    JobManager.endAll();
+    updateStatusBar();
 
     // Remove old service examples
     delete Examples[ServiceInfoLabel];
@@ -101,15 +105,28 @@ export async function fetchSystemInfo() {
   }
 }
 
-export async function askAboutNewJob(): Promise<boolean> {
-  const chosen = await window.showInformationMessage(`Would you like to start an SQL Job?`, `Yes`, `Always`, `No`);
-  if (chosen === `Yes` || chosen === `Always`) {
-    if (chosen === `Always`) {
-      await Configuration.set(`alwaysStartSQLJob`, `new`);
-    }
+export async function askAboutNewJob(startup?: boolean): Promise<boolean> {
+  const instance = getInstance();
+  const connection = instance.getConnection();
 
-    await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
-    return true;
+  if (connection) {
+    const options = startup ? [`Yes`, `Always`, `No`, `Never`] : [`Yes`, `No`];
+
+    const chosen = await window.showInformationMessage(`Would you like to start an SQL Job?`, ...options);
+    switch (chosen) {
+      case `Yes`: 
+      case `Always`:
+        if (chosen === `Always`) {
+          await Configuration.set(`alwaysStartSQLJob`, `new`);
+        }
+
+        await commands.executeCommand(`vscode-db2i.jobManager.newJob`);
+        return true;
+
+      case `Never`:
+        await Configuration.set(`alwaysStartSQLJob`, `never`);
+        break;
+    }
   }
 
   return false;
