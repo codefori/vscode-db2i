@@ -94,7 +94,7 @@ class ResultSetPanelProvider {
     }
   }
 
-  async setLoadingText(content) {
+  async setLoadingText(content: string) {
     await this.focus();
 
     if (!this.loadingState) {
@@ -129,9 +129,15 @@ export interface StatementInfo {
   content: string,
   qualifier: StatementQualifier,
   open?: boolean,
-  history?: boolean,
-  type?: StatementType,
-  refs?: ObjectRef[]
+  viewColumn?: ViewColumn,
+  viewFocus?: boolean,
+  history?: boolean
+}
+
+export interface ParsedStatementInfo extends StatementInfo {
+  statement: Statement;
+  group: StatementGroup;
+  embeddedInfo: ParsedEmbeddedStatement;
 }
 
 export function initialise(context: vscode.ExtensionContext) {
@@ -149,59 +155,75 @@ export function initialise(context: vscode.ExtensionContext) {
       webviewOptions: { retainContextWhenHidden: true },
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.resultset.reset`, async () => {
+      resultSetProvider.loadingState = false;
+      resultSetProvider.setLoadingText(`View will be active when a statement is executed.`);
+    }),
+
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`,
-      async (options: StatementInfo) => {
+      async (options?: StatementInfo) => {
         // Options here can be a vscode.Uri when called from editor context.
         // But that isn't valid here.
         const optionsIsValid = (options && options.content !== undefined);
-
-        const instance = getInstance();
-        const config = instance.getConfig();
-        const content = instance.getContent();
-        const editor = vscode.window.activeTextEditor;
+        let editor = vscode.window.activeTextEditor;
 
         if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
           await resultSetProvider.ensureActivation();
 
-          /** @type {StatementInfo} */
-          const statement = (optionsIsValid ? options : parseStatement(editor));
+          const statementDetail = parseStatement(editor, optionsIsValid ? options : undefined);
 
-          if (statement.open) {
-            const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content: statement.content });
-            await vscode.window.showTextDocument(textDoc);
+          if (statementDetail.open) {
+            const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content: statementDetail.content });
+            editor = await vscode.window.showTextDocument(textDoc, statementDetail.viewColumn, statementDetail.viewFocus);
           }
 
-          if (
-            statement.type === StatementType.Create || statement.type === StatementType.Alter) {
-            const ref = statement.refs[0];
-            const databaseObj =
-              statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
-                ? ref.object.schema || ``
-                : ref.object.schema + ref.object.name;
-            changedCache.add((databaseObj || ``).toUpperCase());
+          if (editor) {
+            const group = statementDetail.group;
+            editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
+
+            if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed) {
+              editor.insertSnippet(
+                new SnippetString(statementDetail.embeddedInfo.content)
+              )
+              return;
+            }
           }
 
-          if (statement.content.trim().length > 0) {
+          const statement = statementDetail.statement;
+
+          if (statement.type === StatementType.Create || statement.type === StatementType.Alter) {
+            const refs = statement.getObjectReferences();
+            if (refs.length > 0) {            
+              const ref = refs[0];
+              const databaseObj =
+                statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
+                  ? ref.object.schema || ``
+                  : ref.object.schema + ref.object.name;
+              changedCache.add((databaseObj || ``).toUpperCase());
+            }
+          }
+
+          if (statementDetail.content.trim().length > 0) {
             try {
-              if (statement.qualifier === `cl`) {
-                resultSetProvider.setScrolling(statement.content, true);
+              if (statementDetail.qualifier === `cl`) {
+                resultSetProvider.setScrolling(statementDetail.content, true);
               } else {
-                if (statement.qualifier === `statement`) {
+                if (statementDetail.qualifier === `statement`) {
                   // If it's a basic statement, we can let it scroll!
-                  resultSetProvider.setScrolling(statement.content);
+                  resultSetProvider.setScrolling(statementDetail.content);
 
                 } else {
                   // Otherwise... it's a bit complicated.
-                  const data = await JobManager.runSQL(statement.content, undefined);
+                  const data = await JobManager.runSQL(statementDetail.content, undefined);
 
                   if (data.length > 0) {
-                    switch (statement.qualifier) {
+                    switch (statementDetail.qualifier) {
 
                     case `csv`:
                     case `json`:
                     case `sql`:
                       let content = ``;
-                      switch (statement.qualifier) {
+                      switch (statementDetail.qualifier) {
                       case `csv`: content = csv.stringify(data, {
                         header: true,
                         quoted_string: true,
@@ -227,7 +249,7 @@ export function initialise(context: vscode.ExtensionContext) {
                         break;
                       }
 
-                      const textDoc = await vscode.workspace.openTextDocument({ language: statement.qualifier, content });
+                      const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
                       await vscode.window.showTextDocument(textDoc);
                       break;
                     }
@@ -252,7 +274,6 @@ export function initialise(context: vscode.ExtensionContext) {
                 
               }
               
-
               if (statement.qualifier === `statement`) {
                 vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement.content);
               }
@@ -265,7 +286,7 @@ export function initialise(context: vscode.ExtensionContext) {
                 errorText = e.message || `Error running SQL statement.`;
               }
 
-              if (statement.qualifier === `statement` && statement.history !== false) {
+              if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {
                 resultSetProvider.setError(errorText);
               } else {
                 vscode.window.showErrorMessage(errorText);
@@ -277,52 +298,61 @@ export function initialise(context: vscode.ExtensionContext) {
   )
 }
 
-export function parseStatement(editor: vscode.TextEditor): StatementInfo {
-  const document = editor.document;
-  const eol = (document.eol === vscode.EndOfLine.LF ? `\n` : `\r\n`);
+export function parseStatement(editor?: vscode.TextEditor, existingInfo?: StatementInfo): ParsedStatementInfo {
+  let statementInfo: ParsedStatementInfo = {
+    content: ``,
+    qualifier: `statement`,
+    group: undefined,
+    statement: undefined,
+    embeddedInfo: undefined
+  };
 
-  let text = document.getText(editor.selection).trim();
-  let content = ``;
-  let statementType: StatementType|undefined;
-  let statementRefs: ObjectRef[]|undefined;
+  let sqlDocument: Document;
+  
+  if (existingInfo) {
+    statementInfo = {
+      ...existingInfo,
+      group: undefined,
+      statement: undefined,
+      embeddedInfo: undefined
+    };
 
-  let qualifier: StatementQualifier = `statement`;
+    // Running from existing data
+    sqlDocument = new Document(statementInfo.content);
+    statementInfo.group = sqlDocument.getStatementGroups()[0];
 
-  if (text.length > 0) {
-    content = text;
-  } else {
+  } else if (editor) {
+    // Is being run from the editor
+
+    const document = editor.document;
     const cursor = editor.document.offsetAt(editor.selection.active);
-    text = document.getText();
 
-    const sqlDocument = new Document(text);
-    const group = sqlDocument.getGroupByOffset(cursor);
+    sqlDocument = new Document(document.getText());
+    statementInfo.group = sqlDocument.getGroupByOffset(cursor);
 
-    if (group) {
-      if (group.statements[0]) {
-        statementType = group.statements[0].type;
-        statementRefs = group.statements[0].getObjectReferences();
-      }
+    if (statementInfo.group) {
+      statementInfo.content = sqlDocument.content.substring(
+        statementInfo.group.range.start, statementInfo.group.range.end
+      );
+    }
 
-      content = text.substring(group.range.start, group.range.end);
-      editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
+    if (statementInfo.content) {
+      [`cl`, `json`, `csv`, `sql`].forEach(mode => {
+        if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
+          statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
+  
+          //@ts-ignore We know the type.
+          statementInfo.qualifier = mode;
+        }
+      });
     }
   }
 
-  if (content) {
-    [`cl`, `json`, `csv`, `sql`].forEach(mode => {
-      if (content.trim().toLowerCase().startsWith(mode + `:`)) {
-        content = content.substring(mode.length + 1).trim();
+  statementInfo.statement = statementInfo.group.statements[0];
 
-        //@ts-ignore We know the type.
-        qualifier = mode;
-      }
-    });
+  if (statementInfo.qualifier !== `cl`) {
+    statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, true);
   }
 
-  return {
-    qualifier: qualifier,
-    content,
-    type: statementType,
-    refs: statementRefs
-  };
+  return statementInfo;
 }

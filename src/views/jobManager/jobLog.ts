@@ -1,6 +1,6 @@
 import { ViewColumn, window } from "vscode";
 import { JobInfo } from "../../connection/manager";
-import { escapeHTML, head } from "../html";
+import { escapeHTML, getHeader } from "../html";
 import { JobLogEntry } from "../../connection/types";
 import { JobManager } from "../../config";
 
@@ -22,7 +22,7 @@ function generatePage(rows: JobLogEntry[]) {
     <!DOCTYPE html>
     <html lang="en">
       <head>
-        ${head}
+        ${getHeader()}
       </head>
       <body>
         <table id="resultset">

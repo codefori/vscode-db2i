@@ -1,5 +1,6 @@
 
-export const head = /*html*/`
+export function getHeader(options: {withCollapsed?: boolean} = {}): string {
+  return /*html*/`
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
@@ -19,12 +20,34 @@ export const head = /*html*/`
 
     #resultset th,
     #resultset td {
-      padding: 12px 15px;
+      padding: 5px 15px;
     }
     
     #resultset tbody tr {
       border-bottom: 1px solid var(--vscode-activityBar-border);
     }
+
+    ${options.withCollapsed ? /*css*/`
+      .hoverable {
+        /* your initial height  */
+        height: 12px;
+        /* stop content from "spilling" */
+        overflow: hidden;
+
+        text-overflow: ellipsis;
+        max-width: 200px;
+        text-wrap: nowrap;
+      }
+      .hoverable:hover {
+        /* or height: auto then it will expand to text height */
+        max-width: initial;
+        height: auto;
+        text-wrap: initial;
+      }
+      #resultset tbody tr {
+        overflow: hidden;
+      }
+    ` : ''}
 
     .center-screen {
       overflow: hidden;
@@ -107,8 +130,9 @@ export const head = /*html*/`
         background-size: 80px 80px;
       }
     }
-  </style>`;
-
+  </style>
+  `;
+}
 
 export const escapeHTML = str => str.replace(/[&<>'"]/g, 
   tag => ({

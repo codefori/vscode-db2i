@@ -3,7 +3,7 @@ import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";
 import { SQLJob, TransactionEndType } from "../../connection/sqlJob";
-import { ServerTraceDest, ServerTraceLevel } from "../../connection/types";
+import { JDBCOptions, ServerTraceDest, ServerTraceLevel } from "../../connection/types";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
@@ -26,17 +26,18 @@ export class JobManagerView implements TreeDataProvider<any> {
 
       ...ConfigManager.initialiseSaveCommands(),
 
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (predefinedJob?: SQLJob, name?: string) => {
-        await window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
-          try {
-            progress.report({ message: `Spinning up SQL job...` });
-            await JobManager.newJob(predefinedJob, name);
-          } catch (e) {
-            window.showErrorMessage(e.message);
-          }
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (options?: JDBCOptions, name?: string) => {
+        try {
+          updateStatusBar({newJob: true});
+          await JobManager.newJob(
+            (options ? new SQLJob(options) : undefined), 
+            name
+          );
+        } catch (e) {
+          window.showErrorMessage(e.message);
+        }
 
-          this.refresh();
-        });
+        this.refresh();
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.closeJob`, async (node?: SQLJobItem) => {
