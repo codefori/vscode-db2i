@@ -245,16 +245,30 @@ export enum Highlighting {
 }
 
 export namespace Highlighting {
-  export const SettingsKey = "doveHighlighting";
-  export function saveSettings(highlights: NodeHighlights) {
-    if (highlights) {
-      Configuration.set(SettingsKey, String(highlights.formatValue));
-    }
-  }
   export function getFromSettings(): NodeHighlights {
-    const saved: number = Number(Configuration.get(SettingsKey));
-    // Default to highlighting everything
-    return isNaN(saved) ? new NodeHighlights().setAll() : new NodeHighlights(saved);
+    let highlights = new NodeHighlights();
+    // Defined in the configuration section of package.json, managed under Db2 for IBM i->Visual Explain in VS Code Settings
+    let settings = Configuration.get(`visualExplain.highlighting`);
+    if (settings) {
+      let keys = Object.keys(settings);
+      for (let key of keys) {
+        if (settings[key]) {
+          switch (key) {
+            case "Index Advised": highlights.set(Highlighting.INDEX_ADVISED); break;
+            case "Actual Number of Rows": highlights.set(Highlighting.ACTUAL_ROWS_EXPENSIVE); break;
+            case "Actual Processing Time": highlights.set(Highlighting.ACTUAL_TIME_EXPENSIVE); break;
+            case "Estimated Number of Rows": highlights.set(Highlighting.ESTIMATED_ROW_EXPENSIVE); break;
+            case "Estimated Processing Time": highlights.set(Highlighting.ESTIMATED_TIME_EXPENSIVE); break;
+            case "Lookahead Predicate Generation (LPG)": highlights.set(Highlighting.LOOKAHEAD_PREDICATE_GENERATION); break;
+            case "Materialized Query Table (MQT)": highlights.set(Highlighting.MATERIALIZED_QUERY_TABLE); break;
+            default: break;
+          }
+        }
+      }
+    } else {
+      highlights.setAll();
+    }
+    return highlights;
   }
 
   /**

@@ -47,27 +47,82 @@
         "path": "snippets/aggregates.code-snippets"
       }
     ],
-    "configuration": {
-      "title": "Db2 for IBM i",
-      "properties": {
-        "vscode-db2i.pageSize": {
-          "type": "number",
-          "description": "Page size for Schema browser",
-          "default": 500
-        },
-        "vscode-db2i.alwaysStartSQLJob": {
-          "type": "string",
-          "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",
-          "default": "ask"
-        },
-        "vscode-db2i.jobConfigs": {
-          "type": "object",
-          "description": "Saved configs for",
-          "default": {},
-          "additionalProperties": true
+    "configuration": [
+      {
+        "id": "vscode-db2i",
+        "title": "General",
+        "order": 1,
+        "properties": {
+          "vscode-db2i.pageSize": {
+            "type": "number",
+            "description": "Page size for Schema browser",
+            "default": 500
+          },
+          "vscode-db2i.alwaysStartSQLJob": {
+            "type": "string",
+            "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",
+            "default": "ask"
+          },
+          "vscode-db2i.jobConfigs": {
+            "type": "object",
+            "description": "Saved configs for",
+            "default": {},
+            "additionalProperties": true
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.visualExplain",
+        "title": "Visual Explain",
+        "order": 2,
+        "properties": {
+          "vscode-db2i.visualExplain.highlighting": {
+            "type": "object",
+            "properties": {
+              "Index Advised": {
+                "type": "boolean",
+                "default": true
+              },
+              "Actual Number of Rows": {
+                "type": "boolean",
+                "default": true
+              },
+              "Actual Processing Time": {
+                "type": "boolean",
+                "default": true
+              },
+              "Estimated Number of Rows": {
+                "type": "boolean",
+                "default": true
+              },
+              "Estimated Processing Time": {
+                "type": "boolean",
+                "default": true
+              },
+              "Lookahead Predicate Generation (LPG)": {
+                "type": "boolean",
+                "default": true
+              },
+              "Materialized Query Table (MQT)": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "default": {
+              "Index Advised": true,
+              "Actual Number of Rows": true,
+              "Actual Processing Time": true,
+              "Estimated Number of Rows": true,
+              "Estimated Processing Time": true,
+              "Lookahead Predicate Generation (LPG)": true,
+              "Materialized Query Table (MQT)": true
+            },
+            "additionalProperties": false,
+            "description": "Highlight expensive operations in the graph to aid in identifying potential problems with the query."
+          }
         }
       }
-    },
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -361,6 +416,12 @@
         "icon": "$(info)"
       },
       {
+        "command": "vscode-db2i.dove.editSettings",
+        "title": "Settings",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
+      },
+      {
         "command": "vscode-db2i.dove.export",
         "title": "Export current VE data",
         "category": "Db2 for i",
@@ -416,6 +477,10 @@
         {
           "command": "vscode-db2i.dove.nodeDetail",
           "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.editSettings",
+          "when": "vscode-db2i:explaining == true"
         },
         {
           "command": "vscode-db2i.dove.export",
@@ -481,6 +546,11 @@
           "command": "vscode-db2i.jobManager.endAll",
           "group": "navigation",
           "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.dove.editSettings",
+          "group": "navigation",
+          "when": "view == vscode-db2i.dove.nodes"
         },
         {
           "command": "vscode-db2i.dove.export",

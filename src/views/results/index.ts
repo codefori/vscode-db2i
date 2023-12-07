@@ -52,6 +52,11 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.dove.nodeDetail`, (explainTreeItem: ExplainTreeItem) => {
       doveNodeView.setNode(explainTreeItem.explainNode);
     }),
+
+    vscode.commands.registerCommand(`vscode-db2i.dove.editSettings`, () => {
+      vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.visualExplain');
+    }),
+
     vscode.commands.registerCommand(`vscode-db2i.dove.export`, () => {
       vscode.workspace.openTextDocument({
         language: `json`,
