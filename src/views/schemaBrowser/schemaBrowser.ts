@@ -10,6 +10,7 @@ import Types from "../types";
 import Statement from "../../database/statement";
 import { copyUI } from "./copyUI";
 import { getAdvisedIndexesStatement } from "./statements";
+import Subscription from "../../database/subscription";
 
 const viewItem = {
   "tables": `table`,
@@ -44,6 +45,8 @@ export default class schemaBrowser {
   cache: {[key: string]: object[]};
 
   filters: {[schema: string]: string} = {};
+
+  private lastDataQueue = ``;
 
   /**
    * @param {vscode.ExtensionContext} context
@@ -167,6 +170,39 @@ export default class schemaBrowser {
             qualifier: `statement`,
             open: false,
           });
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.createSubscription`, async (object: SQLObject) => {
+        if (object) {
+          const defaultName = `QUEUENAME`;
+          const defaultValue = this.lastDataQueue || object.schema.toUpperCase() + "/" + defaultName;
+
+          const dtaq = await vscode.window.showInputBox({
+            title: "Data Queue",
+            prompt: "Enter the data queue name",
+            value: defaultValue,
+            validateInput: (value) => {
+              if (value === "") {
+                return "Data queue cannot be blank";
+              }
+              if (!value.includes("/")) {
+                return "Value must be a qualified data queue name (library/queue)";
+              }
+            }
+          });
+
+          if (dtaq) {
+            this.lastDataQueue = dtaq;
+            
+            const [dtaQLibrary, dtaQName] = dtaq.split("/");
+            try {
+              await Subscription.create(object.schema, object.name, dtaQLibrary, dtaQName);
+              vscode.window.showInformationMessage(`Subscription created for ${object.schema}.${object.name}.`);
+            } catch (e) {
+              vscode.window.showErrorMessage(`Failed to subscribe to ${object.schema}.${object.name}!`, {modal: true, detail: e.message});
+            }
+          }
         }
       }),
       
