@@ -622,6 +622,29 @@ describe(`Object references`, () => {
     expect(refsB[1].object.schema).toBe(`other`);
   });
 
+  test(`CREATE TABLE: for system name`, () => {
+    const content = [
+      `--  Employee Master`,
+      `--  Generated on:               11/03/21 14:32:20`,
+      `CREATE OR REPLACE TABLE super_long_dept_name FOR SYSTEM NAME DEPT (`,
+      `--  SQL150B   10   REUSEDLT(*NO) in table EMPMST in PAYROLL1 ignored.`,
+      `  COL_B CHAR(1) CCSID 37 NOT NULL DEFAULT '' ,`,
+      `  PRIMARY KEY( COL_B ) );`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+
+    expect(document.statements.length).toBe(1);
+  
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.Create);
+
+    const [mainRef] = statement.getObjectReferences();
+    expect(mainRef.object.name).toBe(`super_long_dept_name`);
+    expect(mainRef.object.system).toBe(`DEPT`);
+  })
+
   test(`CREATE ALIAS`, () => {
     const content = [
       `create or replace view tagtalk for system name tt as (`,
@@ -1313,5 +1336,19 @@ describe(`Parameter statement tests`, () => {
       `  FROM table-name`,
       `  WHERE column-1 = expression`,
     ].join(`\n`));
+  });
+
+  test(`Insert with INTO clause`, () => {
+    const content = `INSERT INTO  COOLSTUFF.DLRGPSNEW (DLRID, LOCATION) SELECT ID, QSYS2.ST_POINT(GPSLON, GPSLAT) FROM COOLSTUFF.DLRGPS2`;
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.parameterCount).toBe(0);
+    expect(result.content).toBe(content);
   });
 });

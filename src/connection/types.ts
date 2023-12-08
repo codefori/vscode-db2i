@@ -1,9 +1,9 @@
-import { Server } from "http";
-
 export interface ServerResponse {
   id: string;
   success: boolean;
   error?: string;
+  sql_rc: number;
+  sql_state: string;
 }
 
 export interface ConnectionResult extends ServerResponse {
@@ -82,6 +82,8 @@ export interface ColumnMetaData {
 export type Rows = {[column: string]: string|number|boolean}[];
 
 export interface JDBCOptions {
+  // selfcodes
+  selfcodes?: string[];
   // Format properties
   "naming"?: "sql" | "system";
   "date format"?:

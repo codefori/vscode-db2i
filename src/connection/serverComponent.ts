@@ -1,20 +1,13 @@
 import { getInstance } from "../base";
 
 import { Octokit } from "octokit";
-import fetch from 'node-fetch';
 
 import { Config } from "../config";
 import path from "path";
-import { OutputChannel, commands, window } from "vscode";
+import { OutputChannel, extensions, window } from "vscode";
 
-import { writeFile, unlink } from "fs/promises";
-import os from "os";
-
-const octokit = new Octokit();
-
-// During development, you can set the SERVER_VERSION in .vscode/launch.json
-// Otherwise, fall back to the working version
-const SERVER_VERSION = process.env[`SERVER_VERSION`] || `v1.4.4`;
+import { stat } from "fs/promises";
+import { SERVER_VERSION_FILE } from "./SCVersion";
 
 const ExecutablePathDir = `$HOME/.vscode/`;
 
@@ -90,79 +83,54 @@ export class ServerComponent {
    */
   public static async checkForUpdate(): Promise<UpdateStatus> {
     let updateResult: UpdateStatus = UpdateStatus.NONE_AVAILABLE;
+
+    const extensionPath = extensions.getExtension(`halcyontechltd.vscode-db2i`).extensionPath;
     const instance = getInstance();
     const connection = instance.getConnection();
 
-    const owner = `ThePrez`;
-    const repo = `CodeForIBMiServer`;
-
     try {
-      const result = await octokit.request(`GET /repos/{owner}/{repo}/releases/tags/${SERVER_VERSION}`, {
-        owner,
-        repo,
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28'
-        }
-      });
+      const assetPath = path.join(extensionPath, `dist`, SERVER_VERSION_FILE);
+      const assetExists = await exists(assetPath);
 
-      ServerComponent.writeOutput(JSON.stringify(result));
+      ServerComponent.writeOutput(JSON.stringify({assetPath, assetExists}));
 
-      const newAsset = result.data.assets.find(asset => asset.name.endsWith(`.jar`));
-
-      if (newAsset) {
-        const url = newAsset.browser_download_url;
-        const basename = newAsset.name;
+      if (assetExists) {
+        const basename = SERVER_VERSION_FILE;
         const lastInstalledName = Config.getServerComponentName();
 
+        ServerComponent.writeOutput(JSON.stringify({basename, lastInstalledName}));
+
         if (lastInstalledName !== basename || this.installed === false) {
-          const updateQuestion = await window.showInformationMessage(
-            `Database Extension update required`, 
-            {
-              modal: true,
-              detail: `An update to the database server component is required: ${basename}`
-            }, 
-            `Update`
-          );
+          // This means we're currently running a different version, 
+          // or maybe not at all (currentlyInstalled can be undefined)
 
-          if (updateQuestion === `Update`) {
-            // This means we're currently running a different version, 
-            // or maybe not at all (currentlyInstalled can be undefined)
+          // First, we need their home directory
+          const commandResult = await connection.sendCommand({
+            command: `echo ${ExecutablePathDir}`
+          });
 
-            // First, we need their home directory
-            const commandResult = await connection.sendCommand({
-              command: `echo ${ExecutablePathDir}`
-            });
+          if (commandResult.code === 0 && commandResult.stderr === ``) {
+            const remotePath = path.posix.join(commandResult.stdout, basename);
 
-            if (commandResult.code === 0 && commandResult.stderr === ``) {
-              const remotePath = path.posix.join(commandResult.stdout, basename)
+            ServerComponent.writeOutput(JSON.stringify({remotePath, ExecutablePathDir}));
 
-              const tempFile = path.join(os.tmpdir(), basename);
+            await connection.uploadFiles([{local: assetPath, remote: remotePath}]);
 
-              await downloadFile(url, tempFile);
+            await Config.setServerComponentName(basename);
 
-              await connection.uploadFiles([{local: tempFile, remote: remotePath}]);
-
-              // Clean up the temp file
-              unlink(tempFile);
-
-              await Config.setServerComponentName(basename);
-
-              window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
-              this.installed = true;
-              updateResult = UpdateStatus.JUST_UPDATED;
-              
-            } else {
-              updateResult = UpdateStatus.FAILED;
-
-              this.writeOutput(JSON.stringify(commandResult));
-              window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`).then(chosen => {
-                if (chosen === `Show`) {
-                  this.outputChannel.show();
-                }
-              });
-            }
+            window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
+            this.installed = true;
+            updateResult = UpdateStatus.JUST_UPDATED;
+            
           } else {
-            updateResult = UpdateStatus.DECLINED_UPDATE;
+            updateResult = UpdateStatus.FAILED;
+
+            this.writeOutput(JSON.stringify(commandResult));
+            window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`).then(chosen => {
+              if (chosen === `Show`) {
+                this.outputChannel.show();
+              }
+            });
           }
 
         } else {
@@ -172,9 +140,10 @@ export class ServerComponent {
 
       } else {
         // Uh oh. A release was made by there's no jar file??
-        ServerComponent.writeOutput('Unable to get file name from server component release');
+        ServerComponent.writeOutput('Unable to get file name from server component release.');
         updateResult = UpdateStatus.NONE_AVAILABLE;
       }
+
     } catch (e) {
       updateResult = UpdateStatus.FAILED;
       ServerComponent.writeOutput(JSON.stringify(e));
@@ -191,8 +160,11 @@ export class ServerComponent {
   }
 }
 
-function downloadFile(url, outputPath) {
-  return fetch(url)
-      .then(x => x.arrayBuffer())
-      .then(x => writeFile(outputPath, Buffer.from(x)));
+async function exists(path: string) {
+  try {
+    await stat(path);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }

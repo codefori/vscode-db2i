@@ -6,9 +6,11 @@ import { ManagerSuite } from "./manager";
 import { JobsSuite } from "./jobs";
 import { DatabaseSuite } from "./database";
 import { DatabasePerformanceSuite } from "./databasePerformance";
+import { SelfCodesTestSuite } from "./selfCodes";
 
 const suites : TestSuite[] = [
   JobsSuite,
+  SelfCodesTestSuite,
   ManagerSuite,
   DatabaseSuite,
   DatabasePerformanceSuite
