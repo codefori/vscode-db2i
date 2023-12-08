@@ -1,4 +1,4 @@
-import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, ThemeIcon, commands } from "vscode";
+import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands } from "vscode";
 import { ExplainNode, ExplainProperty, Highlighting, RecordType, NodeHighlights } from "./nodes";
 import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
 
@@ -11,7 +11,28 @@ export class DoveNodeView implements TreeDataProvider<any> {
   private propertyNodes: PropertyNode[];
 
   setNode(currentNode: ExplainNode) {
-    this.propertyNodes = currentNode.props.map(p => new PropertyNode(p));
+    this.propertyNodes = [];
+    let currentSection: PropertySection = null;
+    for (let property of currentNode.props) {
+      let node = property.type === RecordType.HEADING ? new PropertySection(property) : new PropertyNode(property);
+      // If the property node is a new section, add it to the top level node list and set as the current section
+      if (node instanceof PropertySection) {
+        // If this is the first section, but the tree already has nodes, add a blank node to space things out a bit
+        if (currentSection === null && this.propertyNodes.length > 0) {
+          this.propertyNodes.push(new PropertyNode());
+        }
+        // We expect that we are now processing a new section, so add a blank property to current section to finish it off
+        if (currentSection && node != currentSection) {
+          currentSection.addProperty(new PropertyNode());
+        }
+        this.propertyNodes.push(node);
+        currentSection = node;
+      } else if (currentSection) {
+        currentSection.addProperty(node);
+      } else {
+        this.propertyNodes.push(node);
+      }
+    }
     this._onDidChangeTreeData.fire();
 
     // Show tree in the view
@@ -27,6 +48,9 @@ export class DoveNodeView implements TreeDataProvider<any> {
   }
 
   getChildren(element?: PropertyNode): ProviderResult<PropertyNode[]> {
+    if (element) {
+      return element instanceof PropertySection ? element.getProperties() : [];
+    }
     return this.propertyNodes;
   }
 
@@ -39,15 +63,26 @@ export class DoveNodeView implements TreeDataProvider<any> {
 }
 
 export class PropertyNode extends TreeItem {
-  constructor(property: ExplainProperty) {
-    super(property.title);
-    this.description = String(property.value);
-     // Set an empty tooltip, otherwise 'Loading...' is displayed
+  constructor(property?: ExplainProperty) {
+    super(property?.title || ``);
+    this.description = String(property?.value || ``);
+    // Set an empty tooltip, otherwise 'Loading...' is displayed
     this.tooltip = ``;
-    // Differentiate section headings from the rest of the attributes via node highlighting
-    if (property.type === RecordType.HEADING) {
-      this.resourceUri = toDoveTreeDecorationProviderUri(new NodeHighlights().set(Highlighting.ATTRIBUTE_SECTION_HEADING));
-      this.iconPath = new ThemeIcon("list-tree", Highlighting.Colors[Highlighting.ATTRIBUTE_SECTION_HEADING]);
-    }
+  }
+}
+
+class PropertySection extends PropertyNode {
+  propertyNodes: PropertyNode[] = [];
+  constructor(property: ExplainProperty) {
+    super(property);
+    this.collapsibleState = TreeItemCollapsibleState.Expanded;
+    // Visually differentiate section headings from the rest of the attributes via node highlighting
+    this.resourceUri = toDoveTreeDecorationProviderUri(new NodeHighlights().set(Highlighting.ATTRIBUTE_SECTION_HEADING));
+  }
+  addProperty(p: PropertyNode) {
+    this.propertyNodes.push(p);
+  }
+  getProperties(): PropertyNode[] {
+    return this.propertyNodes;
   }
 }

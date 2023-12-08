@@ -145,14 +145,6 @@ export class ExplainTree {
           // TODO: what do we do with this?
           break;
         case RecordType.HEADING:
-          // If not the first node, add a blank node before the heading to space things out a bit
-          if (currentNode.props.length > 0) {
-            currentNode.props.push({
-              type: 0,
-              title: ``,
-              value: ``
-            });
-          }
           currentNode.props.push({
             type: nodeDataType,
             title: nodeTitle,
