@@ -1,4 +1,4 @@
-import vscode, { SnippetString, ViewColumn } from "vscode"
+import vscode, { SnippetString, ViewColumn, TreeView } from "vscode"
 
 import * as csv from "csv/sync";
 
@@ -10,7 +10,7 @@ import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../la
 import Statement from "../../language/sql/statement";
 import { ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
-import { DoveNodeView } from "./explain/doveNodeView";
+import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider } from "./resultSetPanelProvider";
 
@@ -33,7 +33,9 @@ export interface ParsedStatementInfo extends StatementInfo {
 
 let resultSetProvider = new ResultSetPanelProvider();
 let doveResultsView = new DoveResultsView();
+let doveResultsTreeView: TreeView<ExplainTreeItem> = doveResultsView.getTreeView();
 let doveNodeView = new DoveNodeView();
+let doveNodeTreeView: TreeView<PropertyNode> = doveNodeView.getTreeView();
 let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration providor
 
 export function initialise(context: vscode.ExtensionContext) {
@@ -42,14 +44,16 @@ export function initialise(context: vscode.ExtensionContext) {
       webviewOptions: { retainContextWhenHidden: true },
     }),
 
-    vscode.window.registerTreeDataProvider(`vscode-db2i.dove.nodes`, doveResultsView),
-    vscode.window.registerTreeDataProvider(`vscode-db2i.dove.node`, doveNodeView),
+    doveResultsTreeView,
+    doveNodeTreeView,
 
     vscode.commands.registerCommand(`vscode-db2i.dove.close`, () => {
       doveResultsView.close();
       doveNodeView.close();
     }),
     vscode.commands.registerCommand(`vscode-db2i.dove.nodeDetail`, (explainTreeItem: ExplainTreeItem) => {
+      // When the user clicks for details of a node in the tree, set the focus to that node as a visual indicator tying it to the details tree
+      doveResultsTreeView.reveal(explainTreeItem,  { select: false, focus: true, expand: true });
       doveNodeView.setNode(explainTreeItem.explainNode);
     }),
 
@@ -74,7 +78,7 @@ export function initialise(context: vscode.ExtensionContext) {
 async function runHandler(options?: StatementInfo) {
   // Options here can be a vscode.Uri when called from editor context.
   // But that isn't valid here.
-  const optionsIsValid = (options && options.content !== undefined);
+  const optionsIsValid = (options?.content !== undefined);
   let editor = vscode.window.activeTextEditor;
 
   doveResultsView.close();
@@ -85,7 +89,7 @@ async function runHandler(options?: StatementInfo) {
 
     const statementDetail = parseStatement(editor, optionsIsValid ? options : undefined);
 
-    if (options && options.qualifier) {
+    if (options?.qualifier) {
       statementDetail.qualifier = options.qualifier
     }
 
@@ -122,87 +126,79 @@ async function runHandler(options?: StatementInfo) {
       try {
         if (statementDetail.qualifier === `cl`) {
           resultSetProvider.setScrolling(statementDetail.content, true);
-        } else {
-          if (statementDetail.qualifier === `statement`) {
-            // If it's a basic statement, we can let it scroll!
-            resultSetProvider.setScrolling(statementDetail.content);
+        } else if (statementDetail.qualifier === `statement`) {
+          // If it's a basic statement, we can let it scroll!
+          resultSetProvider.setScrolling(statementDetail.content);
 
+        } else if (statementDetail.qualifier === `explain`) {
+          const selectedJob = JobManager.getSelection();
+          if (selectedJob) {
+            try {
+              resultSetProvider.setLoadingText(`Explaining...`);
+
+              const explained = await selectedJob.job.explain(statementDetail.content);
+              // TODO: handle when explain without running
+              resultSetProvider.setScrolling(statementDetail.content, false, explained.id);
+              const tree = new ExplainTree(explained.vedata);
+              const topLevel = tree.get();
+              const rootNode = doveResultsView.setRootNode(topLevel);
+              doveNodeView.setNode(rootNode.explainNode);
+              doveTreeDecorationProvider.updateTreeItems(rootNode);
+            } catch (e) {
+              resultSetProvider.setError(e.message);
+            }
           } else {
-            if (statementDetail.qualifier === `explain`) {
-              const selectedJob = JobManager.getSelection();
-              if (selectedJob) {
-                try {
-                  resultSetProvider.setLoadingText(`Explaining...`);
-
-                  const explained = await selectedJob.job.explain(statementDetail.content);
-                  const tree = new ExplainTree(explained.vedata);
-                  const topLevel = tree.get();
-
-                  doveTreeDecorationProvider.updateTreeItems(doveResultsView.setRootNode(topLevel));
-
-                  // TODO: handle when explain without running
-                  resultSetProvider.setScrolling(statementDetail.content, false, explained.id);
-
-                } catch (e) {
-                  resultSetProvider.setError(e.message);
-                }
-              } else {
-                vscode.window.showInformationMessage(`No job currently selected.`);
-              }
-
-            } else {
-              // Otherwise... it's a bit complicated.
-              const data = await JobManager.runSQL(statementDetail.content, undefined);
-
-              if (data.length > 0) {
+            vscode.window.showInformationMessage(`No job currently selected.`);
+          }
+        } else {
+          // Otherwise... it's a bit complicated.
+          const data = await JobManager.runSQL(statementDetail.content);
+          if (data.length > 0) {
+            switch (statementDetail.qualifier) {
+              case `csv`:
+              case `json`:
+              case `sql`: {
+                let content = ``;
                 switch (statementDetail.qualifier) {
-
                   case `csv`:
-                  case `json`:
-                  case `sql`:
-                    let content = ``;
-                    switch (statementDetail.qualifier) {
-                      case `csv`: content = csv.stringify(data, {
-                        header: true,
-                        quoted_string: true,
-                      }); break;
-                      case `json`: content = JSON.stringify(data, null, 2); break;
-
-                      case `sql`:
-                        const keys = Object.keys(data[0]);
-
-                        const insertStatement = [
-                          `insert into TABLE (`,
-                          `  ${keys.join(`, `)}`,
-                          `) values `,
-                          data.map(
-                            row => `  (${keys.map(key => {
-                              if (row[key] === null) return `null`;
-                              if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
-                              return row[key];
-                            }).join(`, `)})`
-                          ).join(`,\n`),
-                        ];
-                        content = insertStatement.join(`\n`);
-                        break;
-                    }
-
-                    const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
-                    await vscode.window.showTextDocument(textDoc);
+                    content = csv.stringify(data, {
+                      header: true,
+                      quoted_string: true,
+                    });
                     break;
+                  case `json`:
+                    content = JSON.stringify(data, null, 2);
+                    break;
+                  case `sql`: {
+                    const keys = Object.keys(data[0]);
+                    const insertStatement = [
+                      `insert into TABLE (`,
+                      `  ${keys.join(`, `)}`,
+                      `) values `,
+                      data.map(
+                        row => `  (${keys.map(key => {
+                          if (row[key] === null) return `null`;
+                          if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
+                          return row[key];
+                        }).join(`, `)})`
+                      ).join(`,\n`),
+                    ];
+                    content = insertStatement.join(`\n`);
+                    break;
+                  }
                 }
-
-              } else {
-                vscode.window.showInformationMessage(`Query executed with no data returned.`);
+                const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
+                await vscode.window.showTextDocument(textDoc);
+                break;
               }
             }
+          } else {
+            vscode.window.showInformationMessage(`Query executed with no data returned.`);
           }
         }
-
         if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {
           vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
         }
-
       } catch (e) {
         let errorText;
         if (typeof e === `string`) {

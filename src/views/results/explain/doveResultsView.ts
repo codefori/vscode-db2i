@@ -1,4 +1,5 @@
-import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands, ThemeIcon } from "vscode";
+import * as vscode from "vscode";
+import { CancellationToken, Event, EventEmitter, ProviderResult, TreeView, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands, ThemeIcon } from "vscode";
 import { ExplainNode } from "./nodes";
 import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
 
@@ -57,6 +58,17 @@ export class DoveResultsView implements TreeDataProvider<any> {
   readonly onDidChangeTreeData: Event<ChangeTreeDataEventType> = this._onDidChangeTreeData.event;
 
   private topNode: ExplainTreeItem;
+
+  private treeView: TreeView<ExplainTreeItem>;
+  
+  constructor() {
+    this.treeView = vscode.window.createTreeView(`vscode-db2i.dove.nodes`, { treeDataProvider: this, showCollapseAll: true });
+  }
+
+  public getTreeView(): TreeView<ExplainTreeItem> {
+    return this.treeView;
+  }
+
 
   setRootNode(topNode: ExplainNode): ExplainTreeItem {
     this.topNode = new ExplainTreeItem(topNode);

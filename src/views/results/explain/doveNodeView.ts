@@ -1,6 +1,8 @@
-import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands } from "vscode";
+import * as vscode from "vscode";
+import { CancellationToken, Event, EventEmitter, ProviderResult, TreeView, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands } from "vscode";
 import { ExplainNode, ExplainProperty, Highlighting, RecordType, NodeHighlights } from "./nodes";
 import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
+import * as crypto from "crypto";
 
 type EventType = PropertyNode | undefined | null | void;
 
@@ -9,6 +11,16 @@ export class DoveNodeView implements TreeDataProvider<any> {
   readonly onDidChangeTreeData: Event<EventType> = this._onDidChangeTreeData.event;
 
   private propertyNodes: PropertyNode[];
+
+  private treeView: TreeView<PropertyNode>;
+  
+  constructor() {
+    this.treeView = vscode.window.createTreeView(`vscode-db2i.dove.node`, { treeDataProvider: this, showCollapseAll: true });
+  }
+
+  public getTreeView(): TreeView<PropertyNode> {
+    return this.treeView;
+  }
 
   setNode(currentNode: ExplainNode) {
     this.propertyNodes = [];
@@ -34,6 +46,8 @@ export class DoveNodeView implements TreeDataProvider<any> {
       }
     }
     this._onDidChangeTreeData.fire();
+    // Ensure that the tree is positioned such that the first element is visible
+    this.treeView.reveal(this.propertyNodes[0],  { select: false });
 
     // Show tree in the view
     commands.executeCommand(`setContext`, `vscode-db2i:explainingNode`, true);
@@ -75,6 +89,8 @@ class PropertySection extends PropertyNode {
   propertyNodes: PropertyNode[] = [];
   constructor(property: ExplainProperty) {
     super(property);
+    // Random ID so that when switching between result nodes the expansion state of its attribute sections are not applied to another nodes attribute sections with the same title
+    this.id = crypto.randomUUID();
     this.collapsibleState = TreeItemCollapsibleState.Expanded;
     // Visually differentiate section headings from the rest of the attributes via node highlighting
     this.resourceUri = toDoveTreeDecorationProviderUri(new NodeHighlights().set(Highlighting.ATTRIBUTE_SECTION_HEADING));
