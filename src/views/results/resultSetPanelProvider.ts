@@ -95,6 +95,7 @@ export class ResultSetPanelProvider {
   }
 
   async setScrolling(basicSelect, isCL = false, queryId: string = ``) {
+    this.loadingState = false;
     await this.focus();
 
     this._view.webview.html = html.generateScroller(basicSelect, isCL);
@@ -106,6 +107,7 @@ export class ResultSetPanelProvider {
   }
 
   setError(error) {
+    this.loadingState = false;
     // TODO: pretty error
     this._view.webview.html = `<p>${error}</p>`;
   }

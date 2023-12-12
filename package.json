@@ -336,10 +336,16 @@
         "icon": "$(notebook-execute)"
       },
       {
-        "command": "vscode-db2i.explainEditorStatement",
-        "title": "Explain statement",
+        "command": "vscode-db2i.editorExplain.withRun",
+        "title": "Run and explain statement",
         "category": "Db2 for i",
         "icon": "$(debug-alt)"
+      },
+      {
+        "command": "vscode-db2i.editorExplain.withoutRun",
+        "title": "Explain without running",
+        "category": "Db2 for i",
+        "icon": "$(debug-alt)"       
       },
       {
         "command": "vscode-db2i.queryHistory.remove",
@@ -465,6 +471,13 @@
         "icon": "$(file)"
       }
     ],
+    "submenus": [
+      {
+        "icon": "$(notebook-execute)",
+        "id": "sql/editor/context",
+        "label": "Explain"
+      }
+    ],
     "menus": {
       "commandPalette": [
         {
@@ -541,14 +554,26 @@
       ],
       "editor/title": [
         {
+          "when": "editorLangId == sql && code-for-ibmi:connected == true",
+          "group": "navigation@sql",
+          "submenu": "sql/editor/context"
+        }
+      ],
+      "sql/editor/context": [
+        {
           "command": "vscode-db2i.runEditorStatement",
           "when": "editorLangId == sql",
-          "group": "navigation@sql"
+          "group": "1_general@sql"
         },
         {
-          "command": "vscode-db2i.explainEditorStatement",
+          "command": "vscode-db2i.editorExplain.withRun",
           "when": "editorLangId == sql",
-          "group": "navigation@sql"
+          "group": "2_explain@1"
+        },
+        {
+          "command": "vscode-db2i.editorExplain.withoutRun",
+          "when": "editorLangId == sql",
+          "group": "2_explain@2"
         }
       ],
       "view/title": [
