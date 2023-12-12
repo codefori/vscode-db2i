@@ -76,6 +76,8 @@ export class DoveResultsView implements TreeDataProvider<any> {
 
     // Show tree in the view
     commands.executeCommand(`setContext`, `vscode-db2i:explaining`, true);
+    // Ensure that the tree is positioned such that the first element is visible
+    this.treeView.reveal(this.topNode,  { select: false });
     return this.topNode;
   }
 
