@@ -23,7 +23,7 @@ function generatePage(rows: JobLogEntry[]) {
     <html lang="en">
       <head>
         ${getHeader()}
-      </head>
+              </head>
       <body>
         <table id="resultset">
           <thead>
