@@ -13,8 +13,9 @@ import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider } from "./resultSetPanelProvider";
+import { ExplainType } from "../../connection/sqlJob";
 
-export type StatementQualifier = "statement" | "explain" | "json" | "csv" | "cl" | "sql";
+export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 
 export interface StatementInfo {
   content: string,
@@ -70,7 +71,8 @@ export function initialise(context: vscode.ExtensionContext) {
       });
     }),
 
-    vscode.commands.registerCommand(`vscode-db2i.explainEditorStatement`, (options?: StatementInfo) => { runHandler({ qualifier: `explain`, ...options }) }),
+    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withRun`, (options?: StatementInfo) => { runHandler({ qualifier: `explain`, ...options }) }),
+    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withoutRun`, (options?: StatementInfo) => { runHandler({ qualifier: `onlyexplain`, ...options }) }),
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, (options?: StatementInfo) => { runHandler(options) })
   )
 }
@@ -130,15 +132,23 @@ async function runHandler(options?: StatementInfo) {
           // If it's a basic statement, we can let it scroll!
           resultSetProvider.setScrolling(statementDetail.content);
 
-        } else if (statementDetail.qualifier === `explain`) {
+        } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
           const selectedJob = JobManager.getSelection();
           if (selectedJob) {
             try {
-              resultSetProvider.setLoadingText(`Explaining...`);
+              const onlyExplain = statementDetail.qualifier === `onlyexplain`;
 
-              const explained = await selectedJob.job.explain(statementDetail.content);
-              // TODO: handle when explain without running
-              resultSetProvider.setScrolling(statementDetail.content, false, explained.id);
+              resultSetProvider.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
+              const explainType: ExplainType = onlyExplain ? ExplainType.DoNotRun : ExplainType.Run;
+
+              const explained = await selectedJob.job.explain(statementDetail.content, explainType);
+              
+              if (onlyExplain) {
+                resultSetProvider.setLoadingText(`Explained.`);
+              } else {
+                resultSetProvider.setScrolling(statementDetail.content, false, explained.id);
+              }
+
               const tree = new ExplainTree(explained.vedata);
               const topLevel = tree.get();
               const rootNode = doveResultsView.setRootNode(topLevel);
