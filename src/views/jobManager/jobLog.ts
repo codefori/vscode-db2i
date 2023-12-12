@@ -26,6 +26,16 @@ function generatePage(rows: JobLogEntry[]) {
       </head>
       <body>
         <table id="resultset">
+          <thead>
+            <tr>
+              <th>Sent</th>
+              <th>Type</th>
+              <th>Severity</th>
+              <th>Message ID</th>
+              <th>Message</th>
+              <th>Second Level Text</th>
+            </tr>
+          </thead>
           <tbody>
             ${rows.map(row => {
               return `<tr>
