@@ -85,7 +85,7 @@ export async function fetchSystemInfo() {
   const content = instance.getContent();
 
   const [versionResults, db2LevelResults] = await Promise.all([
-    content.runSQL(`select OS_VERSION || '.' || OS_RELEASE as VERSION from sysibmadm.env_sys_info`),
+    content.runSQL(`select OS_VERSION concat '.' concat OS_RELEASE as VERSION from sysibmadm.env_sys_info`),
     content.runSQL([
       `select max(ptf_group_level) as HIGHEST_DB2_PTF_GROUP_LEVEL`,
       `from qsys2.group_ptf_info`,
