@@ -50,6 +50,7 @@ class ResultSetPanelProvider {
           }
 
           let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
+          console.log( queryResults.metadata ? queryResults.metadata.columns.map(x=>x.name) : undefined);
           data = queryResults.data;
           this._view.webview.postMessage({
             command: `rows`,
@@ -117,9 +118,65 @@ class ResultSetPanelProvider {
       queryId: ``
     });
   }
+  setError(error) {
+    // TODO: pretty error
+    this._view.webview.html = `<p>${error}</p>`;
+  }
+}
+
+class SelfCodePanelProvider {
+  _view: vscode.WebviewView;
+  loadingState: boolean;
+  constructor() {
+    this._view = undefined;
+    this.loadingState = false;
+  }
+
+  resolveWebviewView(webviewView: vscode.WebviewView, context: vscode.WebviewViewResolveContext, _token: vscode.CancellationToken) {
+    this._view = webviewView;
+
+    webviewView.webview.options = {
+      // Allow scripts in the webview
+      enableScripts: true,
+    };
+    webviewView.webview.html = html.getLoadingHTML();
+  }
+
+  async ensureActivation() {
+    let currentLoop = 0;
+    while (!this._view && currentLoop < 15) {
+      await this.focus();
+      await delay(100);
+      currentLoop += 1;
+    }
+  }
+
+  async focus() {
+    if (!this._view) {
+      // Weird one. Kind of a hack. _view.show doesn't work yet because it's not initialized.
+      // But, we can call a VS Code API to focus on the tab, which then
+      // 1. calls resolveWebviewView
+      // 2. sets this._view
+      await vscode.commands.executeCommand(`vscode-db2i.resultset.focus`);
+    } else {
+      this._view.show(true);
+    }
+  }
 
   async setTableData(data: any[]) {
-    this._view.webview.html = html.generateTable(data);
+    await this.focus();
+
+    const rows = Object.values(data).map(obj => Object.values(obj));
+    const cols = Object.keys(data[0]);
+  
+    const rawhtml = html.generateDynamicTable();
+  
+    this._view.webview.html = rawhtml;
+    this._view.webview.postMessage({
+      command: 'setTableData',
+      rows: rows,
+      columnList: cols
+    });
   }
 
   setError(error) {
@@ -148,7 +205,7 @@ export interface ParsedStatementInfo extends StatementInfo {
 
 export function initialise(context: vscode.ExtensionContext) {
   let resultSetProvider = new ResultSetPanelProvider();
-  let selfCodeErrorProvider = new ResultSetPanelProvider();
+  let selfCodeErrorProvider = new SelfCodePanelProvider();
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(`vscode-db2i.selfCodeErrorPanel`, selfCodeErrorProvider, {
@@ -272,14 +329,13 @@ export function initialise(context: vscode.ExtensionContext) {
                 const data = await JobManager.runSQL(content, undefined);
                 const hasErrors = data.length > 0;
                 if(hasErrors) {
-                  selfCodeCache = data.length;
-                  vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, true);
-                  selfCodeErrorProvider.setTableData(data);
-                  if(data.length !== selfCodeCache) {
+                  if (data.length !== selfCodeCache) {
+                    await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, true);
+                    await selfCodeErrorProvider.setTableData(data);
+                    selfCodeCache = data.length;
                   }
-
                 } else {
-                  vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
+                  await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
                 }
 
 

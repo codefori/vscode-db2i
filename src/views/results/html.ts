@@ -198,45 +198,113 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
   `;
 }
 
-export function generateTable(data: any[]): string {
-  // Function to check if a string is a valid JSON
-  function isJsonString(str: string): boolean {
-    try {
-      JSON.parse(str);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+export function generateDynamicTable(): string {
+  // const parsedData = JSON.parse(data);
 
-  // Function to generate table rows
-  function generateRows(data: any[]): string {
-    let rows = '';
-    for (const row of data) {
-      let newRow = '<tr>';
-      for (const key of row) {
-        let cellVal = row[key] === undefined ? 'null' : row[key];
-        if (isJsonString(cellVal)) {
-          var formattedJson = JSON.stringify(JSON.parse(cellVal), null, 2);
-          newRow += `<td><pre style="max-height: 100px; overflow-y: auto; margin: 0;">${formattedJson}</pre></td>`;
-        } else {
-          newRow += `<td>${cellVal}</td>`;
-        }
-      }
-      newRow += '</tr>';
-      rows += newRow;
-    }
-    return rows;
-  }
+  return /*html*/`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <script>
+          /* 
+          ${new Date().getTime()}
+          */
+          const vscode = acquireVsCodeApi();
+          let mustLoadHeaders = true;
+          let totalRows = 0;
+          window.addEventListener("load", main);
+          function main() {
+            window.addEventListener('message', event => {
+              const data = event.data;
+              switch (data.command) {
+                case 'setTableData':
+                  if (mustLoadHeaders && event.data.columnList) {
+                    setHeaders('resultset', event.data.columnList);
+                    mustLoadHeaders = false;
+                  }
 
-  // Generate the table
-  let table = /*html*/`
-    <table>
-      <tbody>
-        ${generateRows(data)}
-      </tbody>
-    </table>
+                  if (data.rows && data.rows.length > 0) {
+                    totalRows += data.rows.length;
+                    appendRows('resultset', data.rows);
+                  }
+                  const nextButton = document.getElementById("nextButton");
+                  if (data.rows === undefined && totalRows === 0) {
+                    nextButton.innerText = 'Query executed with no result set returned. Rows affected: ' + data.update_count;
+                  } else {
+                    nextButton.innerText = ('Loaded ' + totalRows + '. End of data');
+                  }
+                  break;
+              }
+            });
+          }
+
+
+          function setHeaders(tableId, columns) {
+            var tHeadRef = document.getElementById(tableId).getElementsByTagName('thead')[0];
+            tHeadRef.innerHTML = '';
+
+            // Insert a row at the end of table
+            var newRow = tHeadRef.insertRow();
+
+            columns.forEach(colName => {
+              // Insert a cell at the end of the row
+              var newCell = newRow.insertCell();
+
+              // Append a text node to the cell
+              var newText = document.createTextNode(colName);
+              newCell.appendChild(newText);
+            });
+          }
+
+          function isJsonString(str) {
+            try {
+              JSON.parse(str);
+              return true;
+            } catch (e) {
+              return false;
+            }
+          }
+
+          function appendRows(tableId, arrayOfObjects) {
+            var tBodyRef = document.getElementById(tableId).getElementsByTagName('tbody')[0];
+
+            for (const row of arrayOfObjects) {
+              // Insert a row at the end of table
+              var newRow = tBodyRef.insertRow()
+
+              for (const cell of row) {
+                // Insert a cell at the end of the row
+                var newCell = newRow.insertCell();
+                var cellVal = cell === undefined ? 'null' : cell;
+
+                // check if cell contains JSON
+                if (isJsonString(cellVal)) {
+                  var formattedJson = JSON.stringify(JSON.parse(cellVal), null, 2);
+                  // Create a pre tag and apply inline styles for scrolling
+                  var pre = document.createElement('pre');
+                  pre.style.maxHeight = '100px'; // Adjust the height as needed
+                  pre.style.overflowY = 'auto';
+                  pre.style.margin = '0'; // To remove default margin of pre
+                  pre.textContent = formattedJson; // Using textContent to preserve text formatting
+                  newCell.appendChild(pre);
+                } else {
+                  // Append a text node to the cell
+                  var newText = document.createTextNode(cellVal);
+                  newCell.appendChild(newText);
+                }
+              }
+            }
+
+          }
+        </script>
+      </head>
+      <body>
+        <table id="resultset">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+        <p id="nextButton"></p>
+      </body>
+    </html>
   `;
-
-  return table;
 }
