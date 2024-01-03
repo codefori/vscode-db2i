@@ -188,6 +188,7 @@ export class SQLJob {
     this.status = JobStatus.Ready;
 
     commands.executeCommand(`setContext`, `vscode-db2i:hasSelfCodes`, false);
+    commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
 
     return connectResult;
   }

@@ -197,3 +197,46 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
     </html>
   `;
 }
+
+export function generateTable(data: any[]): string {
+  // Function to check if a string is a valid JSON
+  function isJsonString(str: string): boolean {
+    try {
+      JSON.parse(str);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Function to generate table rows
+  function generateRows(data: any[]): string {
+    let rows = '';
+    for (const row of data) {
+      let newRow = '<tr>';
+      for (const key of row) {
+        let cellVal = row[key] === undefined ? 'null' : row[key];
+        if (isJsonString(cellVal)) {
+          var formattedJson = JSON.stringify(JSON.parse(cellVal), null, 2);
+          newRow += `<td><pre style="max-height: 100px; overflow-y: auto; margin: 0;">${formattedJson}</pre></td>`;
+        } else {
+          newRow += `<td>${cellVal}</td>`;
+        }
+      }
+      newRow += '</tr>';
+      rows += newRow;
+    }
+    return rows;
+  }
+
+  // Generate the table
+  let table = /*html*/`
+    <table>
+      <tbody>
+        ${generateRows(data)}
+      </tbody>
+    </table>
+  `;
+
+  return table;
+}

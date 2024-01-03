@@ -1,4 +1,4 @@
-import vscode from "vscode";
+import vscode, { SnippetString, ViewColumn } from "vscode";
 
 import * as csv from "csv/sync";
 
@@ -8,10 +8,12 @@ import { JobInfo } from "../../connection/manager";
 import { Query, QueryState } from "../../connection/query";
 import { changedCache } from "../../language/providers/completionItemCache";
 import Document from "../../language/sql/document";
-import { ObjectRef, StatementType } from "../../language/sql/types";
+import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import { updateStatusBar } from "../jobManager/statusBar";
 import * as html from "./html";
-
+import Statement from "../../language/sql/statement";
+import { SQLJob } from "../../connection/sqlJob";
+import LRUCache from "lru-cache";
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
 }
@@ -116,6 +118,10 @@ class ResultSetPanelProvider {
     });
   }
 
+  async setTableData(data: any[]) {
+    this._view.webview.html = html.generateTable(data);
+  }
+
   setError(error) {
     // TODO: pretty error
     this._view.webview.html = `<p>${error}</p>`;
@@ -123,7 +129,7 @@ class ResultSetPanelProvider {
 }
 
 export type StatementQualifier = "statement"|"json"|"csv"|"cl"|"sql";
-export let selfCodeCache: any[] = [];
+export let selfCodeCache: number = 0;
 
 export interface StatementInfo {
   content: string,
@@ -263,7 +269,19 @@ export function initialise(context: vscode.ExtensionContext) {
               const selected: JobInfo = await JobManager.getSelection();
               if (selected.job.options.selfcodes) {
                 const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
-                selfCodeErrorProvider.setScrolling(content);
+                const data = await JobManager.runSQL(content, undefined);
+                const hasErrors = data.length > 0;
+                if(hasErrors) {
+                  selfCodeCache = data.length;
+                  vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, true);
+                  selfCodeErrorProvider.setTableData(data);
+                  if(data.length !== selfCodeCache) {
+                  }
+
+                } else {
+                  vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
+                }
+
 
                 // TODO: when do we display error penel? 
                 // const data = await JobManager.runSQL(content);
@@ -274,8 +292,8 @@ export function initialise(context: vscode.ExtensionContext) {
                 
               }
               
-              if (statement.qualifier === `statement`) {
-                vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement.content);
+              if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {
+                vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
               }
 
             } catch (e) {
