@@ -38,6 +38,11 @@ export class ExampleBrowser implements TreeDataProvider<any> {
       commands.registerCommand(`vscode-db2i.examples.clearFilter`, async () => {
         this.currentFilter = undefined;
         this.refresh();
+      }),
+
+      commands.registerCommand("vscode-db2i.examples.reload", () => {
+        delete Examples[ServiceInfoLabel];
+        this.refresh();
       })
     );
 

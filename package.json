@@ -75,7 +75,11 @@
           "type": "string",
           "description": "SQL formatting options: Lowercase or uppercase SQL identifiers",
           "default": "preserve",
-          "enum": ["lower", "upper", "preserve"],
+          "enum": [
+            "lower",
+            "upper",
+            "preserve"
+          ],
           "enumDescriptions": [
             "Format SQL identifiers in lowercase",
             "Format SQL identifiers in uppercase",
@@ -86,7 +90,10 @@
           "type": "string",
           "description": "SQL formatting options: Lowercase or uppercase SQL keywords",
           "default": "lower",
-          "enum": ["lower", "upper"],
+          "enum": [
+            "lower",
+            "upper"
+          ],
           "enumDescriptions": [
             "Format reserved SQL keywords in lowercase",
             "Format reserved SQL keywords in uppercase"
@@ -292,6 +299,12 @@
         "icon": "$(clear-all)"
       },
       {
+        "command": "vscode-db2i.examples.reload",
+        "title": "Reload examples",
+        "category": "Db2 for i",
+        "icon": "$(sync)"
+      },
+      {
         "command": "vscode-db2i.jobManager.newJob",
         "title": "New SQL Job",
         "category": "Db2 for i",
@@ -420,6 +433,10 @@
         {
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "never"
+        },
+        {
+          "command": "vscode-db2i.examples.reload",
+          "when": "never"
         }
       ],
       "editor/context": [
@@ -466,7 +483,12 @@
           "command": "vscode-db2i.examples.clearFilter",
           "group": "navigation",
           "when": "view == exampleBrowser"
-        },
+        },        
+        {
+          "command": "vscode-db2i.examples.reload",
+          "group": "navigation@99",
+          "when": "view == exampleBrowser"
+        },        
         {
           "command": "vscode-db2i.openSqlDocument",
           "group": "navigation",
