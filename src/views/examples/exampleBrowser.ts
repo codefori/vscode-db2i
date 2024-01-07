@@ -79,10 +79,13 @@ export class ExampleBrowser implements TreeDataProvider<any> {
         return Object.values(Examples)
           .flatMap(examples => examples.filter(exampleWorksForOnOS))
           .filter(example => example.name.toUpperCase().includes(upperFilter) || example.content.some(line => line.toUpperCase().includes(upperFilter)))
+          .sort(sort)
           .map(example => new SQLExampleItem(example));
       }
       else {
-        return Object.entries(Examples).map(([name, examples]) => new ExampleGroupItem(name, examples));
+        return Object.entries(Examples)
+          .sort(([name1], [name2]) => sort(name1, name2))
+          .map(([name, examples]) => new ExampleGroupItem(name, examples));
       }
     }
   }
@@ -97,6 +100,7 @@ class ExampleGroupItem extends TreeItem {
   getChildren(): SQLExampleItem[] {
     return this.group
       .filter(example => exampleWorksForOnOS(example))
+      .sort(sort)
       .map(example => new SQLExampleItem(example));
   }
 }
@@ -129,4 +133,10 @@ function exampleWorksForOnOS(example: SQLExample): boolean {
   }
 
   return true;
+}
+
+function sort(string1: string | SQLExample, string2: string | SQLExample) {
+  string1 = typeof string1 === "string" ? string1 : string1.name;
+  string2 = typeof string2 === "string" ? string2 : string2.name;
+  return string1.localeCompare(string2);
 }
