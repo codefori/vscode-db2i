@@ -1,4 +1,4 @@
-import { Event, EventEmitter, ExtensionContext, MarkdownString, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands, window, workspace } from "vscode";
+import { Event, EventEmitter, ExtensionContext, MarkdownString, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, commands, window, workspace } from "vscode";
 import { Examples, SQLExample, ServiceInfoLabel } from ".";
 import { getInstance } from "../../base";
 import { OSData, fetchSystemInfo } from "../../config";
@@ -109,7 +109,7 @@ class SQLExampleItem extends TreeItem {
   constructor(example: SQLExample) {
     super(example.name, TreeItemCollapsibleState.None);
     this.iconPath = ThemeIcon.File;
-
+    this.resourceUri = Uri.parse('_.sql');
     this.tooltip = new MarkdownString(['```sql', example.content.join(`\n`), '```'].join(`\n`));
 
     this.command = {
