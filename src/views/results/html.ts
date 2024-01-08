@@ -205,6 +205,7 @@ export function generateDynamicTable(): string {
     <!DOCTYPE html>
     <html lang="en">
       <head>
+        ${getHeader({withCollapsed: false})}
         <script>
           /* 
           ${new Date().getTime()}

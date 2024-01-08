@@ -127,6 +127,7 @@ class ResultSetPanelProvider {
 class SelfCodePanelProvider {
   _view: vscode.WebviewView;
   loadingState: boolean;
+  selfCodeCache: number = 0;
   constructor() {
     this._view = undefined;
     this.loadingState = false;
@@ -186,7 +187,6 @@ class SelfCodePanelProvider {
 }
 
 export type StatementQualifier = "statement"|"json"|"csv"|"cl"|"sql";
-export let selfCodeCache: number = 0;
 
 export interface StatementInfo {
   content: string,
@@ -329,10 +329,10 @@ export function initialise(context: vscode.ExtensionContext) {
                 const data = await JobManager.runSQL(content, undefined);
                 const hasErrors = data.length > 0;
                 if(hasErrors) {
-                  if (data.length !== selfCodeCache) {
+                  if (data.length !== selfCodeErrorProvider.selfCodeCache) {
                     await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, true);
                     await selfCodeErrorProvider.setTableData(data);
-                    selfCodeCache = data.length;
+                    selfCodeErrorProvider.selfCodeCache = data.length;
                   }
                 } else {
                   await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
