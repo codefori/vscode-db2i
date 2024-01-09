@@ -638,7 +638,7 @@
     "lint": "eslint .",
     "pretest": "npm run lint",
     "language:test": "vitest",
-    "dsc": "mkdir -p dist && npx tsx src/dsc",
+    "dsc": "bash -c 'mkdir -p dist' && npx tsx src/dsc",
     "package": "vsce package",
     "vscode:prepublish": "rm -rf dist && webpack --mode production && npm run dsc",
     "webpack": "webpack --mode development",
