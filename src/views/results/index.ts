@@ -2,18 +2,15 @@ import vscode, { SnippetString, ViewColumn } from "vscode";
 
 import * as csv from "csv/sync";
 
-import { getInstance } from "../../base";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { Query, QueryState } from "../../connection/query";
 import { changedCache } from "../../language/providers/completionItemCache";
 import Document from "../../language/sql/document";
-import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
+import Statement from "../../language/sql/statement";
+import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import { updateStatusBar } from "../jobManager/statusBar";
 import * as html from "./html";
-import Statement from "../../language/sql/statement";
-import { SQLJob } from "../../connection/sqlJob";
-import LRUCache from "lru-cache";
 function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
 }
@@ -337,15 +334,6 @@ export function initialise(context: vscode.ExtensionContext) {
                 } else {
                   await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
                 }
-
-
-                // TODO: when do we display error penel? 
-                // const data = await JobManager.runSQL(content);
-                // if (data) {
-                //   // selfCodeCache.length = 0;
-                //   // selfCodeCache.push(...data);
-                // }
-                
               }
               
               if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {

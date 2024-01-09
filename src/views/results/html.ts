@@ -141,7 +141,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             });
           }
 
-          function isJsonString(str) {
+          function isJsonString(str: string): boolean {
             try {
               JSON.parse(str);
               return true;
@@ -150,37 +150,39 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             }
           }
 
+          function getFormattedCell(cellValue) {
+            // Handle undefined cells
+            var formattedValue = cellValue === undefined ? 'null' : cellValue;
+
+            // Format JSON cells
+            if (isJsonString(formattedValue)) {
+              var formattedJson = JSON.stringify(JSON.parse(formattedValue), null, 2);
+              var pre = document.createElement('pre');
+              pre.style.maxHeight = '100px';
+              pre.style.overflowY = 'auto';
+              pre.style.margin = '0';
+              pre.textContent = formattedJson;
+              return pre;
+            } else {
+              // Handle non-JSON cells
+              return document.createTextNode(formattedValue);
+            }
+          }
+
           function appendRows(tableId, arrayOfObjects) {
             var tBodyRef = document.getElementById(tableId).getElementsByTagName('tbody')[0];
 
             for (const row of arrayOfObjects) {
-              // Insert a row at the end of table
-              var newRow = tBodyRef.insertRow()
+              var newRow = tBodyRef.insertRow();
 
               for (const cell of row) {
-                // Insert a cell at the end of the row
                 var newCell = newRow.insertCell();
-                var cellVal = cell === undefined ? 'null' : cell;
-
-                // check if cell contains JSON
-                if (isJsonString(cellVal)) {
-                  var formattedJson = JSON.stringify(JSON.parse(cellVal), null, 2);
-                  // Create a pre tag and apply inline styles for scrolling
-                  var pre = document.createElement('pre');
-                  pre.style.maxHeight = '100px'; // Adjust the height as needed
-                  pre.style.overflowY = 'auto';
-                  pre.style.margin = '0'; // To remove default margin of pre
-                  pre.textContent = formattedJson; // Using textContent to preserve text formatting
-                  newCell.appendChild(pre);
-                } else {
-                  // Append a text node to the cell
-                  var newText = document.createTextNode(cellVal);
-                  newCell.appendChild(newText);
-                }
+                var cellContent = getFormattedCell(cell);
+                newCell.appendChild(cellContent);
               }
             }
-
           }
+
         </script>
       </head>
       <body>
@@ -257,7 +259,7 @@ export function generateDynamicTable(): string {
             });
           }
 
-          function isJsonString(str) {
+          function isJsonString(str: string): boolean {
             try {
               JSON.parse(str);
               return true;
@@ -266,36 +268,37 @@ export function generateDynamicTable(): string {
             }
           }
 
+          function getFormattedCell(cellValue) {
+            // Handle undefined cells
+            var formattedValue = cellValue === undefined ? 'null' : cellValue;
+            
+            // Format JSON cells
+            if (isJsonString(formattedValue)) {
+              var formattedJson = JSON.stringify(JSON.parse(formattedValue), null, 2);
+              var pre = document.createElement('pre');
+              pre.style.maxHeight = '100px';
+              pre.style.overflowY = 'auto';
+              pre.style.margin = '0';
+              pre.textContent = formattedJson;
+              return pre;
+            } else {
+              // Handle non-JSON cells
+              return document.createTextNode(formattedValue);
+            }
+          }
+
           function appendRows(tableId, arrayOfObjects) {
             var tBodyRef = document.getElementById(tableId).getElementsByTagName('tbody')[0];
 
             for (const row of arrayOfObjects) {
-              // Insert a row at the end of table
-              var newRow = tBodyRef.insertRow()
+              var newRow = tBodyRef.insertRow();
 
               for (const cell of row) {
-                // Insert a cell at the end of the row
                 var newCell = newRow.insertCell();
-                var cellVal = cell === undefined ? 'null' : cell;
-
-                // check if cell contains JSON
-                if (isJsonString(cellVal)) {
-                  var formattedJson = JSON.stringify(JSON.parse(cellVal), null, 2);
-                  // Create a pre tag and apply inline styles for scrolling
-                  var pre = document.createElement('pre');
-                  pre.style.maxHeight = '100px'; // Adjust the height as needed
-                  pre.style.overflowY = 'auto';
-                  pre.style.margin = '0'; // To remove default margin of pre
-                  pre.textContent = formattedJson; // Using textContent to preserve text formatting
-                  newCell.appendChild(pre);
-                } else {
-                  // Append a text node to the cell
-                  var newText = document.createTextNode(cellVal);
-                  newCell.appendChild(newText);
-                }
+                var cellContent = getFormattedCell(cell);
+                newCell.appendChild(cellContent);
               }
             }
-
           }
         </script>
       </head>
