@@ -418,5 +418,25 @@ export const JobsSuite: TestSuite = {
       console.log(`Old query method took ${oe - os} milliseconds.`);
       assert.equal((ne - ns) < (oe - os), true);
     }},
+    {name: `(long-running) Server-side in-memory tracing doesn't overflow`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
+      const instance = getInstance();
+      const content = instance.getContent();
+
+      const newJob = new SQLJob({naming: `sql`});
+      await newJob.connect();
+      await newJob.setTraceConfig(ServerTraceDest.IN_MEM, ServerTraceLevel.DATASTREAM);
+
+      let numIterations = 1000;
+      for (let i = 0; i < numIterations; i++) {
+        let version = await newJob.getVersion();
+        if(0 == i%20) {
+          console.log(`long-running test interation ${i}/${numIterations}`);
+        }
+      }
+      let bruh = await newJob.getTraceData();
+      newJob.close();
+    }},
   ]
 }
