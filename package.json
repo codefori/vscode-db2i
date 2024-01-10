@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "0.6.1",
+  "version": "0.6.0",
   "preview": true,
   "engines": {
     "vscode": "^1.70.0"
@@ -299,12 +299,6 @@
         "icon": "$(clear-all)"
       },
       {
-        "command": "vscode-db2i.examples.reload",
-        "title": "Reload examples",
-        "category": "Db2 for i",
-        "icon": "$(sync)"
-      },
-      {
         "command": "vscode-db2i.jobManager.newJob",
         "title": "New SQL Job",
         "category": "Db2 for i",
@@ -433,10 +427,6 @@
         {
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "never"
-        },
-        {
-          "command": "vscode-db2i.examples.reload",
-          "when": "never"
         }
       ],
       "editor/context": [
@@ -483,12 +473,7 @@
           "command": "vscode-db2i.examples.clearFilter",
           "group": "navigation",
           "when": "view == exampleBrowser"
-        },        
-        {
-          "command": "vscode-db2i.examples.reload",
-          "group": "navigation@99",
-          "when": "view == exampleBrowser"
-        },        
+        },
         {
           "command": "vscode-db2i.openSqlDocument",
           "group": "navigation",
@@ -653,7 +638,9 @@
     "esbuild-loader": "^3.0.1",
     "eslint": "^7.32.0",
     "glob": "^7.1.7",
+    "octokit": "^3.1.2",
     "raw-loader": "^4.0.2",
+    "ts-loader": "^9.3.1",
     "typescript": "^4.3.2",
     "vitest": "^0.33.0",
     "vscode-test": "^1.5.2",
@@ -662,9 +649,8 @@
   },
   "dependencies": {
     "csv": "^6.1.3",
+    "lru-cache": "^6.0.0",
     "node-fetch": "^3.3.1",
-    "octokit": "^2.0.14",
-    "sql-formatter": "^14.0.0",
-    "lru-cache": "^6.0.0"
+    "sql-formatter": "^14.0.0"
   }
 }

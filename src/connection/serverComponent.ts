@@ -1,7 +1,5 @@
 import { getInstance } from "../base";
 
-import { Octokit } from "octokit";
-
 import { Config } from "../config";
 import path from "path";
 import { OutputChannel, extensions, window } from "vscode";
