@@ -235,6 +235,18 @@
         "key": "ctrl+r",
         "mac": "cmd+r",
         "when": "editorLangId == sql"
+      },
+      {
+        "command": "vscode-db2i.editorExplain.withRun",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorLangId == sql"
+      },
+      {
+        "command": "vscode-db2i.editorExplain.withoutRun",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "editorLangId == sql"
       }
     ],
     "commands": [
