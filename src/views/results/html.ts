@@ -38,6 +38,34 @@ export function getLoadingHTML(): string {
   `;
 }
 
+export function getSelfCodeHelp(): string {
+  return /*html*/ `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        ${getHeader()}
+        <script>
+          window.addEventListener("message", (event) => {
+            const command = event.data.command;
+            switch (command) {
+              case "loadingText":
+                const text = document.getElementById("loadingText");
+                text.innerText = event.data.text;
+                break;
+            }
+          });
+        </script>
+      </head>
+      <body>
+        <div id="spinnerContent" class="center-screen">
+          <p id="loadingText">Under active SQL Job, run Get SELF codes Errors to update view</p>
+          <span class="loader"></span>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
 export function generateScroller(basicSelect: string, isCL: boolean): string {
   const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
 
@@ -141,7 +169,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             });
           }
 
-          function isJsonString(str: string): boolean {
+          function isJsonString(str) {
             try {
               JSON.parse(str);
               return true;
@@ -259,7 +287,7 @@ export function generateDynamicTable(): string {
             });
           }
 
-          function isJsonString(str: string): boolean {
+          function isJsonString(str) {
             try {
               JSON.parse(str);
               return true;

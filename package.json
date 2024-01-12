@@ -124,7 +124,8 @@
           "id": "vscode-db2i.selfCodeErrorPanel",
           "name": "Self Code Errors",
           "when": "code-for-ibmi:connected == true && vscode-db2i:hasSelfCodes == true && vscode-db2i:selfCodeCountChanged == true",
-          "contextualTitle": "IBM i"
+          "contextualTitle": "IBM i",
+          "visibility": "collapsed"
         }
       ],
       "db2-explorer": [

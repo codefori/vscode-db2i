@@ -1,4 +1,4 @@
-import vscode, { SnippetString, ViewColumn } from "vscode";
+import vscode, { EndOfLine, SnippetString, ViewColumn } from "vscode";
 
 import * as csv from "csv/sync";
 
@@ -11,7 +11,10 @@ import Statement from "../../language/sql/statement";
 import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import { updateStatusBar } from "../jobManager/statusBar";
 import * as html from "./html";
-function delay(t: number, v?: number) {
+import { SelfCodePanelProvider } from "./selfCodePanel";
+import { SQLJob } from "../../connection/sqlJob";
+import { count } from "console";
+export function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
 }
 
@@ -120,69 +123,6 @@ class ResultSetPanelProvider {
     this._view.webview.html = `<p>${error}</p>`;
   }
 }
-
-class SelfCodePanelProvider {
-  _view: vscode.WebviewView;
-  loadingState: boolean;
-  selfCodeCache: number = 0;
-  constructor() {
-    this._view = undefined;
-    this.loadingState = false;
-  }
-
-  resolveWebviewView(webviewView: vscode.WebviewView, context: vscode.WebviewViewResolveContext, _token: vscode.CancellationToken) {
-    this._view = webviewView;
-
-    webviewView.webview.options = {
-      // Allow scripts in the webview
-      enableScripts: true,
-    };
-    webviewView.webview.html = html.getLoadingHTML();
-  }
-
-  async ensureActivation() {
-    let currentLoop = 0;
-    while (!this._view && currentLoop < 15) {
-      await this.focus();
-      await delay(100);
-      currentLoop += 1;
-    }
-  }
-
-  async focus() {
-    if (!this._view) {
-      // Weird one. Kind of a hack. _view.show doesn't work yet because it's not initialized.
-      // But, we can call a VS Code API to focus on the tab, which then
-      // 1. calls resolveWebviewView
-      // 2. sets this._view
-      await vscode.commands.executeCommand(`vscode-db2i.resultset.focus`);
-    } else {
-      this._view.show(true);
-    }
-  }
-
-  async setTableData(data: any[]) {
-    await this.focus();
-
-    const rows = Object.values(data).map(obj => Object.values(obj));
-    const cols = Object.keys(data[0]);
-  
-    const rawhtml = html.generateDynamicTable();
-  
-    this._view.webview.html = rawhtml;
-    this._view.webview.postMessage({
-      command: 'setTableData',
-      rows: rows,
-      columnList: cols
-    });
-  }
-
-  setError(error) {
-    // TODO: pretty error
-    this._view.webview.html = `<p>${error}</p>`;
-  }
-}
-
 export type StatementQualifier = "statement"|"json"|"csv"|"cl"|"sql";
 
 export interface StatementInfo {
@@ -207,6 +147,33 @@ export function initialise(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(`vscode-db2i.selfCodeErrorPanel`, selfCodeErrorProvider, {
       webviewOptions : {retainContextWhenHidden: true}
+    }),
+    vscode.commands.registerCommand(`vscode-db2i.selfCodeErrorPanel.fetch`, async (job: SQLJob, showErrors: boolean) => {
+      await selfCodeErrorProvider.ensureActivation();
+      const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${job.id}'`;
+      let prevDataLength = job.selfCodeCounter;
+      let updateView: boolean = false;
+      let data = [];
+      for (let count = 0; count < 3; count++) {
+        const curData = await JobManager.runSQL(content, undefined);
+        if (curData.length !== prevDataLength) {
+          data = curData;
+          job.selfCodeCounter = curData.length;
+          if (showErrors || curData.length > prevDataLength) {
+            updateView = true;
+          }
+          break;
+        }
+        delay(1000);
+        data = curData;
+      }
+
+      if ((data.length === prevDataLength && showErrors) || updateView) {
+        await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, true);
+        await selfCodeErrorProvider.setTableData(data);
+      } else if (data.length === 0) {
+        await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
+      }
     })
   );
 
@@ -322,18 +289,7 @@ export function initialise(context: vscode.ExtensionContext) {
 
               const selected: JobInfo = await JobManager.getSelection();
               if (selected.job.options.selfcodes) {
-                const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
-                const data = await JobManager.runSQL(content, undefined);
-                const hasErrors = data.length > 0;
-                if(hasErrors) {
-                  if (data.length !== selfCodeErrorProvider.selfCodeCache) {
-                    await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, true);
-                    await selfCodeErrorProvider.setTableData(data);
-                    selfCodeErrorProvider.selfCodeCache = data.length;
-                  }
-                } else {
-                  await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
-                }
+                vscode.commands.executeCommand(`vscode-db2i.selfCodeErrorPanel.fetch`, selected.job, false);
               }
               
               if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {

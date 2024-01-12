@@ -189,13 +189,7 @@ export class JobManagerView implements TreeDataProvider<any> {
           const id = node.label as string;
           const selected = await JobManager.getJob(id);
 
-          const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
-
-          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-            content,
-            qualifier: `statement`,
-            open: false,
-          });
+          vscode.commands.executeCommand(`vscode-db2i.selfCodeErrorPanel.fetch`, selected.job, true);
         }
       }),
 
