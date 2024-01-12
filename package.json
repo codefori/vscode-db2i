@@ -487,7 +487,7 @@
       {
         "icon": "$(notebook-execute)",
         "id": "sql/editor/context",
-        "label": "Explain"
+        "label": "Run SQL statement"
       }
     ],
     "menus": {
