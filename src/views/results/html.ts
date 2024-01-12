@@ -141,7 +141,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             });
           }
 
-          function isJsonString(str: string): boolean {
+          function isJsonString(str) {
             try {
               JSON.parse(str);
               return true;
