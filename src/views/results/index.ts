@@ -206,7 +206,7 @@ async function runHandler(options?: StatementInfo) {
             vscode.window.showInformationMessage(`Query executed with no data returned.`);
           }
         }
-        if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {
+        if ((statementDetail.qualifier === `statement` || statementDetail.qualifier === `explain`) && statementDetail.history !== false) {
           vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
         }
       } catch (e) {
