@@ -140,6 +140,13 @@ export interface ParsedStatementInfo extends StatementInfo {
   embeddedInfo: ParsedEmbeddedStatement;
 }
 
+interface sqlLogTableRow {
+  LOGGED_SQLCODE: number;
+  NUMBER_OCCURRENCES: number;
+}
+
+const selfCodeRows: {[jobId: string]: sqlLogTableRow[]} = {};
+
 export function initialise(context: vscode.ExtensionContext) {
   let resultSetProvider = new ResultSetPanelProvider();
   let selfCodeErrorProvider = new SelfCodePanelProvider();
@@ -151,27 +158,40 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.selfCodeErrorPanel.fetch`, async (job: SQLJob, showErrors: boolean) => {
       await selfCodeErrorProvider.ensureActivation();
       const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${job.id}'`;
-      let prevDataLength = job.selfCodeCounter;
       let updateView: boolean = false;
-      let data = [];
+
+      // We need to cached data to compare against
+      let cachedData = selfCodeRows[job.id] || [];
+      
       for (let count = 0; count < 5; count++) {
-        const curData = await JobManager.runSQL(content, undefined);
-        if (curData.length !== prevDataLength) {
-          data = curData;
-          job.selfCodeCounter = curData.length;
-          if (showErrors || curData.length > prevDataLength) {
-            updateView = true;
-          }
+        const curData: sqlLogTableRow[] = await JobManager.runSQL(content, undefined);
+
+        // First let's do a simple check of row count change
+        if (curData.length !== cachedData.length) {
+          updateView = true;
+          selfCodeRows[job.id] = curData;
           break;
+        } else {
+
+          // If the row count didn't change, perhaps the number of occurrences for a specific SQLCODE did,
+          // that means we need to render the data again anyway
+          const rowChanges = curData.some(row => row.NUMBER_OCCURRENCES > (cachedData.find(cd => cd.LOGGED_SQLCODE === row.LOGGED_SQLCODE) || {NUMBER_OCCURRENCES: 0}).NUMBER_OCCURRENCES);
+          if (rowChanges) {
+            updateView = true;
+            selfCodeRows[job.id] = curData;
+            break;
+          }
         }
-        data = curData;
-        delay(1000);
+        
+        await delay(1000);
       }
 
-      if ((data.length === prevDataLength && showErrors) || updateView) {
+
+
+      if (showErrors || updateView) {
         await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, true);
-        await selfCodeErrorProvider.setTableData(data);
-      } else if (data.length === 0) {
+        await selfCodeErrorProvider.setTableData(selfCodeRows[job.id]);
+      } else if (selfCodeRows[job.id].length === 0) {
         await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
       }
     })

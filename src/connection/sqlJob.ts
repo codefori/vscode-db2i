@@ -40,7 +40,6 @@ export class SQLJob {
 
   private traceFile: string|undefined;
   private isTracingChannelData: boolean = false;
-  public selfCodeCounter: number = 0;
 
   //currently unused but we will inevitably need a unique ID assigned to each instance
   // since server job names can be reused in some circumstances
