@@ -50,6 +50,11 @@
     "configuration": {
       "title": "Db2 for IBM i",
       "properties": {
+        "vscode-db21.selfCodePanelTimeout": {
+          "type": "number",
+          "description": "Timeout in seconds for the SELF code panel to be shown",
+          "default": 3
+        },
         "vscode-db2i.pageSize": {
           "type": "number",
           "description": "Page size for Schema browser",
@@ -123,7 +128,7 @@
           "type": "webview",
           "id": "vscode-db2i.selfCodeErrorPanel",
           "name": "Self Code Errors",
-          "when": "code-for-ibmi:connected == true && vscode-db2i:hasSelfCodes == true && vscode-db2i:selfCodeCountChanged == true",
+          "when": "code-for-ibmi:connected == true && vscode-db2i:selfCodeCountChanged == true",
           "contextualTitle": "IBM i",
           "visibility": "collapsed"
         }

@@ -49,6 +49,7 @@ export class ConfigManager {
               await JobManager.newJob(newJob, name);
               if (options.selfcodes) {
                 newJob.setSelfCodes(options.selfcodes);
+                commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
               }
             } catch (e) {
               window.showErrorMessage(e.message);

@@ -13,6 +13,8 @@ import { updateStatusBar } from "../jobManager/statusBar";
 import * as html from "./html";
 import { SelfCodePanelProvider } from "./selfCodePanel";
 import { SQLJob } from "../../connection/sqlJob";
+import { ConfigManager } from "../jobManager/ConfigManager";
+import Configuration from "../../configuration";
 export function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
 }
@@ -189,7 +191,7 @@ export function initialise(context: vscode.ExtensionContext) {
         } else if (selfCodeRows[job.id].length === 0) {
           await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
         }
-      }, 2000);
+      }, Configuration.get(`selfCodePanelTimeout`));
     })
   );
 

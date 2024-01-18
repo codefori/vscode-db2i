@@ -32,7 +32,8 @@ export class JobManagerView implements TreeDataProvider<any> {
           await JobManager.newJob(
             (options ? new SQLJob(options) : undefined), 
             name
-          );
+            );
+          commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
         } catch (e) {
           window.showErrorMessage(e.message);
         }
