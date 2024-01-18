@@ -40,6 +40,7 @@ let doveNodeTreeView: TreeView<PropertyNode> = doveNodeView.getTreeView();
 let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration providor
 
 export function initialise(context: vscode.ExtensionContext) {
+  setResultsVisable(true);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider, {
       webviewOptions: { retainContextWhenHidden: true },
@@ -77,12 +78,17 @@ export function initialise(context: vscode.ExtensionContext) {
   )
 }
 
+function setResultsVisable(visible: boolean) {
+  vscode.commands.executeCommand(`setContext`, `vscode-db2i:resultsVisible`, visible);
+}
+
 async function runHandler(options?: StatementInfo) {
   // Options here can be a vscode.Uri when called from editor context.
   // But that isn't valid here.
   const optionsIsValid = (options?.content !== undefined);
   let editor = vscode.window.activeTextEditor;
 
+  setResultsVisable(true);
   doveResultsView.close();
   doveNodeView.close();
 
@@ -143,6 +149,8 @@ async function runHandler(options?: StatementInfo) {
 
               const explained = await selectedJob.job.explain(statementDetail.content, explainType);
               
+              setResultsVisable(!onlyExplain);
+
               if (onlyExplain) {
                 resultSetProvider.setLoadingText(`Explained.`);
               } else {
