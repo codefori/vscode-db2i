@@ -154,7 +154,7 @@ export function initialise(context: vscode.ExtensionContext) {
       let prevDataLength = job.selfCodeCounter;
       let updateView: boolean = false;
       let data = [];
-      for (let count = 0; count < 3; count++) {
+      for (let count = 0; count < 5; count++) {
         const curData = await JobManager.runSQL(content, undefined);
         if (curData.length !== prevDataLength) {
           data = curData;
@@ -164,8 +164,8 @@ export function initialise(context: vscode.ExtensionContext) {
           }
           break;
         }
-        delay(1000);
         data = curData;
+        delay(1000);
       }
 
       if ((data.length === prevDataLength && showErrors) || updateView) {
