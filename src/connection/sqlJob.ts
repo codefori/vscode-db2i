@@ -234,8 +234,6 @@ export class SQLJob {
     const explainResult: ExplainResults<any> = JSON.parse(result);
 
     if (explainResult.success !== true) {
-      this.dispose();
-      this.status = JobStatus.NotStarted;
       throw new Error(explainResult.error || `Failed to explain.`);
     }
 
