@@ -799,8 +799,8 @@
         "id": "db2i.dove.resultsView.HighlightEstimatedExpensiveRows",
         "description": "Highlight color for estimated expensive rows",
         "defaults": {
-          "dark": "#e8e807",
-          "light": "#e8e807"
+          "dark": "#dbdb01",
+          "light": "#a0a001"
         }
       },
       {
