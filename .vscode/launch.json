@@ -15,7 +15,7 @@
 			"outFiles": [
 				"${workspaceFolder}/dist/**/*.js"
 			],
-			"preLaunchTask": "npm: webpack",
+			"preLaunchTask": "${defaultBuildTask}",
 			"sourceMaps": true
 		},
 		{
@@ -28,7 +28,7 @@
 			"outFiles": [
 				"${workspaceFolder}/dist/**/*.js"
 			],
-			"preLaunchTask": "npm: webpack",
+			"preLaunchTask": "${defaultBuildTask}",
 			"sourceMaps": true,
 			"env": {
 				"testing": "true"
