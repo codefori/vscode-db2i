@@ -224,7 +224,11 @@ export default class Statement {
 					inFromClause = false;
 				}
 
-				if (tokenIs(this.tokens[i], `clause`, `FROM`) || tokenIs(this.tokens[i], `clause`, `INTO`) || tokenIs(this.tokens[i], `join`) || (inFromClause && tokenIs(this.tokens[i], `comma`))) {
+				if (tokenIs(this.tokens[i], `clause`, `FROM`) || 
+					 (this.type !== StatementType.Select && tokenIs(this.tokens[i], `clause`, `INTO`)) || 
+					 tokenIs(this.tokens[i], `join`) || 
+					 (inFromClause && tokenIs(this.tokens[i], `comma`)
+				)) {
 					const sqlObj = this.getRefAtToken(i+1);
 					if (sqlObj) {
 						doAdd(sqlObj);
@@ -300,6 +304,17 @@ export default class Statement {
 
 				if (object && postName) {
 					switch (object.createType?.toUpperCase()) {
+						case `FUNCTION`:
+						case `PROCEDURE`:
+							// For functions, perhaps we can use the SPECIFIC keyword for the system name
+							for (let i = postName; i < this.tokens.length; i++) {
+								if (tokenIs(this.tokens[i], `keyword`, `SPECIFIC`) && this.tokens[i+1]) {
+									object.object.system = this.tokens[i+1].value;
+									break;
+								}
+							}
+							break;
+
 						case `INDEX`:
 							// If the type is `INDEX`, the next reference is the `ON` keyword
 							for (let i = postName; i < this.tokens.length; i++) {

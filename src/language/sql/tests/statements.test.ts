@@ -6,25 +6,25 @@ import { ClauseType, StatementType } from '../types';
 describe(`Basic statements`, () => {
   test('One statement, no end', () => {
     const document = new Document(`select * from sample`);
-  
+
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(4);
   });
-  
+
   test('One statement, with end', () => {
     const document = new Document(`select * from sample;`);
-  
+
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].type).toBe(StatementType.Select);
     expect(document.statements[0].tokens.length).toBe(4);
   });
-  
+
   test('Two statements, one end', () => {
     const document = new Document([
       `select * from sample;`,
       `select a from b.b`
     ].join(`\n`));
-  
+
     expect(document.statements.length).toBe(2);
     expect(document.statements[0].tokens.length).toBe(4);
     expect(document.statements[1].tokens.length).toBe(6);
@@ -32,29 +32,29 @@ describe(`Basic statements`, () => {
     expect(document.statements[0].getClauseForOffset(5)).toBe(ClauseType.Unknown);
     expect(document.statements[0].getClauseForOffset(10)).toBe(ClauseType.From);
   });
-  
+
   test('Two statements, both end', () => {
     const document = new Document([
       `select * from sample;`,
       `select a from b.b;`
     ].join(`\n`));
-  
+
     expect(document.statements.length).toBe(2);
     expect(document.statements[0].tokens.length).toBe(4);
     expect(document.statements[1].tokens.length).toBe(6);
   });
-  
+
   test('Two statements, both end, with comments', () => {
     const document = new Document([
       `select * from sample; --Yep`,
       `select a from b.b; -- Nope`
     ].join(`\n`));
-  
+
     expect(document.statements.length).toBe(2);
     expect(document.statements[0].tokens.length).toBe(4);
     expect(document.statements[1].tokens.length).toBe(6);
   });
-  
+
   test('Two statements, both end, with comments, trimmed', () => {
     const document = new Document([
       ``,
@@ -65,7 +65,7 @@ describe(`Basic statements`, () => {
       ``,
       ``
     ].join(`\n`));
-  
+
     expect(document.statements.length).toBe(2);
     expect(document.statements[0].tokens.length).toBe(4);
     expect(document.statements[1].tokens.length).toBe(6);
@@ -75,7 +75,7 @@ describe(`Basic statements`, () => {
 describe(`Object references`, () => {
   test('SELECT: Simple unqualified object', () => {
     const document = new Document(`select * from sample;`);
-  
+
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(4);
 
@@ -93,7 +93,7 @@ describe(`Object references`, () => {
 
   test('SELECT: Simple qualified object', () => {
     const document = new Document(`select * from myschema.sample;`);
-  
+
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(6);
 
@@ -111,7 +111,7 @@ describe(`Object references`, () => {
 
   test('SELECT: Simple qualified object with alias', () => {
     const document = new Document(`select * from myschema.sample as a;`);
-  
+
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(8);
 
@@ -129,7 +129,7 @@ describe(`Object references`, () => {
 
   test('SELECT: Simple unqualified object with alias (no AS)', () => {
     const document = new Document(`select * from sample a;`);
-  
+
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(5);
 
@@ -147,7 +147,7 @@ describe(`Object references`, () => {
 
   test('SELECT: Simple qualified object with alias (no AS)', () => {
     const document = new Document(`select * from myschema.sample a;`);
-  
+
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(7);
 
@@ -165,7 +165,7 @@ describe(`Object references`, () => {
 
   test('SELECT: Simple qualified object with alias (system naming)', () => {
     const document = new Document(`select * from myschema/sample as a;`);
-  
+
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(8);
 
@@ -190,10 +190,10 @@ describe(`Object references`, () => {
       `              WHERE H.ORID = ODORID ), 0) AS TOTVAL`,
       `FROM  "ORDER" H ,  CUSTOMER`,
       `WHERE ORCUID = CUID`,
-    ].join(`\r\n`);    
-    
+    ].join(`\r\n`);
+
     const document = new Document(query);
-  
+
     expect(document.statements.length).toBe(1);
 
     const statement = document.statements[0];
@@ -480,9 +480,9 @@ describe(`Object references`, () => {
     const document = new Document(content);
 
     expect(document.statements.length).toBe(1);
-  
+
     const statement = document.statements[0];
-    
+
     expect(statement.type).toBe(StatementType.Alter);
 
     const objs = statement.getObjectReferences();
@@ -509,7 +509,7 @@ describe(`Object references`, () => {
     const document = new Document(content);
 
     expect(document.statements.length).toBe(1);
-  
+
     const statement = document.statements[0];
 
     expect(statement.type).toBe(StatementType.Alter);
@@ -539,7 +539,7 @@ describe(`Object references`, () => {
     const document = new Document(content);
 
     expect(document.statements.length).toBe(2);
-  
+
     const withUnique = document.statements[0];
     const withoutUnique = document.statements[1];
 
@@ -588,7 +588,7 @@ describe(`Object references`, () => {
     const document = new Document(content);
 
     expect(document.statements.length).toBe(2);
-  
+
     const withUnique = document.statements[0];
     const withoutUnique = document.statements[1];
 
@@ -635,7 +635,7 @@ describe(`Object references`, () => {
     const document = new Document(content);
 
     expect(document.statements.length).toBe(1);
-  
+
     const statement = document.statements[0];
 
     expect(statement.type).toBe(StatementType.Create);
@@ -658,7 +658,7 @@ describe(`Object references`, () => {
     const document = new Document(content);
 
     expect(document.statements.length).toBe(1);
-  
+
     const view = document.statements[0];
 
     expect(view.type).toBe(StatementType.Create);
@@ -697,33 +697,33 @@ describe(`Object references`, () => {
       `    WHERE ARID = ODARID AND ODORID = ORID GROUP BY ARID, ARDESC`,
       `  ;`,
     ].join(`\n`);
-  
+
     const document = new Document(content);
-  
+
     expect(document.statements.length).toBe(1);
-  
+
     const view = document.statements[0];
-  
+
     expect(view.type).toBe(StatementType.Create);
-  
+
     const defs = view.getObjectReferences();
-  
+
     expect(defs.length).toBe(4);
     expect(defs[0].createType).toBe(`VIEW`);
     expect(defs[0].object.name).toBe(`ARTLSTDAT`);
     expect(defs[0].object.schema).toBeUndefined();
     expect(defs[0].alias).toBeUndefined();
-  
+
     expect(defs[1].createType).toBeUndefined();
     expect(defs[1].object.name).toBe(`ARTICLE`);
     expect(defs[1].object.schema).toBeUndefined();
     expect(defs[1].alias).toBeUndefined();
-  
+
     expect(defs[2].createType).toBeUndefined();
     expect(defs[2].object.name).toBe(`"ORDER"`);
     expect(defs[2].object.schema).toBeUndefined();
     expect(defs[2].alias).toBeUndefined();
-  
+
     expect(defs[3].createType).toBeUndefined();
     expect(defs[3].object.name).toBe(`DETORD`);
     expect(defs[3].object.schema).toBeUndefined();
@@ -743,41 +743,88 @@ describe(`Object references`, () => {
       `    WHERE ARID = ODARID AND ODORID = ORID GROUP BY ARID, ARDESC`,
       `  ;`,
     ].join(`\n`);
-  
+
     const document = new Document(content);
-  
+
     expect(document.statements.length).toBe(1);
-  
+
     const view = document.statements[0];
-  
+
     expect(view.type).toBe(StatementType.Create);
-  
+
     const defs = view.getObjectReferences();
-  
+
     expect(defs.length).toBe(4);
     expect(defs[0].createType).toBe(`VIEW`);
     expect(defs[0].object.name).toBe(`ARTLSTDAT`);
     expect(defs[0].object.schema).toBeUndefined();
     expect(defs[0].object.system).toBe(`SHORT`);
     expect(defs[0].alias).toBeUndefined();
-  
+
     expect(defs[1].createType).toBeUndefined();
     expect(defs[1].object.name).toBe(`ARTICLE`);
     expect(defs[1].object.schema).toBeUndefined();
     expect(defs[1].object.system).toBeUndefined();
     expect(defs[1].alias).toBeUndefined();
-  
+
     expect(defs[2].createType).toBeUndefined();
     expect(defs[2].object.name).toBe(`"ORDER"`);
     expect(defs[2].object.schema).toBeUndefined();
     expect(defs[2].object.system).toBeUndefined();
     expect(defs[2].alias).toBeUndefined();
-  
+
     expect(defs[3].createType).toBeUndefined();
     expect(defs[3].object.name).toBe(`DETORD`);
     expect(defs[3].object.schema).toBeUndefined();
     expect(defs[3].object.system).toBeUndefined();
     expect(defs[3].alias).toBeUndefined();
+  });
+
+  test(`CREATE FUNCTION: with specific, variables and references`, () => {
+    const lines = [
+      `create or replace function getTotalSalary () `,
+      `  returns decimal(9, 2)`,
+      `  specific GETTOTSAL`,
+      `begin`,
+      `  declare total decimal(9, 2);`,
+      ``,
+      `  select sum(salary) into total from employee;`,
+      ``,
+      `  return total;`,
+      `end;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+
+    const [group] = groups;
+
+    const createStatement = group.statements[0];
+    const refsA = createStatement.getObjectReferences();
+    expect(createStatement.type).toBe(StatementType.Create);
+    expect(refsA.length).toBe(1);
+    expect(refsA[0].createType).toBe(`function`);
+    expect(refsA[0].object.name).toBe(`getTotalSalary`);
+    expect(refsA[0].object.schema).toBeUndefined();
+    expect(refsA[0].object.system).toBe(`GETTOTSAL`);
+
+    // Let's check we get the variable back for this declare
+    const declareStatement = group.statements[1];
+    expect(declareStatement.type).toBe(StatementType.Declare);
+    const refsB = declareStatement.getObjectReferences();
+    expect(refsB.length).toBe(1);
+    expect(refsB[0].createType).toBe(`decimal(9,2)`);
+    expect(refsB[0].object.name).toBe(`total`);
+
+    // Let's check we get the table back for this select
+    const selectStatement = group.statements[2];
+    expect(selectStatement.type).toBe(StatementType.Select);
+    const refsC = selectStatement.getObjectReferences();
+    expect(refsC.length).toBe(1);
+    expect(refsC[0].createType).toBeUndefined();
+    expect(refsC[0].object.name).toBe(`employee`);
   });
 });
 
@@ -786,9 +833,9 @@ describe(`Offset reference tests`, () => {
     const document = new Document(`select * from sample.;`);
 
     expect(document.statements.length).toBe(1);
-  
+
     const statement = document.statements[0];
-  
+
     const ref = statement.getReferenceByOffset(21);
     expect(ref).toBeDefined();
     expect(ref.object.schema).toBe(`sample`);
@@ -799,7 +846,7 @@ describe(`Offset reference tests`, () => {
     const document = new Document(`select b. from department b;`);
 
     expect(document.statements.length).toBe(1);
-  
+
     const statement = document.statements[0];
 
     const objs = statement.getObjectReferences();
@@ -807,7 +854,7 @@ describe(`Offset reference tests`, () => {
     expect(objs[0].object.schema).toBeUndefined();
     expect(objs[0].object.name).toBe(`department`);
     expect(objs[0].alias).toBe(`b`);
-  
+
     const ref = statement.getReferenceByOffset(9);
     expect(ref).toBeDefined();
     expect(ref.object.schema).toBe(`b`);
@@ -857,7 +904,7 @@ describe(`PL body tests`, () => {
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
 
-    const endStatement = statements[statements.length-1];
+    const endStatement = statements[statements.length - 1];
     expect(endStatement.type).toBe(StatementType.End);
 
     const endStatements = statements.filter(stmt => stmt.type === StatementType.End);
@@ -917,10 +964,10 @@ describe(`PL body tests`, () => {
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
 
-    const endStatement = statements[statements.length-2];
+    const endStatement = statements[statements.length - 2];
     expect(endStatement.type).toBe(StatementType.End);
 
-    const callStatement = statements[statements.length-1];
+    const callStatement = statements[statements.length - 1];
     expect(callStatement.type).toBe(StatementType.Call);
     expect(callStatement.isBlockOpener()).toBe(false);
   });
@@ -952,7 +999,7 @@ describe(`PL body tests`, () => {
     const statements = document.statements;
 
     expect(statements.length).toBe(1);
-    
+
     const statement = statements[0];
     expect(statement.type).toBe(StatementType.With);
 
@@ -1065,7 +1112,7 @@ describe(`PL body tests`, () => {
   });
 
   test(`SELECT & STOP`, () => {
-    const lines = [ 
+    const lines = [
       `--`,
       `-- What did Tim do?`,
       `--`,
