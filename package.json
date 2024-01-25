@@ -172,14 +172,14 @@
           "id": "vscode-db2i.resultset",
           "name": "Results",
           "when": "code-for-ibmi:connected == true",
-          "contextualTitle": "IBM i"
+          "contextualTitle": "DB2 for i"
         },
         {
           "type": "tree",
           "id": "vscode-db2i.dove.nodes",
           "name": "Visual Explain",
           "when": "vscode-db2i:explaining == true",
-          "contextualTitle": "IBM i"
+          "contextualTitle": "DB2 for i"
         },
         {
           "type": "tree",
