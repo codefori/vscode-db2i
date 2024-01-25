@@ -124,7 +124,7 @@
           "id": "vscode-db2i.resultset",
           "name": "Results",
           "when": "code-for-ibmi:connected == true",
-          "contextualTitle": "IBM i"
+          "contextualTitle": "DB2 for i"
         }
       ],
       "db2-explorer": [
