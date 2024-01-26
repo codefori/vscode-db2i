@@ -310,7 +310,19 @@ export default class Statement {
 							for (let i = postName; i < this.tokens.length; i++) {
 								if (tokenIs(this.tokens[i], `keyword`, `SPECIFIC`) && this.tokens[i+1]) {
 									object.object.system = this.tokens[i+1].value;
-									break;
+									i++;
+								}
+
+								// Support for external name
+								if (tokenIs(this.tokens[i], `keyword`, `EXTERNAL`) && tokenIs(this.tokens[i+1], `word`, `NAME`) && this.tokens[i+2]) {
+									const externalRef = this.getRefAtToken(i+2);
+									if (externalRef) {
+										externalRef.createType = `external`;
+										externalRef.alias = undefined;
+										externalRef.object.system = externalRef.object.name;
+										i += externalRef.tokens.length + 2;
+										doAdd(externalRef);
+									}
 								}
 							}
 							break;

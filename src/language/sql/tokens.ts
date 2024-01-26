@@ -57,7 +57,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`].includes(value.toUpperCase());
+        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },

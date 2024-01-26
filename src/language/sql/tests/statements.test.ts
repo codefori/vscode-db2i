@@ -826,6 +826,34 @@ describe(`Object references`, () => {
     expect(refsC[0].createType).toBeUndefined();
     expect(refsC[0].object.name).toBe(`employee`);
   });
+
+  test(`CREATE PROCEDURE: with EXTERNAL NAME`, () => {
+    const lines = [
+      `create or replace procedure schema.coolness (IN base CHAR(100)) `,
+      `LANGUAGE RPGLE`,
+      `EXTERNAL NAME LIB.PROGRAM GENERAL;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+    const refs = createStatement.getObjectReferences();
+    console.log(refs);
+    expect(refs.length).toBe(2);
+
+    expect(refs[0].createType).toBe(`procedure`);
+    expect(refs[0].object.name).toBe(`coolness`);
+    expect(refs[0].object.schema).toBe(`schema`);
+    expect(refs[0].object.system).toBeUndefined();
+
+    expect(refs[1].createType).toBe(`external`);
+    expect(refs[1].object.system).toBe(`PROGRAM`);
+    expect(refs[1].object.schema).toBe(`LIB`);
+  })
 });
 
 describe(`Offset reference tests`, () => {
