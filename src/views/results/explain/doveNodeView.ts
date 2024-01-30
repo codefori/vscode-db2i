@@ -14,15 +14,18 @@ export class DoveNodeView implements TreeDataProvider<any> {
 
   private treeView: TreeView<PropertyNode>;
   
+  private defaultTitle: string;
   constructor() {
     this.treeView = vscode.window.createTreeView(`vscode-db2i.dove.node`, { treeDataProvider: this, showCollapseAll: true });
+    this.defaultTitle = this.treeView.title;
   }
 
   public getTreeView(): TreeView<PropertyNode> {
     return this.treeView;
   }
 
-  setNode(currentNode: ExplainNode) {
+  setNode(currentNode: ExplainNode, title?: string) {
+    this.treeView.title = title || this.defaultTitle;
     this.propertyNodes = [];
     let currentSection: PropertySection = null;
     for (let property of currentNode.props) {

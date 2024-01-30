@@ -69,7 +69,6 @@ export class DoveResultsView implements TreeDataProvider<any> {
     return this.treeView;
   }
 
-
   setRootNode(topNode: ExplainNode): ExplainTreeItem {
     this.topNode = new ExplainTreeItem(topNode);
     this._onDidChangeTreeData.fire();
@@ -80,12 +79,15 @@ export class DoveResultsView implements TreeDataProvider<any> {
     this.treeView.reveal(this.topNode,  { select: false });
     return this.topNode;
   }
+  getRootNode(): ExplainTreeItem {
+    return this.topNode;
+  }
 
-  getRootExplainNode() {
+  getRootExplainNode(): ExplainNode {
     return this.topNode.explainNode;
   }
 
-  close() {
+  close(): void {
     commands.executeCommand(`setContext`, `vscode-db2i:explaining`, false);
   }
 
@@ -106,18 +108,18 @@ export class DoveResultsView implements TreeDataProvider<any> {
   getParent?(element: any) {
     throw new Error("Method not implemented.");
   }
+
   resolveTreeItem?(item: TreeItem, element: any, token: CancellationToken): ProviderResult<ExplainTreeItem> {
     throw new Error("Method not implemented.");
   }
 }
 
 export class ExplainTreeItem extends TreeItem {
-  children: ExplainTreeItem[];
   explainNode: ExplainNode;
+  private children: ExplainTreeItem[];
 
   constructor(node: ExplainNode) {
     super(node.title, node.childrenNodes > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None);
-
     this.explainNode = node;
     this.contextValue = `explainTreeItem`;
 
@@ -132,8 +134,10 @@ export class ExplainTreeItem extends TreeItem {
     this.iconPath = new ThemeIcon(icons[node.title] || `server-process`, node.highlights.getPriorityColor()); // `circle-outline`
   }
 
-  getChildren() {
-    return this.explainNode.children.map(c => new ExplainTreeItem(c));
+  getChildren(): ExplainTreeItem[] {
+    if (!this.children) {
+      this.children = this.explainNode.children.map(c => new ExplainTreeItem(c));
+    }
+    return this.children;
   }
 }
-

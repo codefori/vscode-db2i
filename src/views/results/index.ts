@@ -33,6 +33,7 @@ export interface ParsedStatementInfo extends StatementInfo {
 }
 
 let resultSetProvider = new ResultSetPanelProvider();
+let explainTree: ExplainTree;
 let doveResultsView = new DoveResultsView();
 let doveResultsTreeView: TreeView<ExplainTreeItem> = doveResultsView.getTreeView();
 let doveNodeView = new DoveNodeView();
@@ -52,10 +53,16 @@ export function initialise(context: vscode.ExtensionContext) {
       doveResultsView.close();
       doveNodeView.close();
     }),
-    vscode.commands.registerCommand(`vscode-db2i.dove.nodeDetail`, (explainTreeItem: ExplainTreeItem) => {
+
+    vscode.commands.registerCommand(`vscode-db2i.dove.displayDetails`, (explainTreeItem: ExplainTreeItem) => {
       // When the user clicks for details of a node in the tree, set the focus to that node as a visual indicator tying it to the details tree
       doveResultsTreeView.reveal(explainTreeItem,  { select: false, focus: true, expand: true });
       doveNodeView.setNode(explainTreeItem.explainNode);
+    }),
+
+    vscode.commands.registerCommand(`vscode-db2i.dove.advisedIndexesAndStatistics`, () => {
+      // TODO would be nice to clear any current selections or focused tree items
+      explainTree.showAdvisedIndexesAndStatistics(doveNodeView);
     }),
 
     vscode.commands.registerCommand(`vscode-db2i.dove.editSettings`, () => {
@@ -71,6 +78,10 @@ export function initialise(context: vscode.ExtensionContext) {
       });
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.dove.closeDetails`, () => {
+      doveNodeView.close();
+    }),
+
     vscode.commands.registerCommand(`vscode-db2i.editorExplain.withRun`, (options?: StatementInfo) => { runHandler({ qualifier: `explain`, ...options }) }),
     vscode.commands.registerCommand(`vscode-db2i.editorExplain.withoutRun`, (options?: StatementInfo) => { runHandler({ qualifier: `onlyexplain`, ...options }) }),
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, (options?: StatementInfo) => { runHandler(options) })
@@ -83,8 +94,7 @@ async function runHandler(options?: StatementInfo) {
   const optionsIsValid = (options?.content !== undefined);
   let editor = vscode.window.activeTextEditor;
 
-  doveResultsView.close();
-  doveNodeView.close();
+  vscode.commands.executeCommand('vscode-db2i.dove.close');
 
   if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
     await resultSetProvider.ensureActivation();
@@ -105,9 +115,7 @@ async function runHandler(options?: StatementInfo) {
       editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
 
       if (group.statements.length === 1 && statementDetail.embeddedInfo.changed) {
-        editor.insertSnippet(
-          new SnippetString(statementDetail.embeddedInfo.content)
-        )
+        editor.insertSnippet(new SnippetString(statementDetail.embeddedInfo.content));
         return;
       }
     }
@@ -149,8 +157,8 @@ async function runHandler(options?: StatementInfo) {
                 resultSetProvider.setScrolling(statementDetail.content, false, explained.id);
               }
 
-              const tree = new ExplainTree(explained.vedata);
-              const topLevel = tree.get();
+              explainTree = new ExplainTree(explained.vedata);
+              const topLevel = explainTree.get();
               const rootNode = doveResultsView.setRootNode(topLevel);
               doveNodeView.setNode(rootNode.explainNode);
               doveTreeDecorationProvider.updateTreeItems(rootNode);
@@ -203,7 +211,7 @@ async function runHandler(options?: StatementInfo) {
               }
             }
           } else {
-            vscode.window.showInformationMessage(`Query executed with no data returned.`);
+            vscode.window.showInformationMessage(`Statement executed with no data returned.`);
           }
         }
         if ((statementDetail.qualifier === `statement` || statementDetail.qualifier === `explain`) && statementDetail.history !== false) {

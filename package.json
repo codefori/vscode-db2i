@@ -184,7 +184,7 @@
         {
           "type": "tree",
           "id": "vscode-db2i.dove.node",
-          "name": "Node Detail",
+          "name": "Visual Explain Details",
           "when": "vscode-db2i:explainingNode == true"
         }
       ],
@@ -460,15 +460,27 @@
       },
       {
         "command": "vscode-db2i.dove.close",
-        "title": "Close detail",
+        "title": "Close",
         "category": "Db2 for i",
-        "icon": "$(close-all)"
+        "icon": "$(close)"
       },
       {
-        "command": "vscode-db2i.dove.nodeDetail",
-        "title": "See detail",
+        "command": "vscode-db2i.dove.displayDetails",
+        "title": "Display details",
         "category": "Db2 for i",
         "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.dove.closeDetails",
+        "title": "Close",
+        "category": "Db2 for i",
+        "icon": "$(close)"
+      },
+      {
+        "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
+        "title": "Advised Indexes and Statistics",
+        "category": "Db2 for i",
+        "icon": "$(lightbulb)"
       },
       {
         "command": "vscode-db2i.dove.editSettings",
@@ -545,8 +557,12 @@
           "when": "never"
         },
         {
-          "command": "vscode-db2i.dove.nodeDetail",
+          "command": "vscode-db2i.dove.displayDetails",
           "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
+          "when": "vscode-db2i:explaining == true"
         },
         {
           "command": "vscode-db2i.dove.editSettings",
@@ -630,19 +646,29 @@
           "when": "view == jobManager"
         },
         {
+          "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
+          "group": "navigation@0",
+          "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
           "command": "vscode-db2i.dove.editSettings",
-          "group": "navigation",
+          "group": "navigation@1",
           "when": "view == vscode-db2i.dove.nodes"
         },
         {
           "command": "vscode-db2i.dove.export",
-          "group": "navigation",
+          "group": "navigation@2",
           "when": "view == vscode-db2i.dove.nodes"
         },
         {
           "command": "vscode-db2i.dove.close",
-          "group": "navigation",
+          "group": "navigation@3",
           "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.closeDetails",
+          "group": "navigation@1",
+          "when": "view == vscode-db2i.dove.node"
         }
       ],
       "view/item/context": [
@@ -772,7 +798,7 @@
           "group": "inline"
         },
         {
-          "command": "vscode-db2i.dove.nodeDetail",
+          "command": "vscode-db2i.dove.displayDetails",
           "when": "view == vscode-db2i.dove.nodes && viewItem == explainTreeItem",
           "group": "inline"
         }
