@@ -75,6 +75,9 @@ export function setupConfig(context: ExtensionContext) {
 
     // Remove old service examples
     delete Examples[ServiceInfoLabel];
+
+    // Close out the Visual Explain panels
+    commands.executeCommand('vscode-db2i.dove.close');
   });
 }
 
