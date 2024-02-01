@@ -75,8 +75,6 @@ export function setupConfig(context: ExtensionContext) {
 
     // Remove old service examples
     delete Examples[ServiceInfoLabel];
-    
-    await commands.executeCommand(`vscode-db2i.resultset.reset`);
   });
 }
 
