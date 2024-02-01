@@ -178,14 +178,14 @@
           "type": "tree",
           "id": "vscode-db2i.dove.nodes",
           "name": "Visual Explain",
-          "when": "vscode-db2i:explaining == true",
+          "when": "code-for-ibmi:connected && vscode-db2i:explaining == true",
           "contextualTitle": "DB2 for i"
         },
         {
           "type": "tree",
           "id": "vscode-db2i.dove.node",
           "name": "Visual Explain Details",
-          "when": "vscode-db2i:explainingNode == true"
+          "when": "code-for-ibmi:connected && vscode-db2i:explainingNode == true"
         }
       ],
       "db2-explorer": [
