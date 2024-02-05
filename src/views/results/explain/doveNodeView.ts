@@ -83,8 +83,7 @@ export class PropertyNode extends TreeItem {
   constructor(property?: ExplainProperty) {
     super(property?.title || ``);
     this.description = String(property?.value || ``);
-    // Set an empty tooltip, otherwise 'Loading...' is displayed
-    this.tooltip = ``;
+    this.tooltip = this.description;
   }
 }
 
