@@ -170,48 +170,63 @@ async function runHandler(options?: StatementInfo) {
           }
         } else {
           // Otherwise... it's a bit complicated.
-          const data = await JobManager.runSQL(statementDetail.content);
+          resultSetProvider.setLoadingText(`Executing SQL statement...`);
+
+          const data = await JobManager.runSQL(statementDetail.content, undefined);
+
           if (data.length > 0) {
             switch (statementDetail.qualifier) {
-              case `csv`:
-              case `json`:
-              case `sql`: {
-                let content = ``;
-                switch (statementDetail.qualifier) {
-                  case `csv`:
-                    content = csv.stringify(data, {
-                      header: true,
-                      quoted_string: true,
-                    });
-                    break;
-                  case `json`:
-                    content = JSON.stringify(data, null, 2);
-                    break;
-                  case `sql`: {
-                    const keys = Object.keys(data[0]);
-                    const insertStatement = [
-                      `insert into TABLE (`,
-                      `  ${keys.join(`, `)}`,
-                      `) values `,
-                      data.map(
-                        row => `  (${keys.map(key => {
-                          if (row[key] === null) return `null`;
-                          if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
-                          return row[key];
-                        }).join(`, `)})`
-                      ).join(`,\n`),
-                    ];
-                    content = insertStatement.join(`\n`);
-                    break;
-                  }
+
+            case `csv`:
+            case `json`:
+            case `sql`:
+              let content = ``;
+              switch (statementDetail.qualifier) {
+              case `csv`: content = csv.stringify(data, {
+                header: true,
+                quoted_string: true,
+              }); break;
+              case `json`: content = JSON.stringify(data, null, 2); break;
+
+              case `sql`:
+                const keys = Object.keys(data[0]);
+
+                // split array into groups of 1k
+                const insertLimit = 1000;
+                const dataChunks = [];
+                for (let i = 0; i < data.length; i += insertLimit) {
+                  dataChunks.push(data.slice(i, i + insertLimit));
                 }
-                const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
-                await vscode.window.showTextDocument(textDoc);
+
+                content = `-- Generated ${dataChunks.length} insert statement${dataChunks.length === 1 ? `` : `s`}\n\n`;
+
+                for (const data of dataChunks) {
+                  const insertStatement = [
+                    `insert into TABLE (`,
+                    `  ${keys.join(`, `)}`,
+                    `) values `,
+                    data.map(
+                      row => `  (${keys.map(key => {
+                        if (row[key] === null) return `null`;
+                        if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
+                        return row[key];
+                      }).join(`, `)})`
+                    ).join(`,\n`),
+                  ];
+                  content += insertStatement.join(`\n`) + `;\n`;
+                }
                 break;
               }
+
+              const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
+              await vscode.window.showTextDocument(textDoc);
+              resultSetProvider.setLoadingText(`Query executed with ${data.length} rows returned.`);
+              break;
             }
+
           } else {
-            vscode.window.showInformationMessage(`Statement executed with no data returned.`);
+            vscode.window.showInformationMessage(`Query executed with no data returned.`);
+            resultSetProvider.setLoadingText(`Query executed with no data returned.`);
           }
         }
         if ((statementDetail.qualifier === `statement` || statementDetail.qualifier === `explain`) && statementDetail.history !== false) {
