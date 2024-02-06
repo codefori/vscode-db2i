@@ -493,6 +493,12 @@
         "title": "Export current VE data",
         "category": "Db2 for i",
         "icon": "$(file)"
+      },
+      {
+        "command": "vscode-db2i.dove.node.copy",
+        "title": "Copy value",
+        "category": "Db2 for i",
+        "icon": "$(pencil)"
       }
     ],
     "submenus": [
@@ -571,6 +577,10 @@
         {
           "command": "vscode-db2i.dove.export",
           "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.node.copy",
+          "when": "never"
         }
       ],
       "editor/context": [
@@ -801,6 +811,10 @@
           "command": "vscode-db2i.dove.displayDetails",
           "when": "view == vscode-db2i.dove.nodes && viewItem == explainTreeItem",
           "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.dove.node.copy",
+          "when": "view == vscode-db2i.dove.node && viewItem == propertyNode"
         }
       ]
     },

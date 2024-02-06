@@ -60,6 +60,12 @@ export function initialise(context: vscode.ExtensionContext) {
       doveNodeView.setNode(explainTreeItem.explainNode);
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.dove.node.copy`, (propertyNode: PropertyNode) => {
+      if (propertyNode.description && typeof propertyNode.description === `string`) {
+        vscode.env.clipboard.writeText(propertyNode.description);
+      }
+    }),
+
     vscode.commands.registerCommand(`vscode-db2i.dove.advisedIndexesAndStatistics`, () => {
       // TODO would be nice to clear any current selections or focused tree items
       explainTree.showAdvisedIndexesAndStatistics(doveNodeView);

@@ -82,8 +82,11 @@ export class DoveNodeView implements TreeDataProvider<any> {
 export class PropertyNode extends TreeItem {
   constructor(property?: ExplainProperty) {
     super(property?.title || ``);
-    this.description = String(property?.value || ``);
-    this.tooltip = this.description;
+    if (property && property.value) {
+      this.description = String(property.value || ``);
+      this.tooltip = this.description;
+      this.contextValue = `propertyNode`;
+    }
   }
 }
 
