@@ -207,6 +207,8 @@ export function initialise(context: vscode.ExtensionContext) {
 
                 } else {
                   // Otherwise... it's a bit complicated.
+                  resultSetProvider.setLoadingText(`Executing SQL statement...`);
+
                   const data = await JobManager.runSQL(statementDetail.content, undefined);
 
                   if (data.length > 0) {
@@ -226,29 +228,42 @@ export function initialise(context: vscode.ExtensionContext) {
                       case `sql`:
                         const keys = Object.keys(data[0]);
 
-                        const insertStatement = [
-                          `insert into TABLE (`,
-                          `  ${keys.join(`, `)}`,
-                          `) values `,
-                          data.map(
-                            row => `  (${keys.map(key => {
-                              if (row[key] === null) return `null`;
-                              if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
-                              return row[key];
-                            }).join(`, `)})`
-                          ).join(`,\n`),
-                        ];
-                        content = insertStatement.join(`\n`);
+                        // split array into groups of 1k
+                        const insertLimit = 1000;
+                        const dataChunks = [];
+                        for (let i = 0; i < data.length; i += insertLimit) {
+                          dataChunks.push(data.slice(i, i + insertLimit));
+                        }
+
+                        content = `-- Generated ${dataChunks.length} insert statement${dataChunks.length === 1 ? `` : `s`}\n\n`;
+
+                        for (const data of dataChunks) {
+                          const insertStatement = [
+                            `insert into TABLE (`,
+                            `  ${keys.join(`, `)}`,
+                            `) values `,
+                            data.map(
+                              row => `  (${keys.map(key => {
+                                if (row[key] === null) return `null`;
+                                if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
+                                return row[key];
+                              }).join(`, `)})`
+                            ).join(`,\n`),
+                          ];
+                          content += insertStatement.join(`\n`) + `;\n`;
+                        }
                         break;
                       }
 
                       const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
                       await vscode.window.showTextDocument(textDoc);
+                      resultSetProvider.setLoadingText(`Query executed with ${data.length} rows returned.`);
                       break;
                     }
 
                   } else {
                     vscode.window.showInformationMessage(`Query executed with no data returned.`);
+                    resultSetProvider.setLoadingText(`Query executed with no data returned.`);
                   }
                 }
               }
