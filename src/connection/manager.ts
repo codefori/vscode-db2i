@@ -11,10 +11,12 @@ export interface JobInfo {
   job: SQLJob;
 }
 
+const NO_SELECTED_JOB = -1;
+
 export class SQLJobManager {
   private totalJobs = 0;
   private jobs: JobInfo[] = [];
-  selectedJob: number = -1;
+  selectedJob: number = NO_SELECTED_JOB;
 
   constructor() { }
 
@@ -56,7 +58,7 @@ export class SQLJobManager {
   async endAll() {
     await Promise.all(this.jobs.map(current => current.job.close()));
     this.jobs = [];
-    this.selectedJob = -1;
+    this.selectedJob = NO_SELECTED_JOB;
   }
 
   async closeJob(index?: number) {
@@ -87,6 +89,11 @@ export class SQLJobManager {
   }
 
   setSelection(selectedName: string): boolean {
+    if (this.selectedJob !== NO_SELECTED_JOB) {
+      const selectedJob = this.jobs[this.selectedJob];
+      selectedJob.job.cancel();
+    }
+
     const jobExists = this.jobs.findIndex(info => info.name === selectedName);
 
     this.selectedJob = jobExists;
@@ -103,7 +110,6 @@ export class SQLJobManager {
    * @returns 
    */
   async runSQL<T>(query: string, opts?: QueryOptions): Promise<T[]> {
-
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
     const rowsToFetch = 2147483647;

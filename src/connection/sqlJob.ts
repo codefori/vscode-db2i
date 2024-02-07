@@ -188,8 +188,14 @@ export class SQLJob {
 
     return connectResult;
   }
+
   query<T>(sql: string, opts?: QueryOptions): Query<T> {
     return new Query(this, sql, opts);
+  }
+
+  async cancel() {
+    await this.query(`CALL QSYS2.CANCEL_SQL(?)`, {parameters: [this.id]}).run();
+    this.status = JobStatus.Ready;
   }
 
   async getVersion(): Promise<VersionCheckResult> {

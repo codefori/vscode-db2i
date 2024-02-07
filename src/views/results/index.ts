@@ -70,6 +70,9 @@ class ResultSetPanelProvider {
         }
 
         updateStatusBar();
+      } else if (message.cancel) {
+        await JobManager.getSelection().job.cancel();
+        this.setError(`Previous statement was cancelled.`);
       }
     });
   }
