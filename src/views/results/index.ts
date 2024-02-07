@@ -336,8 +336,8 @@ function generateSqlForAdvisedIndexes(): void {
     // If sort sequence is specified, add a comment to indicate the connection settings that should be used when creating the index
     if (sortSeqSchema?.value != `*N` && sortSeqTable?.value != `*HEX`) {
       sql += `-- Use these connection properties when creating this index\n`;
-      sql += `-- ` + sortSeqSchema.title + `: ` + sortSeqSchema.value + `\n`;
-      sql += `-- ` + sortSeqTable.title + `: ` + sortSeqTable.value + `\n`;
+      sql += `-- ${sortSeqSchema.title}: ${sortSeqSchema.value}\n`;
+      sql += `-- ${sortSeqTable.title}: ${sortSeqTable.value}\n`;
     }
     sql += `CREATE${type}INDEX ${tableSchema}.${tableName}_IDX ON ${tableSchema}.${tableName} (${keyColumns})`;
     if (!isNaN(distinctValues) && distinctValues > 0) {
