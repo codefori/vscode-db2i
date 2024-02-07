@@ -15,6 +15,8 @@ export interface ExplainNode {
   highlights: NodeHighlights;
   /** Context objects include advised indexes and statistics */
   contextObjects: ContextObject[];
+  /** Context to set when displaying this node, used to identify additional actions */
+  nodeContext: string;
 }
 
 export interface ExplainProperty {
@@ -195,7 +197,8 @@ export class ExplainTree {
       props: [],
       tooltipProps: [],
       highlights: new NodeHighlights(),
-      contextObjects: []
+      contextObjects: [],
+      nodeContext: ``
     };
   }
 
@@ -234,18 +237,27 @@ export class ExplainTree {
     return nodes;
   }
 
+  /** Collects the context objects from the all the tree nodes, sorted by type */
+  public getContextObjects(includeType?: number[]): ContextObject[] {
+    let contextObjects: ContextObject[] = [];
+    this.topNode.contextObjects.forEach(co => contextObjects.push(co));
+    this.getAllChildNodes(this.topNode).forEach(en => en.contextObjects.forEach(co => contextObjects.push(co)));
+    if (includeType) {
+      contextObjects = contextObjects.filter(co => includeType.includes(co.contextType));
+    }
+    contextObjects.sort((a: ContextObject, b: ContextObject) => a.contextType - b.contextType);
+    return contextObjects;
+  }
+
   /**
    * Displays all advised indexes and statistics in the node view details pane
    */
   public showAdvisedIndexesAndStatistics(doveNodeView: DoveNodeView): void {
-    let contextObjects: ContextObject[] = [];
-    // Collect the context objects from the all the tree nodes
-    this.topNode.contextObjects.forEach(co => contextObjects.push(co));
-    this.getAllChildNodes(this.topNode).forEach(en => en.contextObjects.forEach(co => contextObjects.push(co)));
     // Filter the list to only advised indexes and statistics, and sort by type
-    contextObjects = contextObjects.filter(co => co.contextType == ContextType.ADVISED_INDEX || co.contextType == ContextType.ADVISED_STATISTIC).sort((a: ContextObject, b: ContextObject) => a.contextType - b.contextType);
+    let contextObjects: ContextObject[] = this.getContextObjects([ContextType.ADVISED_INDEX, ContextType.ADVISED_STATISTIC]);
     // Build a dummy ExplainNode that can be handed to the node view for display
     let dummy: ExplainNode = this.newNode(0);
+    dummy.contextObjects = contextObjects;
     dummy.title = "Advised Indexes and Statistics";
     if (contextObjects.length > 0) {
       // Spin the advised indexes and statistics, add their properties to the dummy node
@@ -264,6 +276,10 @@ export class ExplainTree {
         title: "No advised indexes or statistics",
         value: ""
       });
+    }
+    // If there are advised indexes, set the context that enables the generate SQL action to create the indexes
+    if (contextObjects.filter(co => co.contextType == ContextType.ADVISED_INDEX).length > 0) {
+      dummy.nodeContext = `vscode-db2i:viewingAdvisedIndexes`;
     }
     // Display the dummy node
     doveNodeView.setNode(dummy, dummy.title);
@@ -299,7 +315,7 @@ const ValueType = {
  * Context type indicators from the context type column ( IFA_CTXTYP )
  * These are associated with invisible data, indicating actions the user might perform on the node
  */
-const ContextType = {
+export const ContextType = {
   TABLE_ACTIONS     : 21,
   INDEX_ACTIONS     : 22,
   ADVISED_INDEX     : 23,

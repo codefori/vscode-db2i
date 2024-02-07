@@ -471,6 +471,12 @@
         "icon": "$(info)"
       },
       {
+        "command": "vscode-db2i.dove.generateSqlForAdvisedIndexes",
+        "title": "Generate SQL for Advised Indexes",
+        "category": "Db2 for i",
+        "icon": "$(go-to-file)"
+      },
+      {
         "command": "vscode-db2i.dove.closeDetails",
         "title": "Close",
         "category": "Db2 for i",
@@ -674,6 +680,11 @@
           "command": "vscode-db2i.dove.close",
           "group": "navigation@3",
           "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.generateSqlForAdvisedIndexes",
+          "group": "navigation@0",
+          "when": "view == vscode-db2i.dove.node && vscode-db2i:viewingAdvisedIndexes"
         },
         {
           "command": "vscode-db2i.dove.closeDetails",

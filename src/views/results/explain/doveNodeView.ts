@@ -10,11 +10,13 @@ export class DoveNodeView implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<EventType> = new EventEmitter<EventType>();
   readonly onDidChangeTreeData: Event<EventType> = this._onDidChangeTreeData.event;
 
+  private currentNode: ExplainNode;
   private propertyNodes: PropertyNode[];
 
   private treeView: TreeView<PropertyNode>;
   
   private defaultTitle: string;
+
   constructor() {
     this.treeView = vscode.window.createTreeView(`vscode-db2i.dove.node`, { treeDataProvider: this, showCollapseAll: true });
     this.defaultTitle = this.treeView.title;
@@ -24,11 +26,16 @@ export class DoveNodeView implements TreeDataProvider<any> {
     return this.treeView;
   }
 
-  setNode(currentNode: ExplainNode, title?: string) {
+  setNode(node: ExplainNode, title?: string) {
+    // If we have a current node in the view and it has a context defined, reset it before processing the new node
+    if (this.currentNode?.nodeContext) {
+      commands.executeCommand(`setContext`, this.currentNode.nodeContext, false);
+    }
+    this.currentNode = node;
     this.treeView.title = title || this.defaultTitle;
     this.propertyNodes = [];
     let currentSection: PropertySection = null;
-    for (let property of currentNode.props) {
+    for (let property of node.props) {
       let node = property.type === RecordType.HEADING ? new PropertySection(property) : new PropertyNode(property);
       // If the property node is a new section, add it to the top level node list and set as the current section
       if (node instanceof PropertySection) {
@@ -51,13 +58,23 @@ export class DoveNodeView implements TreeDataProvider<any> {
     this._onDidChangeTreeData.fire();
     // Ensure that the tree is positioned such that the first element is visible
     this.treeView.reveal(this.propertyNodes[0],  { select: false });
+    // Show the detail view and if the explain node has a context defined, set it
+    this.setContext(true);
+  }
+  getNode(): ExplainNode {
+    return this.currentNode;
+  }
 
-    // Show tree in the view
-    commands.executeCommand(`setContext`, `vscode-db2i:explainingNode`, true);
+  private setContext(enable: boolean): void {
+    commands.executeCommand(`setContext`, `vscode-db2i:explainingNode`, enable);
+    if (this.currentNode?.nodeContext) {
+      commands.executeCommand(`setContext`, this.currentNode.nodeContext, enable);
+    }
   }
 
   close() {
-    commands.executeCommand(`setContext`, `vscode-db2i:explainingNode`, false);
+    // Hide the detail view and if the explain node has a context defined, reset it
+    this.setContext(false);
   }
 
   getTreeItem(element: PropertyNode): PropertyNode | Thenable<PropertyNode> {
@@ -82,7 +99,9 @@ export class DoveNodeView implements TreeDataProvider<any> {
 export class PropertyNode extends TreeItem {
   constructor(property?: ExplainProperty) {
     super(property?.title || ``);
-    if (property && property.value) {
+    // Initialize the tooltip to an empty string, otherwise 'Loading...' is displayed
+    this.tooltip = ``;
+    if (property?.value) {
       this.description = String(property.value || ``);
       this.tooltip = this.description;
       this.contextValue = `propertyNode`;
