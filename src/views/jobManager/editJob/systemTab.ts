@@ -37,7 +37,7 @@ export default function getSystemTab(options: JDBCOptions) {
       `libraries`,
       `Library list`,
       `List of system libraries, separated by commas or spaces`,
-      { rows: 2, default: options.libraries.join(`, `) }
+      { rows: 2, default: options.libraries ? options.libraries.join(`, `) : `QGPL` }
     )
     .addSelect(
       `auto commit`,
