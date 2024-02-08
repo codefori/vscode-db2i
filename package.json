@@ -275,6 +275,12 @@
         "icon": "$(notebook-execute)"
       },
       {
+        "command": "vscode-db2i.resultset.cancel",
+        "title": "Cancel",
+        "category": "Db2 for i",
+        "icon": "$(debug-stop)"
+      },
+      {
         "command": "vscode-db2i.queryHistory.remove",
         "title": "Remove query from history",
         "category": "Db2 for i",
@@ -440,12 +446,12 @@
         {
           "command": "vscode-db2i.runEditorStatement",
           "when": "editorLangId == sql",
-          "group": "navigation@2"
+          "group": "navigation@1"
         },
         {
-          "command": "code-for-ibmi.changeCurrentLibrary",
-          "when": "editorLangId == sql",
-          "group": "navigation@3"
+          "command": "vscode-db2i.resultset.cancel",
+          "when": "editorLangId == sql && vscode-db2i:resultsetCanCancel == true",
+          "group": "navigation@2"
         }
       ],
       "view/title": [

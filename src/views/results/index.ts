@@ -40,6 +40,7 @@ class ResultSetPanelProvider {
 
         let queryObject = Query.byId(message.queryId);
         try {
+          setCancelButtonVisability(true);
           if (queryObject === undefined) {
             // We will need to revisit this if we ever allow multiple result tabs like ACS does
             Query.cleanup();
@@ -49,6 +50,9 @@ class ResultSetPanelProvider {
           }
 
           let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
+
+          setCancelButtonVisability(false);
+
           data = queryResults.data;
           this._view.webview.postMessage({
             command: `rows`,
@@ -58,6 +62,7 @@ class ResultSetPanelProvider {
             update_count: queryResults.update_count,
             isDone: queryResults.is_done
           });
+          
 
         } catch (e) {
           this.setError(e.message);
@@ -70,9 +75,6 @@ class ResultSetPanelProvider {
         }
 
         updateStatusBar();
-      } else if (message.cancel) {
-        await JobManager.getSelection().job.cancel();
-        this.setError(`Previous statement was cancelled.`);
       }
     });
   }
@@ -143,12 +145,25 @@ export interface ParsedStatementInfo extends StatementInfo {
   embeddedInfo: ParsedEmbeddedStatement;
 }
 
+function setCancelButtonVisability(visable: boolean) {
+  vscode.commands.executeCommand(`setContext`, `vscode-db2i:resultsetCanCancel`, visable);
+}
+
 export function initialise(context: vscode.ExtensionContext) {
   let resultSetProvider = new ResultSetPanelProvider();
+  setCancelButtonVisability(false);
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider, {
       webviewOptions: { retainContextWhenHidden: true },
+    }),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.cancel`, async () => {
+      const selected = JobManager.getSelection();
+      if (selected) {
+        await selected.job.cancel();
+        resultSetProvider.setError(`Query cancelled.`);
+      }
     }),
 
     vscode.commands.registerCommand(`vscode-db2i.resultset.reset`, async () => {
