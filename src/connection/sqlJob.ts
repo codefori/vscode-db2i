@@ -1,4 +1,3 @@
-import { CommandResult } from "@halcyontech/vscode-ibmi-types";
 import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions } from "./types";
@@ -194,7 +193,11 @@ export class SQLJob {
   }
 
   async cancel() {
-    await this.query(`CALL QSYS2.CANCEL_SQL(?)`, {parameters: [this.id]}).run();
+    const instance = getInstance();
+    const content = instance.getContent();
+
+    await content.runSQL(`CALL QSYS2.CANCEL_SQL('${this.id}')`);
+
     this.status = JobStatus.Ready;
   }
 

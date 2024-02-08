@@ -445,13 +445,13 @@
       "editor/title": [
         {
           "command": "vscode-db2i.runEditorStatement",
-          "when": "editorLangId == sql",
+          "when": "editorLangId == sql && vscode-db2i:resultsetCanCancel != true",
           "group": "navigation@1"
         },
         {
           "command": "vscode-db2i.resultset.cancel",
           "when": "editorLangId == sql && vscode-db2i:resultsetCanCancel == true",
-          "group": "navigation@2"
+          "group": "navigation@1"
         }
       ],
       "view/title": [

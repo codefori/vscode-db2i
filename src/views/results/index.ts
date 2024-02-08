@@ -163,6 +163,7 @@ export function initialise(context: vscode.ExtensionContext) {
       if (selected) {
         await selected.job.cancel();
         resultSetProvider.setError(`Query cancelled.`);
+        setCancelButtonVisability(false);
       }
     }),
 
