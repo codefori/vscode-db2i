@@ -16,6 +16,8 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       background-color: var(--vscode-banner-background);
       color: var(--vscode-banner-foreground);
       text-align: left;
+      position: sticky; /* Lock the header row to the top so it's always visible as rows are scrolled */
+      top: 0;           /* Don't forget this, required for the stickiness */
     }
 
     #resultset th,
