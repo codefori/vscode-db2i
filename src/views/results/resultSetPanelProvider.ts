@@ -83,7 +83,7 @@ export class ResultSetPanelProvider {
     }
   }
 
-  async setLoadingText(content) {
+  async setLoadingText(content: string) {
     await this.focus();
 
     if (!this.loadingState) {
@@ -95,7 +95,6 @@ export class ResultSetPanelProvider {
   }
 
   async setScrolling(basicSelect, isCL = false, queryId: string = ``) {
-    this.loadingState = false;
     await this.focus();
 
     this._view.webview.html = html.generateScroller(basicSelect, isCL);
