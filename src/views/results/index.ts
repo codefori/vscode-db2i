@@ -14,6 +14,7 @@ import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider } from "./resultSetPanelProvider";
 import { ExplainType } from "../../connection/sqlJob";
+import { generateSqlForAdvisedIndexes } from "./explain/advice";
 
 export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 
@@ -85,7 +86,14 @@ export function initialise(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand(`vscode-db2i.dove.generateSqlForAdvisedIndexes`, () => {
-      generateSqlForAdvisedIndexes();
+      const scriptContent = generateSqlForAdvisedIndexes(explainTree);
+
+      vscode.workspace.openTextDocument({
+        language: `sql`,
+        content: scriptContent
+      }).then(doc => {
+        vscode.window.showTextDocument(doc);
+      });
     }),
 
     vscode.commands.registerCommand(`vscode-db2i.dove.closeDetails`, () => {
@@ -317,38 +325,4 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   }
 
   return statementInfo;
-}
-
-function generateSqlForAdvisedIndexes(): void {
-  let script: string[] = [];
-  // Get the advised indexes and generate SQL for each
-  explainTree.getContextObjects([ContextType.ADVISED_INDEX]).forEach(ai => {
-    let tableSchema = ai.properties[1].value;
-    let tableName = ai.properties[2].value;
-    // Index type is either BINARY RADIX or EVI
-    let type = (ai.properties[3].value as string).startsWith(`E`) ? ` ENCODED VECTOR ` : ` `;
-    // Number of distinct values (only required for EVI type indexes, otherwise will be empty or 0)
-    let distinctValues = (ai.properties[4]?.value as number);
-    let keyColumns = ai.properties[5].value;
-    let sortSeqSchema = ai.properties[6];
-    let sortSeqTable = ai.properties[7];
-    let sql: string = ``;
-    // If sort sequence is specified, add a comment to indicate the connection settings that should be used when creating the index
-    if (sortSeqSchema?.value != `*N` && sortSeqTable?.value != `*HEX`) {
-      sql += `-- Use these connection properties when creating this index\n`;
-      sql += `-- ${sortSeqSchema.title}: ${sortSeqSchema.value}\n`;
-      sql += `-- ${sortSeqTable.title}: ${sortSeqTable.value}\n`;
-    }
-    sql += `CREATE${type}INDEX ${tableSchema}.${tableName}_IDX ON ${tableSchema}.${tableName} (${keyColumns})`;
-    if (!isNaN(distinctValues) && distinctValues > 0) {
-      sql += ` WITH ${distinctValues} VALUES`;
-    }
-    script.push(sql);
-  });
-  vscode.workspace.openTextDocument({
-    language: `sql`,
-    content: `-- Visual Explain - Advised Indexes\n\n` + script.join(`;\n\n`)
-  }).then(doc => {
-    vscode.window.showTextDocument(doc);
-  });
 }
