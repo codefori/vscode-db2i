@@ -1,7 +1,7 @@
 import { CommandResult } from "@halcyontech/vscode-ibmi-types";
 import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
-import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions } from "./types";
+import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions, ExplainResults } from "./types";
 import { Query } from "./query";
 import { EventEmitter } from "stream";
 
@@ -10,6 +10,11 @@ export enum JobStatus {
   Ready = "ready",
   Active = "active",
   Ended = "ended"
+}
+
+export enum ExplainType {
+  Run,
+  DoNotRun
 }
 
 export enum TransactionEndType {
@@ -122,6 +127,7 @@ export class SQLJob {
 
   async send(content: string): Promise<string> {
     if (this.isTracingChannelData) ServerComponent.writeOutput(content);
+
     let req: ReqRespFmt = JSON.parse(content);
     this.channel.stdin.write(content + `\n`);
     this.status = JobStatus.Active;
@@ -138,6 +144,8 @@ export class SQLJob {
   }
 
   async connect(): Promise<ConnectionResult> {
+    this.isTracingChannelData = true;
+
     this.channel = await this.getChannel();
 
     this.channel.on(`error`, (err) => {
@@ -164,7 +172,8 @@ export class SQLJob {
     const connectionObject = {
       id: SQLJob.getNewUniqueId(),
       type: `connect`,
-      technique: (getInstance().getConnection().qccsid === 65535 || this.options["database name"]) ? `tcp` : `cli`, //TODO: investigate why QCCSID 65535 breaks CLI and if there is any workaround
+      //technique: (getInstance().getConnection().qccsid === 65535 || this.options["database name"]) ? `tcp` : `cli`, //TODO: investigate why QCCSID 65535 breaks CLI and if there is any workaround
+      technique: `tcp`, // TODO: DOVE does not work in cli mode
       application: `vscode-db2i ${DB2I_VERSION}`,
       props: props.length > 0 ? props : undefined
     }
@@ -186,8 +195,11 @@ export class SQLJob {
     this.id = connectResult.job;
     this.status = JobStatus.Ready;
 
+    this.isTracingChannelData = false;
+
     return connectResult;
   }
+
   query<T>(sql: string, opts?: QueryOptions): Query<T> {
     return new Query(this, sql, opts);
   }
@@ -207,6 +219,25 @@ export class SQLJob {
     }
 
     return version;
+  }
+
+  async explain(statement: string, type: ExplainType = ExplainType.Run): Promise<ExplainResults<any>> {
+    const explainRequest = {
+      id: SQLJob.getNewUniqueId(),
+      type: `dove`,
+      sql: statement,
+      run: type === ExplainType.Run
+    }
+
+    const result = await this.send(JSON.stringify(explainRequest));
+
+    const explainResult: ExplainResults<any> = JSON.parse(result);
+
+    if (explainResult.success !== true) {
+      throw new Error(explainResult.error || `Failed to explain.`);
+    }
+
+    return explainResult;
   }
 
   getTraceFilePath(): string|undefined {

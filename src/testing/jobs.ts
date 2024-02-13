@@ -2,6 +2,7 @@ import assert from "assert";
 import { TestSuite } from ".";
 import { getInstance } from "../base";
 import { Query } from "../connection/query";
+import { ExplainTree } from "../views/results/explain/nodes";
 import { ServerComponent } from "../connection/serverComponent";
 import { JobStatus, SQLJob } from "../connection/sqlJob";
 import { ServerTraceDest, ServerTraceLevel } from "../connection/types";
@@ -417,6 +418,42 @@ export const JobsSuite: TestSuite = {
 
       console.log(`Old query method took ${oe - os} milliseconds.`);
       assert.equal((ne - ns) < (oe - os), true);
+    }},
+
+    {name: `Explain API`, test: async () => {
+      const newJob = new SQLJob({"full open": true});
+      await newJob.connect();
+
+      const query = `select * from qiws.qcustcdt`;
+
+      const result = await newJob.explain(query);
+
+      const tree = new ExplainTree(result.data);
+
+      const topLevel = tree.get();
+
+      assert.notStrictEqual(topLevel, undefined);
+    }},
+    
+    {name: `(long-running) Server-side in-memory tracing doesn't overflow`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+
+      const instance = getInstance();
+      const content = instance.getContent();
+
+      const newJob = new SQLJob({naming: `sql`});
+      await newJob.connect();
+      await newJob.setTraceConfig(ServerTraceDest.IN_MEM, ServerTraceLevel.DATASTREAM);
+
+      let numIterations = 1000;
+      for (let i = 0; i < numIterations; i++) {
+        let version = await newJob.getVersion();
+        if(0 == i%20) {
+          console.log(`long-running test interation ${i}/${numIterations}`);
+        }
+      }
+      let bruh = await newJob.getTraceData();
+      newJob.close();
     }},
   ]
 }

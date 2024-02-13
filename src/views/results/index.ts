@@ -1,130 +1,24 @@
-import vscode, { EndOfLine, SnippetString, ViewColumn } from "vscode";
+import vscode, { EndOfLine, SnippetString, ViewColumn, TreeView } from "vscode";
 
 import * as csv from "csv/sync";
 
-import { JobManager } from "../../config";
-import { JobInfo } from "../../connection/manager";
-import { Query, QueryState } from "../../connection/query";
 import { changedCache } from "../../language/providers/completionItemCache";
-import Document from "../../language/sql/document";
 import Statement from "../../language/sql/statement";
+import { ExplainTree, ContextType } from "./explain/nodes";
+import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
+import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
+import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
+import { ResultSetPanelProvider } from "./resultSetPanelProvider";
+import { ExplainType } from "../../connection/sqlJob";
+
+export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
-import { updateStatusBar } from "../jobManager/statusBar";
-import * as html from "./html";
-import { SelfCodePanelProvider } from "./selfCodePanel";
-import { SQLJob } from "../../connection/sqlJob";
-import { ConfigManager } from "../jobManager/ConfigManager";
-import Configuration from "../../configuration";
+import { JobManager } from "../../config";
+import Document from "../../language/sql/document";
+
 export function delay(t: number, v?: number) {
   return new Promise(resolve => setTimeout(resolve, t, v));
 }
-
-class ResultSetPanelProvider {
-  _view: vscode.WebviewView;
-  loadingState: boolean;
-  constructor() {
-    this._view = undefined;
-    this.loadingState = false;
-  }
-
-  resolveWebviewView(webviewView: vscode.WebviewView, context: vscode.WebviewViewResolveContext, _token: vscode.CancellationToken) {
-    this._view = webviewView;
-
-    webviewView.webview.options = {
-      // Allow scripts in the webview
-      enableScripts: true,
-    };
-
-    webviewView.webview.html = html.getLoadingHTML();
-    this._view.webview.onDidReceiveMessage(async (message) => {
-      if (message.query) {
-        let data = [];
-
-        let queryObject = Query.byId(message.queryId);
-        try {
-          if (queryObject === undefined) {
-            // We will need to revisit this if we ever allow multiple result tabs like ACS does
-            Query.cleanup();
-
-            let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
-            queryObject = query;
-          }
-
-          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
-          console.log( queryResults.metadata ? queryResults.metadata.columns.map(x=>x.name) : undefined);
-          data = queryResults.data;
-          this._view.webview.postMessage({
-            command: `rows`,
-            rows: queryResults.data,
-            columnList: queryResults.metadata ? queryResults.metadata.columns.map(x=>x.name) : undefined, // Query.fetchMore() doesn't return the metadata
-            queryId: queryObject.getId(),
-            update_count: queryResults.update_count,
-            isDone: queryResults.is_done
-          });
-
-        } catch (e) {
-          this.setError(e.message);
-          this._view.webview.postMessage({
-            command: `rows`,
-            rows: [],
-            queryId: ``,
-            isDone: true
-          });
-        }
-
-        updateStatusBar();
-      }
-    });
-  }
-
-  async ensureActivation() {
-    let currentLoop = 0;
-    while (!this._view && currentLoop < 15) {
-      await this.focus();
-      await delay(100);
-      currentLoop += 1;
-    }
-  }
-
-  async focus() {
-    if (!this._view) {
-      // Weird one. Kind of a hack. _view.show doesn't work yet because it's not initialized.
-      // But, we can call a VS Code API to focus on the tab, which then
-      // 1. calls resolveWebviewView
-      // 2. sets this._view
-      await vscode.commands.executeCommand(`vscode-db2i.resultset.focus`);
-    } else {
-      this._view.show(true);
-    }
-  }
-
-  async setLoadingText(content: string) {
-    await this.focus();
-
-    if (!this.loadingState) {
-      this._view.webview.html = html.getLoadingHTML();
-      this.loadingState = true;
-    }
-
-    html.setLoadingText(this._view.webview, content);
-  }
-
-  async setScrolling(basicSelect, isCL = false) {
-    await this.focus();
-
-    this._view.webview.html = html.generateScroller(basicSelect, isCL);
-
-    this._view.webview.postMessage({
-      command: `fetch`,
-      queryId: ``
-    });
-  }
-  setError(error) {
-    // TODO: pretty error
-    this._view.webview.html = `<p>${error}</p>`;
-  }
-}
-export type StatementQualifier = "statement"|"json"|"csv"|"cl"|"sql";
 
 export interface StatementInfo {
   content: string,
@@ -141,197 +35,236 @@ export interface ParsedStatementInfo extends StatementInfo {
   embeddedInfo: ParsedEmbeddedStatement;
 }
 
-interface sqlLogTableRow {
-  LOGGED_SQLCODE: number;
-  NUMBER_OCCURRENCES: number;
-}
-
-const selfCodeRows: {[jobId: string]: sqlLogTableRow[]} = {};
-let renderTimeout: NodeJS.Timeout;
+let resultSetProvider = new ResultSetPanelProvider();
+let explainTree: ExplainTree;
+let doveResultsView = new DoveResultsView();
+let doveResultsTreeView: TreeView<ExplainTreeItem> = doveResultsView.getTreeView();
+let doveNodeView = new DoveNodeView();
+let doveNodeTreeView: TreeView<PropertyNode> = doveNodeView.getTreeView();
+let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration providor
 
 export function initialise(context: vscode.ExtensionContext) {
   let resultSetProvider = new ResultSetPanelProvider();
-  let selfCodeErrorProvider = new SelfCodePanelProvider();
-
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(`vscode-db2i.selfCodeErrorPanel`, selfCodeErrorProvider, {
-      webviewOptions : {retainContextWhenHidden: true}
-    }),
-    vscode.commands.registerCommand(`vscode-db2i.selfCodeErrorPanel.fetch`, async (job: SQLJob, showErrors: boolean) => {
-      await selfCodeErrorProvider.ensureActivation();
-
-      clearTimeout(renderTimeout);
-      renderTimeout = setTimeout(async () => {
-        const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${job.id}'`;
-        let updateView: boolean = false;
-
-        // We need to cached data to compare against
-        let cachedData = selfCodeRows[job.id] || [];
-        
-        const curData: sqlLogTableRow[] = await JobManager.runSQL(content, undefined);
-
-        // First let's do a simple check of row count change
-        if (curData.length !== cachedData.length) {
-          updateView = true;
-          selfCodeRows[job.id] = curData;
-        } else {
-
-          // If the row count didn't change, perhaps the number of occurrences for a specific SQLCODE did,
-          // that means we need to render the data again anyway
-          const rowChanges = curData.some(row => row.NUMBER_OCCURRENCES > (cachedData.find(cd => cd.LOGGED_SQLCODE === row.LOGGED_SQLCODE) || {NUMBER_OCCURRENCES: 0}).NUMBER_OCCURRENCES);
-          if (rowChanges) {
-            updateView = true;
-            selfCodeRows[job.id] = curData;
-          }
-        }
-
-        if (showErrors || updateView) {
-          await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, true);
-          await selfCodeErrorProvider.setTableData(selfCodeRows[job.id]);
-        } else if (selfCodeRows[job.id].length === 0) {
-          await vscode.commands.executeCommand(`setContext`, `vscode-db2i:selfCodeCountChanged`, false);
-        }
-      }, Configuration.get(`selfCodePanelTimeout`));
-    })
-  );
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.reset`, async () => {
-      resultSetProvider.loadingState = false;
-      resultSetProvider.setLoadingText(`View will be active when a statement is executed.`);
+    doveResultsTreeView,
+    doveNodeTreeView,
+
+    vscode.commands.registerCommand(`vscode-db2i.dove.close`, () => {
+      doveResultsView.close();
+      doveNodeView.close();
     }),
 
-    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`,
-      async (options?: StatementInfo) => {
-        // Options here can be a vscode.Uri when called from editor context.
-        // But that isn't valid here.
-        const optionsIsValid = (options && options.content !== undefined);
-        let editor = vscode.window.activeTextEditor;
+    vscode.commands.registerCommand(`vscode-db2i.dove.displayDetails`, (explainTreeItem: ExplainTreeItem) => {
+      // When the user clicks for details of a node in the tree, set the focus to that node as a visual indicator tying it to the details tree
+      doveResultsTreeView.reveal(explainTreeItem, { select: false, focus: true, expand: true });
+      doveNodeView.setNode(explainTreeItem.explainNode);
+    }),
 
-        if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
-          await resultSetProvider.ensureActivation();
+    vscode.commands.registerCommand(`vscode-db2i.dove.node.copy`, (propertyNode: PropertyNode) => {
+      if (propertyNode.description && typeof propertyNode.description === `string`) {
+        vscode.env.clipboard.writeText(propertyNode.description);
+      }
+    }),
 
-          const statementDetail = parseStatement(editor, optionsIsValid ? options : undefined);
+    vscode.commands.registerCommand(`vscode-db2i.dove.advisedIndexesAndStatistics`, () => {
+      // TODO would be nice to clear any current selections or focused tree items
+      explainTree.showAdvisedIndexesAndStatistics(doveNodeView);
+    }),
 
-          if (statementDetail.open) {
-            const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content: statementDetail.content });
-            editor = await vscode.window.showTextDocument(textDoc, statementDetail.viewColumn, statementDetail.viewFocus);
-          }
+    vscode.commands.registerCommand(`vscode-db2i.dove.editSettings`, () => {
+      vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.visualExplain');
+    }),
 
-          if (editor) {
-            const group = statementDetail.group;
-            editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
+    vscode.commands.registerCommand(`vscode-db2i.dove.export`, () => {
+      vscode.workspace.openTextDocument({
+        language: `json`,
+        content: JSON.stringify(doveResultsView.getRootExplainNode(), null, 2)
+      }).then(doc => {
+        vscode.window.showTextDocument(doc);
+      });
+    }),
 
-            if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed) {
-              editor.insertSnippet(
-                new SnippetString(statementDetail.embeddedInfo.content)
-              )
-              return;
-            }
-          }
+    vscode.commands.registerCommand(`vscode-db2i.dove.generateSqlForAdvisedIndexes`, () => {
+      generateSqlForAdvisedIndexes();
+    }),
 
-          const statement = statementDetail.statement;
+    vscode.commands.registerCommand(`vscode-db2i.dove.closeDetails`, () => {
+      doveNodeView.close();
+    }),
 
-          if (statement.type === StatementType.Create || statement.type === StatementType.Alter) {
-            const refs = statement.getObjectReferences();
-            if (refs.length > 0) {            
-              const ref = refs[0];
-              const databaseObj =
-                statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
-                  ? ref.object.schema || ``
-                  : ref.object.schema + ref.object.name;
-              changedCache.add((databaseObj || ``).toUpperCase());
-            }
-          }
+    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withRun`, (options?: StatementInfo) => { runHandler({ qualifier: `explain`, ...options }) }),
+    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withoutRun`, (options?: StatementInfo) => { runHandler({ qualifier: `onlyexplain`, ...options }) }),
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, (options?: StatementInfo) => { runHandler(options) })
+  )
+}
 
-          if (statementDetail.content.trim().length > 0) {
+async function runHandler(options?: StatementInfo) {
+  // Options here can be a vscode.Uri when called from editor context.
+  // But that isn't valid here.
+  const optionsIsValid = (options?.content !== undefined);
+  let editor = vscode.window.activeTextEditor;
+
+  vscode.commands.executeCommand('vscode-db2i.dove.close');
+
+  if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
+    await resultSetProvider.ensureActivation();
+
+    const statementDetail = parseStatement(editor, optionsIsValid ? options : undefined);
+
+    if (options?.qualifier) {
+      statementDetail.qualifier = options.qualifier
+    }
+
+    if (statementDetail.open) {
+      const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content: statementDetail.content });
+      editor = await vscode.window.showTextDocument(textDoc, statementDetail.viewColumn, statementDetail.viewFocus);
+    }
+
+    if (editor) {
+      const group = statementDetail.group;
+      editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
+
+      if (group.statements.length === 1 && statementDetail.embeddedInfo.changed) {
+        editor.insertSnippet(new SnippetString(statementDetail.embeddedInfo.content));
+        return;
+      }
+    }
+
+    const statement = statementDetail.statement;
+
+    if (statement.type === StatementType.Create || statement.type === StatementType.Alter) {
+      const refs = statement.getObjectReferences();
+      const ref = refs[0];
+      const databaseObj =
+        statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
+          ? ref.object.schema || ``
+          : ref.object.schema + ref.object.name;
+      changedCache.add((databaseObj || ``).toUpperCase());
+    }
+
+    if (statementDetail.content.trim().length > 0) {
+      try {
+        if (statementDetail.qualifier === `cl`) {
+          resultSetProvider.setScrolling(statementDetail.content, true);
+        } else if (statementDetail.qualifier === `statement`) {
+          // If it's a basic statement, we can let it scroll!
+          resultSetProvider.setScrolling(statementDetail.content);
+
+        } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
+          const selectedJob = JobManager.getSelection();
+          if (selectedJob) {
             try {
-              if (statementDetail.qualifier === `cl`) {
-                resultSetProvider.setScrolling(statementDetail.content, true);
+              const onlyExplain = statementDetail.qualifier === `onlyexplain`;
+
+              resultSetProvider.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
+              const explainType: ExplainType = onlyExplain ? ExplainType.DoNotRun : ExplainType.Run;
+
+              const explained = await selectedJob.job.explain(statementDetail.content, explainType);
+
+              if (onlyExplain) {
+                resultSetProvider.setLoadingText(`Explained.`);
               } else {
-                if (statementDetail.qualifier === `statement`) {
-                  // If it's a basic statement, we can let it scroll!
-                  resultSetProvider.setScrolling(statementDetail.content);
+                resultSetProvider.setScrolling(statementDetail.content, false, explained.id);
+              }
 
-                } else {
-                  // Otherwise... it's a bit complicated.
-                  const data = await JobManager.runSQL(statementDetail.content, undefined);
+              explainTree = new ExplainTree(explained.vedata);
+              const topLevel = explainTree.get();
+              const rootNode = doveResultsView.setRootNode(topLevel);
+              doveNodeView.setNode(rootNode.explainNode);
+              doveTreeDecorationProvider.updateTreeItems(rootNode);
+            } catch (e) {
+              resultSetProvider.setError(e.message);
+            }
+          } else {
+            vscode.window.showInformationMessage(`No job currently selected.`);
+          }
+        } else {
+          // Otherwise... it's a bit complicated.
+          resultSetProvider.setLoadingText(`Executing SQL statement...`);
 
-                  if (data.length > 0) {
-                    switch (statementDetail.qualifier) {
+          const data = await JobManager.runSQL(statementDetail.content, undefined);
 
-                    case `csv`:
-                    case `json`:
-                    case `sql`:
-                      let content = ``;
-                      switch (statementDetail.qualifier) {
-                      case `csv`: content = csv.stringify(data, {
-                        header: true,
-                        quoted_string: true,
-                      }); break;
-                      case `json`: content = JSON.stringify(data, null, 2); break;
+          if (data.length > 0) {
+            switch (statementDetail.qualifier) {
 
-                      case `sql`:
-                        const keys = Object.keys(data[0]);
+              case `csv`:
+              case `json`:
+              case `sql`:
+                let content = ``;
+                switch (statementDetail.qualifier) {
+                  case `csv`: content = csv.stringify(data, {
+                    header: true,
+                    quoted_string: true,
+                  }); break;
+                  case `json`: content = JSON.stringify(data, null, 2); break;
 
-                        const insertStatement = [
-                          `insert into TABLE (`,
-                          `  ${keys.join(`, `)}`,
-                          `) values `,
-                          data.map(
-                            row => `  (${keys.map(key => {
-                              if (row[key] === null) return `null`;
-                              if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
-                              return row[key];
-                            }).join(`, `)})`
-                          ).join(`,\n`),
-                        ];
-                        content = insertStatement.join(`\n`);
-                        break;
-                      }
+                  case `sql`:
+                    const keys = Object.keys(data[0]);
 
-                      const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
-                      await vscode.window.showTextDocument(textDoc);
-                      break;
+                    // split array into groups of 1k
+                    const insertLimit = 1000;
+                    const dataChunks = [];
+                    for (let i = 0; i < data.length; i += insertLimit) {
+                      dataChunks.push(data.slice(i, i + insertLimit));
                     }
 
-                  } else {
-                    vscode.window.showInformationMessage(`Query executed with no data returned.`);
-                  }
+                    content = `-- Generated ${dataChunks.length} insert statement${dataChunks.length === 1 ? `` : `s`}\n\n`;
+
+                    for (const data of dataChunks) {
+                      const insertStatement = [
+                        `insert into TABLE (`,
+                        `  ${keys.join(`, `)}`,
+                        `) values `,
+                        data.map(
+                          row => `  (${keys.map(key => {
+                            if (row[key] === null) return `null`;
+                            if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
+                            return row[key];
+                          }).join(`, `)})`
+                        ).join(`,\n`),
+                      ];
+                      content += insertStatement.join(`\n`) + `;\n`;
+                    }
+                    break;
                 }
-              }
 
-              const selected: JobInfo = await JobManager.getSelection();
-              if (selected.job.options.selfcodes) {
-                vscode.commands.executeCommand(`vscode-db2i.selfCodeErrorPanel.fetch`, selected.job, false);
-              }
-              
-              if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {
-                vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
-              }
-
-            } catch (e) {
-              let errorText;
-              if (typeof e === `string`) {
-                errorText = e.length > 0 ? e : `An error occurred when executing the statement.`;
-              } else {
-                errorText = e.message || `Error running SQL statement.`;
-              }
-
-              if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {
-                resultSetProvider.setError(errorText);
-              } else {
-                vscode.window.showErrorMessage(errorText);
-              }
+                const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
+                await vscode.window.showTextDocument(textDoc);
+                resultSetProvider.setLoadingText(`Query executed with ${data.length} rows returned.`);
+                break;
             }
+
+          } else {
+            vscode.window.showInformationMessage(`Query executed with no data returned.`);
           }
         }
-      }),
-  )
+
+        if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {
+          vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
+        }
+
+      } catch (e) {
+        let errorText;
+        if (typeof e === `string`) {
+          errorText = e.length > 0 ? e : `An error occurred when executing the statement.`;
+        } else {
+          errorText = e.message || `Error running SQL statement.`;
+        }
+
+        if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {
+          resultSetProvider.setError(errorText);
+        } else {
+          vscode.window.showErrorMessage(errorText);
+        }
+      }
+    }
+
+  }
 }
 
 export function parseStatement(editor?: vscode.TextEditor, existingInfo?: StatementInfo): ParsedStatementInfo {
@@ -344,7 +277,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   };
 
   let sqlDocument: Document;
-  
+
   if (existingInfo) {
     statementInfo = {
       ...existingInfo,
@@ -373,10 +306,10 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     }
 
     if (statementInfo.content) {
-      [`cl`, `json`, `csv`, `sql`].forEach(mode => {
+      [`cl`, `json`, `csv`, `sql`, `explain`].forEach(mode => {
         if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
           statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
-  
+
           //@ts-ignore We know the type.
           statementInfo.qualifier = mode;
         }
@@ -391,4 +324,38 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   }
 
   return statementInfo;
+}
+
+function generateSqlForAdvisedIndexes(): void {
+  let script: string[] = [];
+  // Get the advised indexes and generate SQL for each
+  explainTree.getContextObjects([ContextType.ADVISED_INDEX]).forEach(ai => {
+    let tableSchema = ai.properties[1].value;
+    let tableName = ai.properties[2].value;
+    // Index type is either BINARY RADIX or EVI
+    let type = (ai.properties[3].value as string).startsWith(`E`) ? ` ENCODED VECTOR ` : ` `;
+    // Number of distinct values (only required for EVI type indexes, otherwise will be empty or 0)
+    let distinctValues = (ai.properties[4]?.value as number);
+    let keyColumns = ai.properties[5].value;
+    let sortSeqSchema = ai.properties[6];
+    let sortSeqTable = ai.properties[7];
+    let sql: string = ``;
+    // If sort sequence is specified, add a comment to indicate the connection settings that should be used when creating the index
+    if (sortSeqSchema?.value != `*N` && sortSeqTable?.value != `*HEX`) {
+      sql += `-- Use these connection properties when creating this index\n`;
+      sql += `-- ${sortSeqSchema.title}: ${sortSeqSchema.value}\n`;
+      sql += `-- ${sortSeqTable.title}: ${sortSeqTable.value}\n`;
+    }
+    sql += `CREATE${type}INDEX ${tableSchema}.${tableName}_IDX ON ${tableSchema}.${tableName} (${keyColumns})`;
+    if (!isNaN(distinctValues) && distinctValues > 0) {
+      sql += ` WITH ${distinctValues} VALUES`;
+    }
+    script.push(sql);
+  });
+  vscode.workspace.openTextDocument({
+    language: `sql`,
+    content: `-- Visual Explain - Advised Indexes\n\n` + script.join(`;\n\n`)
+  }).then(doc => {
+    vscode.window.showTextDocument(doc);
+  });
 }
