@@ -32,7 +32,7 @@ export interface ParsedStatementInfo extends StatementInfo {
   embeddedInfo: ParsedEmbeddedStatement;
 }
 
-function setCancelButtonVisability(visable: boolean) {
+export function setCancelButtonVisability(visable: boolean) {
   vscode.commands.executeCommand(`setContext`, `vscode-db2i:resultsetCanCancel`, visable);
 }
 

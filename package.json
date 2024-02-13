@@ -604,20 +604,20 @@
       ],
       "editor/title": [
         {
-          "when": "editorLangId == sql && code-for-ibmi:connected == true",
-          "group": "navigation@sql",
+          "when": "editorLangId == sql && code-for-ibmi:connected == true && vscode-db2i:resultsetCanCancel != true",
+          "group": "navigation@1",
           "submenu": "sql/editor/context"
+        },
+        {
+          "command": "vscode-db2i.resultset.cancel",
+          "when": "editorLangId == sql && vscode-db2i:resultsetCanCancel == true",
+          "group": "navigation@1"
         }
       ],
       "sql/editor/context": [
         {
           "command": "vscode-db2i.runEditorStatement",
           "when": "editorLangId == sql && vscode-db2i:resultsetCanCancel != true",
-          "group": "navigation@1"
-        },
-        {
-          "command": "vscode-db2i.resultset.cancel",
-          "when": "editorLangId == sql && vscode-db2i:resultsetCanCancel == true",
           "group": "navigation@1"
         },
         {
