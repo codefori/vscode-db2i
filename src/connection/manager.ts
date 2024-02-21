@@ -89,6 +89,8 @@ export class SQLJobManager {
   }
 
   setSelection(selectedName: string): boolean {
+    // We should pull this out when we are able to have
+    // multiple jobs running at once with multiple result set views
     if (this.selectedJob !== NO_SELECTED_JOB) {
       const selectedJob = this.jobs[this.selectedJob];
       selectedJob.job.cancel();
