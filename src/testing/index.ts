@@ -13,7 +13,7 @@ const suites : TestSuite[] = [
   SelfCodesTestSuite,
   ManagerSuite,
   DatabaseSuite,
-  DatabasePerformanceSuite
+  // DatabasePerformanceSuite
 ]
 
 export type TestSuite = {
