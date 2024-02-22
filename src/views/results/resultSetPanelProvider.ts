@@ -83,8 +83,10 @@ export class ResultSetPanelProvider {
     }
   }
 
-  async setLoadingText(content) {
-    await this.focus();
+  async setLoadingText(content: string, focus = true) {
+    if (focus) {
+      await this.focus();
+    }
 
     if (!this.loadingState) {
       this._view.webview.html = html.getLoadingHTML();

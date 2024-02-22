@@ -5,7 +5,7 @@ import { getInstance } from "../../base";
 
 const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Left);
 
-export async function updateStatusBar(options: {newJob?: boolean} = {}) {
+export async function updateStatusBar(options: {newJob?: boolean, executing?: boolean} = {}) {
   const instance = getInstance();
   const connection = instance.getConnection();
 
@@ -16,6 +16,9 @@ export async function updateStatusBar(options: {newJob?: boolean} = {}) {
     let backgroundColour: ThemeColor|undefined = undefined;
     let toolTipItems = [];
 
+    if (options.executing) {
+      text = `$(sync~spin) Executing...`;
+    } else
     if (options.newJob) {
       text = `$(sync~spin) Spinning up job...`;
     } else
