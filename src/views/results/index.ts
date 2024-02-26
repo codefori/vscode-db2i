@@ -132,7 +132,7 @@ async function runHandler(options?: StatementInfo) {
       const group = statementDetail.group;
       editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
 
-      if (group.statements.length === 1 && statementDetail.embeddedInfo.changed) {
+      if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed) {
         editor.insertSnippet(new SnippetString(statementDetail.embeddedInfo.content));
         return;
       }
