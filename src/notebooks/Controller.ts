@@ -169,7 +169,7 @@ export class IBMiController {
 
         case `shellscript`:
           try {
-            const command: CommandResult = await vscode.commands.executeCommand(`code-for-ibmi.runCommand`, {
+            const command = await connection.runCommand({
               command: cell.document.getText(),
               environment: `pase`
             });

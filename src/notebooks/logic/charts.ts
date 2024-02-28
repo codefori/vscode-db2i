@@ -24,7 +24,7 @@ export function generateChart(id: number, detail: ChartDetail, columns: string[]
   if (rows.length === 1) {
     const labels = columns;
     const data = Object.values(rows[0]);
-    return generateBarChartHTML(id, detail, labels, [{ data, label: `Data` }]);
+    return generateChartHTML(id, detail, labels, [{ data, label: `Data` }]);
 
   } else if (rows.length > 1) {
     const datasets: Dataset[] = [];
@@ -52,12 +52,12 @@ export function generateChart(id: number, detail: ChartDetail, columns: string[]
         }
       }
 
-      return generateBarChartHTML(id, detail, labels, datasets);
+      return generateChartHTML(id, detail, labels, datasets);
     }
   }
 }
 
-function generateBarChartHTML(id: number, detail: ChartDetail, labels, datasets: Dataset[]): string {
+function generateChartHTML(id: number, detail: ChartDetail, labels, datasets: Dataset[]): string {
   const chartData: ChartData = {
     labels,
     datasets,
