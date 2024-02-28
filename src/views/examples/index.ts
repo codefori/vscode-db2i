@@ -11,6 +11,7 @@ export interface SQLExample {
   name: string;
   content: string[];
   requirements?: ExampleSystemRequirements;
+  isNotebook?: boolean;
 };
 
 // Unlike the bulk of the examples defined below, the services examples are retrieved dynamically
