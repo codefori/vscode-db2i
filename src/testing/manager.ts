@@ -90,6 +90,6 @@ export const ManagerSuite: TestSuite = {
       assert.strictEqual(JobManager.getSelection().name, runningJobs[0].name);
 
       await JobManager.endAll();
-    }},
+    }}
   ]
 }
