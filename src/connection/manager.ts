@@ -88,21 +88,12 @@ export class SQLJobManager {
     return this.jobs.find(info => info.name === name);
   }
 
-  setSelection(selectedName: string): boolean {
-    // We should pull this out when we are able to have
-    // multiple jobs running at once with multiple result set views
-    if (this.selectedJob !== NO_SELECTED_JOB) {
-      const selectedJob = this.jobs[this.selectedJob];
-      if (selectedJob.job.getStatus() === JobStatus.Busy) {
-        selectedJob.job.cancel();
-      }
-    }
-
+  setSelection(selectedName: string): JobInfo|undefined {
     const jobExists = this.jobs.findIndex(info => info.name === selectedName);
 
     this.selectedJob = jobExists;
 
-    return (this.selectedJob >= 0);
+    return this.jobs[jobExists];
   }
 
   /**

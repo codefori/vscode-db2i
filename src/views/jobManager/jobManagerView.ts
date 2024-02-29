@@ -2,7 +2,7 @@ import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, U
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";
-import { SQLJob, TransactionEndType } from "../../connection/sqlJob";
+import { JobStatus, SQLJob, TransactionEndType } from "../../connection/sqlJob";
 import { JDBCOptions, ServerTraceDest, ServerTraceLevel } from "../../connection/types";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
@@ -280,9 +280,10 @@ export class JobManagerView implements TreeDataProvider<any> {
 
       vscode.commands.registerCommand(selectJobCommand, async (selectedName: string) => {
         if (selectedName) {
-          await JobManager.setSelection(selectedName);
+          const selectedJob = await JobManager.setSelection(selectedName);
           this.refresh();
-          setCancelButtonVisibility(false);
+
+          setCancelButtonVisibility(selectedJob.job.getStatus() === JobStatus.Busy);
         }
       }),
 
