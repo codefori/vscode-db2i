@@ -179,7 +179,9 @@ async function runHandler(options?: StatementInfo) {
               resultSetProvider.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
               const explainType: ExplainType = onlyExplain ? ExplainType.DoNotRun : ExplainType.Run;
 
+              setCancelButtonVisibility(true);
               const explained = await selectedJob.job.explain(statementDetail.content, explainType);
+              setCancelButtonVisibility(false);
 
               if (onlyExplain) {
                 resultSetProvider.setLoadingText(`Explained.`);
@@ -263,6 +265,8 @@ async function runHandler(options?: StatementInfo) {
           vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
         }
       } catch (e) {
+        setCancelButtonVisibility(false);
+
         let errorText;
         if (typeof e === `string`) {
           errorText = e.length > 0 ? e : `An error occurred when executing the statement.`;
