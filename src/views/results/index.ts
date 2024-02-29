@@ -204,7 +204,9 @@ async function runHandler(options?: StatementInfo) {
           // Otherwise... it's a bit complicated.
           resultSetProvider.setLoadingText(`Executing SQL statement...`);
 
-          const data = await JobManager.runSQL(statementDetail.content, undefined);
+          setCancelButtonVisibility(true);
+          const data = await JobManager.runSQL(statementDetail.content);
+          setCancelButtonVisibility(false);
 
           if (data.length > 0) {
             switch (statementDetail.qualifier) {
