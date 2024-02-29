@@ -10,6 +10,7 @@ import { displayJobLog } from "./jobLog";
 import { selfCodesMap } from "./selfCodes/selfCodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
+import { setCancelButtonVisibility } from "../results";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -281,6 +282,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         if (selectedName) {
           await JobManager.setSelection(selectedName);
           this.refresh();
+          setCancelButtonVisibility(false);
         }
       }),
 
