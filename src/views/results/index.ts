@@ -32,8 +32,8 @@ export interface ParsedStatementInfo extends StatementInfo {
   embeddedInfo: ParsedEmbeddedStatement;
 }
 
-export function setCancelButtonVisability(visable: boolean) {
-  vscode.commands.executeCommand(`setContext`, `vscode-db2i:resultsetCanCancel`, visable);
+export function setCancelButtonVisibility(visible: boolean) {
+  vscode.commands.executeCommand(`setContext`, `vscode-db2i:statementCanCancel`, visible);
 }
 
 let resultSetProvider = new ResultSetPanelProvider();
@@ -45,7 +45,7 @@ let doveNodeTreeView: TreeView<PropertyNode> = doveNodeView.getTreeView();
 let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration providor
 
 export function initialise(context: vscode.ExtensionContext) {
-  setCancelButtonVisability(false);
+  setCancelButtonVisibility(false);
 
   context.subscriptions.push(
     doveResultsTreeView,
@@ -55,12 +55,12 @@ export function initialise(context: vscode.ExtensionContext) {
       webviewOptions: { retainContextWhenHidden: true },
     }),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.cancel`, async () => {
+    vscode.commands.registerCommand(`vscode-db2i.statement.cancel`, async () => {
       const selected = JobManager.getSelection();
       if (selected) {
         await selected.job.cancel();
-        resultSetProvider.setError(`Query cancelled.`);
-        setCancelButtonVisability(false);
+        resultSetProvider.setError(`Statement canceled.`);
+        setCancelButtonVisibility(false);
       }
     }),
 

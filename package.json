@@ -348,7 +348,7 @@
         "icon": "$(notebook-execute)"
       },
       {
-        "command": "vscode-db2i.resultset.cancel",
+        "command": "vscode-db2i.statement.cancel",
         "title": "Cancel",
         "category": "Db2 for i",
         "icon": "$(debug-stop)"
@@ -604,20 +604,20 @@
       ],
       "editor/title": [
         {
-          "when": "editorLangId == sql && code-for-ibmi:connected == true && vscode-db2i:resultsetCanCancel != true",
+          "when": "editorLangId == sql && code-for-ibmi:connected == true && vscode-db2i:statementCanCancel != true",
           "group": "navigation@1",
           "submenu": "sql/editor/context"
         },
         {
-          "command": "vscode-db2i.resultset.cancel",
-          "when": "editorLangId == sql && vscode-db2i:resultsetCanCancel == true",
+          "command": "vscode-db2i.statement.cancel",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
           "group": "navigation@1"
         }
       ],
       "sql/editor/context": [
         {
           "command": "vscode-db2i.runEditorStatement",
-          "when": "editorLangId == sql && vscode-db2i:resultsetCanCancel != true",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
           "group": "navigation@1"
         },
         {

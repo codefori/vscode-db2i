@@ -207,6 +207,7 @@ export class SQLJob {
     const instance = getInstance();
     const content = instance.getContent();
 
+    // Note that this statement is run via the base extension since it has to be done on a job other than the one whose SQL is getting canceled
     await content.runSQL(`CALL QSYS2.CANCEL_SQL('${this.id}')`);
 
     this.status = JobStatus.Ready;

@@ -4,7 +4,7 @@ import { Query, QueryState } from "../../connection/query";
 import * as html from "./html";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { JobManager } from "../../config";
-import { setCancelButtonVisability } from ".";
+import { setCancelButtonVisibility } from ".";
 
 export class ResultSetPanelProvider {
   _view: WebviewView;
@@ -29,7 +29,7 @@ export class ResultSetPanelProvider {
 
         let queryObject = Query.byId(message.queryId);
         try {
-          setCancelButtonVisability(true);
+          setCancelButtonVisibility(true);
           if (queryObject === undefined) {
             // We will need to revisit this if we ever allow multiple result tabs like ACS does
             Query.cleanup();
@@ -40,7 +40,7 @@ export class ResultSetPanelProvider {
 
           let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
 
-          setCancelButtonVisability(false);
+          setCancelButtonVisibility(false);
 
           data = queryResults.data;
           this._view.webview.postMessage({
