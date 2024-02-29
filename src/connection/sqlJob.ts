@@ -7,7 +7,7 @@ import { EventEmitter } from "stream";
 export enum JobStatus {
   NotStarted = "notStarted",
   Ready = "ready",
-  Active = "active",
+  Busy = "busy",
   Ended = "ended"
 }
 
@@ -35,7 +35,6 @@ const TransactionCountQuery = [
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
 export class SQLJob {
-
   private static uniqueIdCounter: number = 0;
   private channel: any;
   private responseEmitter: EventEmitter = new EventEmitter();
@@ -129,7 +128,6 @@ export class SQLJob {
 
     let req: ReqRespFmt = JSON.parse(content);
     this.channel.stdin.write(content + `\n`);
-    this.status = JobStatus.Active;
     return new Promise((resolve, reject) => {
       this.responseEmitter.on(req.id, (x: string) => {
         this.responseEmitter.removeAllListeners(req.id);
@@ -139,7 +137,9 @@ export class SQLJob {
   }
 
   getStatus() {
-    return this.status;
+    const currentListnerCount = this.responseEmitter.eventNames().length;
+
+    return currentListnerCount > 0 ? JobStatus.Busy : this.status;
   }
 
   async connect(): Promise<ConnectionResult> {

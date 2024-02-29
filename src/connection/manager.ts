@@ -52,7 +52,7 @@ export class SQLJobManager {
   }
 
   getRunningJobs() {
-    return this.jobs.filter(info => [JobStatus.Ready, JobStatus.Active].includes(info.job.getStatus()));
+    return this.jobs.filter(info => [JobStatus.Ready, JobStatus.Busy].includes(info.job.getStatus()));
   }
 
   async endAll() {
@@ -93,7 +93,9 @@ export class SQLJobManager {
     // multiple jobs running at once with multiple result set views
     if (this.selectedJob !== NO_SELECTED_JOB) {
       const selectedJob = this.jobs[this.selectedJob];
-      selectedJob.job.cancel();
+      if (selectedJob.job.getStatus() === JobStatus.Busy) {
+        selectedJob.job.cancel();
+      }
     }
 
     const jobExists = this.jobs.findIndex(info => info.name === selectedName);
