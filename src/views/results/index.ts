@@ -239,13 +239,13 @@ async function runHandler(options?: StatementInfo) {
 
               const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
               await vscode.window.showTextDocument(textDoc);
-              resultSetProvider.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
+              resultSetProvider.setLoadingText(`Statement executed with ${data.length} rows returned.`, false);
               break;
             }
 
           } else {
-            vscode.window.showInformationMessage(`Query executed with no data returned.`);
-            resultSetProvider.setLoadingText(`Query executed with no data returned.`);
+            vscode.window.showInformationMessage(`Statement executed with no data returned.`);
+            resultSetProvider.setLoadingText(`Statement executed with no data returned.`);
           }
         }
 
