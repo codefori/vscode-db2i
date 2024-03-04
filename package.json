@@ -186,6 +186,12 @@
           "id": "vscode-db2i.dove.node",
           "name": "Visual Explain Details",
           "when": "code-for-ibmi:connected && vscode-db2i:explainingNode == true"
+        },
+        {
+          "type": "tree",
+          "id": "vscode-db2i.self.nodes",
+          "name": "SELF Codes Errors",
+          "when": "code-for-ibmi:connected"
         }
       ],
       "db2-explorer": [

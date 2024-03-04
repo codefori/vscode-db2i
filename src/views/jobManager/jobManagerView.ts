@@ -10,6 +10,7 @@ import { displayJobLog } from "./jobLog";
 import { selfCodesMap } from "./selfCodes/selfCodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
+import { selfCodesResultsView } from "../results/selfCodes/selfCodesResultsView";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -200,6 +201,10 @@ export class JobManagerView implements TreeDataProvider<any> {
                             (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
                           where user_name = current_user
                           order by logged_time desc`;
+
+          const data: SelfCodeNode[] = await JobManager.runSQL<SelfCodeNode>(content, undefined);
+          const treeDataProvider = new selfCodesResultsView(data);
+          context.subscriptions.push(vscode.window.registerTreeDataProvider('vscode-db2i.self.nodes', treeDataProvider));
 
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,

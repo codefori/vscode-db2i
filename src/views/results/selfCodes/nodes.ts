@@ -1,9 +1,10 @@
-export interface SelfCodeNode {
-    userName: string,
-    SQLCode: string,
-    matches: number,
-    statementText: string,
-    messageText: string,
-    secondLevelMessageText: string
-
+interface SelfCodeNode {
+  userName: string;
+  loggedTime: string;
+  loggedSqlState: string;
+  loggedSqlCode: number;
+  matches: number;
+  stmtText: string;
+  messageText: string;
+  messageSecondLevelText: string;
 }
