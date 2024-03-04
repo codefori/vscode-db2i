@@ -145,7 +145,7 @@ export class JobManagerView implements TreeDataProvider<any> {
 
             const quickPick = vscode.window.createQuickPick();
             quickPick.title = `Select SELF codes`;
-            quickPick.canSelectMany = true;
+            quickPick.canSelectMany = false;
             quickPick.matchOnDetail = true;
             quickPick.items = [
               {
@@ -169,10 +169,14 @@ export class JobManagerView implements TreeDataProvider<any> {
             quickPick.onDidAccept(async () => {
               const selections = quickPick.selectedItems;
               // SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('-514, -204, -501, +30, -199');
-              if (selections) {
-                const codes: string[] = selections.map((code) => code.label);
-                selected.job.setSelfCodes(codes);
-                vscode.window.showInformationMessage(`Applied SELF codes: ${codes}`);
+              if (selections && selections.length == 1) {
+                const codes: string = selections[0].label;
+                try {
+                  await selected.job.setSelfCodes(codes);
+                  vscode.window.showInformationMessage(`Applied SELF codes: ${codes}`);
+                } catch (e) {
+                  vscode.window.showErrorMessage(`Cannot set SELF Codes: ${codes}\n ${e}`)
+                }
               }
               quickPick.hide();
             });
@@ -189,7 +193,13 @@ export class JobManagerView implements TreeDataProvider<any> {
           const id = node.label as string;
           const selected = await JobManager.getJob(id);
 
-          const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
+          // const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
+          const content = `SELECT user_name, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, 
+                              message_text, message_second_level_text 
+                          FROM qsys2.sql_error_log, lateral 
+                            (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
+                          where user_name = current_user
+                          order by logged_time desc`;
 
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,

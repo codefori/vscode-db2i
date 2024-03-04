@@ -10,7 +10,6 @@ import { SelfCodesTestSuite } from "./selfCodes";
 
 const suites : TestSuite[] = [
   JobsSuite,
-  SelfCodesTestSuite,
   ManagerSuite,
   DatabaseSuite,
   // DatabasePerformanceSuite

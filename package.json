@@ -773,7 +773,7 @@
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
         },
-        {
+{
           "command": "vscode-db2i.jobManager.editSelfCodes",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "self@2"

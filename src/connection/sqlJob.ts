@@ -261,10 +261,9 @@ export class SQLJob {
     return rpy;
   }
 
-  async setSelfCodes(codes: string[]) {
-    const signedCodes: String[] = codes.map(code => [code, `-${code}`]).flat();
+  async setSelfCodes(codes: string) {
     try {
-      const query: string = `SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('${signedCodes.join(', ')}')`
+      const query: string = `SET SYSIBMADM.SELFCODES = '${codes}'`
       await this.query<any>(query).run();
       this.options.selfcodes = codes;
     } catch (e) {
