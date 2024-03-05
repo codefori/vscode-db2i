@@ -124,7 +124,7 @@ export default class Schemas {
       }
     }
 
-    const query = `${selects.join(" UNION ALL ")} Order by QSYS2.DELIMIT_NAME(NAME) asc`;
+    const query = `with results as (${selects.join(" UNION ALL ")}) select * from results Order by QSYS2.DELIMIT_NAME(NAME) asc`;
 
     const objects: any[] = await JobManager.runSQL([
       query,
