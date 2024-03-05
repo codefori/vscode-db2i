@@ -8,7 +8,7 @@ import Document from "../../language/sql/document";
 import { changedCache } from "../../language/providers/completionItemCache";
 import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import Statement from "../../language/sql/statement";
-import { ExplainTree, ContextType } from "./explain/nodes";
+import { ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
@@ -60,10 +60,15 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.statement.cancel`, async () => {
       const selected = JobManager.getSelection();
       if (selected) {
+        updateStatusBar({cancelling: true});
         const cancelled = await selected.job.requestCancel();
         if (cancelled) {
           resultSetProvider.setError(`Statement canceled.`);
           setCancelButtonVisibility(false);
+          updateStatusBar();
+        } else {
+          updateStatusBar({jobIsBusy: true});
+          setTimeout(() => updateStatusBar(), 2000);
         }
       }
     }),
