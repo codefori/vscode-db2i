@@ -203,14 +203,18 @@ export class SQLJob {
     return new Query(this, sql, opts);
   }
 
-  async cancel() {
+  async requestCancel(): Promise<boolean> {
     const instance = getInstance();
     const content = instance.getContent();
 
     // Note that this statement is run via the base extension since it has to be done on a job other than the one whose SQL is getting canceled
     await content.runSQL(`CALL QSYS2.CANCEL_SQL('${this.id}')`);
 
-    this.status = JobStatus.Ready;
+    const [row] = await content.runSQL(`select V_SQL_STMT_STATUS as STATUS from table(qsys2.get_job_info('${this.id}'))`) as {STATUS: string|null}[];
+
+    if (row && row.STATUS === `ACTIVE`) return false;
+
+    return true;
   }
 
   async getVersion(): Promise<VersionCheckResult> {
