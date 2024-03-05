@@ -1,49 +1,73 @@
 import * as vscode from "vscode";
 import {
+  Event,
   EventEmitter,
+  FileDecorationProvider,
   ProviderResult,
   TreeDataProvider,
-  TreeItem
+  TreeItem,
+  Uri,
+  Disposable
 } from "vscode";
+import { JobManager } from "../../../config";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
 export class selfCodesResultsView implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<ChangeTreeDataEventType> =
     new EventEmitter<ChangeTreeDataEventType>();
+  readonly onDidChangeTreeData: vscode.Event<ChangeTreeDataEventType> = this._onDidChangeTreeData.event;
   private treeView: vscode.TreeView<SelfCodeTreeItem>;
-  constructor(private selfCodes: any[]) {
-    // this.treeView = vscode.window.createTreeView(`vscode-db2i.self.errorNodes`, { treeDataProvider: this, showCollapseAll: true });
+  private selfCodes: SelfCodeNode[];
+  constructor(context: vscode.ExtensionContext) {
+    context.subscriptions.push(
+      vscode.commands.registerCommand(`vscode-db2i.refreshSelfCodesView`, async () => this.refresh())
+    );
+  }
+
+  async getSelfCodes(): Promise<SelfCodeNode[]> {
+    const selected = JobManager.getRunningJobs();
+    if (selected) {
+      const content = `SELECT job_name, user_name, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, 
+                          message_text, message_second_level_text 
+                      FROM qsys2.sql_error_log, lateral 
+                          (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
+                      where user_name = current_user
+                      order by logged_time desc`;
+      const data: SelfCodeNode[] = await JobManager.runSQL<SelfCodeNode>(content, undefined);
+      return data;
+    }
+    return;
   }
 
   refresh(): void {
-    this._onDidChangeTreeData.fire(null);
+    this._onDidChangeTreeData.fire();
   }
 
   getTreeItem(element: any): TreeItem | Thenable<TreeItem> {
     return element;
   }
-  getChildren(element?: any): ProviderResult<any[]> {
+  async getChildren(element?: any): Promise<any[]> {
     if (element) {
-      return Promise.resolve([]);
+      return [];
     } else {
-      return Promise.resolve(
-        this.selfCodes.map((error) => {
-          const label = `${error.LOGGED_SQLSTATE} (${error.LOGGED_SQLCODE}) - ${error.MATCHES} hits`;
-          const details = `${error.MESSAGE_TEXT}`;
-          const hoverMessage = new vscode.MarkdownString(
-            `**SQL Statement:** ${error.STMTTEXT}\n\n---\n\n**Detail:** ${error.MESSAGE_SECOND_LEVEL_TEXT}`
-          );
-          hoverMessage.isTrusted = true;
-          const treeItem = new SelfCodeTreeItem(
-            label,
-            details,
-            hoverMessage,
-            vscode.TreeItemCollapsibleState.None
-          );
-          return treeItem;
-        })
-      );
+      const selfCodes = await this.getSelfCodes();
+      return selfCodes.map((error) => {
+        const hitsTxt = error.MATCHES.toString().padStart(10, ' ');
+        const label = `${error.LOGGED_SQLSTATE} (${error.LOGGED_SQLCODE})`;
+        const details = `${error.MESSAGE_TEXT} ${hitsTxt} 🔥`;
+        const hoverMessage = new vscode.MarkdownString(
+          `**SQL Statement💻:** ${error.STMTTEXT}\n\n---\n\n**SQL Job🛠️:** ${error.JOB_NAME}\n\n---\n\n**Details✏️:** ${error.MESSAGE_SECOND_LEVEL_TEXT}`
+        );
+        hoverMessage.isTrusted = true;
+        const treeItem = new SelfCodeTreeItem(
+          label,
+          details,
+          hoverMessage,
+          vscode.TreeItemCollapsibleState.None
+        );
+        return treeItem;
+      });
     }
   }
   getParent?(element: any) {
@@ -78,5 +102,25 @@ export class SelfCodeTreeItem extends TreeItem {
     console.log(hoverMessage);
     this.tooltip = hoverMessage; // Hover text
     this.description = details; // Additional details shown in the tree view
+  }
+}
+
+// maybe can be used for showing node details
+export class SelfTreeDecorationProvider implements FileDecorationProvider {
+  private disposables: Array<Disposable> = [];
+
+  readonly _onDidChangeFileDecorations: EventEmitter<Uri | Uri[]> = new EventEmitter<Uri | Uri[]>();
+  readonly onDidChangeFileDecorations: Event<Uri | Uri[]> = this._onDidChangeFileDecorations.event;
+
+  constructor() {
+      this.disposables = [];
+      this.disposables.push(vscode.window.registerFileDecorationProvider(this));
+  }
+  provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<vscode.FileDecoration> {
+    throw new Error("Method not implemented.");
+  }
+
+  async updateTreeItems(treeItem: TreeItem): Promise<void> {
+      this._onDidChangeFileDecorations.fire(treeItem.resourceUri);
   }
 }

@@ -191,7 +191,8 @@
           "type": "tree",
           "id": "vscode-db2i.self.nodes",
           "name": "SELF Codes Errors",
-          "when": "code-for-ibmi:connected"
+          "when": "code-for-ibmi:connected && vscode-db2i:jobManager == true",
+          "visibility": "collapsed"
         }
       ],
       "db2-explorer": [
@@ -265,6 +266,12 @@
       {
         "command": "vscode-db2i.refreshSchemaBrowser",
         "title": "Refresh Schema Browser",
+        "category": "Db2 for i",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-db2i.refreshSelfCodesView",
+        "title": "Refresh SELF Codes View",
         "category": "Db2 for i",
         "icon": "$(refresh)"
       },
@@ -636,6 +643,11 @@
           "command": "vscode-db2i.refreshSchemaBrowser",
           "group": "navigation",
           "when": "view == schemaBrowser"
+        },
+        {
+          "command": "vscode-db2i.refreshSelfCodesView",
+          "group": "navigation",
+          "when": "view == vscode-db2i.self.nodes"
         },
         {
           "command": "vscode-db2i.queryHistory.clear",

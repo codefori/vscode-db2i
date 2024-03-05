@@ -17,6 +17,7 @@ import { ServerComponent } from "./connection/serverComponent";
 import { SQLJobManager } from "./connection/manager";
 import { JDBCOptions } from "./connection/types";
 import { SQLJob } from "./connection/sqlJob";
+import { selfCodesResultsView } from "./views/results/selfCodes/selfCodesResultsView";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -53,6 +54,10 @@ export function activate(context: vscode.ExtensionContext): Db2i {
       `exampleBrowser`,
       new ExampleBrowser(context)
     ),
+    vscode.window.registerTreeDataProvider(
+      'vscode-db2i.self.nodes',
+      new selfCodesResultsView(context)
+    )
   );
 
   JSONServices.initialise(context);

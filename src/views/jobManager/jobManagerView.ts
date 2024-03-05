@@ -189,30 +189,29 @@ export class JobManagerView implements TreeDataProvider<any> {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.getSelfErrors`, async (node?: SQLJobItem) => {
-        if (node) {
-          const id = node.label as string;
-          const selected = await JobManager.getJob(id);
+      // vscode.commands.registerCommand(`vscode-db2i.jobManager.getSelfErrors`, async (node?: SQLJobItem) => {
+      //   if (node) {
+      //     const id = node.label as string;
+      //     const selected = await JobManager.getJob(id);
 
-          // const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
-          const content = `SELECT user_name, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, 
-                              message_text, message_second_level_text 
-                          FROM qsys2.sql_error_log, lateral 
-                            (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
-                          where user_name = current_user
-                          order by logged_time desc`;
+      //     // const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
+      //     const content = `SELECT user_name, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, 
+      //                         message_text, message_second_level_text 
+      //                     FROM qsys2.sql_error_log, lateral 
+      //                       (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
+      //                     where user_name = current_user
+      //                     order by logged_time desc`;
 
-          const data: SelfCodeNode[] = await JobManager.runSQL<SelfCodeNode>(content, undefined);
-          const treeDataProvider = new selfCodesResultsView(data);
-          context.subscriptions.push(vscode.window.registerTreeDataProvider('vscode-db2i.self.nodes', treeDataProvider));
+      //     const data: SelfCodeNode[] = await JobManager.runSQL<SelfCodeNode>(content, undefined);
+          
 
-          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-            content,
-            qualifier: `statement`,
-            open: false,
-          });
-        }
-      }),
+      //     // vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+      //     //   content,
+      //     //   qualifier: `statement`,
+      //     //   open: false,
+      //     // });
+      //   }
+      // }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.enableTracing`, async (node?: SQLJobItem) => {
         if (node) {
@@ -314,7 +313,8 @@ export class JobManagerView implements TreeDataProvider<any> {
     });
   }
 
-  refresh() {
+    refresh() {
+    
     this._onDidChangeTreeData.fire();
     updateStatusBar();
   }
