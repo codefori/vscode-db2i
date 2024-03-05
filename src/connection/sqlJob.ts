@@ -317,7 +317,7 @@ export class SQLJob {
   }
 
   underCommitControl() {
-    return this.options["transaction isolation"] !== `none`;
+    return this.options["transaction isolation"] && this.options["transaction isolation"] !== `none`;
   }
 
   async getPendingTransactions() {
