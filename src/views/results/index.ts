@@ -211,6 +211,7 @@ async function runHandler(options?: StatementInfo) {
           resultSetProvider.setLoadingText(`Executing SQL statement...`, false);
 
           setCancelButtonVisibility(true);
+          updateStatusBar({executing: true});
           const data = await JobManager.runSQL(statementDetail.content);
           setCancelButtonVisibility(false);
 
