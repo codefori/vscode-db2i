@@ -5,7 +5,7 @@ import { getInstance } from "../../base";
 
 const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Left);
 
-export async function updateStatusBar(options: {newJob?: boolean, cancelling?: boolean, jobIsBusy?: boolean, executing?: boolean} = {}) {
+export async function updateStatusBar(options: {newJob?: boolean, canceling?: boolean, jobIsBusy?: boolean, executing?: boolean} = {}) {
   const instance = getInstance();
   const connection = instance.getConnection();
 
@@ -19,8 +19,8 @@ export async function updateStatusBar(options: {newJob?: boolean, cancelling?: b
     if (options.executing) {
       text = `$(sync~spin) Executing...`;
     } else
-    if (options.cancelling) {
-      text = `$(sync~spin) Cancelling...`;
+    if (options.canceling) {
+      text = `$(sync~spin) Canceling...`;
     } else
     if (options.jobIsBusy) {
       text = `🙁 Job is busy`;

@@ -60,7 +60,7 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.statement.cancel`, async () => {
       const selected = JobManager.getSelection();
       if (selected) {
-        updateStatusBar({cancelling: true});
+        updateStatusBar({canceling: true});
         const cancelled = await selected.job.requestCancel();
         if (cancelled) {
           resultSetProvider.setError(`Statement canceled.`);
