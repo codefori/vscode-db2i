@@ -21,7 +21,13 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
   private selfCodes: SelfCodeNode[];
   constructor(context: vscode.ExtensionContext) {
     context.subscriptions.push(
-      vscode.commands.registerCommand(`vscode-db2i.refreshSelfCodesView`, async () => this.refresh())
+      vscode.commands.registerCommand(`vscode-db2i.refreshSelfCodesView`, async () => this.refresh()),
+      vscode.commands.registerCommand(`vscode-db2i.self.reset`, async () => {
+        const selected = JobManager.getRunningJobs();
+        if (selected) {
+          const resetSelfCmd = ``
+        }
+      })
     );
   }
 

@@ -422,7 +422,7 @@
       },
       {
         "command": "vscode-db2i.jobManager.editSelfCodes",
-        "title": "Edit SELF codes",
+        "title": "Set SELF codes Level",
         "category": "Db2 for i",
         "icon": "$(bracket-error)"
       },
@@ -446,11 +446,6 @@
       {
         "command": "vscode-db2i.jobManager.getTrace",
         "title": "Get Trace Data",
-        "category": "Db2 for i"
-      },
-      {
-        "command": "vscode-db2i.jobManager.getSelfErrors",
-        "title": "Get SELF codes Errors",
         "category": "Db2 for i"
       },
       {
