@@ -137,9 +137,9 @@ export class SQLJob {
   }
 
   getStatus() {
-    const currentListnerCount = this.responseEmitter.eventNames().length;
+    const currentListenerCount = this.responseEmitter.eventNames().length;
 
-    return currentListnerCount > 0 ? JobStatus.Busy : this.status;
+    return currentListenerCount > 0 ? JobStatus.Busy : this.status;
   }
 
   async connect(): Promise<ConnectionResult> {
