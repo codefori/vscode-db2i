@@ -280,10 +280,8 @@ export class JobManagerView implements TreeDataProvider<any> {
 
       vscode.commands.registerCommand(selectJobCommand, async (selectedName: string) => {
         if (selectedName) {
-          const selectedJob = await JobManager.setSelection(selectedName);
+          await JobManager.setSelection(selectedName);
           this.refresh();
-
-          setCancelButtonVisibility(selectedJob.job.getStatus() === JobStatus.Busy);
         }
       }),
 
@@ -305,6 +303,9 @@ export class JobManagerView implements TreeDataProvider<any> {
   refresh() {
     this._onDidChangeTreeData.fire();
     updateStatusBar();
+
+    const selectedJob = JobManager.getSelection();
+    setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === JobStatus.Busy);
   }
 
   getTreeItem(element: vscode.TreeItem) {
