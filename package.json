@@ -276,6 +276,12 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "vscode-db2i.self.reset",
+        "title": "Reset SELF Codes Error Log",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
+      },
+      {
         "command": "vscode-db2i.manageSchemaBrowserList",
         "title": "Manage Schema Browser List",
         "category": "Db2 for i",
@@ -557,10 +563,6 @@
           "when": "never"
         },
         {
-          "command": "vscode-db2i.jobManager.getSelfErrors",
-          "when": "never"
-        },
-        {
           "command": "vscode-db2i.jobManager.getTrace",
           "when": "never"
         },
@@ -641,6 +643,11 @@
         },
         {
           "command": "vscode-db2i.refreshSelfCodesView",
+          "group": "navigation",
+          "when": "view == vscode-db2i.self.nodes"
+        },
+        {
+          "command": "vscode-db2i.self.reset",
           "group": "navigation",
           "when": "view == vscode-db2i.self.nodes"
         },
@@ -810,11 +817,6 @@
           "command": "vscode-db2i.jobManager.getTrace",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "trace@2"
-        },
-        {
-          "command": "vscode-db2i.jobManager.getSelfErrors",
-          "when": "view == jobManager && viewItem == sqlJob",
-          "group": "self@1"
         },
         {
           "command": "vscode-db2i.jobManager.newConfig",

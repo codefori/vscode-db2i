@@ -25,7 +25,14 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
       vscode.commands.registerCommand(`vscode-db2i.self.reset`, async () => {
         const selected = JobManager.getRunningJobs();
         if (selected) {
-          const resetSelfCmd = ``
+          try {
+            const resetSelfCmd = `DELETE FROM qsys2.sql_error_log where user_name = current_user`
+            await JobManager.runSQL(resetSelfCmd, undefined);
+            this.refresh();
+            vscode.window.showInformationMessage(`Reset SELF code error log.`)
+          } catch (e) {
+            vscode.window.showErrorMessage(`An Error occured reseting SELF code error log: ${e}`)
+          }
         }
       })
     );
