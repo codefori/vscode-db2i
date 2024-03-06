@@ -6,8 +6,8 @@ import schemaBrowser from "./views/schemaBrowser/schemaBrowser";
 import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
-import { loadBase } from "./base";
-import { JobManager, setupConfig } from "./config";
+import { getInstance, loadBase } from "./base";
+import { JobManager, determineFeatures, fetchSystemInfo, setupConfig, turnOffAllFeatures } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { languageInit } from "./language";
@@ -35,6 +35,8 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   loadBase();
 
+  const exampleBrowser = new ExampleBrowser(context);
+
   context.subscriptions.push(
     ...languageInit(),
     ServerComponent.initOutputChannel(),
@@ -52,7 +54,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     ),
     vscode.window.registerTreeDataProvider(
       `exampleBrowser`,
-      new ExampleBrowser(context)
+      exampleBrowser
     ),
     vscode.window.registerTreeDataProvider(
       'vscode-db2i.self.nodes',
@@ -70,6 +72,21 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     // Run tests if not in production build
     initialise(context);
   }
+
+  const instance = getInstance();
+
+  instance.onEvent(`connected`, () => {
+    // We need to fetch the system info
+    fetchSystemInfo().then(() => {
+      determineFeatures();
+      // Refresh the examples when we have it, so we only display certain examples
+      exampleBrowser.refresh();
+    })
+  });
+
+  instance.onEvent(`disconnected`, () => {
+    turnOffAllFeatures();
+  })
 
   return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new SQLJob(options) };
 }

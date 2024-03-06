@@ -191,7 +191,7 @@
           "type": "tree",
           "id": "vscode-db2i.self.nodes",
           "name": "SELF Codes Errors",
-          "when": "code-for-ibmi:connected && vscode-db2i:jobManager == true",
+          "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported && vscode-db2i:jobManager == true",
           "visibility": "collapsed"
         }
       ],
