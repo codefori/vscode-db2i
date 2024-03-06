@@ -1,4 +1,3 @@
-import { CommandResult } from "@halcyontech/vscode-ibmi-types";
 import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions, ExplainResults } from "./types";
@@ -8,7 +7,7 @@ import { EventEmitter } from "stream";
 export enum JobStatus {
   NotStarted = "notStarted",
   Ready = "ready",
-  Active = "active",
+  Busy = "busy",
   Ended = "ended"
 }
 
@@ -36,7 +35,6 @@ const TransactionCountQuery = [
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
 export class SQLJob {
-
   private static uniqueIdCounter: number = 0;
   private channel: any;
   private responseEmitter: EventEmitter = new EventEmitter();
@@ -130,7 +128,6 @@ export class SQLJob {
 
     let req: ReqRespFmt = JSON.parse(content);
     this.channel.stdin.write(content + `\n`);
-    this.status = JobStatus.Active;
     return new Promise((resolve, reject) => {
       this.responseEmitter.on(req.id, (x: string) => {
         this.responseEmitter.removeAllListeners(req.id);
@@ -140,7 +137,9 @@ export class SQLJob {
   }
 
   getStatus() {
-    return this.status;
+    const currentListenerCount = this.responseEmitter.eventNames().length;
+
+    return currentListenerCount > 0 ? JobStatus.Busy : this.status;
   }
 
   async connect(): Promise<ConnectionResult> {
@@ -202,6 +201,20 @@ export class SQLJob {
 
   query<T>(sql: string, opts?: QueryOptions): Query<T> {
     return new Query(this, sql, opts);
+  }
+
+  async requestCancel(): Promise<boolean> {
+    const instance = getInstance();
+    const content = instance.getContent();
+
+    // Note that this statement is run via the base extension since it has to be done on a job other than the one whose SQL is getting canceled
+    await content.runSQL(`CALL QSYS2.CANCEL_SQL('${this.id}')`);
+
+    const [row] = await content.runSQL(`select V_SQL_STMT_STATUS as STATUS from table(qsys2.get_job_info('${this.id}'))`) as {STATUS: string|null}[];
+
+    if (row && row.STATUS === `ACTIVE`) return false;
+
+    return true;
   }
 
   async getVersion(): Promise<VersionCheckResult> {
@@ -304,7 +317,7 @@ export class SQLJob {
   }
 
   underCommitControl() {
-    return this.options["transaction isolation"] !== `none`;
+    return this.options["transaction isolation"] && this.options["transaction isolation"] !== `none`;
   }
 
   async getPendingTransactions() {
