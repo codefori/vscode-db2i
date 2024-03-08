@@ -842,7 +842,6 @@ describe(`Object references`, () => {
 
     expect(createStatement.type).toBe(StatementType.Create);
     const refs = createStatement.getObjectReferences();
-    console.log(refs);
     expect(refs.length).toBe(2);
 
     expect(refs[0].createType).toBe(`procedure`);
@@ -985,9 +984,10 @@ describe(`PL body tests`, () => {
     expect(medianResultSetProc.type).toBe(StatementType.Create);
     expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
+
     const parameterTokens = medianResultSetProc.getBlockAt(46);
     expect(parameterTokens.length).toBeGreaterThan(0);
-    expect(parameterTokens.map(t => t.type).join()).toBe([`word`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join())
+    expect(parameterTokens.map(t => t.type).join()).toBe([`word`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join());
 
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
@@ -998,6 +998,11 @@ describe(`PL body tests`, () => {
     const callStatement = statements[statements.length - 1];
     expect(callStatement.type).toBe(StatementType.Call);
     expect(callStatement.isBlockOpener()).toBe(false);
+
+    const blockParent = callStatement.getCallableDetail(callStatement.tokens[3].range.start);
+    expect(blockParent).toBeDefined();
+    expect(blockParent.tokens.length).toBe(3);
+    expect(blockParent.parentRef.object.name).toBe(`MEDIAN_RESULT_SET`);
   });
 
   test(`WITH: no explicit columns`, () => {

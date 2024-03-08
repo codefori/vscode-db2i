@@ -1,5 +1,5 @@
 import SQLTokeniser, { NameTypes } from "./tokens";
-import { CTEReference, ClauseType, ClauseTypeWord, IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
+import { CTEReference, CallableReference, ClauseType, ClauseTypeWord, IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
 
 const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 	return (token && token.type === type && (value ? token.value?.toUpperCase() === value : true));
@@ -86,7 +86,7 @@ export default class Statement {
 		return currentClause;
 	}
 
-	getBlockAt(offset: number): Token[] {
+	getBlockRangeAt(offset: number) {
 		let start = -1;
 		let end = -1;
 
@@ -95,17 +95,22 @@ export default class Statement {
 
 		let depth = 0;
 
-		for (let x = i; x >= 0; x--) {
-			if (tokenIs(this.tokens[x], `openbracket`)) {
-				if (depth === 0) {
-					start = x+1;
-					break;
-				} else {
-					depth--;
+		if (tokenIs(this.tokens[i], `openbracket`)) {
+			start = i+1;
+			i++;
+		} else {
+			for (let x = i; x >= 0; x--) {
+				if (tokenIs(this.tokens[x], `openbracket`)) {
+					if (depth === 0) {
+						start = x+1;
+						break;
+					} else {
+						depth--;
+					}
+				} else
+				if (tokenIs(this.tokens[x], `closebracket`)) {
+					depth++;
 				}
-			} else
-			if (tokenIs(this.tokens[x], `closebracket`)) {
-				depth++;
 			}
 		}
 
@@ -126,9 +131,40 @@ export default class Statement {
 		}
 
 		if (start === -1 || end === -1) {
-			return []
+			return undefined;
 		} else {
-			return this.tokens.slice(start, end)
+			return {
+				start,
+				end
+			}
+		}
+	}
+
+	getCallableDetail(offset: number, withBlocks = false): CallableReference {
+		const range = this.getBlockRangeAt(offset);
+
+		if (range) {
+			const hasDot = tokenIs(this.tokens[range.start-4], `word`) && tokenIs(this.tokens[range.start-3], `dot`);
+				const parentRef = hasDot ? this.getRefAtToken(range.start-4) : this.getRefAtToken(range.start-2);
+
+			if (parentRef) {
+				return {
+					tokens: withBlocks ? SQLTokeniser.createBlocks(this.tokens.slice(range.start, range.end)) : this.tokens.slice(range.start, range.end),
+					parentRef
+				};
+			}
+		}
+
+		return;
+	}
+
+	getBlockAt(offset: number): Token[] {
+		const range = this.getBlockRangeAt(offset);
+
+		if (range) {
+			return this.tokens.slice(range.start, range.end)
+		} else {
+			return []
 		}
 	}
 
