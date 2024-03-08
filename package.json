@@ -270,14 +270,26 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "vscode-db2i.refreshSelfCodesView",
+        "command": "vscode-db2i.self.refresh",
         "title": "Refresh SELF Codes View",
         "category": "Db2 for i",
         "icon": "$(refresh)"
       },
       {
+        "command": "vscode-db2i.self.enableAutoRefresh",
+        "title": "Enable Auto Refresh",
+        "category": "Db2 for i",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "vscode-db2i.self.disableAutoRefresh",
+        "title": "Disable Auto Refresh",
+        "category": "Db2 for i",
+        "icon": "$(sync-ignored)"
+      },
+      {
         "command": "vscode-db2i.self.reset",
-        "title": "Reset SELF Codes Error Log",
+        "title": "Reset SELF Codes View",
         "category": "Db2 for i",
         "icon": "$(trash)"
       },
@@ -642,9 +654,19 @@
           "when": "view == schemaBrowser"
         },
         {
-          "command": "vscode-db2i.refreshSelfCodesView",
+          "command": "vscode-db2i.self.refresh",
           "group": "navigation",
           "when": "view == vscode-db2i.self.nodes"
+        },
+        {
+          "command": "vscode-db2i.self.enableAutoRefresh",
+          "group": "navigation",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == false"
+        },
+        {
+          "command": "vscode-db2i.self.disableAutoRefresh",
+          "group": "navigation",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == true"
         },
         {
           "command": "vscode-db2i.self.reset",

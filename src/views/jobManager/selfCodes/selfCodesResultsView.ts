@@ -10,6 +10,7 @@ import {
   Disposable
 } from "vscode";
 import { JobManager } from "../../../config";
+import { SelfCodeNode } from "./nodes";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -17,11 +18,10 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<ChangeTreeDataEventType> =
     new EventEmitter<ChangeTreeDataEventType>();
   readonly onDidChangeTreeData: vscode.Event<ChangeTreeDataEventType> = this._onDidChangeTreeData.event;
-  private treeView: vscode.TreeView<SelfCodeTreeItem>;
-  private selfCodes: SelfCodeNode[];
+  private autoRefresh: boolean = false;
   constructor(context: vscode.ExtensionContext) {
     context.subscriptions.push(
-      vscode.commands.registerCommand(`vscode-db2i.refreshSelfCodesView`, async () => this.refresh()),
+      vscode.commands.registerCommand(`vscode-db2i.self.refresh`, async () => this.refresh()),
       vscode.commands.registerCommand(`vscode-db2i.self.reset`, async () => {
         const selected = JobManager.getRunningJobs();
         if (selected) {
@@ -34,8 +34,24 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
             vscode.window.showErrorMessage(`An Error occured reseting SELF code error log: ${e}`)
           }
         }
+      }),
+      vscode.commands.registerCommand(`vscode-db2i.self.enableAutoRefresh`, async () => {
+        this.autoRefresh = true;
+        vscode.commands.executeCommand(`setContext`, `vscode-db2i.self.autoRefresh`, true);
+        vscode.window.showInformationMessage("SELF Code Auto Refresh Enabled");
+      }),
+      vscode.commands.registerCommand(`vscode-db2i.self.disableAutoRefresh`, async () => {
+        this.autoRefresh = false;
+        vscode.commands.executeCommand(`setContext`, `vscode-db2i.self.autoRefresh`, false);
+        vscode.window.showInformationMessage("SELF Code Auto Refresh Disabled");
       })
     );
+    setInterval(async () => {
+      if (this.autoRefresh) {
+        this.refresh();
+      }
+    }, 5000);
+
   }
 
   async getSelfCodes(): Promise<SelfCodeNode[]> {

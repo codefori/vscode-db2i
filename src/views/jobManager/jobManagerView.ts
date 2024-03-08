@@ -7,10 +7,10 @@ import { JDBCOptions, ServerTraceDest, ServerTraceLevel } from "../../connection
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
-import { selfCodesMap } from "./selfCodes/selfCodes";
+import { selfCodesMap } from "./selfCodes/nodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
-import { selfCodesResultsView } from "../results/selfCodes/selfCodesResultsView";
+import { selfCodesResultsView } from "./selfCodes/selfCodesResultsView";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
