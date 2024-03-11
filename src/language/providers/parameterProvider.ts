@@ -26,12 +26,16 @@ export const signatureProvider = languages.registerSignatureHelpProvider({ langu
             const help = new SignatureHelp();
 
             // TODO: bad way of getting active param
-            help.activeParameter = callableRef.tokens.filter(token => token.type === `comma`).length;
+            const paramCommas = callableRef.tokens.filter(token => token.type === `comma`);
+            help.activeParameter = paramCommas.findIndex(t => offset < t.range.end);
             help.activeSignature = 0;
+
+            if (help.activeParameter === -1) {
+              help.activeParameter = paramCommas.length;
+            }
 
             let requiredParms = parms.filter((parm) => parm.DEFAULT === null && parm.PARAMETER_MODE !== `OUT`);
 
-            ///
             const signature = new SignatureInformation(
               (callableRef.parentRef.object.schema ? Statement.prettyName(callableRef.parentRef.object.schema) + `.` : ``) + Statement.prettyName(callableRef.parentRef.object.name) + 
               `(` + requiredParms.map((parm) => Statement.prettyName(parm.PARAMETER_NAME)).join(`, `) + (parms.length > requiredParms.length ? `, ...` : ``) + `)`);

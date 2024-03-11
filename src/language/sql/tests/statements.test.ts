@@ -1432,3 +1432,47 @@ describe(`Parameter statement tests`, () => {
     expect(result.content).toBe(content);
   });
 });
+
+test(`Callable blocks`, () => {
+  const lines = [
+      `call qsys2.create_abcd();`,
+      `call qsys2.create_abcd(a, cool(a + b));`,
+  ].join(` `);
+
+  const document = new Document(lines);
+  const statements = document.statements;
+
+  expect(statements.length).toBe(2);
+
+  const a = statements[0];
+  expect(a.type).toBe(StatementType.Call);
+
+  const b = statements[1];
+  expect(b.type).toBe(StatementType.Call);
+
+  const blockA = a.getBlockRangeAt(23);
+  expect(blockA).toMatchObject({ start: 5, end: 5 });
+
+  const callableA = a.getCallableDetail(23);
+  expect(callableA).toBeDefined();
+  expect(callableA.parentRef.object.schema).toBe(`qsys2`);
+  expect(callableA.parentRef.object.name).toBe(`create_abcd`);
+
+  const blockB = a.getBlockRangeAt(24);
+  expect(blockB).toMatchObject({ start: 5, end: 5 });
+
+  const callableB = a.getCallableDetail(24);
+  expect(callableB).toBeDefined();
+  expect(callableB.parentRef.object.schema).toBe(`qsys2`);
+  expect(callableB.parentRef.object.name).toBe(`create_abcd`);
+
+  const blockC = b.getBlockRangeAt(49);
+  expect(blockC).toMatchObject({ start: 5, end: 13 });
+
+  const callableC = b.getCallableDetail(49, true);
+  expect(callableC).toBeDefined();
+  expect(callableC.tokens.length).toBe(4);
+  expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
+  expect(callableC.parentRef.object.schema).toBe(`qsys2`);
+  expect(callableC.parentRef.object.name).toBe(`create_abcd`);
+});
