@@ -1,7 +1,7 @@
 import assert from "assert";
 import { TestSuite } from ".";
 import { JobManager } from "../config";
-import Database from "../database/schemas";
+import Database, { AllSQLTypes } from "../database/schemas";
 import Statement from "../database/statement";
 import Callable from "../database/callable";
 import { getInstance } from "../base";
@@ -93,6 +93,12 @@ export const DatabaseSuite: TestSuite = {
 
     {name: `Get tables, system name`, test: async () => {
       const objects = await Database.getObjects(systemLibrary, [`tables`]);
+
+      assert.notStrictEqual(objects.length, 0);
+    }},
+
+    {name: `Schema filter test`, test: async () => {
+      const objects = await Database.getObjects(systemLibrary, AllSQLTypes, {filter: `emp`});
 
       assert.notStrictEqual(objects.length, 0);
     }},
