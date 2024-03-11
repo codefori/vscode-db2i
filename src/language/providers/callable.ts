@@ -92,7 +92,11 @@ export function getPositionData(ref: CallableReference, offset: number) {
   }
 
   const firstNamedPipe = ref.tokens.find((token, i) => token.type === `rightpipe`);
-  const firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : undefined;
+  let firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : undefined;
+
+  if (firstNamedParameter === -1) {
+    firstNamedParameter = undefined;
+  }
 
   return {
     currentParm,
