@@ -2,7 +2,7 @@ import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, U
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";
-import { SQLJob, TransactionEndType } from "../../connection/sqlJob";
+import { JobStatus, SQLJob, TransactionEndType } from "../../connection/sqlJob";
 import { JDBCOptions, ServerTraceDest, ServerTraceLevel } from "../../connection/types";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
@@ -11,6 +11,7 @@ import { selfCodesMap } from "./selfCodes/nodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
 import { selfCodesResultsView } from "./selfCodes/selfCodesResultsView";
+import { setCancelButtonVisibility } from "../results";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -317,6 +318,9 @@ export class JobManagerView implements TreeDataProvider<any> {
     
     this._onDidChangeTreeData.fire();
     updateStatusBar();
+
+    const selectedJob = JobManager.getSelection();
+    setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === JobStatus.Busy);
   }
 
   getTreeItem(element: vscode.TreeItem) {

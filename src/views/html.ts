@@ -69,8 +69,8 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       position: relative;
       border-radius: 50% 50% 0 0;
       border-bottom: 10px solid #0055ff;
-      background-color: #FFF;
-      background-image: radial-gradient(ellipse at center, #FFF 34%, #0055ff 35%, #0055ff 54%, #FFF 55%), linear-gradient(#0055ff 10px, transparent 0);
+      background-color: #d6dce3;
+      background-image: radial-gradient(ellipse at center, #d6dce3 34%, #0055ff 35%, #0055ff 54%, #d6dce3 55%), linear-gradient(#0055ff 10px, transparent 0);
       background-size: 28px 28px;
       background-position: center 20px , center 2px;
       background-repeat: no-repeat;

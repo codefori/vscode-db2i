@@ -8,13 +8,14 @@ import Document from "../../language/sql/document";
 import { changedCache } from "../../language/providers/completionItemCache";
 import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import Statement from "../../language/sql/statement";
-import { ExplainTree, ContextType } from "./explain/nodes";
+import { ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider } from "./resultSetPanelProvider";
 import { ExplainType } from "../../connection/sqlJob";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
+import { updateStatusBar } from "../jobManager/statusBar";
 
 export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 
@@ -33,6 +34,10 @@ export interface ParsedStatementInfo extends StatementInfo {
   embeddedInfo: ParsedEmbeddedStatement;
 }
 
+export function setCancelButtonVisibility(visible: boolean) {
+  vscode.commands.executeCommand(`setContext`, `vscode-db2i:statementCanCancel`, visible);
+}
+
 let resultSetProvider = new ResultSetPanelProvider();
 let explainTree: ExplainTree;
 let doveResultsView = new DoveResultsView();
@@ -42,13 +47,36 @@ let doveNodeTreeView: TreeView<PropertyNode> = doveNodeView.getTreeView();
 let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration providor
 
 export function initialise(context: vscode.ExtensionContext) {
+  setCancelButtonVisibility(false);
+
   context.subscriptions.push(
+    doveResultsTreeView,
+    doveNodeTreeView,
+
     vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
 
-    doveResultsTreeView,
-    doveNodeTreeView,
+    vscode.commands.registerCommand(`vscode-db2i.statement.cancel`, async () => {
+      const selected = JobManager.getSelection();
+      if (selected) {
+        updateStatusBar({canceling: true});
+        const cancelled = await selected.job.requestCancel();
+        if (cancelled) {
+          resultSetProvider.setError(`Statement canceled.`);
+          setCancelButtonVisibility(false);
+          updateStatusBar();
+        } else {
+          updateStatusBar({jobIsBusy: true});
+          setTimeout(() => updateStatusBar(), 2000);
+        }
+      }
+    }),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.reset`, async () => {
+      resultSetProvider.loadingState = false;
+      resultSetProvider.setLoadingText(`View will be active when a statement is executed.`);
+    }),
 
     vscode.commands.registerCommand(`vscode-db2i.dove.close`, () => {
       doveResultsView.close();
@@ -57,7 +85,7 @@ export function initialise(context: vscode.ExtensionContext) {
 
     vscode.commands.registerCommand(`vscode-db2i.dove.displayDetails`, (explainTreeItem: ExplainTreeItem) => {
       // When the user clicks for details of a node in the tree, set the focus to that node as a visual indicator tying it to the details tree
-      doveResultsTreeView.reveal(explainTreeItem,  { select: false, focus: true, expand: true });
+      doveResultsTreeView.reveal(explainTreeItem, { select: false, focus: true, expand: true });
       doveNodeView.setNode(explainTreeItem.explainNode);
     }),
 
@@ -153,104 +181,110 @@ async function runHandler(options?: StatementInfo) {
     if (statementDetail.content.trim().length > 0) {
       try {
         if (statementDetail.qualifier === `cl`) {
-          resultSetProvider.setScrolling(statementDetail.content, true);
+          resultSetProvider.setScrolling(statementDetail.content, true); // Never errors
         } else if (statementDetail.qualifier === `statement`) {
           // If it's a basic statement, we can let it scroll!
-          resultSetProvider.setScrolling(statementDetail.content);
+          resultSetProvider.setScrolling(statementDetail.content); // Never errors
 
         } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
+          // If it's an explain, we need to 
           const selectedJob = JobManager.getSelection();
           if (selectedJob) {
-            try {
-              const onlyExplain = statementDetail.qualifier === `onlyexplain`;
+            const onlyExplain = statementDetail.qualifier === `onlyexplain`;
 
-              resultSetProvider.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
-              const explainType: ExplainType = onlyExplain ? ExplainType.DoNotRun : ExplainType.Run;
+            resultSetProvider.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
+            const explainType: ExplainType = onlyExplain ? ExplainType.DoNotRun : ExplainType.Run;
 
-              const explained = await selectedJob.job.explain(statementDetail.content, explainType);
+              setCancelButtonVisibility(true);
+              const explained = await selectedJob.job.explain(statementDetail.content, explainType); // Can throw
+              setCancelButtonVisibility(false);
 
-              if (onlyExplain) {
-                resultSetProvider.setLoadingText(`Explained.`);
-              } else {
-                resultSetProvider.setScrolling(statementDetail.content, false, explained.id);
-              }
-
-              explainTree = new ExplainTree(explained.vedata);
-              const topLevel = explainTree.get();
-              const rootNode = doveResultsView.setRootNode(topLevel);
-              doveNodeView.setNode(rootNode.explainNode);
-              doveTreeDecorationProvider.updateTreeItems(rootNode);
-            } catch (e) {
-              resultSetProvider.setError(e.message);
+            if (onlyExplain) {
+              resultSetProvider.setLoadingText(`Explained.`, false);
+            } else {
+              resultSetProvider.setScrolling(statementDetail.content, false, explained.id); // Never errors
             }
+
+            explainTree = new ExplainTree(explained.vedata);
+            const topLevel = explainTree.get();
+            const rootNode = doveResultsView.setRootNode(topLevel);
+            doveNodeView.setNode(rootNode.explainNode);
+            doveTreeDecorationProvider.updateTreeItems(rootNode);
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
         } else {
           // Otherwise... it's a bit complicated.
-          resultSetProvider.setLoadingText(`Executing SQL statement...`);
+          resultSetProvider.setLoadingText(`Executing SQL statement...`, false);
 
-          const data = await JobManager.runSQL(statementDetail.content, undefined);
+          setCancelButtonVisibility(true);
+          updateStatusBar({executing: true});
+          const data = await JobManager.runSQL(statementDetail.content);
+          setCancelButtonVisibility(false);
 
           if (data.length > 0) {
             switch (statementDetail.qualifier) {
 
-            case `csv`:
-            case `json`:
-            case `sql`:
-              let content = ``;
-              switch (statementDetail.qualifier) {
-              case `csv`: content = csv.stringify(data, {
-                header: true,
-                quoted_string: true,
-              }); break;
-              case `json`: content = JSON.stringify(data, null, 2); break;
-
+              case `csv`:
+              case `json`:
               case `sql`:
-                const keys = Object.keys(data[0]);
+                let content = ``;
+                switch (statementDetail.qualifier) {
+                  case `csv`: content = csv.stringify(data, {
+                    header: true,
+                    quoted_string: true,
+                  }); break;
+                  case `json`: content = JSON.stringify(data, null, 2); break;
 
-                // split array into groups of 1k
-                const insertLimit = 1000;
-                const dataChunks = [];
-                for (let i = 0; i < data.length; i += insertLimit) {
-                  dataChunks.push(data.slice(i, i + insertLimit));
+                  case `sql`:
+                    const keys = Object.keys(data[0]);
+
+                    // split array into groups of 1k
+                    const insertLimit = 1000;
+                    const dataChunks = [];
+                    for (let i = 0; i < data.length; i += insertLimit) {
+                      dataChunks.push(data.slice(i, i + insertLimit));
+                    }
+
+                    content = `-- Generated ${dataChunks.length} insert statement${dataChunks.length === 1 ? `` : `s`}\n\n`;
+
+                    for (const data of dataChunks) {
+                      const insertStatement = [
+                        `insert into TABLE (`,
+                        `  ${keys.join(`, `)}`,
+                        `) values `,
+                        data.map(
+                          row => `  (${keys.map(key => {
+                            if (row[key] === null) return `null`;
+                            if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
+                            return row[key];
+                          }).join(`, `)})`
+                        ).join(`,\n`),
+                      ];
+                      content += insertStatement.join(`\n`) + `;\n`;
+                    }
+                    break;
                 }
 
-                content = `-- Generated ${dataChunks.length} insert statement${dataChunks.length === 1 ? `` : `s`}\n\n`;
-
-                for (const data of dataChunks) {
-                  const insertStatement = [
-                    `insert into TABLE (`,
-                    `  ${keys.join(`, `)}`,
-                    `) values `,
-                    data.map(
-                      row => `  (${keys.map(key => {
-                        if (row[key] === null) return `null`;
-                        if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
-                        return row[key];
-                      }).join(`, `)})`
-                    ).join(`,\n`),
-                  ];
-                  content += insertStatement.join(`\n`) + `;\n`;
-                }
+                const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
+                await vscode.window.showTextDocument(textDoc);
+                resultSetProvider.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
                 break;
-              }
-
-              const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
-              await vscode.window.showTextDocument(textDoc);
-              resultSetProvider.setLoadingText(`Query executed with ${data.length} rows returned.`);
-              break;
             }
 
           } else {
-            vscode.window.showInformationMessage(`Query executed with no data returned.`);
-            resultSetProvider.setLoadingText(`Query executed with no data returned.`);
+            vscode.window.showInformationMessage(`Statement executed with no data returned.`);
+            resultSetProvider.setLoadingText(`Statement executed with no data returned.`);
           }
         }
+
         if ((statementDetail.qualifier === `statement` || statementDetail.qualifier === `explain`) && statementDetail.history !== false) {
           vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
         }
+
       } catch (e) {
+        setCancelButtonVisibility(false);
+
         let errorText;
         if (typeof e === `string`) {
           errorText = e.length > 0 ? e : `An error occurred when executing the statement.`;
@@ -258,12 +292,14 @@ async function runHandler(options?: StatementInfo) {
           errorText = e.message || `Error running SQL statement.`;
         }
 
-        if (statementDetail.qualifier === `statement` && statementDetail.history !== false) {
+        if ([`statement`, `explain`, `onlyexplain`].includes(statementDetail.qualifier) && statementDetail.history !== false) {
           resultSetProvider.setError(errorText);
         } else {
           vscode.window.showErrorMessage(errorText);
         }
       }
+
+      updateStatusBar();
     }
   }
 }
