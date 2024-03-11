@@ -14,8 +14,8 @@ import CompletionItemCache, { changedCache } from "./completionItemCache";
 import Callable from "../../database/callable";
 import { ServerComponent } from "../../connection/serverComponent";
 import { env } from "process";
-
-const completionItemCache = new CompletionItemCache();
+import { prepareParamType, createCompletionItem, getParmAttributes, completionItemCache } from "./completion";
+import { isCallableType, getCallableParameters } from "./callable";
 
 export interface CompletionType {
   order: string;
@@ -51,44 +51,9 @@ const completionTypes: { [index: string]: CompletionType } = {
   }
 };
 
-function createCompletionItem(
-  name: string,
-  kind: CompletionItemKind,
-  detail?: string,
-  documentation?: string,
-  sortText?: string
-): CompletionItem {
-  const item = new CompletionItem(name, kind);
-  item.detail = detail;
-  item.documentation = documentation;
-  item.sortText = sortText;
-  return item;
-}
 
 function isEnabled() {
   return (env.DB2I_DISABLE_CA !== `true`);
-}
-
-function getParmAttributes(parm: SQLParm): string {
-  const lines: string[] = [
-    `Column: ${parm.PARAMETER_NAME}`,
-    `Type: ${prepareParamType(parm)}`,
-    `HAS_DEFAULT: ${parm.DEFAULT || `-`}`,
-    `IS_NULLABLE: ${parm.IS_NULLABLE}`,
-  ];
-  return lines.join(`\n `);
-}
-
-function prepareParamType(param: TableColumn | SQLParm): string {
-  if (param.CHARACTER_MAXIMUM_LENGTH) {
-    return `${param.DATA_TYPE}(${param.CHARACTER_MAXIMUM_LENGTH})`;
-  }
-
-  if (param.NUMERIC_PRECISION !== null && param.NUMERIC_SCALE !== null) {
-    return `${param.DATA_TYPE}(${param.NUMERIC_PRECISION}, ${param.NUMERIC_SCALE})`;
-  }
-
-  return `${param.DATA_TYPE}`;
 }
 
 
@@ -483,70 +448,6 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   }
 
   return completionItems;
-}
-
-/**
- * Checks if the ref exists as a procedure or function. Then,
- * stores the parameters in the completionItemCache
- */
-async function isCallableType(ref: ObjectRef) {
-  if (ref.object.schema && ref.object.name && ref.object.name.toUpperCase() !== `TABLE`) {
-    ref.object.schema = Statement.delimName(ref.object.schema, true);
-    ref.object.name = Statement.delimName(ref.object.name, true);
-
-    const databaseObj = (ref.object.schema + ref.object.name);
-
-    if (completionItemCache.has(databaseObj)) {
-      return true;
-    }
-
-    const callableType = await Callable.getType(ref.object.schema, ref.object.name);
-
-    if (callableType) {
-      const parms = await Callable.getParms(ref.object.schema, ref.object.name, true);
-      completionItemCache.set(databaseObj, parms);
-      return true;
-    } else {
-      // Not callable, let's just cache it as empty to stop spamming the db
-      completionItemCache.set(databaseObj, []);
-    }
-  }
-
-  return false;
-}
-
-/**
- * Gets completion items that are stored in the cache
- * for a specific procedure
- */
-function getCallableParameters(ref: CallableReference): CompletionItem[] {
-  const sqlObj = ref.parentRef.object;
-  const databaseObj = (sqlObj.schema + sqlObj.name).toUpperCase();
-  if (completionItemCache.has(databaseObj)) {
-    const parms: SQLParm[] = completionItemCache.get(databaseObj);
-
-    // Find any already referenced parameters in this list
-    const usedParms = ref.tokens.filter((token) => parms.some((parm) => parm.PARAMETER_NAME === token.value?.toUpperCase()));
-
-    // Get a list of the available parameters
-    const availableParms = parms.filter((parm, i) => 
-      (parm.DEFAULT !== null || parm.PARAMETER_MODE === `OUT`) &&
-      (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase()))
-    );
-
-    return availableParms.map((parm) => createCompletionItem(
-      Statement.prettyName(parm.PARAMETER_NAME),
-      parm.DEFAULT ? CompletionItemKind.Variable : CompletionItemKind.Constant,
-      getParmAttributes(parm),
-      [
-        `Comment: ${parm.LONG_COMMENT}`,
-        `Schema: ${sqlObj.schema}`,
-        `Object: ${sqlObj.name}`,
-      ].join(`\n`),
-      String(parm.ORDINAL_POSITION)
-    ));
-  }
-  return [];
 }
 
 async function getCompletionItems(
