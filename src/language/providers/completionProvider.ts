@@ -9,7 +9,7 @@ import Statement from "../../database/statement";
 import Table from "../../database/table";
 import Document from "../sql/document";
 import * as LanguageStatement from "../sql/statement";
-import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
+import { CTEReference, CallableReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
 import CompletionItemCache, { changedCache } from "./completionItemCache";
 import Callable from "../../database/callable";
 import { ServerComponent } from "../../connection/serverComponent";
@@ -485,11 +485,88 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   return completionItems;
 }
 
+/**
+ * Checks if the ref exists as a procedure or function. Then,
+ * stores the parameters in the completionItemCache
+ */
+async function isCallableType(ref: ObjectRef) {
+  if (ref.object.schema && ref.object.name && ref.object.name.toUpperCase() !== `TABLE`) {
+    ref.object.schema = Statement.delimName(ref.object.schema, true);
+    ref.object.name = Statement.delimName(ref.object.name, true);
+
+    const databaseObj = (ref.object.schema + ref.object.name);
+
+    if (completionItemCache.has(databaseObj)) {
+      return true;
+    }
+
+    const callableType = await Callable.getType(ref.object.schema, ref.object.name);
+
+    if (callableType) {
+      const parms = await Callable.getParms(ref.object.schema, ref.object.name, true);
+      completionItemCache.set(databaseObj, parms);
+      return true;
+    } else {
+      // Not callable, let's just cache it as empty to stop spamming the db
+      completionItemCache.set(databaseObj, []);
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Gets completion items that are stored in the cache
+ * for a specific procedure
+ */
+function getCallableParameters(ref: CallableReference): CompletionItem[] {
+  const sqlObj = ref.parentRef.object;
+  const databaseObj = (sqlObj.schema + sqlObj.name).toUpperCase();
+  if (completionItemCache.has(databaseObj)) {
+    const parms: SQLParm[] = completionItemCache.get(databaseObj);
+
+    // Find any already referenced parameters in this list
+    const usedParms = ref.tokens.filter((token) => parms.some((parm) => parm.PARAMETER_NAME === token.value?.toUpperCase()));
+
+    // Get a list of the available parameters
+    const availableParms = parms.filter((parm, i) => 
+      (parm.DEFAULT !== null || parm.PARAMETER_MODE === `OUT`) &&
+      (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase()))
+    );
+
+    return availableParms.map((parm) => createCompletionItem(
+      Statement.prettyName(parm.PARAMETER_NAME),
+      parm.DEFAULT ? CompletionItemKind.Variable : CompletionItemKind.Constant,
+      getParmAttributes(parm),
+      [
+        `Comment: ${parm.LONG_COMMENT}`,
+        `Schema: ${sqlObj.schema}`,
+        `Object: ${sqlObj.name}`,
+      ].join(`\n`),
+      String(parm.ORDINAL_POSITION)
+    ));
+  }
+  return [];
+}
+
 async function getCompletionItems(
   trigger: string,
   currentStatement: LanguageStatement.default|undefined,
   offset?: number
 ) {
+
+
+  if (currentStatement) {
+    const callableRef = currentStatement.getCallableDetail(offset, true);
+    // TODO: check the function actually exists before returning
+    if (callableRef) {
+      const isValid = await isCallableType(callableRef.parentRef);
+      if (isValid) {
+        return await getCallableParameters(callableRef);
+      }
+    }
+  }
+
   if (currentStatement && currentStatement.type === StatementType.Call) {
     const curClause = currentStatement.getClauseForOffset(offset);
     if (curClause === ClauseType.Unknown) {

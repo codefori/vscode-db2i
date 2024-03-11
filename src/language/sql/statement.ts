@@ -93,6 +93,12 @@ export default class Statement {
 		// Get the current token for the provided offset
 		let i = this.tokens.findIndex(token => offset >= token.range.start && offset <= token.range.end);
 
+		// TODO: merge these findIndexes
+
+		if (i === -1) {
+			i = this.tokens.findIndex((token, y) => offset >= token.range.end && this.tokens[y+1] && offset <= this.tokens[y+1].range.start);
+		}
+
 		let depth = 0;
 
 		if (tokenIs(this.tokens[i], `openbracket`)) {

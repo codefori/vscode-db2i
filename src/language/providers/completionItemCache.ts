@@ -8,7 +8,7 @@ export interface CompletionItemCacheObj {
   cacheList: CompletionItem[];
 }
 
-export default class CompletionItemCache extends LRU<string, CompletionItem[]> {
+export default class CompletionItemCache extends LRU {
   constructor() {
     super({
       max: 50,

@@ -4,7 +4,24 @@ import { JobManager } from "../config";
 import { QueryOptions } from "../connection/types";
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
+export type CallableType = "PROCEDURE"|"FUNCTION";
+
 export default class Callable {
+  static async getType(schema: string, name: string): Promise<CallableType|undefined> {
+    const statement = `select routine_type from qsys2.sysroutines where ROUTINE_SCHEMA = ? and ROUTINE_NAME = ? and routine_type in ('PROCEDURE', 'FUNCTION') limit 1`;
+   
+    const result = await JobManager.runSQL<{ROUTINE_TYPE: CallableType}>(
+      statement,
+      {parameters: [schema, name]}
+    );
+
+    if (result.length === 1) {
+      return result[0].ROUTINE_TYPE;
+    }
+
+    return;
+  }
+
   /**
    * @param schema Not user input
    * @param specificName Not user input
