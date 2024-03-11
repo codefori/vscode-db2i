@@ -180,7 +180,7 @@ async function getCompletionItemsForSchema(
   const data = await Database.getObjects(schema, ["procedures"]);
   return data.map((item) =>
     createCompletionItem(
-      item.name,
+      Statement.prettyName(item.name),
       CompletionItemKind.Method,
       `Type: Procedure`,
       `Schema: ${item.schema}`
