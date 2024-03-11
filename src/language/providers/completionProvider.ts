@@ -463,7 +463,7 @@ async function getCompletionItems(
     if (callableRef) {
       const isValid = await isCallableType(callableRef.parentRef);
       if (isValid) {
-        return await getCallableParameters(callableRef);
+        return await getCallableParameters(callableRef, offset);
       }
     }
   }

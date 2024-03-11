@@ -6,9 +6,6 @@ import { getParmAttributes, prepareParamType } from "./completion";
 
 export const signatureProvider = languages.registerSignatureHelpProvider({ language: `sql` }, {
   async provideSignatureHelp(document, position, token, context) {
-    const help = new SignatureHelp();
-
-    const trigger = context.triggerCharacter;
     const content = document.getText();
     const offset = document.offsetAt(position);
 
@@ -25,8 +22,16 @@ export const signatureProvider = languages.registerSignatureHelpProvider({ langu
           if (parms) {
             const help = new SignatureHelp();
 
-            // TODO: bad way of getting active param
             const paramCommas = callableRef.tokens.filter(token => token.type === `comma`);
+
+            // When named parameters are used, the signature doesn't really apply
+            const firstNamedPipe = callableRef.tokens.find((token, i) => token.type === `rightpipe`);
+            const firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : undefined;
+
+            if (firstNamedParameter === 0) {
+              return;
+            }
+
             help.activeParameter = paramCommas.findIndex(t => offset < t.range.end);
             help.activeSignature = 0;
 
@@ -34,7 +39,7 @@ export const signatureProvider = languages.registerSignatureHelpProvider({ langu
               help.activeParameter = paramCommas.length;
             }
 
-            let requiredParms = parms.filter((parm) => parm.DEFAULT === null && parm.PARAMETER_MODE !== `OUT`);
+            const requiredParms = parms.filter((parm, i) => parm.DEFAULT === null && parm.PARAMETER_MODE !== `OUT` && (firstNamedParameter === undefined || i < firstNamedParameter));
 
             const signature = new SignatureInformation(
               (callableRef.parentRef.object.schema ? Statement.prettyName(callableRef.parentRef.object.schema) + `.` : ``) + Statement.prettyName(callableRef.parentRef.object.name) + 

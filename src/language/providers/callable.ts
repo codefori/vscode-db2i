@@ -38,28 +38,37 @@ export async function isCallableType(ref: ObjectRef) {
  * Gets completion items that are stored in the cache
  * for a specific procedure
  */
-export function getCallableParameters(ref: CallableReference): CompletionItem[] {
+export function getCallableParameters(ref: CallableReference, offset: number): CompletionItem[] {
   const sqlObj = ref.parentRef.object;
   const parms = getCachedParameters(ref);
   if (parms) {
     // Find any already referenced parameters in this list
     const usedParms = ref.tokens.filter((token) => parms.some((parm) => parm.PARAMETER_NAME === token.value?.toUpperCase()));
 
+    // When named parameters are used, the signature doesn't really apply
+    const paramCommas = ref.tokens.filter(token => token.type === `comma`);
+    
+    let currentParm = paramCommas.findIndex(t => offset < t.range.end);
+
+    if (currentParm === -1) {
+      currentParm = paramCommas.length;
+    }
+
+    const firstNamedPipe = ref.tokens.find((token, i) => token.type === `rightpipe`);
+    const firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : -1;
+
     // Get a list of the available parameters
     const availableParms = parms.filter((parm, i) => 
-      (parm.DEFAULT !== null || parm.PARAMETER_MODE === `OUT`) &&
-      (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase()))
+      (parm.PARAMETER_MODE !== `OUT`) && // Hide output parameters
+      (i >= Math.max(currentParm, firstNamedParameter)) && // Hide fixed parameters that have already been used
+      (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase())) // Hide parameters that have already been named
     );
 
     return availableParms.map((parm) => createCompletionItem(
       Statement.prettyName(parm.PARAMETER_NAME),
       parm.DEFAULT ? CompletionItemKind.Variable : CompletionItemKind.Constant,
       getParmAttributes(parm),
-      [
-        `Comment: ${parm.LONG_COMMENT}`,
-        `Schema: ${sqlObj.schema}`,
-        `Object: ${sqlObj.name}`,
-      ].join(`\n`),
+      parm.LONG_COMMENT,
       String(parm.ORDINAL_POSITION)
     ));
   }
