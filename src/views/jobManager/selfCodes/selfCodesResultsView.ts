@@ -86,7 +86,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
         const label = `${error.LOGGED_SQLSTATE} (${error.LOGGED_SQLCODE})`;
         const details = `${error.MESSAGE_TEXT} ${error.MATCHES < 100 ? hitsTxt : '💯'.padStart(10, ' ')} 🔥`;
         const hoverMessage = new vscode.MarkdownString(
-          `**SQL Statement💻:** ${error.STMTTEXT}\n\n---\n\n**SQL Job🛠️:** ${error.JOB_NAME}\n\n---\n\n**Details✏️:** ${error.MESSAGE_SECOND_LEVEL_TEXT}`
+          `**SQL Statement💻:** ${error.STMTTEXT}\n\n---\n\n**SQL Job🛠️:** ${error.JOB_NAME}\n\n---\n\n**Occurrences🔥:** ${error.MATCHES}\n\n---\n\n**Details✏️:** ${error.MESSAGE_SECOND_LEVEL_TEXT}`
         );
         hoverMessage.isTrusted = true;
         const treeItem = new SelfCodeTreeItem(
