@@ -1,7 +1,7 @@
 import { MarkdownString, ParameterInformation, Position, Range, SignatureHelp, SignatureInformation, TextEdit, languages } from "vscode";
 import Statement from "../../database/statement";
 import Document from "../sql/document";
-import { getCachedParameters, getCallableParameters, isCallableType } from "./callable";
+import { getCachedParameters, getCallableParameters, getPositionData, isCallableType } from "./callable";
 import { getParmAttributes, prepareParamType } from "./completion";
 
 export const signatureProvider = languages.registerSignatureHelpProvider({ language: `sql` }, {
@@ -22,24 +22,16 @@ export const signatureProvider = languages.registerSignatureHelpProvider({ langu
           if (parms) {
             const help = new SignatureHelp();
 
-            const paramCommas = callableRef.tokens.filter(token => token.type === `comma`);
-
-            // When named parameters are used, the signature doesn't really apply
-            const firstNamedPipe = callableRef.tokens.find((token, i) => token.type === `rightpipe`);
-            const firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : undefined;
+            const { firstNamedParameter, currentParm } = getPositionData(callableRef, offset);
 
             if (firstNamedParameter === 0) {
               return;
             }
 
-            help.activeParameter = paramCommas.findIndex(t => offset < t.range.end);
+            help.activeParameter = currentParm;
             help.activeSignature = 0;
 
-            if (help.activeParameter === -1) {
-              help.activeParameter = paramCommas.length;
-            }
-
-            const validParms = parms.filter((parm, i) => parm.DEFAULT === null && (firstNamedParameter === undefined || i < firstNamedParameter));
+            const validParms = parms.filter((parm, i) => parm.DEFAULT === null && parm.PARAMETER_MODE !== `OUT` && (firstNamedParameter === undefined || i < firstNamedParameter));
 
             const signature = new SignatureInformation(
               (callableRef.parentRef.object.schema ? Statement.prettyName(callableRef.parentRef.object.schema) + `.` : ``) + Statement.prettyName(callableRef.parentRef.object.name) + 

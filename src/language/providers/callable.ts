@@ -39,27 +39,17 @@ export async function isCallableType(ref: ObjectRef) {
  * for a specific procedure
  */
 export function getCallableParameters(ref: CallableReference, offset: number): CompletionItem[] {
-  const sqlObj = ref.parentRef.object;
   const parms = getCachedParameters(ref);
   if (parms) {
     // Find any already referenced parameters in this list
     const usedParms = ref.tokens.filter((token) => parms.some((parm) => parm.PARAMETER_NAME === token.value?.toUpperCase()));
 
     // When named parameters are used, the signature doesn't really apply
-    const paramCommas = ref.tokens.filter(token => token.type === `comma`);
-    
-    let currentParm = paramCommas.findIndex(t => offset < t.range.end);
-
-    if (currentParm === -1) {
-      currentParm = paramCommas.length;
-    }
-
-    const firstNamedPipe = ref.tokens.find((token, i) => token.type === `rightpipe`);
-    const firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : -1;
+    const { currentParm, firstNamedParameter } = getPositionData(ref, offset);
 
     // Get a list of the available parameters
     const availableParms = parms.filter((parm, i) => 
-      (i >= Math.max(currentParm, firstNamedParameter)) && // Hide fixed parameters that have already been used
+      (i >= Math.max(currentParm, firstNamedParameter || -1)) && // Hide fixed parameters that have already been used
       (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase())) // Hide parameters that have already been named
     );
 
@@ -90,6 +80,24 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
     });
   }
   return [];
+}
+
+export function getPositionData(ref: CallableReference, offset: number) {
+  const paramCommas = ref.tokens.filter(token => token.type === `comma`);
+    
+  let currentParm = paramCommas.findIndex(t => offset < t.range.end);
+
+  if (currentParm === -1) {
+    currentParm = paramCommas.length;
+  }
+
+  const firstNamedPipe = ref.tokens.find((token, i) => token.type === `rightpipe`);
+  const firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : undefined;
+
+  return {
+    currentParm,
+    firstNamedParameter
+  };
 }
 
 export function getCachedParameters(ref: CallableReference): SQLParm[]|undefined {
