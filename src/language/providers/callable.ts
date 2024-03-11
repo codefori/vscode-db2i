@@ -1,4 +1,4 @@
-import { CompletionItem, CompletionItemKind } from "vscode";
+import { CompletionItem, CompletionItemKind, SnippetString } from "vscode";
 import Callable from "../../database/callable";
 import { ObjectRef, CallableReference } from "../sql/types";
 import Statement from "../../database/statement";
@@ -59,18 +59,35 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
 
     // Get a list of the available parameters
     const availableParms = parms.filter((parm, i) => 
-      (parm.PARAMETER_MODE !== `OUT`) && // Hide output parameters
       (i >= Math.max(currentParm, firstNamedParameter)) && // Hide fixed parameters that have already been used
       (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase())) // Hide parameters that have already been named
     );
 
-    return availableParms.map((parm) => createCompletionItem(
-      Statement.prettyName(parm.PARAMETER_NAME),
-      parm.DEFAULT ? CompletionItemKind.Variable : CompletionItemKind.Constant,
-      getParmAttributes(parm),
-      parm.LONG_COMMENT,
-      String(parm.ORDINAL_POSITION)
-    ));
+    return availableParms.map((parm) => {
+      const item = createCompletionItem(
+        Statement.prettyName(parm.PARAMETER_NAME),
+        parm.DEFAULT ? CompletionItemKind.Variable : CompletionItemKind.Constant,
+        getParmAttributes(parm),
+        parm.LONG_COMMENT,
+        String(parm.ORDINAL_POSITION)
+      );
+
+      switch (parm.PARAMETER_MODE) {
+        case `IN`:
+        case `INOUT`:
+          if (parm.DEFAULT) {
+            item.insertText = new SnippetString(item.label + ` => \${0:${parm.DEFAULT}}`);
+          } else {
+            item.insertText = new SnippetString(item.label + ` => \${0}`);
+          }
+          break;
+        case `OUT`:
+          item.insertText = item.label + ` => ?`;
+          break;
+      }
+
+      return item;
+    });
   }
   return [];
 }

@@ -39,13 +39,13 @@ export const signatureProvider = languages.registerSignatureHelpProvider({ langu
               help.activeParameter = paramCommas.length;
             }
 
-            const requiredParms = parms.filter((parm, i) => parm.DEFAULT === null && parm.PARAMETER_MODE !== `OUT` && (firstNamedParameter === undefined || i < firstNamedParameter));
+            const validParms = parms.filter((parm, i) => parm.DEFAULT === null && (firstNamedParameter === undefined || i < firstNamedParameter));
 
             const signature = new SignatureInformation(
               (callableRef.parentRef.object.schema ? Statement.prettyName(callableRef.parentRef.object.schema) + `.` : ``) + Statement.prettyName(callableRef.parentRef.object.name) + 
-              `(` + requiredParms.map((parm) => Statement.prettyName(parm.PARAMETER_NAME)).join(`, `) + (parms.length > requiredParms.length ? `, ...` : ``) + `)`);
+              `(` + validParms.map((parm) => Statement.prettyName(parm.PARAMETER_NAME)).join(`, `) + (parms.length > validParms.length ? `, ...` : ``) + `)`);
 
-            signature.parameters = requiredParms.map((parm) => {
+            signature.parameters = validParms.map((parm) => {
               const mdString = new MarkdownString(
                 [
                   `\`${parm.PARAMETER_MODE} ${prepareParamType(parm).toLowerCase()}\``,
