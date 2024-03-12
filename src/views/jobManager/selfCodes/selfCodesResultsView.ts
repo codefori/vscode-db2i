@@ -60,7 +60,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
   }
 
   async getSelfCodes(): Promise<SelfCodeNode[]> {
-    const selected = JobManager.getRunningJobs();
+    const selected = JobManager.getSelection();
     if (selected) {
       const content = `SELECT job_name, user_name, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, 
                           message_text, message_second_level_text 
