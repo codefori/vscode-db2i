@@ -177,15 +177,18 @@ async function getObjectCompletions(
 async function getCompletionItemsForSchema(
   schema: string
 ): Promise<CompletionItem[]> {
-  const data = await Database.getObjects(schema, ["procedures"]);
-  return data.map((item) =>
-    createCompletionItem(
-      Statement.prettyName(item.name),
-      CompletionItemKind.Method,
-      `Type: Procedure`,
-      `Schema: ${item.schema}`
-    )
-  );
+  const data = (await Database.getObjects(schema, ["procedures"]));
+
+  return data
+    .filter((v, i, a) => a.findIndex(t => (t.name === v.name)) === i) //Hide overloads here
+    .map((item) =>
+      createCompletionItem(
+        Statement.prettyName(item.name),
+        CompletionItemKind.Method,
+        `Type: Procedure`,
+        `Schema: ${item.schema}`
+      )
+    );
 }
 
 async function getProcedures(
