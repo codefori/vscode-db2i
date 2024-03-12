@@ -36,14 +36,10 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
         }
       }),
       vscode.commands.registerCommand(`vscode-db2i.self.enableAutoRefresh`, async () => {
-        this.autoRefresh = true;
-        vscode.commands.executeCommand(`setContext`, `vscode-db2i.self.autoRefresh`, true);
-        vscode.window.showInformationMessage("SELF Code Auto Refresh Enabled");
+        this.setRefreshEnabled(true, true);
       }),
       vscode.commands.registerCommand(`vscode-db2i.self.disableAutoRefresh`, async () => {
-        this.autoRefresh = false;
-        vscode.commands.executeCommand(`setContext`, `vscode-db2i.self.autoRefresh`, false);
-        vscode.window.showInformationMessage("SELF Code Auto Refresh Disabled");
+        this.setRefreshEnabled(false, true);
       })
     );
     setInterval(async () => {
@@ -52,6 +48,15 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
       }
     }, 5000);
 
+  }
+
+  setRefreshEnabled(enabled: boolean, withMessage = false): void {
+    this.autoRefresh = enabled;
+    vscode.commands.executeCommand(`setContext`, `vscode-db2i.self.autoRefresh`, enabled);
+
+    if (withMessage) {
+      vscode.window.showInformationMessage(`SELF Code Auto Refresh ${enabled ? 'Enabled' : 'Disabled'}`);
+    }
   }
 
   async getSelfCodes(): Promise<SelfCodeNode[]> {
@@ -81,22 +86,27 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
       return [];
     } else {
       const selfCodes = await this.getSelfCodes();
-      return selfCodes.map((error) => {
-        const hitsTxt = error.MATCHES.toString().padStart(10, ' ');
-        const label = `${error.LOGGED_SQLSTATE} (${error.LOGGED_SQLCODE})`;
-        const details = `${error.MESSAGE_TEXT} ${error.MATCHES < 100 ? hitsTxt : '💯'.padStart(10, ' ')} 🔥`;
-        const hoverMessage = new vscode.MarkdownString(
-          `**SQL Statement💻:** ${error.STMTTEXT}\n\n---\n\n**SQL Job🛠️:** ${error.JOB_NAME}\n\n---\n\n**Occurrences🔥:** ${error.MATCHES}\n\n---\n\n**Details✏️:** ${error.MESSAGE_SECOND_LEVEL_TEXT}`
-        );
-        hoverMessage.isTrusted = true;
-        const treeItem = new SelfCodeTreeItem(
-          label,
-          details,
-          hoverMessage,
-          vscode.TreeItemCollapsibleState.None
-        );
-        return treeItem;
-      });
+
+      if (selfCodes) {
+        return selfCodes.map((error) => {
+          const hitsTxt = error.MATCHES.toString().padStart(10, ' ');
+          const label = `${error.LOGGED_SQLSTATE} (${error.LOGGED_SQLCODE})`;
+          const details = `${error.MESSAGE_TEXT} ${error.MATCHES < 100 ? hitsTxt : '💯'.padStart(10, ' ')} 🔥`;
+          const hoverMessage = new vscode.MarkdownString(
+            `**SQL Statement💻:** ${error.STMTTEXT}\n\n---\n\n**SQL Job🛠️:** ${error.JOB_NAME}\n\n---\n\n**Occurrences🔥:** ${error.MATCHES}\n\n---\n\n**Details✏️:** ${error.MESSAGE_SECOND_LEVEL_TEXT}`
+          );
+          hoverMessage.isTrusted = true;
+          const treeItem = new SelfCodeTreeItem(
+            label,
+            details,
+            hoverMessage,
+            vscode.TreeItemCollapsibleState.None
+          );
+          return treeItem;
+        });
+      }
+
+      return [];
     }
   }
   getParent?(element: any) {
@@ -128,7 +138,6 @@ export class SelfCodeTreeItem extends TreeItem {
     public readonly collapsibleState: vscode.TreeItemCollapsibleState
   ) {
     super(errorMessage, collapsibleState);
-    console.log(hoverMessage);
     this.tooltip = hoverMessage; // Hover text
     this.description = details; // Additional details shown in the tree view
   }

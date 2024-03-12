@@ -18,6 +18,7 @@ import { SQLJobManager } from "./connection/manager";
 import { JDBCOptions } from "./connection/types";
 import { SQLJob } from "./connection/sqlJob";
 import { selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
+import Configuration from "./configuration";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -36,6 +37,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   loadBase();
 
   const exampleBrowser = new ExampleBrowser(context);
+  const selfCodesView = new selfCodesResultsView(context);
 
   context.subscriptions.push(
     ...languageInit(),
@@ -58,7 +60,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     ),
     vscode.window.registerTreeDataProvider(
       'vscode-db2i.self.nodes',
-      new selfCodesResultsView(context)
+      selfCodesView
     )
   );
 
@@ -81,6 +83,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
       determineFeatures();
       // Refresh the examples when we have it, so we only display certain examples
       exampleBrowser.refresh();
+      selfCodesView.setRefreshEnabled(Configuration.get(`autoRefreshSelfCodesView`) || false)
     })
   });
 

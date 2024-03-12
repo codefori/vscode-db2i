@@ -53,6 +53,11 @@
         "title": "General",
         "order": 1,
         "properties": {
+          "vscode-db2i.autoRefreshSelfCodesView": {
+            "type": "boolean",
+            "description": "Automatically refresh the SELF codes view every 5 seconds",
+            "default": false
+          },
           "vscode-db2i.pageSize": {
             "type": "number",
             "description": "Page size for Schema browser",
