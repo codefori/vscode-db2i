@@ -1,5 +1,5 @@
 import { CompletionItem, CompletionItemKind, SnippetString } from "vscode";
-import Callable from "../../database/callable";
+import Callable, { CallableSignature, CallableType } from "../../database/callable";
 import { ObjectRef, CallableReference } from "../sql/types";
 import Statement from "../../database/statement";
 import { completionItemCache, createCompletionItem, getParmAttributes } from "./completion";
@@ -8,7 +8,7 @@ import { completionItemCache, createCompletionItem, getParmAttributes } from "./
  * Checks if the ref exists as a procedure or function. Then,
  * stores the parameters in the completionItemCache
  */
-export async function isCallableType(ref: ObjectRef) {
+export async function isCallableType(ref: ObjectRef, type: CallableType) {
   if (ref.object.schema && ref.object.name && ref.object.name.toUpperCase() !== `TABLE`) {
     ref.object.schema = Statement.delimName(ref.object.schema, true);
     ref.object.name = Statement.delimName(ref.object.name, true);
@@ -19,10 +19,10 @@ export async function isCallableType(ref: ObjectRef) {
       return true;
     }
 
-    const callableType = await Callable.getType(ref.object.schema, ref.object.name);
+    const callableRoutine = await Callable.getType(ref.object.schema, ref.object.name, type);
 
-    if (callableType) {
-      const parms = await Callable.getParms(ref.object.schema, ref.object.name, true);
+    if (callableRoutine) {
+      const parms = await Callable.getSignaturesFor(ref.object.schema, callableRoutine.specificNames);
       completionItemCache.set(databaseObj, parms);
       return true;
     } else {
@@ -39,8 +39,11 @@ export async function isCallableType(ref: ObjectRef) {
  * for a specific procedure
  */
 export function getCallableParameters(ref: CallableReference, offset: number): CompletionItem[] {
-  const parms = getCachedParameters(ref);
-  if (parms) {
+  const signatures = getCachedSignatures(ref);
+  if (signatures) {
+    // find signature with the most parameters
+    const parms = signatures.reduce((acc, val) => acc.length > val.parms.length ? acc : val.parms, []);
+
     // Find any already referenced parameters in this list
     const usedParms = ref.tokens.filter((token) => parms.some((parm) => parm.PARAMETER_NAME === token.value?.toUpperCase()));
 
@@ -100,15 +103,15 @@ export function getPositionData(ref: CallableReference, offset: number) {
 
   return {
     currentParm,
+    currentCount: paramCommas.length + 1,
     firstNamedParameter
   };
 }
 
-export function getCachedParameters(ref: CallableReference): SQLParm[]|undefined {
+export function getCachedSignatures(ref: CallableReference): CallableSignature[]|undefined {
   const sqlObj = ref.parentRef.object;
   const databaseObj = (sqlObj.schema + sqlObj.name).toUpperCase();
   if (completionItemCache.has(databaseObj)) {
-    const parms: SQLParm[] = completionItemCache.get(databaseObj);
-    return parms;
+    return completionItemCache.get(databaseObj);
   }
 }

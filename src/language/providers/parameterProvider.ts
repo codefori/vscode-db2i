@@ -1,8 +1,10 @@
 import { MarkdownString, ParameterInformation, Position, Range, SignatureHelp, SignatureInformation, TextEdit, languages } from "vscode";
 import Statement from "../../database/statement";
 import Document from "../sql/document";
-import { getCachedParameters, getCallableParameters, getPositionData, isCallableType } from "./callable";
+import { getCachedSignatures, getCallableParameters, getPositionData, isCallableType } from "./callable";
 import { getParmAttributes, prepareParamType } from "./completion";
+import { CallableType } from "../../database/callable";
+import { StatementType } from "../sql/types";
 
 export const signatureProvider = languages.registerSignatureHelpProvider({ language: `sql` }, {
   async provideSignatureHelp(document, position, token, context) {
@@ -13,44 +15,53 @@ export const signatureProvider = languages.registerSignatureHelpProvider({ langu
     const currentStatement = sqlDoc.getStatementByOffset(offset);
 
     if (currentStatement) {
+      const routineType: CallableType = currentStatement.type === StatementType.Call ? `PROCEDURE` : `FUNCTION`;
       const callableRef = currentStatement.getCallableDetail(offset, true);
       // TODO: check the function actually exists before returning
       if (callableRef) {
-        const isValid = await isCallableType(callableRef.parentRef);
+        const isValid = await isCallableType(callableRef.parentRef, routineType);
         if (isValid) {
-          let parms = getCachedParameters(callableRef);
-          if (parms) {
+          let signatures = getCachedSignatures(callableRef);
+          if (signatures) {
             const help = new SignatureHelp();
 
-            const { firstNamedParameter, currentParm } = getPositionData(callableRef, offset);
+            const { firstNamedParameter, currentParm, currentCount } = getPositionData(callableRef, offset);
 
             if (firstNamedParameter === 0) {
               return;
             }
 
             help.activeParameter = currentParm;
-            help.activeSignature = 0;
+            help.signatures = [];
 
-            const validParms = parms.filter((parm, i) => parm.DEFAULT === null && parm.PARAMETER_MODE !== `OUT` && (firstNamedParameter === undefined || i < firstNamedParameter));
+            // Remove any signatures that have more parameters than the current count and sort them
+            signatures = signatures.filter((s) => s.parms.length >= currentCount).sort((a, b) => a.parms.length - b.parms.length);
+            help.activeSignature = signatures.findIndex((signature) => currentCount <= signature.parms.length);
 
-            const signature = new SignatureInformation(
-              (callableRef.parentRef.object.schema ? Statement.prettyName(callableRef.parentRef.object.schema) + `.` : ``) + Statement.prettyName(callableRef.parentRef.object.name) + 
-              `(` + validParms.map((parm) => Statement.prettyName(parm.PARAMETER_NAME)).join(`, `) + (parms.length > validParms.length ? `, ...` : ``) + `)`);
+            for (const signature of signatures) {
+              const parms = signature.parms;
 
-            signature.parameters = validParms.map((parm) => {
-              const mdString = new MarkdownString(
-                [
-                  `\`${parm.PARAMETER_MODE} ${prepareParamType(parm).toLowerCase()}\``,
-                  parm.LONG_COMMENT
-                ].join(`\n\n`),
-              )
-              return new ParameterInformation(
-                Statement.prettyName(parm.PARAMETER_NAME), 
-                mdString
-              );
-            });
+              const validParms = parms.filter((parm, i) => parm.DEFAULT === null && parm.PARAMETER_MODE !== `OUT` && (firstNamedParameter === undefined || i < firstNamedParameter));
 
-            help.signatures = [signature];
+              const signatureInfo = new SignatureInformation(
+                (callableRef.parentRef.object.schema ? Statement.prettyName(callableRef.parentRef.object.schema) + `.` : ``) + Statement.prettyName(callableRef.parentRef.object.name) +
+                `(` + validParms.map((parm, i) => Statement.prettyName(parm.PARAMETER_NAME || `PARM${i}`)).join(`, `) + (parms.length > validParms.length ? `, ...` : ``) + `)`);
+
+              signatureInfo.parameters = validParms.map((parm, i) => {
+                const mdString = new MarkdownString(
+                  [
+                    `\`${parm.PARAMETER_MODE} ${prepareParamType(parm).toLowerCase()}\``,
+                    parm.LONG_COMMENT
+                  ].join(`\n\n`),
+                )
+                return new ParameterInformation(
+                  Statement.prettyName(parm.PARAMETER_NAME || `PARM${i}`),
+                  mdString
+                );
+              });
+
+              help.signatures.push(signatureInfo);
+            }
 
             return help;
           }

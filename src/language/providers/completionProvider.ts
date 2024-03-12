@@ -11,7 +11,7 @@ import Document from "../sql/document";
 import * as LanguageStatement from "../sql/statement";
 import { CTEReference, CallableReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
 import CompletionItemCache, { changedCache } from "./completionItemCache";
-import Callable from "../../database/callable";
+import Callable, { CallableType } from "../../database/callable";
 import { ServerComponent } from "../../connection/serverComponent";
 import { env } from "process";
 import { prepareParamType, createCompletionItem, getParmAttributes, completionItemCache } from "./completion";
@@ -461,7 +461,8 @@ async function getCompletionItems(
     const callableRef = currentStatement.getCallableDetail(offset, true);
     // TODO: check the function actually exists before returning
     if (callableRef) {
-      const isValid = await isCallableType(callableRef.parentRef);
+      const routineType: CallableType = currentStatement.type === StatementType.Call ? `PROCEDURE` : `FUNCTION`;
+      const isValid = await isCallableType(callableRef.parentRef, routineType);
       if (isValid) {
         return await getCallableParameters(callableRef, offset);
       }

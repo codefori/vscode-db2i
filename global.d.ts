@@ -14,6 +14,7 @@ interface TableColumn {
 }
 
 interface SQLParm {
+  SPECIFIC_NAME: string,
   PARAMETER_NAME: string,
   PARAMETER_MODE: "IN" | "OUT" | "INOUT",
   DATA_TYPE: string,
