@@ -26,7 +26,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
         const selected = JobManager.getRunningJobs();
         if (selected) {
           try {
-            const resetSelfCmd = `DELETE FROM qsys2.sql_error_log where user_name = current_user`
+            const resetSelfCmd = `DELETE FROM qsys2.SQL_ERRORT where user_name = current_user`
             await JobManager.runSQL(resetSelfCmd, undefined);
             this.refresh();
             vscode.window.showInformationMessage(`Reset SELF code error log.`)
@@ -140,7 +140,6 @@ export class SelfCodeTreeItem extends TreeItem {
   ) {
     super(errorMessage, collapsibleState);
     this.tooltip = hoverMessage; // Hover text
-    this.tooltip.isTrusted = true;
     this.description = details; // Additional details shown in the tree view
     this.resourceUri = vscode.Uri.parse(`selfCodeTreeView:${encodeURIComponent(error.MATCHES.toString())}`);
     this.iconPath = error.LOGGED_SQLCODE < 0 ? new vscode.ThemeIcon(`error`): new vscode.ThemeIcon(`warning`);
