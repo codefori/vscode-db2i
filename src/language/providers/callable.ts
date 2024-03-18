@@ -1,6 +1,6 @@
 import { CompletionItem, CompletionItemKind, SnippetString } from "vscode";
 import Callable, { CallableSignature, CallableType } from "../../database/callable";
-import { ObjectRef, CallableReference } from "../sql/types";
+import { ObjectRef, QualifiedObject, CallableReference } from "../sql/types";
 import Statement from "../../database/statement";
 import { completionItemCache, createCompletionItem, getParmAttributes } from "./completion";
 
@@ -13,9 +13,9 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
     ref.object.schema = Statement.delimName(ref.object.schema, true);
     ref.object.name = Statement.delimName(ref.object.name, true);
 
-    const databaseObj = (ref.object.schema + ref.object.name);
+    const cacheKey = toCacheKey(ref.object);
 
-    if (completionItemCache.has(databaseObj)) {
+    if (completionItemCache.has(cacheKey)) {
       return true;
     }
 
@@ -23,11 +23,11 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
 
     if (callableRoutine) {
       const parms = await Callable.getSignaturesFor(ref.object.schema, callableRoutine.specificNames);
-      completionItemCache.set(databaseObj, parms);
+      completionItemCache.set(cacheKey, parms);
       return true;
     } else {
       // Not callable, let's just cache it as empty to stop spamming the db
-      completionItemCache.set(databaseObj, []);
+      completionItemCache.set(cacheKey, []);
     }
   }
 
@@ -109,9 +109,12 @@ export function getPositionData(ref: CallableReference, offset: number) {
 }
 
 export function getCachedSignatures(ref: CallableReference): CallableSignature[]|undefined {
-  const sqlObj = ref.parentRef.object;
-  const databaseObj = (sqlObj.schema + sqlObj.name).toUpperCase();
-  if (completionItemCache.has(databaseObj)) {
-    return completionItemCache.get(databaseObj);
+  const key = toCacheKey(ref.parentRef.object);
+  if (completionItemCache.has(key)) {
+    return completionItemCache.get(key);
   }
+}
+
+function toCacheKey(sqlObj: QualifiedObject): string {
+  return sqlObj.schema + sqlObj.name;
 }
