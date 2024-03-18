@@ -440,11 +440,13 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
     // content assist invoked during incomplete reference
     // example: select * from sample.emp
     // --                               |
-    const curSchema: string = objectRefs[objectRefs.length - 1].object.schema;
-    if (curClause !== ClauseType.Unknown && tokenAtOffset && curSchema) {
-      completionItems.push(
-        ...(await getObjectCompletions(curSchema, completionTypes))
-      );
+    if (objectRefs[objectRefs.length - 1]) {
+      const curSchema: string = objectRefs[objectRefs.length - 1].object.schema;
+      if (curClause !== ClauseType.Unknown && tokenAtOffset && curSchema) {
+        completionItems.push(
+          ...(await getObjectCompletions(curSchema, completionTypes))
+        );
+      }
     }
   }
 

@@ -13,8 +13,10 @@ export default class Statement {
 		
 		let first = this.tokens[0];
 
-		if (tokenIs(first, `word`, `EXEC`) && tokenIs(this.tokens[1], `word`, `SQL`) && this) {
-			first = this.tokens[3];
+		if (tokenIs(first, `word`, `EXEC`) && tokenIs(this.tokens[1], `word`, `SQL`)) {
+			first = this.tokens[2];
+		} else if (tokenIs(first, `word`) && tokenIs(this.tokens[1], `colon`)) {
+			first = this.tokens[2];
 		}
 
 		if (tokenIs(first, `statementType`) || tokenIs(first, `keyword`, `END`) || tokenIs(first, `keyword`, `BEGIN`)) {
