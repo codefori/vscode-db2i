@@ -266,7 +266,8 @@
 				"command": "vscode-db2i.openNotebook",
 				"title": "New Notebook",
 				"category": "IBM i Notebooks",
-        "enablement": "code-for-ibmi:connected == true"
+        "enablement": "code-for-ibmi:connected == true",
+        "icon": "$(notebook)"
 			},
       {
         "command": "vscode-db2i.notebook.fromSqlUri",
@@ -691,18 +692,23 @@
           "when": "view == exampleBrowser"
         },
         {
-          "command": "vscode-db2i.openSqlDocument",
-          "group": "navigation",
-          "when": "view == jobManager"
-        },
-        {
           "command": "vscode-db2i.jobManager.newJob",
-          "group": "navigation",
+          "group": "navigation@1",
           "when": "view == jobManager"
         },
         {
           "command": "vscode-db2i.jobManager.endAll",
-          "group": "navigation",
+          "group": "navigation@2",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.openSqlDocument",
+          "group": "navigation@3",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.openNotebook",
+          "group": "navigation@4",
           "when": "view == jobManager"
         },
         {
