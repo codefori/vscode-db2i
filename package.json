@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "preview": true,
   "engines": {
     "vscode": "^1.70.0"
@@ -372,6 +372,12 @@
         "icon": "$(notebook-execute)"
       },
       {
+        "command": "vscode-db2i.statement.cancel",
+        "title": "Cancel",
+        "category": "Db2 for i",
+        "icon": "$(stop)"
+      },
+      {
         "command": "vscode-db2i.editorExplain.withRun",
         "title": "Run and explain statement",
         "category": "Db2 for i",
@@ -626,16 +632,21 @@
       ],
       "editor/title": [
         {
-          "when": "editorLangId == sql && code-for-ibmi:connected == true",
-          "group": "navigation@sql",
+          "when": "editorLangId == sql && code-for-ibmi:connected == true && vscode-db2i:statementCanCancel != true",
+          "group": "navigation@1",
           "submenu": "sql/editor/context"
+        },
+        {
+          "command": "vscode-db2i.statement.cancel",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
+          "group": "navigation@1"
         }
       ],
       "sql/editor/context": [
         {
           "command": "vscode-db2i.runEditorStatement",
-          "when": "editorLangId == sql",
-          "group": "1_general@sql"
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
+          "group": "navigation@1"
         },
         {
           "command": "vscode-db2i.editorExplain.withRun",
