@@ -148,10 +148,10 @@ async function getObjectCompletions(
   forSchema: string,
   sqlTypes: { [index: string]: CompletionType }
 ): Promise<CompletionItem[]> {
-  const schemaUpdate: boolean = changedCache.delete(forSchema.toUpperCase());
+  forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
+  const schemaUpdate: boolean = changedCache.delete(forSchema);
   if (!completionItemCache.has(forSchema) || schemaUpdate) {
     const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
-      forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
       const data = await Database.getObjects(forSchema, [value.type]);
       return data.map((table) =>
         createCompletionItem(
