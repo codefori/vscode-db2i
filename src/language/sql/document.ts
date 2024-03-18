@@ -106,7 +106,9 @@ export default class Document {
             groups.push({
               range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
               statements: currentGroup
-            })
+            });
+
+            currentGroup = [];
           }
         } else
         if (statement.isBlockOpener()) {
@@ -128,6 +130,13 @@ export default class Document {
             });
           }
         }
+    }
+
+    if (currentGroup.length > 0) {
+      groups.push({
+        range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
+        statements: currentGroup
+      });
     }
 
     return groups;
