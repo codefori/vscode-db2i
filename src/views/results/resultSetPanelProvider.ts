@@ -38,7 +38,7 @@ export class ResultSetPanelProvider {
             queryObject = query;
           }
 
-          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();          
+          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
 
           data = queryResults.data;
           this._view.webview.postMessage({
@@ -59,10 +59,8 @@ export class ResultSetPanelProvider {
             isDone: true
           });
         }
-        finally{
-          setCancelButtonVisibility(false);
-        }
 
+        setCancelButtonVisibility(false);
         updateStatusBar();
       }
     });
