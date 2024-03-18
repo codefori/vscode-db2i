@@ -17,7 +17,7 @@ import { ServerComponent } from "./connection/serverComponent";
 import { SQLJobManager } from "./connection/manager";
 import { JDBCOptions } from "./connection/types";
 import { SQLJob } from "./connection/sqlJob";
-import { selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
+import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import Configuration from "./configuration";
 
 export interface Db2i {
@@ -38,6 +38,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   const exampleBrowser = new ExampleBrowser(context);
   const selfCodesView = new selfCodesResultsView(context);
+  const selfCodeFileDecorator = new SelfTreeDecorationProvider();
 
   context.subscriptions.push(
     ...languageInit(),

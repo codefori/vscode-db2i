@@ -89,9 +89,8 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
 
       if (selfCodes) {
         return selfCodes.map((error) => {
-          const hitsTxt = error.MATCHES.toString().padStart(10, ' ');
           const label = `${error.LOGGED_SQLSTATE} (${error.LOGGED_SQLCODE})`;
-          const details = `${error.MESSAGE_TEXT} ${error.MATCHES < 100 ? hitsTxt : '💯'.padStart(10, ' ')} 🔥`;
+          const details = `${error.MESSAGE_TEXT}`; // ${error.MATCHES < 100 ? hitsTxt : '💯'.padStart(10, ' ')} 🔥`;
           const hoverMessage = new vscode.MarkdownString(
             `**SQL Statement💻:** ${error.STMTTEXT}\n\n---\n\n**SQL Job🛠️:** ${error.JOB_NAME}\n\n---\n\n**Occurrences🔥:** ${error.MATCHES}\n\n---\n\n**Details✏️:** ${error.MESSAGE_SECOND_LEVEL_TEXT}`
           );
@@ -100,7 +99,8 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
             label,
             details,
             hoverMessage,
-            vscode.TreeItemCollapsibleState.None
+            vscode.TreeItemCollapsibleState.None,
+            error
           );
           return treeItem;
         });
@@ -135,11 +135,15 @@ export class SelfCodeTreeItem extends TreeItem {
     public readonly errorMessage: string,
     public readonly details: string,
     public readonly hoverMessage: vscode.MarkdownString,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+    error: SelfCodeNode
   ) {
     super(errorMessage, collapsibleState);
     this.tooltip = hoverMessage; // Hover text
+    this.tooltip.isTrusted = true;
     this.description = details; // Additional details shown in the tree view
+    this.resourceUri = vscode.Uri.parse(`selfCodeTreeView:${encodeURIComponent(error.MATCHES.toString())}`);
+    this.iconPath = error.LOGGED_SQLCODE < 0 ? new vscode.ThemeIcon(`error`): new vscode.ThemeIcon(`warning`);
   }
 }
 
@@ -155,7 +159,18 @@ export class SelfTreeDecorationProvider implements FileDecorationProvider {
       this.disposables.push(vscode.window.registerFileDecorationProvider(this));
   }
   provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<vscode.FileDecoration> {
-    throw new Error("Method not implemented.");
+    if (uri.scheme === `selfCodeTreeView`) {
+      const errorCount = parseInt(decodeURIComponent(uri.path));
+      
+      if (!isNaN(errorCount) && errorCount > 0) {
+        return {
+          badge: errorCount < 100 ? errorCount.toString() : '💯',
+          tooltip: `Occurrences: ${errorCount}`
+        }
+      }
+    }
+
+    return null;
   }
 
   async updateTreeItems(treeItem: TreeItem): Promise<void> {
