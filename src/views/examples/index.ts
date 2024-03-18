@@ -18,6 +18,74 @@ export interface SQLExample {
 export const ServiceInfoLabel = `IBM i (SQL) Services`;
 
 export const Examples: SQLExamplesList = {
+  "Notebooks": [
+    {
+      "name": "User Storage (Bar)",
+      content: [
+        `-- This notebook will show the top 10 users by storage used`,
+        [
+          `bar: SELECT A.AUTHORIZATION_NAME as label, SUM(A.STORAGE_USED) AS TOTAL_STORAGE_USED`,
+          `  FROM QSYS2.USER_STORAGE A `,
+          `  INNER JOIN QSYS2.USER_INFO B ON B.USER_NAME = A.AUTHORIZATION_NAME WHERE B.USER_NAME NOT LIKE 'Q%' `,
+          `  GROUP BY A.AUTHORIZATION_NAME, B.TEXT_DESCRIPTION, B.ACCOUNTING_CODE, B.MAXIMUM_ALLOWED_STORAGE`,
+          `  ORDER BY TOTAL_STORAGE_USED DESC FETCH FIRST 10 ROWS ONLY`,
+        ].join('\n'),
+      ],
+      isNotebook: true
+    },
+    {
+      "name": "Spool Storage (Line)",
+      content: [
+        `-- This notebook will show the top 10 users by storage used`,
+        [
+          `line: SELECT USER_NAME as label, SUM(SIZE) AS TOTAL_SPOOL_SPACE FROM `,
+          `  TABLE (QSYS2.OBJECT_STATISTICS('QSYS      ', '*LIB') ) as a, `,
+          `  TABLE (QSYS2.OBJECT_STATISTICS(a.objname, 'OUTQ')  ) AS b, `,
+          `  TABLE (QSYS2.OUTPUT_QUEUE_ENTRIES(a.objname, b.objname, '*NO')) AS c`,
+          `WHERE USER_NAME NOT LIKE 'Q%' `,
+          `GROUP BY USER_NAME`,
+          `ORDER BY TOTAL_SPOOL_SPACE DESC`,
+          `FETCH FIRST 10 ROWS ONLY`,
+        ].join(`\n`)
+      ],
+      isNotebook: true
+    },
+    {
+      name: "CPU Consumption (Pie)",
+      content: [
+        `-- Find the top 10 consumers of CPU in the QUSRWRK and QSYSWRK subsystems`,
+        [
+          `pie: select JOB_NAME_SHORT as label, CPU_TIME`,
+          `from table(QSYS2.ACTIVE_JOB_INFO(SUBSYSTEM_LIST_FILTER => 'QUSRWRK,QSYSWRK')) A `,
+          `ORDER BY CPU_TIME DESC `,
+          `LIMIT 10`,
+        ].join(`\n`)
+      ],
+      isNotebook: true
+    },
+    {
+      name: "Largest Objects owned (Line)",
+      content: [
+        `-- Find the top 10 largest objects owned by a user (current_user)`,
+        [
+          `line: with qsysobjs (lib, obj, type) as (`,
+          `  select object_library, object_name, object_type`,
+          `    from table (qsys2.object_ownership(current_user))`,
+          `    where path_name is null`,
+          `)`,
+          `select lib concat '/' concat obj concat ' (' concat type concat ')' as label,`,
+          `       objsize as "Size"`,
+          `  from qsysobjs q, lateral (`,
+          `         select objcreated, last_used_timestamp, objsize`,
+          `           from table (qsys2.object_statistics(lib, type, obj))`,
+          `       ) z`,
+          `order by OBJSIZE DESC`,
+          `limit 10`,
+        ].join(`\n`)
+      ],
+      isNotebook: true
+    }
+  ],
   "Data Definition Language (DDL)": [
     {
       "name": "Create Schema",

@@ -26,7 +26,13 @@ export function notebookFromStatements(statements?: string[]) {
   if (statements) {
     workspace.openNotebookDocument(
       `db2i-notebook`,
-      {cells: statements.map(s => {return new NotebookCellData(NotebookCellKind.Code, s, `sql`)})}
+      {cells: statements.map(s => {
+        if (s.startsWith(`--`)) {
+          return new NotebookCellData(NotebookCellKind.Markup, s.substring(2).trim(), `md`)
+        } else {
+          return new NotebookCellData(NotebookCellKind.Code, s, `sql`)
+        }
+      })}
     )
     .then(doc => {
       window.showNotebookDocument(doc);
