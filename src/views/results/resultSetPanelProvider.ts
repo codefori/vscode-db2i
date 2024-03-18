@@ -1,10 +1,10 @@
-import { WebviewView, WebviewViewResolveContext, CancellationToken, commands } from "vscode";
+import { CancellationToken, WebviewView, WebviewViewResolveContext, commands } from "vscode";
 
-import { Query, QueryState } from "../../connection/query";
-import * as html from "./html";
-import { updateStatusBar } from "../jobManager/statusBar";
-import { JobManager } from "../../config";
 import { setCancelButtonVisibility } from ".";
+import { JobManager } from "../../config";
+import { Query, QueryState } from "../../connection/query";
+import { updateStatusBar } from "../jobManager/statusBar";
+import * as html from "./html";
 
 export class ResultSetPanelProvider {
   _view: WebviewView;
@@ -38,9 +38,7 @@ export class ResultSetPanelProvider {
             queryObject = query;
           }
 
-          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
-
-          setCancelButtonVisibility(false);
+          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();          
 
           data = queryResults.data;
           this._view.webview.postMessage({
@@ -60,6 +58,9 @@ export class ResultSetPanelProvider {
             queryId: ``,
             isDone: true
           });
+        }
+        finally{
+          setCancelButtonVisibility(false);
         }
 
         updateStatusBar();
