@@ -104,7 +104,9 @@ function generateChartHTML(id: number, detail: ChartDetail, labels, datasets: Da
       </script>
     </head>
     <body>
-      <canvas id="myChart${id}"></canvas>
+      <div style="max-height: 700px">
+        <canvas id="myChart${id}"></canvas>
+      </div>
       <p id="errorText${id}"></p>
     </body>
   `;
