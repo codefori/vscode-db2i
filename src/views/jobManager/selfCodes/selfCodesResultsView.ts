@@ -142,6 +142,10 @@ export class SelfCodeTreeItem extends TreeItem {
     this.tooltip = hoverMessage; // Hover text
     this.description = details; // Additional details shown in the tree view
     this.resourceUri = vscode.Uri.parse(`selfCodeTreeView:${encodeURIComponent(error.MATCHES.toString())}`);
+    this.resourceUri = vscode.Uri.from({
+      scheme: `selfCodeTreeView`,
+      path: error.MATCHES.toString()
+    })
     this.iconPath = error.LOGGED_SQLCODE < 0 ? new vscode.ThemeIcon(`error`): new vscode.ThemeIcon(`warning`);
   }
 }
@@ -159,7 +163,7 @@ export class SelfTreeDecorationProvider implements FileDecorationProvider {
   }
   provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<vscode.FileDecoration> {
     if (uri.scheme === `selfCodeTreeView`) {
-      const errorCount = parseInt(decodeURIComponent(uri.path));
+      const errorCount = parseInt(uri.path);
       
       if (!isNaN(errorCount) && errorCount > 0) {
         return {
