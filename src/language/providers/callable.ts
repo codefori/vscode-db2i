@@ -10,8 +10,8 @@ import { completionItemCache, createCompletionItem, getParmAttributes } from "./
  */
 export async function isCallableType(ref: ObjectRef, type: CallableType) {
   if (ref.object.schema && ref.object.name && ref.object.name.toUpperCase() !== `TABLE`) {
-    ref.object.schema = Statement.delimName(ref.object.schema, true);
-    ref.object.name = Statement.delimName(ref.object.name, true);
+    ref.object.schema = Statement.noQuotes(Statement.delimName(ref.object.schema, true));
+    ref.object.name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
 
     const cacheKey = toCacheKey(ref.object);
 

@@ -148,7 +148,7 @@ export default class Statement {
 		const range = this.getBlockRangeAt(offset);
 
 		if (range) {
-			const hasDot = tokenIs(this.tokens[range.start-4], `word`) && tokenIs(this.tokens[range.start-3], `dot`);
+			const hasDot = (tokenIs(this.tokens[range.start-4], `word`) || tokenIs(this.tokens[range.start-4], `sqlName`)) && tokenIs(this.tokens[range.start-3], `dot`);
 				const parentRef = hasDot ? this.getRefAtToken(range.start-4) : this.getRefAtToken(range.start-2);
 
 			if (parentRef) {
@@ -158,8 +158,6 @@ export default class Statement {
 				};
 			}
 		}
-
-		return;
 	}
 
 	getBlockAt(offset: number): Token[] {
@@ -469,7 +467,7 @@ export default class Statement {
 			}
 
 		} else {
-			if (nextToken && NameTypes.includes(this.tokens[i].type)) {
+			if (nextToken && NameTypes.includes(nextToken.type)) {
 				nextIndex = i;
 				endIndex = i;
 
