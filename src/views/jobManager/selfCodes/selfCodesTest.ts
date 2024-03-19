@@ -69,7 +69,7 @@ export function testSelfCodes(): TestCase[] {
       test: async () => {
         let newJob = new SQLJob();
         await newJob.connect();
-        await newJob.setSelfCodes(test.code);
+        await newJob.setSelfState(test.code);
         try {
           await newJob.query(test.sql).run();
         } catch (e) {}

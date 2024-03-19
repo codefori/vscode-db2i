@@ -3,6 +3,7 @@ import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions, ExplainResults } from "./types";
 import { Query } from "./query";
 import { EventEmitter } from "stream";
+import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 
 export enum JobStatus {
   NotStarted = "notStarted",
@@ -274,11 +275,11 @@ export class SQLJob {
     return rpy;
   }
 
-  async setSelfCodes(codes: string) {
+  async setSelfState(code: SelfValue) {
     try {
-      const query: string = `SET SYSIBMADM.SELFCODES = '${codes}'`
+      const query: string = `SET SYSIBMADM.SELFCODES = '${code}'`
       await this.query<any>(query).run();
-      this.options.selfcodes = codes;
+      this.options.selfcodes = code;
     } catch (e) {
       throw e;
     }

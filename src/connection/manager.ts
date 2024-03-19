@@ -4,7 +4,9 @@ import { Query } from "./query";
 import { ServerComponent, UpdateStatus } from "./serverComponent";
 import { JobStatus, SQLJob } from "./sqlJob";
 import { QueryOptions } from "./types";
-import { askAboutNewJob, onConnectOrServerInstall } from "../config";
+import { askAboutNewJob, determineFeatures, onConnectOrServerInstall } from "../config";
+import { SelfValue } from "../views/jobManager/selfCodes/nodes";
+import Configuration from "../configuration";
 
 export interface JobInfo {
   name: string;
@@ -22,6 +24,8 @@ export class SQLJobManager {
 
   async newJob(predefinedJob?: SQLJob, name?: string) {
     if (ServerComponent.isInstalled()) {
+      const features = determineFeatures();
+
       const instance = getInstance();
       const config = instance.getConfig();
 
@@ -36,6 +40,11 @@ export class SQLJobManager {
 
       try {
         await newJob.connect();
+
+        const selfDefault = SQLJobManager.getSelfDefault();
+        if (features.SELF && selfDefault !== `*NONE`) {
+          await newJob.setSelfState(selfDefault);
+        }
 
         this.totalJobs += 1;
 
@@ -137,5 +146,9 @@ export class SQLJobManager {
         throw new Error(`Active SQL job is required. Please spin one up in the 'SQL Job Manager' view and try again.`);
       }
     }
+  }
+
+  static getSelfDefault(): SelfValue {
+    return Configuration.get<SelfValue>(`jobSelfDefault`) || `*NONE`;
   }
 }

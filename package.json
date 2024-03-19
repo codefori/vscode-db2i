@@ -68,6 +68,12 @@
             "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",
             "default": "ask"
           },
+          "vscode-db2i.jobSelfDefault": {
+            "type": "string",
+            "description": "Default SELF code state for new jobs",
+            "default": "*NONE",
+            "enum": ["*NONE", "*ALL", "*ERROR", "*WARN"]
+          },
           "vscode-db2i.jobConfigs": {
             "type": "object",
             "description": "Saved configs for",
@@ -454,6 +460,12 @@
         "icon": "$(edit)"
       },
       {
+        "command": "vscode-db2i.jobManager.defaultSelfSettings",
+        "title": "Set default SELF codes",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
+      },
+      {
         "command": "vscode-db2i.jobManager.editSelfCodes",
         "title": "Set SELF codes Level",
         "category": "Db2 for i",
@@ -715,6 +727,11 @@
         },
         {
           "command": "vscode-db2i.jobManager.newJob",
+          "group": "navigation",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.defaultSelfSettings",
           "group": "navigation",
           "when": "view == jobManager"
         },

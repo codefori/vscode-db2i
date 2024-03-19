@@ -127,7 +127,6 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
     return item;
   }
 }
-
 export class SelfCodeTreeItem extends TreeItem {
   selfCodeNode: SelfCodeNode;
 

@@ -7,7 +7,7 @@ import { JDBCOptions, ServerTraceDest, ServerTraceLevel } from "../../connection
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
-import { selfCodesMap } from "./selfCodes/nodes";
+import { SelfValue, selfCodesMap } from "./selfCodes/nodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
 import { selfCodesResultsView } from "./selfCodes/selfCodesResultsView";
@@ -27,6 +27,10 @@ export class JobManagerView implements TreeDataProvider<any> {
       }),
 
       ...ConfigManager.initialiseSaveCommands(),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.defaultSelfSettings`, () => {
+        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobSelfDefault');
+      }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (options?: JDBCOptions, name?: string) => {
         try {
@@ -172,12 +176,12 @@ export class JobManagerView implements TreeDataProvider<any> {
               const selections = quickPick.selectedItems;
               // SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('-514, -204, -501, +30, -199');
               if (selections && selections.length == 1) {
-                const codes: string = selections[0].label;
+                const code = selections[0].label as SelfValue;
                 try {
-                  await selected.job.setSelfCodes(codes);
-                  vscode.window.showInformationMessage(`Applied SELF codes: ${codes}`);
+                  await selected.job.setSelfState(code);
+                  vscode.window.showInformationMessage(`Applied SELF code: ${code}`);
                 } catch (e) {
-                  vscode.window.showErrorMessage(`Cannot set SELF Codes: ${codes}\n ${e}`)
+                  vscode.window.showErrorMessage(`Cannot set SELF Code: ${code}\n ${e}`)
                 }
               }
               quickPick.hide();

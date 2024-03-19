@@ -10,14 +10,16 @@ export interface SelfCodeNode {
   MESSAGE_SECOND_LEVEL_TEXT: string;
 }
 
+export type SelfValue = "*ALL" | "*ERROR" | "*WARNING" | "*NONE";
+
 export interface SelfCodeObject {
-  code: string;
+  code: SelfValue;
   message: string;
 }
 
 export const selfCodesMap: SelfCodeObject[] = [
   {code: `*ALL`, message: undefined},
   {code: `*ERROR`, message: undefined},
-  {code: `*WARN`, message: undefined},
+  {code: `*WARNING`, message: undefined},
   {code: `*NONE`, message: undefined}
 ];
