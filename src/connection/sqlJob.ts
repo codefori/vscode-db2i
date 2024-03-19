@@ -181,19 +181,19 @@ export class SQLJob {
 
     const connectResult: ConnectionResult = JSON.parse(result);
 
-    if (connectResult.success !== true) {
+    if (connectResult.success === true) {
+      this.status = JobStatus.Ready;
+    } else {
       this.dispose();
       this.status = JobStatus.NotStarted;
       throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 
-    if (this.status === JobStatus.Ended) {
+    if (this.status !== JobStatus.Ready) {
       throw new Error(`Failed to connect properly.`);
     }
 
     this.id = connectResult.job;
-    this.status = JobStatus.Ready;
-
     this.isTracingChannelData = false;
 
     return connectResult;
