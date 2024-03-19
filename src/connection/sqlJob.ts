@@ -189,10 +189,6 @@ export class SQLJob {
       throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 
-    if (this.status !== JobStatus.Ready) {
-      throw new Error(`Failed to connect properly.`);
-    }
-
     this.id = connectResult.job;
     this.isTracingChannelData = false;
 
