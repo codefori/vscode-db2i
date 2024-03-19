@@ -7,6 +7,7 @@ import { getInstance } from '../base';
 import { CommandResult } from '@halcyontech/vscode-ibmi-types';
 import { JobManager } from '../config';
 import { ChartDetail, ChartType, chartTypes, generateChart } from './logic/charts';
+import { JobStatus } from '../connection/sqlJob';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -52,12 +53,19 @@ export class IBMiController {
     execution.executionOrder = ++this._executionOrder;
     execution.start(Date.now()); // Keep track of elapsed time to execute cell.
 
+    const selected = JobManager.getSelection();
+
+    execution.token.onCancellationRequested(() => {
+      if (selected && selected.job.getStatus() === JobStatus.Busy) {
+        selected.job.requestCancel();
+      }
+    });
+
     if (connection) {
       switch (cell.document.languageId) {
         case `sql`:
           try {
-            const job = JobManager.getSelection();
-            if (job) {
+            if (selected) {
               let content = cell.document.getText().trim();
 
               let chartDetail: ChartDetail = {};
@@ -103,7 +111,7 @@ export class IBMiController {
               }
 
               // Execute the query
-              const query = job.job.query(content);
+              const query = selected.job.query(content);
               const results = await query.run();
 
               const table = results.data;
@@ -216,4 +224,6 @@ export class IBMiController {
 
     execution.end(true, Date.now());
   }
+
+
 }
