@@ -252,6 +252,9 @@ describe(`Object references`, () => {
 
     const statement = document.statements[0];
 
+    expect(statement.tokens[10].type).toBe(`join`);
+    expect(statement.tokens[10].value).toBe(`LEFT OUTER JOIN`);
+
     const refs = statement.getObjectReferences();
     expect(refs.length).toBe(2);
 
@@ -842,7 +845,6 @@ describe(`Object references`, () => {
 
     expect(createStatement.type).toBe(StatementType.Create);
     const refs = createStatement.getObjectReferences();
-    console.log(refs);
     expect(refs.length).toBe(2);
 
     expect(refs[0].createType).toBe(`procedure`);
