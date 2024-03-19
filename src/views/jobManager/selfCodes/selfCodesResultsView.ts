@@ -78,7 +78,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
   async getSelfCodes(): Promise<SelfCodeNode[]> {
     const selected = JobManager.getSelection();
     if (selected) {
-      const content = `SELECT job_name, user_name, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, 
+      const content = `SELECT job_name, user_name, reason_code, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, 
                           message_text, message_second_level_text 
                       FROM qsys2.sql_error_log, lateral 
                           (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
@@ -105,7 +105,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
 
       if (selfCodes) {
         return selfCodes.map((error) => {
-          const label = `${error.LOGGED_SQLSTATE} (${error.LOGGED_SQLCODE})`;
+          const label = `${error.LOGGED_SQLSTATE} (${error.LOGGED_SQLCODE}) ${error.REASON_CODE != null ? error.REASON_CODE : ""}`;
           const details = `${error.MESSAGE_TEXT}`; // ${error.MATCHES < 100 ? hitsTxt : '💯'.padStart(10, ' ')} 🔥`;
           const hoverMessage = new vscode.MarkdownString(
             `**SQL Statement💻:** ${error.STMTTEXT}\n\n---\n\n**SQL Job🛠️:** ${error.JOB_NAME}\n\n---\n\n**Occurrences🔥:** ${error.MATCHES}\n\n---\n\n**Details✏️:** ${error.MESSAGE_SECOND_LEVEL_TEXT}`

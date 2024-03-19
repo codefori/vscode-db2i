@@ -1,6 +1,7 @@
 export interface SelfCodeNode {
   JOB_NAME: string,
   USER_NAME: string;
+  REASON_CODE: string;
   LOGGED_TIME: string;
   LOGGED_SQLSTATE: string;
   LOGGED_SQLCODE: number;
