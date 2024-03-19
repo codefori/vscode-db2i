@@ -71,6 +71,11 @@ export class IBMiController {
                 const startingComments = lines.slice(0, firstNonCommentLine).map(line => line.substring(2).trim());
                 content = lines.slice(firstNonCommentLine).join(eol);
 
+                // Remove trailing semicolon. The Service Component doesn't like it.
+                if (content.endsWith(`;`)) {
+                  content = content.substring(0, content.length - 1);
+                }
+
                 let settings = {};
 
                 for (let comment of startingComments) {
