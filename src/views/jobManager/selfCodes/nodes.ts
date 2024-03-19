@@ -17,7 +17,7 @@ export interface SelfCodeObject {
 
 export const selfCodesMap: SelfCodeObject[] = [
   {code: `*ALL`, message: undefined},
-  {code: `*Error`, message: undefined},
-  {code: `*WARN`, message:undefined},
-  {code: `*NONE`, message:undefined}
+  {code: `*ERROR`, message: undefined},
+  {code: `*WARN`, message: undefined},
+  {code: `*NONE`, message: undefined}
 ];
