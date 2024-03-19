@@ -55,6 +55,13 @@ export default class SQLTokeniser {
       becomes: `join`,
     },
     {
+      name: `JOIN`,
+      match: [
+        {type: `word`, match: (value: string) => {return value.toUpperCase() === `JOIN`}}
+      ],
+      becomes: `join`,
+    },
+    {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
         return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
