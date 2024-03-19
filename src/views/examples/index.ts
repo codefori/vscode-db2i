@@ -84,6 +84,20 @@ export const Examples: SQLExamplesList = {
         ].join(`\n`)
       ],
       isNotebook: true
+    },
+    {
+      name: "Authority Failures review",
+      content: [
+        `--Review the audit journal authority failure (AF) detail, over the last month\n\nWhich days had the highest number of AF entries?`,
+        `bar: select date(entry_timestamp) as label, count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by date(entry_timestamp)\n  order by AF_count desc`,
+        `--Which users had the highest number of AF entries?`,
+        `bar: select user_name as label, count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by user_name\n  order by AF_count desc`,
+        `--Which types of AF failures are being hit?`,
+        `bar: select VIOLATION_TYPE_DETAIL as label, count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by VIOLATION_TYPE_DETAIL\n  order by AF_count desc`,
+        `--Which objects are haing the authorization failures?`,
+        `select coalesce(\n         path_name, object_library concat '/' concat object_name concat ' ' concat object_type) as label,\n       count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by coalesce(\n      path_name, object_library concat '/' concat object_name concat ' ' concat object_type)\n  order by AF_count desc`
+      ],
+      isNotebook: true
     }
   ],
   "Data Definition Language (DDL)": [
