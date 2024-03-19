@@ -28,7 +28,7 @@ export function notebookFromStatements(statements?: string[]) {
       `db2i-notebook`,
       {cells: statements.map(s => {
         if (s.startsWith(`--`)) {
-          return new NotebookCellData(NotebookCellKind.Markup, s.substring(2).trim(), `md`)
+          return new NotebookCellData(NotebookCellKind.Markup, s.substring(2).trim(), `markdown`)
         } else {
           return new NotebookCellData(NotebookCellKind.Code, s, `sql`)
         }
