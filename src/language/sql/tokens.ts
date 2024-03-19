@@ -19,6 +19,11 @@ enum ReadState {
   IN_NAME
 }
 
+interface TokenState {
+  tokens: Token[];
+  content: string;
+}
+
 export default class SQLTokeniser {
   matchers: Matcher[] = [
     {
@@ -50,6 +55,13 @@ export default class SQLTokeniser {
       match: [
         {type: `word`, match: (value: string) => {return [`FULL`, `LEFT`, `RIGHT`].includes(value.toUpperCase())}},
         {type: `word`, match: (value: string) => {return value.toUpperCase() === `OUTER`}},
+        {type: `word`, match: (value: string) => {return value.toUpperCase() === `JOIN`}}
+      ],
+      becomes: `join`,
+    },
+    {
+      name: `JOIN`,
+      match: [
         {type: `word`, match: (value: string) => {return value.toUpperCase() === `JOIN`}}
       ],
       becomes: `join`,
@@ -214,14 +226,21 @@ export default class SQLTokeniser {
       currentText = ``;
     }
 
-    result = this.fixStatement(result);
+    const tokenState: TokenState = {
+      tokens: result,
+      content,
+    };
+
+    result = this.fixStatement(tokenState);
     // result = SQLTokeniser.createBlocks(result);
     // result = SQLTokeniser.findScalars(result);
 
     return result;
   }
 
-  private fixStatement(tokens: Token[]) {
+  private fixStatement(state: TokenState) {
+    let tokens = state.tokens;
+
     for (let i = 0; i < tokens.length; i++) {
       for (let y = 0; y < this.matchers.length; y++) {
         const type = this.matchers[y];
@@ -253,7 +272,7 @@ export default class SQLTokeniser {
 
         if (goodMatch) {
           const matchedTokens = tokens.slice(i, i + type.match.length);
-          const value = matchedTokens.map(x => x.value).join(``);
+          const value = state.content.substring(matchedTokens[0].range.start, matchedTokens[matchedTokens.length - 1].range.end);
           tokens.splice(i, type.match.length, {
             type: type.becomes,
             value,
