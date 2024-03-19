@@ -252,6 +252,9 @@ describe(`Object references`, () => {
 
     const statement = document.statements[0];
 
+    expect(statement.tokens[10].type).toBe(`join`);
+    expect(statement.tokens[10].value).toBe(`LEFT OUTER JOIN`);
+
     const refs = statement.getObjectReferences();
     expect(refs.length).toBe(2);
 
@@ -1052,9 +1055,10 @@ describe(`PL body tests`, () => {
     expect(ctes[2].name).toBe(`Temp03`);
     expect(ctes[2].columns.length).toBe(0);
     const temp03Stmt = ctes[2].statement.getObjectReferences();
-    expect(temp03Stmt.length).toBe(2);
+    expect(temp03Stmt.length).toBe(3);
     expect(temp03Stmt[0].object.name).toBe(`Temp01`);
     expect(temp03Stmt[1].object.name).toBe(`Temp02`);
+    expect(temp03Stmt[2].object.name).toBe(`customers`);
   })
 
   test(`WITH: explicit columns`, () => {
