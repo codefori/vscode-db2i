@@ -35,24 +35,21 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
 }
 
 /**
- * Gets completion items that are stored in the cache
- * for a specific procedure
+ * Gets completion items for named paramaters
+ * that are stored in the cache for a specific procedure
  */
 export function getCallableParameters(ref: CallableReference, offset: number): CompletionItem[] {
   const signatures = getCachedSignatures(ref);
   if (signatures) {
     // find signature with the most parameters
-    const parms = signatures.reduce((acc, val) => acc.length > val.parms.length ? acc : val.parms, []);
+    const parms: SQLParm[] = signatures.reduce((acc, val) => acc.length > val.parms.length ? acc : val.parms, []);
 
     // Find any already referenced parameters in this list
     const usedParms = ref.tokens.filter((token) => parms.some((parm) => parm.PARAMETER_NAME === token.value?.toUpperCase()));
 
-    // When named parameters are used, the signature doesn't really apply
-    const { currentParm, firstNamedParameter } = getPositionData(ref, offset);
-
     // Get a list of the available parameters
     const availableParms = parms.filter((parm, i) => 
-      (i >= Math.max(currentParm, firstNamedParameter || -1)) && // Hide fixed parameters that have already been used
+      parm.DEFAULT !== null && 
       (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase())) // Hide parameters that have already been named
     );
 
