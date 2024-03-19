@@ -65,11 +65,31 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
       switch (parm.PARAMETER_MODE) {
         case `IN`:
         case `INOUT`:
+
+          let defaultSnippetValue = `\${0}`;
+
           if (parm.DEFAULT) {
-            item.insertText = new SnippetString(item.label + ` => \${0:${parm.DEFAULT}}`);
-          } else {
-            item.insertText = new SnippetString(item.label + ` => \${0}`);
+            defaultSnippetValue = `\${0:${parm.DEFAULT}}`;
           }
+
+          if (parm.LONG_COMMENT) {
+            const splitIndex = parm.LONG_COMMENT.indexOf(`-`);
+            if (splitIndex !== -1) {
+              const possibleItems = parm.LONG_COMMENT.substring(0, splitIndex).trim();
+              if (possibleItems.includes(`,`)) {
+                const literalValues = possibleItems
+                  .split(`,`)
+                  .map((item) => parm.CHARACTER_MAXIMUM_LENGTH !== null ? `${item.trim()}` : item.trim())
+
+                // If there are no spaces in the literal values, then it's likely to be a good candidate for a snippet
+                if (literalValues.some((item) => item.includes(` `)) === false) {
+                  defaultSnippetValue = `'\${1|` + literalValues.join(`,`) + `|}'\${0}`;
+                }
+              }
+            }
+          }
+
+          item.insertText = new SnippetString(item.label + ` => ${defaultSnippetValue}`);
           break;
         case `OUT`:
           item.insertText = item.label + ` => ?`;
