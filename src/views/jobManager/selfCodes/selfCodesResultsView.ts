@@ -40,6 +40,22 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
       }),
       vscode.commands.registerCommand(`vscode-db2i.self.disableAutoRefresh`, async () => {
         this.setRefreshEnabled(false, true);
+      }),
+      vscode.commands.registerCommand(`vscode-db2i.self.copySqlStatement`, async (item: SelfCodeTreeItem) => {
+        if (item && item.selfCodeNode.STMTTEXT) {
+          await vscode.env.clipboard.writeText(item.selfCodeNode.STMTTEXT);
+          vscode.window.showInformationMessage(`SQL statement copied to clipboard.`);
+        }
+      }),
+      vscode.commands.registerCommand(`vscode-db2i.self.displayDetails`, async (item: SelfCodeTreeItem) => {
+        if (item && item.selfCodeNode) {
+          const jsonData = JSON.stringify(item.selfCodeNode, null, 2);
+          const document = await vscode.workspace.openTextDocument({
+            content: jsonData,
+            language: `json`
+          });
+          await vscode.window.showTextDocument(document, { preview: false });
+        }
       })
     );
     setInterval(async () => {
@@ -102,6 +118,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
             vscode.TreeItemCollapsibleState.None,
             error
           );
+          treeItem.contextValue = `selfCodeNode`;
           return treeItem;
         });
       }
@@ -138,6 +155,7 @@ export class SelfCodeTreeItem extends TreeItem {
     error: SelfCodeNode
   ) {
     super(errorMessage, collapsibleState);
+    this.selfCodeNode = error;
     this.tooltip = hoverMessage; // Hover text
     this.description = details; // Additional details shown in the tree view
     this.resourceUri = vscode.Uri.parse(`selfCodeTreeView:${encodeURIComponent(error.MATCHES.toString())}`);

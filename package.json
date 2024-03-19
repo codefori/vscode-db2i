@@ -558,7 +558,20 @@
         "title": "Copy value",
         "category": "Db2 for i",
         "icon": "$(pencil)"
+      },
+      {
+        "command": "vscode-db2i.self.copySqlStatement",
+        "title": "Copy SQL statement",
+        "category": "Db2 for i",
+        "icon": "$(pencil)"
+      },
+      {
+        "command": "vscode-db2i.self.displayDetails",
+        "title": "Display SELF Code Details",
+        "category": "Db2 for i",
+        "icon": "$(info)"
       }
+
     ],
     "submenus": [
       {
@@ -772,6 +785,16 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "vscode-db2i.self.copySqlStatement",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.self.displayDetails",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        },
         {
           "command": "vscode-db2i.setCurrentSchema",
           "when": "viewItem == schema",
