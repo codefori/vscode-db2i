@@ -1,3 +1,5 @@
+import { SelfValue } from "../views/jobManager/selfCodes/nodes";
+
 export interface ServerResponse {
   id: string;
   success: boolean;
@@ -83,7 +85,7 @@ export type Rows = {[column: string]: string|number|boolean}[];
 
 export interface JDBCOptions {
   // selfcodes
-  selfcodes?: string;
+  selfcodes?: SelfValue;
   // Format properties
   "naming"?: "sql" | "system";
   "date format"?:

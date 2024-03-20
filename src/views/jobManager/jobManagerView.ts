@@ -1,6 +1,6 @@
 import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
 import { JobManager } from "../../config";
-import { JobInfo } from "../../connection/manager";
+import { JobInfo, SQLJobManager } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";
 import { JobStatus, SQLJob, TransactionEndType } from "../../connection/sqlJob";
 import { JDBCOptions, ServerTraceDest, ServerTraceLevel } from "../../connection/types";
@@ -140,7 +140,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
           try {
-            const currentSelfCodes = selected.job.options.selfcodes;
+            const currentSelfCodes: SelfValue = selected.job.options.selfcodes;
             const selfCodeItems: SelfCodesQuickPickItem[] = selfCodesMap.map(
               (code) => new SelfCodesQuickPickItem(code)
             );
@@ -172,51 +172,27 @@ export class JobManagerView implements TreeDataProvider<any> {
 
             quickPick.selectedItems = currentSelfCodeItems;
 
-            quickPick.onDidAccept(async () => {
+            quickPick.onDidChangeSelection(async () => {
               const selections = quickPick.selectedItems;
               // SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('-514, -204, -501, +30, -199');
-              if (selections && selections.length == 1) {
+              if (selections && selections[0].label !== currentSelfCodes) {
                 const code = selections[0].label as SelfValue;
                 try {
                   await selected.job.setSelfState(code);
                   vscode.window.showInformationMessage(`Applied SELF code: ${code}`);
+                  quickPick.hide();
+                  quickPick.dispose();
                 } catch (e) {
                   vscode.window.showErrorMessage(`Cannot set SELF Code: ${code}\n ${e}`)
                 }
               }
-              quickPick.hide();
             });
-            quickPick.onDidHide(() => quickPick.dispose());
             quickPick.show();
           } catch (e) {
             vscode.window.showErrorMessage(e.message);
           }
         }
       }),
-
-      // vscode.commands.registerCommand(`vscode-db2i.jobManager.getSelfErrors`, async (node?: SQLJobItem) => {
-      //   if (node) {
-      //     const id = node.label as string;
-      //     const selected = await JobManager.getJob(id);
-
-      //     // const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
-      //     const content = `SELECT user_name, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, 
-      //                         message_text, message_second_level_text 
-      //                     FROM qsys2.sql_error_log, lateral 
-      //                       (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
-      //                     where user_name = current_user
-      //                     order by logged_time desc`;
-
-      //     const data: SelfCodeNode[] = await JobManager.runSQL<SelfCodeNode>(content, undefined);
-          
-
-      //     // vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-      //     //   content,
-      //     //   qualifier: `statement`,
-      //     //   open: false,
-      //     // });
-      //   }
-      // }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.enableTracing`, async (node?: SQLJobItem) => {
         if (node) {

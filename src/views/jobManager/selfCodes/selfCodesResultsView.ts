@@ -176,7 +176,6 @@ export class SelfTreeDecorationProvider implements FileDecorationProvider {
 
   constructor() {
       this.disposables = [];
-      this.disposables.push(vscode.window.registerFileDecorationProvider(this));
   }
   provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<vscode.FileDecoration> {
     if (uri.scheme === `selfCodeTreeView`) {

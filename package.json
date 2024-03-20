@@ -72,7 +72,7 @@
             "type": "string",
             "description": "Default SELF code state for new jobs",
             "default": "*NONE",
-            "enum": ["*NONE", "*ALL", "*ERROR", "*WARN"]
+            "enum": ["*NONE", "*ALL", "*ERROR", "*WARNING"]
           },
           "vscode-db2i.jobConfigs": {
             "type": "object",
