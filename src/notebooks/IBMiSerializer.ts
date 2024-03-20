@@ -9,11 +9,17 @@ interface RawNotebookCell {
   kind: vscode.NotebookCellKind;
 }
 
-export function notebookInit() {
-  const openBlankNotebook = vscode.commands.registerCommand(`vscode-db2i.openNotebook`, (node) => {
-    const uri = node ? node.resourceUri : vscode.Uri.parse(`untitled:` + `notebook.inb`);
+let newNotebookCount = 1;
 
-    vscode.commands.executeCommand(`vscode.openWith`, uri, `db2i-notebook`);
+export function notebookInit() {
+  const openBlankNotebook = vscode.commands.registerCommand(`vscode-db2i.openNotebook`, () => {
+    vscode.workspace.openNotebookDocument(
+      `db2i-notebook`,
+      {cells: []}
+    )
+    .then(doc => {
+      vscode.window.showNotebookDocument(doc);
+    });
   });
 
   return [
