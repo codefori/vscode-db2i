@@ -1,6 +1,7 @@
 import vscode, { MarkdownString, ThemeIcon, TreeItem, window, workspace } from "vscode";
 import { TreeDataProvider } from "vscode";
 import { Config } from "../config";
+import { QueryHistoryItem } from "../Storage";
 
 const openSqlDocumentCommand = `vscode-db2i.openSqlDocument`;
 
@@ -22,7 +23,7 @@ export class queryHistory implements TreeDataProvider<any> {
       vscode.commands.registerCommand(`vscode-db2i.queryHistory.prepend`, async (newQuery?: string) => {
         if (newQuery && Config.ready) {
           let currentList = Config.getPastQueries();
-          const existingQuery = currentList.findIndex(query => query.trim() === newQuery.trim());
+          const existingQuery = currentList.findIndex(queryItem => queryItem.query.trim() === newQuery.trim());
       
           // If it exists, remove it
           if (existingQuery > 0) {
@@ -31,7 +32,10 @@ export class queryHistory implements TreeDataProvider<any> {
       
           // If it's at the top, don't add it, it's already at the top
           if (existingQuery !== 0) {
-            currentList.splice(0, 0, newQuery);
+            currentList.splice(0, 0, {
+              query: newQuery,
+              unix: Math.floor(Date.now() / 1000)
+            });
           }
       
           await Config.setPastQueries(currentList);
@@ -40,11 +44,13 @@ export class queryHistory implements TreeDataProvider<any> {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.queryHistory.remove`, async (node: PastQuery) => {
+      vscode.commands.registerCommand(`vscode-db2i.queryHistory.remove`, async (node: PastQueryNode) => {
         if (node && Config.ready) {
           let currentList = Config.getPastQueries();
           const chosenQuery = node.query;
-          const existingQuery = currentList.findIndex(query => query.trim() === chosenQuery.trim());
+          const existingQuery = currentList.findIndex(queryItem => 
+            queryItem.query.trim() === chosenQuery.trim()
+          );
       
           // If it exists, remove it
           if (existingQuery >= 0) {
@@ -72,9 +78,26 @@ export class queryHistory implements TreeDataProvider<any> {
     return element;
   }
 
-  async getChildren(): Promise<vscode.TreeItem[]> {
+  async getChildren(timePeriod?: TimePeriodNode): Promise<vscode.TreeItem[]> {
     if (Config.ready) {
-      return Config.getPastQueries().map(query => new PastQuery(query));
+      if (timePeriod) {
+        return timePeriod.getChildren();
+
+      } else {
+        let currentList = Config.getPastQueries();
+        const timePeriods: { [key: string]: PastQueryNode[] } = {};
+
+        for (let queryItem of currentList) {
+          const date = new Date(queryItem.unix * 1000);
+          const period = date.toDateString();
+          if (!timePeriods[period]) {
+            timePeriods[period] = [];
+          }
+          timePeriods[period].push(new PastQueryNode(queryItem.query));
+        }
+
+        return Object.keys(timePeriods).map((period, i) => new TimePeriodNode(period, timePeriods[period], i === 0));
+      }
 
     } else {
       return [new TreeItem(`A connection is required for query history`)];
@@ -82,7 +105,21 @@ export class queryHistory implements TreeDataProvider<any> {
   }
 }
 
-class PastQuery extends vscode.TreeItem {
+class TimePeriodNode extends vscode.TreeItem {
+  constructor(public period: string, private nodes: PastQueryNode[], expanded = true) {
+    super(period, expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
+
+    this.contextValue = `timePeriod`;
+
+    this.iconPath = new ThemeIcon(`calendar`);
+  }
+
+  getChildren() {
+    return this.nodes;
+  }
+}
+
+class PastQueryNode extends vscode.TreeItem {
   constructor(public query: string) {
     super(query.length > 63 ? query.substring(0, 60) + `...` : query);
 

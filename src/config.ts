@@ -23,6 +23,8 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
 
   Config.setConnectionName(instance.getConnection().currentConnectionName);
 
+  await Config.fixPastQueries();
+
   await ServerComponent.initialise().then(installed => {
     if (installed) {
       JobManagerView.setVisible(true);
