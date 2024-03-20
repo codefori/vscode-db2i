@@ -197,7 +197,7 @@
         },
         {
           "id": "queryHistory",
-          "name": "Query History",
+          "name": "Statement History",
           "visibility": "visible",
           "when": "code-for-ibmi:connected == true"
         },
@@ -222,7 +222,7 @@
     "viewsWelcome": [
       {
         "view": "queryHistory",
-        "contents": "Query history will appear here."
+        "contents": "Statement history will appear here."
       },
       {
         "view": "jobManager",
@@ -367,13 +367,13 @@
       },
       {
         "command": "vscode-db2i.queryHistory.remove",
-        "title": "Remove query from history",
+        "title": "Remove statement from history",
         "category": "Db2 for i",
         "icon": "$(trash)"
       },
       {
         "command": "vscode-db2i.queryHistory.clear",
-        "title": "Clear query history",
+        "title": "Clear statement history",
         "category": "Db2 for i",
         "icon": "$(trash)"
       },
