@@ -112,12 +112,6 @@ export class ServerComponent {
 
             ServerComponent.writeOutput(JSON.stringify({remotePath, ExecutablePathDir}));
 
-            const createDirResult = await connection.sendCommand({
-              command: `mkdir -p ${ExecutablePathDir} && chmod 500 ${ExecutablePathDir}`
-            });
-
-            this.writeOutput(JSON.stringify(createDirResult));
-
             await connection.uploadFiles([{local: assetPath, remote: remotePath}]);
 
             const scAuth = await connection.sendCommand({
