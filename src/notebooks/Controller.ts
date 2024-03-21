@@ -96,6 +96,10 @@ export class IBMiController {
                 if (settings[`title`]) {
                   chartDetail.title = settings[`title`];
                 }
+
+                if (settings[`y`]) {
+                  chartDetail.y = settings[`y`];
+                }
               }
 
               // Remove trailing semicolon. The Service Component doesn't like it.

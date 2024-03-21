@@ -2,6 +2,7 @@
 export interface ChartDetail {
   type?: ChartType;
   title?: string;
+  y?: string;
 }
 
 interface ChartData {
@@ -112,6 +113,15 @@ function generateChartHTML(id: number, detail: ChartDetail, labels, datasets: Da
                               return '\\n' + context.dataset.tooltips[nodeIndex];
                             }
                           }
+                        }
+                      }
+                    },
+                    scales: {
+                      y: {
+                        display: true,
+                        title: {
+                          display: ${detail.y ? `true` : `false`},
+                          text: ${JSON.stringify(detail.y)}
                         }
                       }
                     }
