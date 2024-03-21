@@ -98,6 +98,22 @@ export const Examples: SQLExamplesList = {
         `select coalesce(\n         path_name, object_library concat '/' concat object_name concat ' ' concat object_type) as label,\n       count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by coalesce(\n      path_name, object_library concat '/' concat object_name concat ' ' concat object_type)\n  order by AF_count desc`
       ],
       isNotebook: true
+    },
+    {
+      name: `IFS_OBJECT_STATISTICS (Pie)`,
+      content: [
+        `-- Get raw info about files from IFS_OBJECT_STATISTICS. This is a long running query`,
+        `pie: WITH ALL_OBJS AS (\n         SELECT PATH_NAME,\n                OBJECT_TYPE,\n                DATA_SIZE AS FILESIZE,\n                OBJECT_OWNER\n             FROM TABLE (\n                     QSYS2.IFS_OBJECT_STATISTICS(START_PATH_NAME => '/home', -- Set "root" directory for analysis\n                                                 SUBTREE_DIRECTORIES => 'YES',\n                                                 OMIT_LIST => '/QSYS.LIB /QFileSvr.400')\n                 )\n     ),\n     -- Get the total size of all data underneath root\n     TOTAL_DATA_SIZE AS (\n         SELECT CAST(SUM(FILESIZE) AS DECFLOAT) AS DATA_SIZE\n             FROM ALL_OBJS\n             WHERE OBJECT_TYPE != '*DIR'\n     ),\n    -- Get path names to files, also calculate percent storage used (relative to total storage under root).\n    PATHS_AND_FILES AS (\n        SELECT SUBSTRING(PATH_NAME, 1, LOCATE_IN_STRING(PATH_NAME, '/', -1)) AS PATHNAME,\n               SUBSTRING(PATH_NAME, LOCATE_IN_STRING(PATH_NAME, '/', -1) + 1) AS FILENAME,\n               FILESIZE,\n               OBJECT_TYPE,\n               (CAST(FILESIZE AS DECFLOAT) / (SELECT DATA_SIZE FROM TOTAL_DATA_SIZE)) * 100 AS PERCENT_STORAGE\n            FROM ALL_OBJS\n            WHERE OBJECT_TYPE != '*DIR'\n    ),\n    \n    -- Sum file size by directory.\n    FILES_AND_DIRS AS (\n        SELECT PATHNAME, \n               COUNT(*) AS NUM_FILES,\n               CAST(CAST(SUM(FILESIZE) AS DECFLOAT) / 1000000 AS DEC(12, 2)) AS STORAGE_USED_MB, \n               CAST(SUM(PERCENT_STORAGE) AS DEC(5, 2)) AS PERCENT_STORAGE_USED_OF_RELATIVE_ROOT\n        FROM PATHS_AND_FILES\n        GROUP BY PATHNAME)\nSELECT PATHNAME AS LABEL, STORAGE_USED_MB FROM FILES_AND_DIRS\nORDER BY PERCENT_STORAGE_USED_OF_RELATIVE_ROOT DESC\nLIMIT 10;`
+      ],
+      isNotebook: true
+    },
+    {
+      name: `Temp storage by dat (Line)`,
+      content: [
+        `--Show the top temp storage consumption by day`,
+        `line: WITH TOP_CONSUMERS AS (\n        SELECT RANK() OVER (\n                   PARTITION BY DATE(MESSAGE_TIMESTAMP)\n                   ORDER BY PEAK_TEMPORARY_STORAGE DESC\n               ) AS RANK,\n               DATE(MESSAGE_TIMESTAMP) AS DATE,\n               FROM_JOB,\n               JOB_END_CODE,\n               JOB_END_DETAIL,\n               CPU_TIME,\n               SYNC_AUX_IO_COUNT,\n               PEAK_TEMPORARY_STORAGE\n            FROM TABLE (\n                    SYSTOOLS.ENDED_JOB_INFO(START_TIME => CURRENT TIMESTAMP - 7 DAYS, END_TIME => CURRENT TIMESTAMP)\n                )\n    )\n    SELECT FROM_JOB || ' ' || DATE AS LABEL, PEAK_TEMPORARY_STORAGE \n        FROM TOP_CONSUMERS\n        WHERE RANK <= 1\n        ORDER BY DATE ASC,\n                 RANK ASC`,
+      ],
+      isNotebook: true
     }
   ],
   "Data Definition Language (DDL)": [
