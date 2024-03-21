@@ -6,6 +6,7 @@ export interface ChartDetail {
 
 interface ChartData {
   labels: string[];
+  tooltips?: string[];
   datasets: Dataset[];
 }
 
@@ -29,6 +30,7 @@ export function generateChart(id: number, detail: ChartDetail, columns: string[]
   } else if (rows.length > 1) {
     const datasets: Dataset[] = [];
     const keys = Object.keys(rows[0]);
+
     let labels = [];
 
     const labelIndex = keys.findIndex(key => String(key).toUpperCase() === `LABEL`);
@@ -41,13 +43,22 @@ export function generateChart(id: number, detail: ChartDetail, columns: string[]
           // If this column matches the label, set the labels based on the rows of this column
           labels = rows.map(row => row[columns[i]]);
         } else {
-
           // We only want to add columns that are numbers, so we ignore string columns
           if ([`bigint`, `number`].includes(typeof rows[0][columns[i]])) {
-            datasets.push({
+            const newSet = {
               label: columns[i],
+              tooltips: [],
               data: rows.map(row => row[columns[i]]),
-            });
+            };
+
+            // If we have a description column, we add it to the dataset
+            const setDescriptionsColumn = columns.findIndex(col => col.toUpperCase().startsWith(columns[i] + `_`));
+
+            if (setDescriptionsColumn >= 0 && typeof rows[0][columns[setDescriptionsColumn]] === `string`) {
+              newSet.tooltips = rows.map(row => row[columns[setDescriptionsColumn]].replaceAll(`\\n`, `\n`));
+            }
+
+            datasets.push(newSet);
           }
         }
       }
@@ -90,6 +101,16 @@ function generateChartHTML(id: number, detail: ChartDetail, labels, datasets: Da
                         display: ${detail.title ? `true` : `false`},
                         text: '${detail.title || `undefined`}',
                         position: 'top'
+                      },
+                      tooltip: {
+                        callbacks: {
+                          afterLabel: function(context) {
+                            const nodeIndex = context.dataIndex;
+                            if (context.dataset.tooltips && context.dataset.tooltips[nodeIndex]) {
+                              return '\\n' + context.dataset.tooltips[nodeIndex];
+                            }
+                          }
+                        }
                       }
                     }
                   },
