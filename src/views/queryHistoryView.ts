@@ -84,19 +84,50 @@ export class queryHistory implements TreeDataProvider<any> {
         return timePeriod.getChildren();
 
       } else {
-        let currentList = Config.getPastQueries();
-        const timePeriods: { [key: string]: PastQueryNode[] } = {};
+        const currentList = Config.getPastQueries();
+        
+        const day = 60 * 60 * 24;
+        const week = day * 7;
+        const month = day * 30;
+        
+        const now = Math.floor(Date.now() / 1000);
+        const dayAgo = now - day;
+        const weekAgo = now - week;
+        const monthAgo = now - month;
 
-        for (let queryItem of currentList) {
-          const date = new Date(queryItem.unix * 1000);
-          const period = date.toDateString();
-          if (!timePeriods[period]) {
-            timePeriods[period] = [];
+        let dayQueries: PastQueryNode[] = [];
+        let weekQueries: PastQueryNode[] = [];
+        let monthQueries: PastQueryNode[] = [];
+        let laterQueries: PastQueryNode[] = [];
+
+        currentList.forEach(queryItem => {
+          if (queryItem.unix < dayAgo) {
+            dayQueries.push(new PastQueryNode(queryItem.query));
+          } else if (queryItem.unix < weekAgo) {
+            weekQueries.push(new PastQueryNode(queryItem.query));
+          } else if (queryItem.unix < monthAgo) {
+            monthQueries.push(new PastQueryNode(queryItem.query));
+          } else {
+            laterQueries.push(new PastQueryNode(queryItem.query));
           }
-          timePeriods[period].push(new PastQueryNode(queryItem.query));
+        });
+
+        let nodes: TimePeriodNode[] = [];
+
+        if (dayQueries.length > 0) {
+          nodes.push(new TimePeriodNode(`Past day`, dayQueries, true));
+        }
+        if (weekQueries.length > 0) {
+          nodes.push(new TimePeriodNode(`Past week`, weekQueries));
+        }
+        if (monthQueries.length > 0) {
+          nodes.push(new TimePeriodNode(`Past month`, monthQueries));
+        }
+        if (laterQueries.length > 0) {
+          nodes.push(new TimePeriodNode(`Later`, laterQueries));
         }
 
-        return Object.keys(timePeriods).map((period, i) => new TimePeriodNode(period, timePeriods[period], i === 0));
+        return nodes;
       }
 
     } else {
@@ -106,7 +137,7 @@ export class queryHistory implements TreeDataProvider<any> {
 }
 
 class TimePeriodNode extends vscode.TreeItem {
-  constructor(public period: string, private nodes: PastQueryNode[], expanded = true) {
+  constructor(public period: string, private nodes: PastQueryNode[], expanded = false) {
     super(period, expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
 
     this.contextValue = `timePeriod`;
