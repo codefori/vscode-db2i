@@ -108,7 +108,7 @@ export const Examples: SQLExamplesList = {
       isNotebook: true
     },
     {
-      name: `Temp storage by dat (Line)`,
+      name: `Temp storage by day (Line)`,
       content: [
         `--Show the top temp storage consumption by day`,
         `line: WITH TOP_CONSUMERS AS (\n        SELECT RANK() OVER (\n                   PARTITION BY DATE(MESSAGE_TIMESTAMP)\n                   ORDER BY PEAK_TEMPORARY_STORAGE DESC\n               ) AS RANK,\n               DATE(MESSAGE_TIMESTAMP) AS DATE,\n               FROM_JOB,\n               JOB_END_CODE,\n               JOB_END_DETAIL,\n               CPU_TIME,\n               SYNC_AUX_IO_COUNT,\n               PEAK_TEMPORARY_STORAGE\n            FROM TABLE (\n                    SYSTOOLS.ENDED_JOB_INFO(START_TIME => CURRENT TIMESTAMP - 7 DAYS, END_TIME => CURRENT TIMESTAMP)\n                )\n    )\n    SELECT FROM_JOB || ' ' || DATE AS LABEL, PEAK_TEMPORARY_STORAGE \n        FROM TOP_CONSUMERS\n        WHERE RANK <= 1\n        ORDER BY DATE ASC,\n                 RANK ASC`,
