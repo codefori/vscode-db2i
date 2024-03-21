@@ -21,6 +21,8 @@ interface Dataset {
 export type ChartType = `bar` | `line` | `doughnut` | `pie` | `polarArea` | `radar`;
 export const chartTypes: ChartType[] = [`bar`, `line`, `doughnut`, `pie`, `polarArea`, `radar`];
 
+import chartjs from 'chart.js/dist/chart.umd.js';
+
 export function generateChart(id: number, detail: ChartDetail, columns: string[], rows: any[]): string | undefined {
   if (rows.length === 1) {
     const labels = columns;
@@ -77,7 +79,7 @@ function generateChartHTML(id: number, detail: ChartDetail, labels, datasets: Da
   // TODO: remove hardcoded version: https://github.com/codefori/vscode-db2i/compare/0.1.0...0.1.1
   return /*html*/`
     <head>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js" integrity="sha512-6HrPqAvK+lZElIZ4mZ64fyxIBTsaX5zAFZg2V/2WT+iKPrFzTzvx6QAsLW2OaLwobhMYBog/+bvmIEEGXi0p1w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+      <script>${chartjs}</script>
       <script>
         if (!window.ibmicharts) {
           window.ibmicharts = {};
