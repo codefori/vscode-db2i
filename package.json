@@ -201,7 +201,7 @@
         {
           "type": "tree",
           "id": "vscode-db2i.self.nodes",
-          "name": "SELF Codes",
+          "name": "SQL Error Logging Facility (SELF)",
           "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported && vscode-db2i:jobManager == true",
           "visibility": "collapsed"
         }
@@ -467,7 +467,7 @@
       },
       {
         "command": "vscode-db2i.jobManager.editSelfCodes",
-        "title": "Set SELF codes Level",
+        "title": "Set logging level for SELF",
         "category": "Db2 for i",
         "icon": "$(bracket-error)"
       },
@@ -570,6 +570,12 @@
         "title": "Display SELF Code Details",
         "category": "Db2 for i",
         "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.self.help",
+        "title": "Open SELF Documentation",
+        "category": "Db2 for i",
+        "icon": "$(question)"
       }
 
     ],
@@ -700,22 +706,27 @@
         },
         {
           "command": "vscode-db2i.self.refresh",
-          "group": "navigation",
+          "group": "navigation@1",
           "when": "view == vscode-db2i.self.nodes"
         },
         {
           "command": "vscode-db2i.self.enableAutoRefresh",
-          "group": "navigation",
+          "group": "navigation@2",
           "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == false"
         },
         {
           "command": "vscode-db2i.self.disableAutoRefresh",
-          "group": "navigation",
+          "group": "navigation@2",
           "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == true"
         },
         {
           "command": "vscode-db2i.self.reset",
-          "group": "navigation",
+          "group": "navigation@3",
+          "when": "view == vscode-db2i.self.nodes"
+        },
+        {
+          "command": "vscode-db2i.self.help",
+          "group": "navigation@4",
           "when": "view == vscode-db2i.self.nodes"
         },
         {

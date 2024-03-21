@@ -150,18 +150,18 @@ export class JobManagerView implements TreeDataProvider<any> {
               );
 
             const quickPick = vscode.window.createQuickPick();
-            quickPick.title = `Select SELF codes`;
+            quickPick.title = `Set logging level for SELF`;
             quickPick.canSelectMany = false;
             quickPick.matchOnDetail = true;
             quickPick.items = [
               {
                 kind: vscode.QuickPickItemKind.Separator,
-                label: "Currently selected SELF codes",
+                label: "Current logging level",
               },
               ...currentSelfCodeItems,
               {
                 kind: vscode.QuickPickItemKind.Separator,
-                label: "All Available SELF codes",
+                label: "Available logging levels",
               },
               ...selfCodeItems.filter((item) =>
                 currentSelfCodeItems

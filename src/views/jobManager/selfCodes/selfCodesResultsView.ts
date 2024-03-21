@@ -56,6 +56,9 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
           });
           await vscode.window.showTextDocument(document, { preview: false });
         }
+      }),
+      vscode.commands.registerCommand(`vscode-db2i.self.help`, async () => {
+        await vscode.commands.executeCommand(`vscode.open`, `https://www.ibm.com/docs/en/i/7.5?topic=tools-sql-error-logging-facility-self`)
       })
     );
     setInterval(async () => {

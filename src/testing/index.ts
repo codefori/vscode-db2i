@@ -12,6 +12,7 @@ const suites : TestSuite[] = [
   JobsSuite,
   ManagerSuite,
   DatabaseSuite,
+  SelfCodesTestSuite
   // DatabasePerformanceSuite
 ]
 
