@@ -248,7 +248,7 @@
       },
       {
         "view": "vscode-db2i.self.nodes",
-        "contents": "🛠️SELF Codes will appear here"
+        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSelfSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
       }
     ],
     "keybindings": [
