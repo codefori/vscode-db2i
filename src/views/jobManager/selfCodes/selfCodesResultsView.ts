@@ -10,7 +10,7 @@ import {
   Disposable
 } from "vscode";
 import { JobManager } from "../../../config";
-import { SelfCodeNode } from "./nodes";
+import { SelfCodeNode, SelfIleStackFrame } from "./nodes";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -42,14 +42,14 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
         this.setRefreshEnabled(false, true);
       }),
       vscode.commands.registerCommand(`vscode-db2i.self.copySqlStatement`, async (item: SelfCodeTreeItem) => {
-        if (item && item.selfCodeNode.STMTTEXT) {
-          await vscode.env.clipboard.writeText(item.selfCodeNode.STMTTEXT);
+        if (item && item.error.STMTTEXT) {
+          await vscode.env.clipboard.writeText(item.error.STMTTEXT);
           vscode.window.showInformationMessage(`SQL statement copied to clipboard.`);
         }
       }),
       vscode.commands.registerCommand(`vscode-db2i.self.displayDetails`, async (item: SelfCodeTreeItem) => {
-        if (item && item.selfCodeNode) {
-          const jsonData = JSON.stringify(item.selfCodeNode, null, 2);
+        if (item && item.error) {
+          const jsonData = JSON.stringify(item.error, null, 2);
           const document = await vscode.workspace.openTextDocument({
             content: jsonData,
             language: `json`
@@ -81,13 +81,18 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
   async getSelfCodes(): Promise<SelfCodeNode[]> {
     const selected = JobManager.getSelection();
     if (selected) {
-      const content = `SELECT job_name, user_name, reason_code, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, 
-                          message_text, message_second_level_text 
-                      FROM qsys2.sql_error_log, lateral 
-                          (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
+      const content = `SELECT 
+                        job_name, user_name, reason_code, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, message_text, message_second_level_text,
+                        program_library, program_name, program_type, module_name, client_applname, client_programid, initial_stack
+                      FROM qsys2.sql_error_log, lateral (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
                       where user_name = current_user
                       order by logged_time desc`;
-      const data: SelfCodeNode[] = await JobManager.runSQL<SelfCodeNode>(content, undefined);
+
+      const data: SelfCodeNode[] = (await JobManager.runSQL<SelfCodeNode>(content)).map((row) => ({
+        ...row,
+        INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string)
+      }));
+
       return data;
     }
     return;
@@ -100,28 +105,20 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
   getTreeItem(element: any): TreeItem | Thenable<TreeItem> {
     return element;
   }
-  async getChildren(element?: any): Promise<any[]> {
+
+  async getChildren(element?: SelfCodeTreeItem|SelfErrorStackItem): Promise<any[]> {
     if (element) {
-      return [];
+      if (element instanceof SelfCodeTreeItem) {
+        return element.getChilden();
+      } else if (element instanceof SelfErrorStackItem) {
+        return element.getChildren();
+      }
     } else {
       const selfCodes = await this.getSelfCodes();
 
       if (selfCodes) {
         return selfCodes.map((error) => {
-          const label = `${error.LOGGED_SQLSTATE} (${error.LOGGED_SQLCODE}) ${error.REASON_CODE != null ? error.REASON_CODE : ""}`;
-          const details = `${error.MESSAGE_TEXT}`; // ${error.MATCHES < 100 ? hitsTxt : '💯'.padStart(10, ' ')} 🔥`;
-          const hoverMessage = new vscode.MarkdownString(
-            `**SQL Statement💻:** ${error.STMTTEXT}\n\n---\n\n**SQL Job🛠️:** ${error.JOB_NAME}\n\n---\n\n**Occurrences🔥:** ${error.MATCHES}\n\n---\n\n**Details✏️:** ${error.MESSAGE_SECOND_LEVEL_TEXT}`
-          );
-          hoverMessage.isTrusted = true;
-          const treeItem = new SelfCodeTreeItem(
-            label,
-            details,
-            hoverMessage,
-            vscode.TreeItemCollapsibleState.None,
-            error
-          );
-          treeItem.contextValue = `selfCodeNode`;
+          const treeItem = new SelfCodeTreeItem(error);
           return treeItem;
         });
       }
@@ -148,24 +145,84 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
   }
 }
 export class SelfCodeTreeItem extends TreeItem {
-  selfCodeNode: SelfCodeNode;
-
   constructor(
-    public readonly errorMessage: string,
-    public readonly details: string,
-    public readonly hoverMessage: vscode.MarkdownString,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-    error: SelfCodeNode
+    public error: SelfCodeNode
   ) {
-    super(errorMessage, collapsibleState);
-    this.selfCodeNode = error;
-    this.tooltip = hoverMessage; // Hover text
-    this.description = details; // Additional details shown in the tree view
+    const label = `${error.LOGGED_SQLSTATE} (${error.LOGGED_SQLCODE}) ${error.REASON_CODE != null ? error.REASON_CODE : ""}`;
+    super(label, vscode.TreeItemCollapsibleState.Collapsed);
+
+    const hover = new vscode.MarkdownString(
+      [
+        `**💻 SQL Statement:** ${error.STMTTEXT}`,
+        ``, ``,
+        `---`,
+        ``, ``,
+        `**🛠️ SQL Job:** ${error.JOB_NAME}`,
+        ``, ``,
+        `---`,
+        ``, ``,
+        `**🔥 Occurrences:** ${error.MATCHES}`,
+        ``, ``,
+        `---`,
+        ``, ``,
+        `**✏️ Details:** ${error.MESSAGE_SECOND_LEVEL_TEXT}`
+      ].join(`\n`)
+    );
+    hover.isTrusted = true;
+
+    this.tooltip = hover;
+
+    this.description = error.MESSAGE_TEXT; // Additional details shown in the tree view
     this.resourceUri = vscode.Uri.from({
       scheme: `selfCodeTreeView`,
       path: error.MATCHES.toString()
     })
+
     this.iconPath = error.LOGGED_SQLCODE < 0 ? new vscode.ThemeIcon(`error`): new vscode.ThemeIcon(`warning`);
+    this.contextValue = `selfCodeNode`;
+  }
+
+  getChilden(): SelfErrorNodeItem[] {
+    return [
+      new SelfErrorNodeItem(`Job`, this.error.JOB_NAME),
+      new SelfErrorNodeItem(`Client Name`, this.error.CLIENT_APPLNAME),
+      new SelfErrorNodeItem(`Client Program`, this.error.CLIENT_PROGRAMID),
+      new SelfErrorNodeItem(`Object`, `${this.error.PROGRAM_LIBRARY}/${this.error.PROGRAM_NAME} (${this.error.PROGRAM_TYPE}, ${this.error.MODULE_NAME})`),
+      new SelfErrorStackItem(this.error.INITIAL_STACK.initial_stack)
+    ]
+  }
+}
+
+class SelfErrorNodeItem extends TreeItem {
+  constructor(label: string, description: string) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon(`info`);
+    this.description = description;
+  }
+}
+
+class SelfErrorStackItem extends TreeItem {
+  constructor(private stack: SelfIleStackFrame[]) {
+    super(`Stack`, vscode.TreeItemCollapsibleState.Collapsed);
+    this.iconPath = new vscode.ThemeIcon(`debug`);
+    this.contextValue = `selfCodeStack`;
+
+    this.resourceUri = vscode.Uri.from({
+      scheme: `selfCodeTreeView`,
+      path: stack.length.toString()
+    })
+  }
+
+  getChildren(): SelfErrorStackFrameItem[] {
+    return this.stack.map((stackCall) => new SelfErrorStackFrameItem(stackCall));
+  }
+}
+
+class SelfErrorStackFrameItem extends TreeItem {
+  constructor(stackCall: SelfIleStackFrame) {
+    super(`${stackCall.PROC}:${stackCall.STMT}`, vscode.TreeItemCollapsibleState.None);
+    this.description = `${stackCall.LIB}/${stackCall.PGM} (${stackCall.TYPE}, ${stackCall.MODULE})`;
+    this.contextValue = `selfCodeStackCall`;
   }
 }
 
@@ -185,8 +242,7 @@ export class SelfTreeDecorationProvider implements FileDecorationProvider {
       
       if (!isNaN(errorCount) && errorCount > 0) {
         return {
-          badge: errorCount < 100 ? errorCount.toString() : '💯',
-          tooltip: `Occurrences: ${errorCount}`
+          badge: errorCount < 100 ? errorCount.toString() : '💯'
         }
       }
     }
