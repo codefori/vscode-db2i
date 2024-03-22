@@ -29,10 +29,33 @@
     "onLanguage:sql"
   ],
   "extensionDependencies": [
-    "halcyontechltd.code-for-ibmi"
+    "halcyontechltd.code-for-ibmi",
+    "github.copilot-chat"
+  ],
+  "enabledApiProposals": [
+    "chatParticipant",
+    "chatVariableResolver",
+    "languageModels"
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "chatParticipants": [
+      {
+        "id":"vscode-db2i.chat",
+        "name": "Db2i",
+        "description": "Chat with the Db2 for i AI assistant",
+        "commands": [
+          {
+            "name": "build",
+            "description": "build an SQL statement"
+          },
+          {
+            "name": "activity",
+            "description": "summarize the activity on the system"
+          }
+        ]
+      }
+    ],
     "snippets": [
       {
         "language": "sql",
