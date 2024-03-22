@@ -124,7 +124,7 @@ export class queryHistory implements TreeDataProvider<any> {
           nodes.push(new TimePeriodNode(`Past month`, monthQueries));
         }
         if (laterQueries.length > 0) {
-          nodes.push(new TimePeriodNode(`Later`, laterQueries));
+          nodes.push(new TimePeriodNode(`Older`, laterQueries));
         }
 
         return nodes;
