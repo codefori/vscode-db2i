@@ -6,8 +6,8 @@ import schemaBrowser from "./views/schemaBrowser/schemaBrowser";
 import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
-import { loadBase } from "./base";
-import { JobManager, setupConfig } from "./config";
+import { getInstance, loadBase } from "./base";
+import { JobManager, determineFeatures, fetchSystemInfo, setupConfig, turnOffAllFeatures } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { languageInit } from "./language";
@@ -17,6 +17,8 @@ import { ServerComponent } from "./connection/serverComponent";
 import { SQLJobManager } from "./connection/manager";
 import { JDBCOptions } from "./connection/types";
 import { SQLJob } from "./connection/sqlJob";
+import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
+import Configuration from "./configuration";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -33,6 +35,9 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   console.log(`Congratulations, your extension "vscode-db2i" is now active!`);
 
   loadBase();
+
+  const exampleBrowser = new ExampleBrowser(context);
+  const selfCodesView = new selfCodesResultsView(context);
 
   context.subscriptions.push(
     ...languageInit(),
@@ -51,8 +56,15 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     ),
     vscode.window.registerTreeDataProvider(
       `exampleBrowser`,
-      new ExampleBrowser(context)
+      exampleBrowser
     ),
+    vscode.window.registerTreeDataProvider(
+      'vscode-db2i.self.nodes',
+      selfCodesView
+    ),
+    vscode.window.registerFileDecorationProvider(
+      new SelfTreeDecorationProvider()
+    ) 
   );
 
   JSONServices.initialise(context);
@@ -65,6 +77,22 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     // Run tests if not in production build
     initialise(context);
   }
+
+  const instance = getInstance();
+
+  instance.onEvent(`connected`, () => {
+    // We need to fetch the system info
+    fetchSystemInfo().then(() => {
+      determineFeatures();
+      // Refresh the examples when we have it, so we only display certain examples
+      exampleBrowser.refresh();
+      selfCodesView.setRefreshEnabled(Configuration.get(`autoRefreshSelfCodesView`) || false)
+    })
+  });
+
+  instance.onEvent(`disconnected`, () => {
+    turnOffAllFeatures();
+  })
 
   return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new SQLJob(options) };
 }

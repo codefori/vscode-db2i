@@ -45,14 +45,6 @@ export class ExampleBrowser implements TreeDataProvider<any> {
         this.refresh();
       })
     );
-
-    getInstance().onEvent(`connected`, () => {
-      // We need to fetch the system info
-      fetchSystemInfo().then(() => {
-        // Refresh the examples when we have it, so we only display certain examples
-        this.refresh();
-      })
-    })
   }
 
   refresh() {
