@@ -18,6 +18,15 @@ export let Config: ConnectionStorage;
 export let OSData: IBMiLevels|undefined;
 export let JobManager: SQLJobManager = new SQLJobManager();
 
+export type Db2Features = `SELF`;
+
+const featureRequirements: {[id in Db2Features]: {[osVersion: number]: number}} = {
+  'SELF': {
+    7.4: 26,
+    7.5: 5
+  }
+}
+
 export async function onConnectOrServerInstall(): Promise<boolean> {
   const instance = getInstance();
 
@@ -103,6 +112,33 @@ export async function fetchSystemInfo() {
       version,
       db2Level
     }
+  }
+}
+
+export function determineFeatures() {
+  const result: {[id in Db2Features]: boolean} = {
+    'SELF': false
+  };
+
+  if (OSData) {
+    const {version, db2Level} = OSData;
+    
+    const features = Object.keys(featureRequirements) as Db2Features[];
+    for (const featureId of features) {
+      const requiredLevelForFeature = featureRequirements[featureId][String(version)];
+      const supported = requiredLevelForFeature && db2Level >= requiredLevelForFeature;
+      commands.executeCommand(`setContext`, `vscode-db2i:${featureId}Supported`, supported);
+      result[featureId] = supported;
+    }
+  }
+  
+  return result;
+}
+
+export function turnOffAllFeatures() {
+  const features = Object.keys(featureRequirements);
+  for (const featureId of features) {
+    commands.executeCommand(`setContext`, `vscode-db2i:${featureId}Supported`, false);
   }
 }
 

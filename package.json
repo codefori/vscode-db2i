@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "preview": true,
   "engines": {
     "vscode": "^1.70.0"
@@ -53,6 +53,11 @@
         "title": "General",
         "order": 1,
         "properties": {
+          "vscode-db2i.autoRefreshSelfCodesView": {
+            "type": "boolean",
+            "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
+            "default": false
+          },
           "vscode-db2i.pageSize": {
             "type": "number",
             "description": "Page size for Schema browser",
@@ -62,6 +67,12 @@
             "type": "string",
             "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",
             "default": "ask"
+          },
+          "vscode-db2i.jobSelfDefault": {
+            "type": "string",
+            "description": "Default SELF setting for new jobs",
+            "default": "*NONE",
+            "enum": ["*NONE", "*ALL", "*ERROR", "*WARNING"]
           },
           "vscode-db2i.jobConfigs": {
             "type": "object",
@@ -205,6 +216,13 @@
           "id": "vscode-db2i.dove.node",
           "name": "Visual Explain Details",
           "when": "code-for-ibmi:connected && vscode-db2i:explainingNode == true"
+        },
+        {
+          "type": "tree",
+          "id": "vscode-db2i.self.nodes",
+          "name": "SQL Error Logging Facility (SELF)",
+          "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported && vscode-db2i:jobManager == true",
+          "visibility": "collapsed"
         }
       ],
       "db2-explorer": [
@@ -246,6 +264,10 @@
       {
         "view": "jobManager",
         "contents": "The SQL Job Manager allows you to provision one or more jobs for running SQL statements, each with its own connection settings.\n\nUsing managed jobs reduces the use of system resources, improves performance, and maintains  state across subsequent SQL statements.\n\nYou can run SQL statements without starting a job, just be aware that every statement you run requires a temporary, single-use job to be started on your behalf. \n[New SQL job](command:vscode-db2i.jobManager.newJob)"
+      },
+      {
+        "view": "vscode-db2i.self.nodes",
+        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSelfSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
       }
     ],
     "keybindings": [
@@ -293,6 +315,30 @@
         "title": "Refresh Schema Browser",
         "category": "Db2 for i",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-db2i.self.refresh",
+        "title": "Refresh SELF Codes View",
+        "category": "Db2 for i",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-db2i.self.enableAutoRefresh",
+        "title": "Enable Auto Refresh",
+        "category": "Db2 for i",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "vscode-db2i.self.disableAutoRefresh",
+        "title": "Disable Auto Refresh",
+        "category": "Db2 for i",
+        "icon": "$(sync-ignored)"
+      },
+      {
+        "command": "vscode-db2i.self.reset",
+        "title": "Reset SELF Codes View",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
       },
       {
         "command": "vscode-db2i.manageSchemaBrowserList",
@@ -446,8 +492,14 @@
         "icon": "$(edit)"
       },
       {
+        "command": "vscode-db2i.jobManager.defaultSelfSettings",
+        "title": "SQL Error Logging Facility (SELF) - Default Setting",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
+      },
+      {
         "command": "vscode-db2i.jobManager.editSelfCodes",
-        "title": "Edit SELF codes",
+        "title": "Set logging level for SELF",
         "category": "Db2 for i",
         "icon": "$(bracket-error)"
       },
@@ -471,11 +523,6 @@
       {
         "command": "vscode-db2i.jobManager.getTrace",
         "title": "Get Trace Data",
-        "category": "Db2 for i"
-      },
-      {
-        "command": "vscode-db2i.jobManager.getSelfErrors",
-        "title": "Get SELF codes Errors",
         "category": "Db2 for i"
       },
       {
@@ -543,7 +590,26 @@
         "title": "Copy value",
         "category": "Db2 for i",
         "icon": "$(pencil)"
+      },
+      {
+        "command": "vscode-db2i.self.copySqlStatement",
+        "title": "Copy SQL statement",
+        "category": "Db2 for i",
+        "icon": "$(pencil)"
+      },
+      {
+        "command": "vscode-db2i.self.displayDetails",
+        "title": "Display SELF Code Details",
+        "category": "Db2 for i",
+        "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.self.help",
+        "title": "Open SELF Documentation",
+        "category": "Db2 for i",
+        "icon": "$(question)"
       }
+
     ],
     "submenus": [
       {
@@ -584,10 +650,6 @@
         },
         {
           "command": "vscode-db2i.jobManager.enableTracing",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.getSelfErrors",
           "when": "never"
         },
         {
@@ -684,6 +746,31 @@
           "when": "view == schemaBrowser"
         },
         {
+          "command": "vscode-db2i.self.refresh",
+          "group": "navigation@1",
+          "when": "view == vscode-db2i.self.nodes"
+        },
+        {
+          "command": "vscode-db2i.self.enableAutoRefresh",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == false"
+        },
+        {
+          "command": "vscode-db2i.self.disableAutoRefresh",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == true"
+        },
+        {
+          "command": "vscode-db2i.self.reset",
+          "group": "navigation@3",
+          "when": "view == vscode-db2i.self.nodes"
+        },
+        {
+          "command": "vscode-db2i.self.help",
+          "group": "navigation@4",
+          "when": "view == vscode-db2i.self.nodes"
+        },
+        {
           "command": "vscode-db2i.queryHistory.clear",
           "group": "navigation",
           "when": "view == queryHistory"
@@ -701,6 +788,11 @@
         {
           "command": "vscode-db2i.jobManager.newJob",
           "group": "navigation@1",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.defaultSelfSettings",
+          "group": "navigation",
           "when": "view == jobManager"
         },
         {
@@ -750,6 +842,16 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "vscode-db2i.self.copySqlStatement",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.self.displayDetails",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        },
         {
           "command": "vscode-db2i.setCurrentSchema",
           "when": "viewItem == schema",
@@ -830,7 +932,7 @@
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
         },
-        {
+{
           "command": "vscode-db2i.jobManager.editSelfCodes",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "self@2"
@@ -854,11 +956,6 @@
           "command": "vscode-db2i.jobManager.getTrace",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "trace@2"
-        },
-        {
-          "command": "vscode-db2i.jobManager.getSelfErrors",
-          "when": "view == jobManager && viewItem == sqlJob",
-          "group": "self@1"
         },
         {
           "command": "vscode-db2i.jobManager.newConfig",

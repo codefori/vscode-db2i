@@ -1,15 +1,16 @@
 import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
 import { JobManager } from "../../config";
-import { JobInfo } from "../../connection/manager";
+import { JobInfo, SQLJobManager } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";
 import { JobStatus, SQLJob, TransactionEndType } from "../../connection/sqlJob";
 import { JDBCOptions, ServerTraceDest, ServerTraceLevel } from "../../connection/types";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
-import { selfCodesMap } from "./selfCodes/selfCodes";
+import { SelfValue, selfCodesMap } from "./selfCodes/nodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
+import { selfCodesResultsView } from "./selfCodes/selfCodesResultsView";
 import { setCancelButtonVisibility } from "../results";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
@@ -26,6 +27,10 @@ export class JobManagerView implements TreeDataProvider<any> {
       }),
 
       ...ConfigManager.initialiseSaveCommands(),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.defaultSelfSettings`, () => {
+        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobSelfDefault');
+      }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (options?: JDBCOptions, name?: string) => {
         try {
@@ -135,7 +140,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
           try {
-            const currentSelfCodes = selected.job.options.selfcodes;
+            const currentSelfCodes: SelfValue = selected.job.options.selfcodes;
             const selfCodeItems: SelfCodesQuickPickItem[] = selfCodesMap.map(
               (code) => new SelfCodesQuickPickItem(code)
             );
@@ -145,18 +150,18 @@ export class JobManagerView implements TreeDataProvider<any> {
               );
 
             const quickPick = vscode.window.createQuickPick();
-            quickPick.title = `Select SELF codes`;
-            quickPick.canSelectMany = true;
+            quickPick.title = `Set logging level for SELF`;
+            quickPick.canSelectMany = false;
             quickPick.matchOnDetail = true;
             quickPick.items = [
               {
                 kind: vscode.QuickPickItemKind.Separator,
-                label: "Currently selected SELF codes",
+                label: "Current logging level",
               },
               ...currentSelfCodeItems,
               {
                 kind: vscode.QuickPickItemKind.Separator,
-                label: "All Available SELF codes",
+                label: "Available logging levels",
               },
               ...selfCodeItems.filter((item) =>
                 currentSelfCodeItems
@@ -167,36 +172,25 @@ export class JobManagerView implements TreeDataProvider<any> {
 
             quickPick.selectedItems = currentSelfCodeItems;
 
-            quickPick.onDidAccept(async () => {
+            quickPick.onDidChangeSelection(async () => {
               const selections = quickPick.selectedItems;
               // SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('-514, -204, -501, +30, -199');
-              if (selections) {
-                const codes: string[] = selections.map((code) => code.label);
-                selected.job.setSelfCodes(codes);
-                vscode.window.showInformationMessage(`Applied SELF codes: ${codes}`);
+              if (selections && selections[0].label !== currentSelfCodes) {
+                const code = selections[0].label as SelfValue;
+                try {
+                  await selected.job.setSelfState(code);
+                  vscode.window.showInformationMessage(`Applied SELF code: ${code}`);
+                  quickPick.hide();
+                  quickPick.dispose();
+                } catch (e) {
+                  vscode.window.showErrorMessage(`Cannot set SELF Code: ${code}\n ${e}`)
+                }
               }
-              quickPick.hide();
             });
-            quickPick.onDidHide(() => quickPick.dispose());
             quickPick.show();
           } catch (e) {
             vscode.window.showErrorMessage(e.message);
           }
-        }
-      }),
-
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.getSelfErrors`, async (node?: SQLJobItem) => {
-        if (node) {
-          const id = node.label as string;
-          const selected = await JobManager.getJob(id);
-
-          const content = `SELECT * FROM QSYS2.SQL_ERROR_LOG WHERE JOB_NAME = '${selected.job.id}'`;
-
-          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-            content,
-            qualifier: `statement`,
-            open: false,
-          });
         }
       }),
 
@@ -300,7 +294,8 @@ export class JobManagerView implements TreeDataProvider<any> {
     });
   }
 
-  refresh() {
+    refresh() {
+    
     this._onDidChangeTreeData.fire();
     updateStatusBar();
 
