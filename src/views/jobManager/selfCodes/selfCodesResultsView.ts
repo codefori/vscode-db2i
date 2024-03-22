@@ -161,7 +161,6 @@ export class SelfCodeTreeItem extends TreeItem {
     this.selfCodeNode = error;
     this.tooltip = hoverMessage; // Hover text
     this.description = details; // Additional details shown in the tree view
-    this.resourceUri = vscode.Uri.parse(`selfCodeTreeView:${encodeURIComponent(error.MATCHES.toString())}`);
     this.resourceUri = vscode.Uri.from({
       scheme: `selfCodeTreeView`,
       path: error.MATCHES.toString()
