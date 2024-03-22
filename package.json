@@ -55,7 +55,7 @@
         "properties": {
           "vscode-db2i.autoRefreshSelfCodesView": {
             "type": "boolean",
-            "description": "Automatically refresh the SELF codes view every 5 seconds",
+            "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
             "default": false
           },
           "vscode-db2i.pageSize": {
