@@ -11,6 +11,8 @@ import {
 } from "vscode";
 import { JobManager } from "../../../config";
 import { SelfCodeNode, SelfIleStackFrame } from "./nodes";
+import { openExampleCommand } from "../../examples/exampleBrowser";
+import { SQLExample } from "../../examples";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -184,12 +186,36 @@ export class SelfCodeTreeItem extends TreeItem {
 
   getChilden(): SelfErrorNodeItem[] {
     return [
+      new SelfErrorStatementItem(this.error.STMTTEXT),
       new SelfErrorNodeItem(`Job`, this.error.JOB_NAME),
       new SelfErrorNodeItem(`Client Name`, this.error.CLIENT_APPLNAME),
       new SelfErrorNodeItem(`Client Program`, this.error.CLIENT_PROGRAMID),
       new SelfErrorNodeItem(`Object`, `${this.error.PROGRAM_LIBRARY}/${this.error.PROGRAM_NAME} (${this.error.PROGRAM_TYPE}, ${this.error.MODULE_NAME})`),
       new SelfErrorStackItem(this.error.INITIAL_STACK.initial_stack)
     ]
+  }
+}
+
+class SelfErrorStatementItem extends TreeItem {
+  constructor(statement: string) {
+    super(`Statement`, vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon(`database`);
+    this.description = statement;
+
+    const hoverable = new vscode.MarkdownString();
+    hoverable.appendCodeblock(statement, `sql`);
+    this.tooltip = hoverable;
+
+    const example: SQLExample = {
+      name: `Statement`,
+      content: [statement]
+    }
+    
+    this.command = {
+      command: openExampleCommand,
+      title: `Open example`,
+      arguments: [example]
+    };
   }
 }
 
