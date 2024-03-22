@@ -55,7 +55,7 @@ export function generateChart(id: number, detail: ChartDetail, columns: string[]
             };
 
             // If we have a description column, we add it to the dataset
-            const setDescriptionsColumn = columns.findIndex(col => col.toUpperCase().startsWith(columns[i].toUpperCase() + `_`));
+            const setDescriptionsColumn = columns.findIndex(col => col.toUpperCase().startsWith(columns[i].toUpperCase() + `_D`));
 
             if (setDescriptionsColumn >= 0 && typeof rows[0][columns[setDescriptionsColumn]] === `string`) {
               newSet.tooltips = rows.map(row => row[columns[setDescriptionsColumn]].replaceAll(`\\n`, `\n`));
