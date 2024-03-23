@@ -19,42 +19,46 @@ export function activateChat(context: vscode.ExtensionContext) {
     token: vscode.CancellationToken
   ): Promise<IDB2ChatResult> => {
 
-    if (request.command == `build`) {
-      stream.progress(`Querying database for information...`);
-      const messages = [
-        new vscode.LanguageModelChatSystemMessage(
-          `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice. Help the developer write an SQL statement based on the prompt information. Always include code examples where is makes sense.`
-        ),
-        new vscode.LanguageModelChatUserMessage(request.prompt),
-      ];
+    let messages: (vscode.LanguageModelChatSystemMessage | vscode.LanguageModelChatUserMessage)[];
 
-      await streamModelResponse(messages, stream, token);
-
-      return { metadata: { command: "build" } };
-
-    } else if (request.command == `activity`) {
+    switch (request.command) {
+      case `build`:
+        stream.progress(`Querying database for information...`);
+        messages = [
+          new vscode.LanguageModelChatSystemMessage(
+            `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice. Help the developer write an SQL statement based on the prompt information. Always include code examples where is makes sense.`
+          ),
+          new vscode.LanguageModelChatUserMessage(request.prompt),
+        ];
+  
+        await streamModelResponse(messages, stream, token);
+  
+        return { metadata: { command: "build" } };
       
-      stream.progress(`Grabbing Information about IBM i system`);
-      const data = await processUserMessage();
-      console.log(`summarize the following data in a readable paragraph: ${data}`)
-      const messages = [
-        new vscode.LanguageModelChatSystemMessage(
-          `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice. Help the developer write an SQL statement based on the prompt information. Always include code examples where is makes sense.`
-        ),
-        new vscode.LanguageModelChatUserMessage(
-          `summarize the following data in a readable paragraph: ${data}`
-        ),
-      ];
-
-      await streamModelResponse(messages, stream, token);
-
-      return { metadata: { command: "activity" } };
+      case `activity`:
+        stream.progress(`Grabbing Information about IBM i system`);
+        const data = await processUserMessage();
+        console.log(`summarize the following data in a readable paragraph: ${data}`)
+        messages = [
+          new vscode.LanguageModelChatSystemMessage(
+            `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice. Help the developer write an SQL statement based on the prompt information. Always include code examples where is makes sense.`
+          ),
+          new vscode.LanguageModelChatUserMessage(
+            `summarize the following data in a readable paragraph: ${data}`
+          ),
+        ];
+  
+        await streamModelResponse(messages, stream, token);
+  
+        return { metadata: { command: "activity" } };
     }
   };
 
   const chat = vscode.chat.createChatParticipant(CHAT_ID, chatHandler);
   chat.isSticky = true;
   chat.iconPath = new vscode.ThemeIcon(`database`);
+
+  context.subscriptions.push(chat);
 }
 
 

@@ -47,11 +47,11 @@
         "commands": [
           {
             "name": "build",
-            "description": "build an SQL statement"
+            "description": "Build an SQL statement"
           },
           {
             "name": "activity",
-            "description": "summarize the activity on the system"
+            "description": "Summarize the activity on the system"
           }
         ]
       }
