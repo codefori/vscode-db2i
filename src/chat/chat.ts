@@ -19,7 +19,17 @@ const getDefaultSchema = (): string => {
 type TableRefs = { [key: string]: TableColumn[] };
 
 async function findPossibleTables(schema: string, words: string[]) {
-  const validWords = words.filter(item => item.length > 2 && !item.includes(`'`)).map(item => `'${Statement.delimName(item, true)}'`);
+  // Add extra words for words with S at the end, to ignore possible plurals
+  words.forEach(item => {
+    if (item.endsWith(`s`)) {
+      words.push(item.slice(0, -1));
+    }
+  })
+
+  const validWords = words
+    .map(item => item.endsWith(`'s`) ? item.slice(0, -2) : item)
+    .filter(item => item.length > 2 && !item.includes(`'`))
+    .map(item => `'${Statement.delimName(item, true)}'`);
 
   const objectFindStatement = [
     `SELECT `,
@@ -41,7 +51,7 @@ async function findPossibleTables(schema: string, words: string[]) {
     `    column.table_schema = key.table_schema and`,
     `    column.table_name = key.table_name and`,
     `    column.column_name = key.column_name`,
-    `WHERE column.TABLE_SCHEMA = '${getDefaultSchema()}' AND column.TABLE_NAME in (${validWords.join(`, `)})`,
+    `WHERE column.TABLE_SCHEMA = '${schema}' AND column.TABLE_NAME in (${validWords.join(`, `)})`,
     `ORDER BY column.ORDINAL_POSITION`,
   ].join(` `);
 
