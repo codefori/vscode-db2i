@@ -21,7 +21,6 @@ export function activateChat(context: vscode.ExtensionContext) {
 
     if (request.command == `build`) {
       stream.progress(`Querying database for information...`);
-      const text = processUserMessage(request.prompt);
       const messages = [
         new vscode.LanguageModelChatSystemMessage(
           `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice. Help the developer write an SQL statement based on the prompt information. Always include code examples where is makes sense.`
@@ -36,7 +35,7 @@ export function activateChat(context: vscode.ExtensionContext) {
     } else if (request.command == `activity`) {
       
       stream.progress(`Grabbing Information about IBM i system`);
-      const data = await processUserMessage(request.prompt);
+      const data = await processUserMessage();
       console.log(`summarize the following data in a readable paragraph: ${data}`)
       const messages = [
         new vscode.LanguageModelChatSystemMessage(
@@ -59,8 +58,7 @@ export function activateChat(context: vscode.ExtensionContext) {
 }
 
 
-async function processUserMessage(prompt: string): Promise<string> {
-
+async function processUserMessage(): Promise<string> {
   const sqlStatment = `SELECT * FROM TABLE(QSYS2.SYSTEM_STATUS(RESET_STATISTICS=>'YES',DETAILED_INFO=>'ALL')) X`;
   const result = await JobManager.runSQL(sqlStatment, undefined);
   return JSON.stringify(result);
