@@ -84,11 +84,18 @@ function refsToMarkdown(refs: TableRefs) {
 
     markdown.push(`# ${tableName}`, ``);
 
+    if (condensedResult) {
+      markdown.push(`| Column | Type | Text |`);
+      markdown.push(`| - | - | - |`);
+    } else {
+      markdown.push(`| Column | Type | Nullable | Identity | Text | Constraint |`);
+      markdown.push(`| - | - | - | - | - | - |`);
+    }
     for (const column of refs[tableName]) {
       if (condensedResult) {
-        markdown.push(`| name:${column.COLUMN_NAME} | type:${column.DATA_TYPE} | text:${column.COLUMN_TEXT} |`);
+        markdown.push(`| ${column.COLUMN_NAME} | ${column.DATA_TYPE} | ${column.COLUMN_TEXT} |`);
       } else {
-        markdown.push(`| name:${column.COLUMN_NAME} | type:${column.DATA_TYPE} | nullable:${column.IS_NULLABLE} | identity:${column.IS_IDENTITY} | text:${column.COLUMN_TEXT} | constraint:${column.CONSTRAINT_NAME} |`);
+        markdown.push(`| ${column.COLUMN_NAME} | ${column.DATA_TYPE} | ${column.IS_NULLABLE} | ${column.IS_IDENTITY} | ${column.COLUMN_TEXT} | ${column.CONSTRAINT_NAME} |`);
       }
     }
 
@@ -139,6 +146,7 @@ export function activateChat(context: vscode.ExtensionContext) {
         return { metadata: { command: "activity" } };
         
       default:
+        context
         stream.progress(`Getting information from ${Statement.prettyName(usingSchema)}...`);
         let refs = await findPossibleTables(usingSchema, request.prompt.split(` `));
 
