@@ -99,7 +99,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   if (data.rows === undefined && totalRows === 0) {
                     document.getElementById(messageSpanId).innerText = 'Statement executed with no result set returned. Rows affected: ' + data.update_count;
                   } else {
-                    document.getElementById(statusId).innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. More available...');
+                    document.getElementById(statusId).innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. More available.');
                     document.getElementById(messageSpanId).style.visibility = "hidden";
                   }
                   break;
