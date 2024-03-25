@@ -109,27 +109,6 @@ export function activateChat(context: vscode.ExtensionContext) {
     request.variables
 
     switch (request.command) {
-      case `build`:
-        stream.progress(`Getting information from ${Statement.prettyName(usingSchema)}...`);
-        const refs = await findPossibleTables(usingSchema, request.prompt.split(` `));
-        stream.progress(`Building response...`);
-        messages = [
-          new vscode.LanguageModelChatSystemMessage(
-            `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice.`
-          ),
-          new vscode.LanguageModelChatSystemMessage(
-            `Give the developer an SQL statement or information based on the prompt and following table references. Always include code examples where is makes sense.`
-          ),
-          new vscode.LanguageModelChatSystemMessage(
-            `Here are the table references:\n${refsToMarkdown(refs)}`
-          ),
-          new vscode.LanguageModelChatUserMessage(request.prompt),
-        ];
-
-        await streamModelResponse(messages, stream, token);
-
-        return { metadata: { command: "build" } };
-
       case `activity`:
         stream.progress(`Grabbing Information about IBM i system`);
         const data = await processUserMessage();
@@ -147,6 +126,39 @@ export function activateChat(context: vscode.ExtensionContext) {
         await streamModelResponse(messages, stream, token);
 
         return { metadata: { command: "activity" } };
+        
+      default:
+        stream.progress(`Getting information from ${Statement.prettyName(usingSchema)}...`);
+        const refs = await findPossibleTables(usingSchema, request.prompt.split(` `));
+
+        messages = [new vscode.LanguageModelChatSystemMessage(
+          `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice.`
+        )];
+
+        if (Object.keys(refs).length > 0) {
+          stream.progress(`Building response...`);
+          messages.push(
+            new vscode.LanguageModelChatSystemMessage(
+              `Give the developer an SQL statement or information based on the prompt and following table references. Always include code examples where is makes sense.`
+            ),
+            new vscode.LanguageModelChatSystemMessage(
+              `Here are the table references:\n${refsToMarkdown(refs)}`
+            ),
+            new vscode.LanguageModelChatUserMessage(request.prompt),
+          );
+
+        } else {
+          stream.progress(`No references found.`);
+          messages.push(
+            new vscode.LanguageModelChatSystemMessage(
+              `Warn the developer that their request is not clear or that no references were found. Provide a suggestion or ask for more information.`
+            ),
+          );
+        }
+
+        await streamModelResponse(messages, stream, token);
+
+        return { metadata: { command: "build" } };
     }
   };
 
