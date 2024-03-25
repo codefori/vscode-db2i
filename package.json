@@ -288,6 +288,12 @@
         "key": "ctrl+alt+r",
         "mac": "cmd+alt+r",
         "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
+        "command": "notebook.cell.execute",
+        "key": "ctrl+r",
+        "mac": "cmd+r",
+        "when": "editorLangId == sql && resourceExtname == .inb"
       }
     ],
     "commands": [
