@@ -87,18 +87,26 @@ function refsToMarkdown(refs: TableRefs) {
   return markdown.join(`\n`);
 }
 
+type GptMessage = (
+  | vscode.LanguageModelChatUserMessage
+  | vscode.LanguageModelChatSystemMessage
+);
+
 export function activateChat(context: vscode.ExtensionContext) {
 
+  // chatHandler deals with the input from the chat windows,
+  // and uses streamModelResponse to send the response back to the chat window
   const chatHandler: vscode.ChatRequestHandler = async (
     request: vscode.ChatRequest,
     context: vscode.ChatContext,
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken
   ): Promise<IDB2ChatResult> => {
-
-    let messages: (vscode.LanguageModelChatSystemMessage | vscode.LanguageModelChatUserMessage)[];
+    let messages: GptMessage[];
 
     const usingSchema = getDefaultSchema();
+
+    request.variables
 
     switch (request.command) {
       case `build`:
@@ -117,11 +125,11 @@ export function activateChat(context: vscode.ExtensionContext) {
           ),
           new vscode.LanguageModelChatUserMessage(request.prompt),
         ];
-  
+
         await streamModelResponse(messages, stream, token);
-  
+
         return { metadata: { command: "build" } };
-      
+
       case `activity`:
         stream.progress(`Grabbing Information about IBM i system`);
         const data = await processUserMessage();
@@ -135,18 +143,27 @@ export function activateChat(context: vscode.ExtensionContext) {
           ),
           new vscode.LanguageModelChatUserMessage(request.prompt),
         ];
-  
+
         await streamModelResponse(messages, stream, token);
-  
+
         return { metadata: { command: "activity" } };
     }
   };
+
+  const variableResolver = vscode.chat.registerChatVariableResolver(`coolness`, `Selected value`, 
+    {
+      resolve: async (name, context, token) => {
+        const editor = vscode.window.activeTextEditor;
+        return [{value: 'Hello world', level: vscode.ChatVariableLevel.Full}];
+      }
+    }
+  );
 
   const chat = vscode.chat.createChatParticipant(CHAT_ID, chatHandler);
   chat.isSticky = true;
   chat.iconPath = new vscode.ThemeIcon(`database`);
 
-  context.subscriptions.push(chat);
+  context.subscriptions.push(chat, variableResolver);
 }
 
 
@@ -156,12 +173,33 @@ async function processUserMessage(): Promise<string> {
   return JSON.stringify(result);
 }
 
+async function sendChatMessage(messages: GptMessage[]) {
+  let chatResponse: vscode.LanguageModelChatResponse | undefined;
+  try {
+    chatResponse = await vscode.lm.sendChatRequest(LANGUAGE_MODEL_ID, messages, {}, new vscode.CancellationTokenSource().token);
+
+    // for await (const fragment of chatResponse.stream) {
+    //   await textEditor.edit(edit => {
+    //     const lastLine = textEditor.document.lineAt(textEditor.document.lineCount - 1);
+    //     const position = new vscode.Position(lastLine.lineNumber, lastLine.text.length);
+    //     edit.insert(position, fragment);
+    //   });
+    // }
+
+  } catch (err) {
+    // making the chat request might fail because
+    // - model does not exist
+    // - user consent not given
+    // - quote limits exceeded
+    if (err instanceof vscode.LanguageModelError) {
+      console.log(err.message, err.code)
+    }
+    return
+  }
+}
 
 async function streamModelResponse(
-  messages: (
-    | vscode.LanguageModelChatUserMessage
-    | vscode.LanguageModelChatSystemMessage
-  )[],
+  messages: GptMessage[],
   stream: vscode.ChatResponseStream,
   token: vscode.CancellationToken
 ) {
@@ -172,6 +210,7 @@ async function streamModelResponse(
       {},
       token
     );
+
     for await (const fragement of chatResponse.stream) {
       stream.markdown(fragement);
     }
@@ -184,4 +223,4 @@ async function streamModelResponse(
   }
 }
 
-export function deactivate() {}
+export function deactivate() { }
