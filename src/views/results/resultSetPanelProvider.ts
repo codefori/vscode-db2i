@@ -1,4 +1,4 @@
-import { CancellationToken, WebviewView, WebviewViewResolveContext, commands } from "vscode";
+import { CancellationToken, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
 
 import { setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
@@ -6,7 +6,7 @@ import { Query, QueryState } from "../../connection/query";
 import { updateStatusBar } from "../jobManager/statusBar";
 import * as html from "./html";
 
-export class ResultSetPanelProvider {
+export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView;
   loadingState: boolean;
   constructor() {
@@ -16,6 +16,7 @@ export class ResultSetPanelProvider {
 
   resolveWebviewView(webviewView: WebviewView, context: WebviewViewResolveContext, _token: CancellationToken) {
     this._view = webviewView;
+    this._view.onDidDispose(() => this._view = undefined);
 
     webviewView.webview.options = {
       // Allow scripts in the webview
@@ -73,6 +74,7 @@ export class ResultSetPanelProvider {
       await delay(100);
       currentLoop += 1;
     }
+    this._view.show(true);
   }
 
   async focus() {
@@ -82,8 +84,6 @@ export class ResultSetPanelProvider {
       // 1. calls resolveWebviewView
       // 2. sets this._view
       await commands.executeCommand(`vscode-db2i.resultset.focus`);
-    } else {
-      this._view.show(true);
     }
   }
 
