@@ -184,15 +184,24 @@ export class SelfCodeTreeItem extends TreeItem {
     this.contextValue = `selfCodeNode`;
   }
 
-  getChilden(): SelfErrorNodeItem[] {
-    return [
+  getChilden(): TreeItem[] {
+    const validStack = this.error.INITIAL_STACK.initial_stack
+      .sort((a, b) => a.ORD - b.ORD) // Ord, low to high
+      .filter((stack) => stack.LIB !== `QSYS`);
+
+    const items = [
       new SelfErrorStatementItem(this.error.STMTTEXT),
       new SelfErrorNodeItem(`Job`, this.error.JOB_NAME),
       new SelfErrorNodeItem(`Client Name`, this.error.CLIENT_APPLNAME),
       new SelfErrorNodeItem(`Client Program`, this.error.CLIENT_PROGRAMID),
       new SelfErrorNodeItem(`Object`, `${this.error.PROGRAM_LIBRARY}/${this.error.PROGRAM_NAME} (${this.error.PROGRAM_TYPE}, ${this.error.MODULE_NAME})`),
-      new SelfErrorStackItem(this.error.INITIAL_STACK.initial_stack)
     ]
+
+    if (validStack.length > 0) {
+      items.push(new SelfErrorStackItem(validStack));
+    }
+
+    return items;
   }
 }
 
