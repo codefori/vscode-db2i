@@ -155,7 +155,7 @@ export function activateChat(context: vscode.ExtensionContext) {
           stream.progress(`Building response...`);
           messages.push(
             new vscode.LanguageModelChatSystemMessage(
-              `Give the developer an SQL statement or information based on the prompt and following table references. Always include code examples where is makes sense.`
+              `Give the developer an SQL statement or information based on the prompt and following table references. Always include code examples where is makes sense. Do not make suggestions for reference you do not have.`
             ),
             new vscode.LanguageModelChatSystemMessage(
               `Here are the table references for current schema ${usingSchema}\n${refsToMarkdown(refs)}`
