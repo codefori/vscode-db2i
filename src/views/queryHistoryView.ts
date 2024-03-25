@@ -101,15 +101,15 @@ export class queryHistory implements TreeDataProvider<any> {
         let laterQueries: PastQueryNode[] = [];
 
         currentList.forEach(queryItem => {
-          if (queryItem.unix < dayAgo) {
-            dayQueries.push(new PastQueryNode(queryItem.query));
-          } else if (queryItem.unix < weekAgo) {
-            weekQueries.push(new PastQueryNode(queryItem.query));
-          } else if (queryItem.unix < monthAgo) {
+          if (queryItem.unix > monthAgo) {
+             laterQueries.push(new PastQueryNode(queryItem.query));
+          } else if (queryItem.unix > weekAgo) {
             monthQueries.push(new PastQueryNode(queryItem.query));
-          } else {
-            laterQueries.push(new PastQueryNode(queryItem.query));
-          }
+         } else if (queryItem.unix > dayAgo) {
+            weekQueries.push(new PastQueryNode(queryItem.query));
+         } else {
+            dayQueries.push(new PastQueryNode(queryItem.query));
+         }
         });
 
         let nodes: TimePeriodNode[] = [];
