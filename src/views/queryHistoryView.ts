@@ -95,36 +95,37 @@ export class queryHistory implements TreeDataProvider<any> {
         const weekAgo = now - week;
         const monthAgo = now - month;
 
-        let dayQueries: PastQueryNode[] = [];
-        let weekQueries: PastQueryNode[] = [];
-        let monthQueries: PastQueryNode[] = [];
-        let laterQueries: PastQueryNode[] = [];
+        let pastDayQueries: PastQueryNode[] = [];
+        let pastWeekQueries: PastQueryNode[] = [];
+        let pastMonthQueries: PastQueryNode[] = [];
+        let olderQueries: PastQueryNode[] = [];
 
         currentList.forEach(queryItem => {
-          if (queryItem.unix > monthAgo) {
-             laterQueries.push(new PastQueryNode(queryItem.query));
-          } else if (queryItem.unix > weekAgo) {
-            monthQueries.push(new PastQueryNode(queryItem.query));
-         } else if (queryItem.unix > dayAgo) {
-            weekQueries.push(new PastQueryNode(queryItem.query));
+          // The smaller the unix value, the older it is
+          if (queryItem.unix < monthAgo) {
+             olderQueries.push(new PastQueryNode(queryItem.query));
+          } else if (queryItem.unix < weekAgo) {
+            pastMonthQueries.push(new PastQueryNode(queryItem.query));
+         } else if (queryItem.unix < dayAgo) {
+            pastWeekQueries.push(new PastQueryNode(queryItem.query));
          } else {
-            dayQueries.push(new PastQueryNode(queryItem.query));
+            pastDayQueries.push(new PastQueryNode(queryItem.query));
          }
         });
 
         let nodes: TimePeriodNode[] = [];
 
-        if (dayQueries.length > 0) {
-          nodes.push(new TimePeriodNode(`Past day`, dayQueries, true));
+        if (pastDayQueries.length > 0) {
+          nodes.push(new TimePeriodNode(`Past day`, pastDayQueries, true));
         }
-        if (weekQueries.length > 0) {
-          nodes.push(new TimePeriodNode(`Past week`, weekQueries));
+        if (pastWeekQueries.length > 0) {
+          nodes.push(new TimePeriodNode(`Past week`, pastWeekQueries));
         }
-        if (monthQueries.length > 0) {
-          nodes.push(new TimePeriodNode(`Past month`, monthQueries));
+        if (pastMonthQueries.length > 0) {
+          nodes.push(new TimePeriodNode(`Past month`, pastMonthQueries));
         }
-        if (laterQueries.length > 0) {
-          nodes.push(new TimePeriodNode(`Older`, laterQueries));
+        if (olderQueries.length > 0) {
+          nodes.push(new TimePeriodNode(`Older`, olderQueries));
         }
 
         return nodes;
