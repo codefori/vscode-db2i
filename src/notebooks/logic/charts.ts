@@ -66,6 +66,10 @@ export function generateChart(id: number, detail: ChartDetail, columns: string[]
         }
       }
 
+      if (datasets.length === 0) {
+        throw new Error(`No dataset columns found in the result set.`);
+      }
+
       return generateChartHTML(id, detail, labels, datasets);
     }
   }
