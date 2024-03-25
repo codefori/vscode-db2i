@@ -52,16 +52,19 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
           */
           const vscode = acquireVsCodeApi();
           const basicSelect = ${JSON.stringify(basicSelect)};
+          const htmlTableId = 'resultset';
+          const statusId = 'status';
+          const messageSpanId = 'messageSpan';
+
           let myQueryId = '';
-          
-          let mustLoadHeaders = true;
+          let needToInitializeTable = true;
           let totalRows = 0;
           let noMoreRows = false;
           let isFetching = false;
 
           window.addEventListener("load", main);
             function main() {
-              let Observer = new IntersectionObserver(function(entries) {
+              new IntersectionObserver(function(entries) {
               // isIntersecting is true when element and viewport are overlapping
               // isIntersecting is false when element and viewport don't overlap
               if(entries[0].isIntersecting === true) {
@@ -69,9 +72,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   fetchNextPage();
                 }
               }
-            }, { threshold: [0] });
-
-            Observer.observe(document.getElementById("nextButton"));
+            }, { threshold: [0] }).observe(document.getElementById(messageSpanId));
 
             window.addEventListener('message', event => {
               const data = event.data;
@@ -85,21 +86,21 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   isFetching = false;
                   noMoreRows = data.isDone;
 
-                  if (mustLoadHeaders && event.data.columnList) {
-                    setHeaders('resultset', event.data.columnList);
-                    mustLoadHeaders = false;
+                  if (needToInitializeTable && event.data.columnList) {
+                    initializeTable(event.data.columnList);
+                    needToInitializeTable = false;
                   }
 
                   if (data.rows && data.rows.length > 0) {
                     totalRows += data.rows.length;
-                    appendRows('resultset', data.rows);
+                    appendRows(data.rows);
                   }
 
-                  const nextButton = document.getElementById("nextButton");
                   if (data.rows === undefined && totalRows === 0) {
-                    nextButton.innerText = 'Query executed with no result set returned. Rows affected: ' + data.update_count;
+                    document.getElementById(messageSpanId).innerText = 'Statement executed with no result set returned. Rows affected: ' + data.update_count;
                   } else {
-                    nextButton.innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. Fetching more...');
+                    document.getElementById(statusId).innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. More available...');
+                    document.getElementById(messageSpanId).style.visibility = "hidden";
                   }
                   break;
 
@@ -124,27 +125,26 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             document.getElementById("spinnerContent").style.display = 'none';
           }
 
-          function setHeaders(tableId, columns) {
-            var tHeadRef = document.getElementById(tableId).getElementsByTagName('thead')[0];
-            tHeadRef.innerHTML = '';
+          function initializeTable(columns) {
+            // Initialize the header
+            var header = document.getElementById(htmlTableId).getElementsByTagName('thead')[0];
+            header.innerHTML = '';
+            var headerRow = header.insertRow();
+            columns.forEach(colName => headerRow.insertCell().appendChild(document.createTextNode(colName)));
 
-            // Insert a row at the end of table
-            var newRow = tHeadRef.insertRow();
-
-            columns.forEach(colName => {
-              // Insert a cell at the end of the row
-              var newCell = newRow.insertCell();
-
-              // Append a text node to the cell
-              var newText = document.createTextNode(colName);
-              newCell.appendChild(newText);
-            });
+            // Initialize the footer
+            var footer = document.getElementById(htmlTableId).getElementsByTagName('tfoot')[0];
+            footer.innerHTML = '';
+            var newCell = footer.insertRow().insertCell();
+            newCell.colSpan = columns.length;
+            newCell.id = statusId;
+            newCell.appendChild(document.createTextNode(' '));
           }
 
-          function appendRows(tableId, arrayOfObjects) {
-            var tBodyRef = document.getElementById(tableId).getElementsByTagName('tbody')[0];
+          function appendRows(rows) {
+            var tBodyRef = document.getElementById(htmlTableId).getElementsByTagName('tbody')[0];
 
-            for (const row of arrayOfObjects) {
+            for (const row of rows) {
               // Insert a row at the end of table
               var newRow = tBodyRef.insertRow()
 
@@ -170,8 +170,9 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
         <table id="resultset">
           <thead></thead>
           <tbody></tbody>
-        </table>
-        <p id="nextButton"></p>
+          <tfoot></tfoot>
+          </table>
+        <p id="messageSpan"></p>
         <div id="spinnerContent" class="center-screen">
           <p id="loadingText">Running statement</p>
           <span class="loader"></span>

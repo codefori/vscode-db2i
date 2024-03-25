@@ -20,6 +20,13 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       top: 0;           /* Don't forget this, required for the stickiness */
     }
 
+    tfoot tr {
+      background-color: rgb(128, 128, 128); /* same as var(--vscode-panelSectionHeader-background) but without transparancy */
+      text-align: left;
+      position: sticky; /* Lock the footer row to the bottom so it's always visible as rows are scrolled */
+      bottom: 0;        /* Don't forget this, required for the stickiness */
+    }
+
     #resultset th,
     #resultset td {
       padding: 5px 15px;
