@@ -21,7 +21,7 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
     }
 
     tfoot tr {
-      background-color: rgb(128, 128, 128); /* same as var(--vscode-panelSectionHeader-background) but without transparancy */
+      background-color: var(--vscode-multiDiffEditor-headerBackground);
       text-align: left;
       position: sticky; /* Lock the footer row to the bottom so it's always visible as rows are scrolled */
       bottom: 0;        /* Don't forget this, required for the stickiness */
