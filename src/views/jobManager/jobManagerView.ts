@@ -175,7 +175,7 @@ export class JobManagerView implements TreeDataProvider<any> {
             quickPick.onDidChangeSelection(async () => {
               const selections = quickPick.selectedItems;
               // SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('-514, -204, -501, +30, -199');
-              if (selections && selections[0].label !== currentSelfCodes) {
+              if (selections && selections[0] && selections[0].label !== currentSelfCodes) {
                 const code = selections[0].label as SelfValue;
                 try {
                   await selected.job.setSelfState(code);

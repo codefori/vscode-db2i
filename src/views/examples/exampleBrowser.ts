@@ -4,7 +4,7 @@ import { getInstance } from "../../base";
 import { OSData, fetchSystemInfo } from "../../config";
 import { getServiceInfo } from "../../database/serviceInfo";
 
-const openExampleCommand = `vscode-db2i.examples.open`;
+export const openExampleCommand = `vscode-db2i.examples.open`;
 
 export class ExampleBrowser implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
