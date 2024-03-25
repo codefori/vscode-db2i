@@ -114,6 +114,12 @@ export class ServerComponent {
 
             await connection.uploadFiles([{local: assetPath, remote: remotePath}]);
 
+            const scAuth = await connection.sendCommand({
+              command: `chmod 400 ${remotePath}`
+            });
+
+            this.writeOutput(JSON.stringify(scAuth));
+
             await Config.setServerComponentName(basename);
 
             window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
