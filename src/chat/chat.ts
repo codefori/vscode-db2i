@@ -19,15 +19,17 @@ const getDefaultSchema = (): string => {
 type TableRefs = { [key: string]: TableColumn[] };
 
 async function findPossibleTables(schema: string, words: string[]) {
+  words = words.map(word => word.replace(/[.,\/#!?$%\^&\*;:{}=\-_`~()]/g,""))
+
   // Add extra words for words with S at the end, to ignore possible plurals
-  words.forEach(item => {
-    if (item.endsWith(`s`)) {
-      words.push(item.slice(0, -1));
-    }
-  })
+  words
+    .forEach(item => {
+      if (item.endsWith(`s`)) {
+        words.push(item.slice(0, -1));
+      }
+    })
 
   const validWords = words
-    .map(item => item.endsWith(`'s`) ? item.slice(0, -2) : item)
     .filter(item => item.length > 2 && !item.includes(`'`))
     .map(item => `'${Statement.delimName(item, true)}'`);
 
@@ -51,7 +53,8 @@ async function findPossibleTables(schema: string, words: string[]) {
     `    column.table_schema = key.table_schema and`,
     `    column.table_name = key.table_name and`,
     `    column.column_name = key.column_name`,
-    `WHERE column.TABLE_SCHEMA = '${schema}' AND column.TABLE_NAME in (${validWords.join(`, `)})`,
+    `WHERE column.TABLE_SCHEMA = '${schema}'`,
+    ...[words.length > 0 ? `AND column.TABLE_NAME in (${validWords.join(`, `)})` : ``],
     `ORDER BY column.ORDINAL_POSITION`,
   ].join(` `);
 
@@ -72,13 +75,21 @@ async function findPossibleTables(schema: string, words: string[]) {
 }
 
 function refsToMarkdown(refs: TableRefs) {
+  const condensedResult = Object.keys(refs).length > 5;
+
   let markdown: string[] = [];
 
   for (const tableName in refs) {
+    if (tableName.startsWith(`SYS`)) continue;
+
     markdown.push(`# ${tableName}`, ``);
 
     for (const column of refs[tableName]) {
-      markdown.push(`| name: ${column.COLUMN_NAME} | type: ${column.DATA_TYPE} | nullable: ${column.IS_NULLABLE} | identity: ${column.IS_IDENTITY} | text: ${column.COLUMN_TEXT} | constraint: ${column.CONSTRAINT_NAME} |`);
+      if (condensedResult) {
+        markdown.push(`| name:${column.COLUMN_NAME} | type:${column.DATA_TYPE} | text:${column.COLUMN_TEXT} |`);
+      } else {
+        markdown.push(`| name:${column.COLUMN_NAME} | type:${column.DATA_TYPE} | nullable:${column.IS_NULLABLE} | identity:${column.IS_IDENTITY} | text:${column.COLUMN_TEXT} | constraint:${column.CONSTRAINT_NAME} |`);
+      }
     }
 
     markdown.push(``);
@@ -129,11 +140,16 @@ export function activateChat(context: vscode.ExtensionContext) {
         
       default:
         stream.progress(`Getting information from ${Statement.prettyName(usingSchema)}...`);
-        const refs = await findPossibleTables(usingSchema, request.prompt.split(` `));
+        let refs = await findPossibleTables(usingSchema, request.prompt.split(` `));
 
         messages = [new vscode.LanguageModelChatSystemMessage(
           `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice.`
         )];
+
+        if (Object.keys(refs).length === 0) {
+          stream.progress(`No references found. Doing bigger lookup...`);
+          refs = await findPossibleTables(usingSchema, []);
+        }
 
         if (Object.keys(refs).length > 0) {
           stream.progress(`Building response...`);
@@ -142,7 +158,7 @@ export function activateChat(context: vscode.ExtensionContext) {
               `Give the developer an SQL statement or information based on the prompt and following table references. Always include code examples where is makes sense.`
             ),
             new vscode.LanguageModelChatSystemMessage(
-              `Here are the table references:\n${refsToMarkdown(refs)}`
+              `Here are the table references for current schema ${usingSchema}\n${refsToMarkdown(refs)}`
             ),
             new vscode.LanguageModelChatUserMessage(request.prompt),
           );
@@ -152,6 +168,9 @@ export function activateChat(context: vscode.ExtensionContext) {
           messages.push(
             new vscode.LanguageModelChatSystemMessage(
               `Warn the developer that their request is not clear or that no references were found. Provide a suggestion or ask for more information.`
+            ),
+            new vscode.LanguageModelChatSystemMessage(
+              `The developers current schema is ${usingSchema}.`
             ),
           );
         }
