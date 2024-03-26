@@ -21,8 +21,7 @@ export function getParmAttributes(parm: SQLParm): string {
   const lines: string[] = [
     `Column: ${parm.PARAMETER_NAME}`,
     `Type: ${prepareParamType(parm)}`,
-    `HAS_DEFAULT: ${parm.DEFAULT || `-`}`,
-    `IS_NULLABLE: ${parm.IS_NULLABLE}`,
+    `Default: ${parm.DEFAULT || `-`}`
   ];
   return lines.join(`\n `);
 }
