@@ -51,13 +51,8 @@
       {
         "id": "vscode-db2i",
         "title": "General",
-        "order": 1,
+        "order": 0,
         "properties": {
-          "vscode-db2i.autoRefreshSelfCodesView": {
-            "type": "boolean",
-            "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
-            "default": false
-          },
           "vscode-db2i.pageSize": {
             "type": "number",
             "description": "Page size for Schema browser",
@@ -68,26 +63,39 @@
             "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",
             "default": "ask"
           },
-          "vscode-db2i.jobSelfDefault": {
-            "type": "string",
-            "description": "Default SELF setting for new jobs",
-            "default": "*NONE",
-            "enum": ["*NONE", "*ALL", "*ERROR", "*WARNING"]
-          },
           "vscode-db2i.jobConfigs": {
             "type": "object",
             "description": "Saved configs for",
             "default": {},
             "additionalProperties": true
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.self",
+        "title": "SQL Error Logging Facility (SELF)",
+        "properties": {
+          "vscode-db2i.jobSelfDefault": {
+            "type": "string",
+            "order": 0,
+            "description": "Default SELF setting for new jobs",
+            "default": "*NONE",
+            "enum": ["*NONE", "*ALL", "*ERROR", "*WARNING"]
           },
-          "vscode-db2i.collapsedResultSet": {
+          "vscode-db2i.autoRefreshSelfCodesView": {
             "type": "boolean",
-            "description": "Make larger cells collapsed by default",
+            "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
             "default": false
-          },
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.sqlFormat",
+        "title": "SQL Formatting",
+        "properties": {
           "vscode-db2i.sqlFormat.identifierCase": {
             "type": "string",
-            "description": "SQL formatting options: Lowercase or uppercase SQL identifiers",
+            "description": "SQL identifiers",
             "default": "preserve",
             "enum": ["lower", "upper", "preserve"],
             "enumDescriptions": [
@@ -98,7 +106,7 @@
           },
           "vscode-db2i.sqlFormat.keywordCase": {
             "type": "string",
-            "description": "SQL formatting options: Lowercase or uppercase SQL keywords",
+            "description": "SQL keywords",
             "default": "lower",
             "enum": ["lower", "upper"],
             "enumDescriptions": [
@@ -109,9 +117,30 @@
         }
       },
       {
+        "id": "vscode-db2i.resultsets",
+        "title": "Viewing Data",
+        "properties": {
+          "vscode-db2i.resultsets.columnHeadings": {
+            "type": "string",
+            "order": 0,
+            "description": "Descriptor to use for column headings when viewing data",
+            "default": "Name",
+            "enum": ["Name", "Label"],
+            "enumDescriptions": [
+              "Show the column name",
+              "Show the column label\n'Extended metadata' must be set to true in the JDBC configuration"
+            ]
+            },
+          "vscode-db2i.collapsedResultSet": {
+            "type": "boolean",
+            "description": "Make larger cells collapsed by default",
+            "default": false
+          }
+        }
+      },
+      {
         "id": "vscode-db2i.visualExplain",
         "title": "Visual Explain",
-        "order": 2,
         "properties": {
           "vscode-db2i.visualExplain.highlighting": {
             "type": "object",
@@ -576,8 +605,13 @@
         "title": "Open SELF Documentation",
         "category": "Db2 for i",
         "icon": "$(question)"
+      },
+      {
+        "command": "vscode-db2i.resultset.settings",
+        "title": "Settings",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
       }
-
     ],
     "submenus": [
       {
@@ -654,6 +688,10 @@
         },
         {
           "command": "vscode-db2i.dove.node.copy",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.settings",
           "when": "never"
         }
       ],
@@ -793,6 +831,11 @@
           "command": "vscode-db2i.dove.closeDetails",
           "group": "navigation@1",
           "when": "view == vscode-db2i.dove.node"
+        },
+        {
+          "command": "vscode-db2i.resultset.settings",
+          "group": "navigation",
+          "when": "view == vscode-db2i.resultset"
         }
       ],
       "view/item/context": [
