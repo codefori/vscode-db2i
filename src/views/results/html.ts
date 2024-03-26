@@ -57,6 +57,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
           const messageSpanId = 'messageSpan';
 
           let myQueryId = '';
+          let columnMetaData = undefined;
           let needToInitializeTable = true;
           let totalRows = 0;
           let noMoreRows = false;
@@ -77,6 +78,10 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             window.addEventListener('message', event => {
               const data = event.data;
               myQueryId = data.queryId;
+              // If we haven't yet saved off the column meta data, do so now
+              if (columnMetaData === undefined) {
+                columnMetaData = data.columnMetaData;
+              }
 
               switch (data.command) {
                 case 'rows':
@@ -86,8 +91,8 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   isFetching = false;
                   noMoreRows = data.isDone;
 
-                  if (needToInitializeTable && event.data.columnList) {
-                    initializeTable(event.data.columnList);
+                  if (needToInitializeTable && columnMetaData) {
+                    initializeTable(data.columnHeadings);
                     needToInitializeTable = false;
                   }
 
@@ -108,6 +113,10 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   // Set loading here....
                   fetchNextPage();
                   break;
+
+                case 'header':
+                  updateHeader(event.data.columnHeadings);
+                  break;
               }
             });
           }
@@ -125,18 +134,18 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             document.getElementById("spinnerContent").style.display = 'none';
           }
 
-          function initializeTable(columns) {
+          function initializeTable(columnHeadings) {
             // Initialize the header
             var header = document.getElementById(htmlTableId).getElementsByTagName('thead')[0];
             header.innerHTML = '';
             var headerRow = header.insertRow();
-            columns.forEach(colName => headerRow.insertCell().appendChild(document.createTextNode(colName)));
+            columnMetaData.map(col => columnHeadings === 'Label' ? col.label : col.name).forEach(colName => headerRow.insertCell().appendChild(document.createTextNode(colName)));
 
             // Initialize the footer
             var footer = document.getElementById(htmlTableId).getElementsByTagName('tfoot')[0];
             footer.innerHTML = '';
             var newCell = footer.insertRow().insertCell();
-            newCell.colSpan = columns.length;
+            newCell.colSpan = columnMetaData.length;
             newCell.id = statusId;
             newCell.appendChild(document.createTextNode(' '));
           }
@@ -162,7 +171,16 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                 newCell.appendChild(newDiv);
               }
             }
+          }
 
+          // columnHeadings parameter is the value of the "vscode-db2i.resultsets.columnHeadings" setting, either 'Name' or 'Label'
+          function updateHeader(columnHeadings) {
+            if (columnMetaData) {
+              var headerCells = document.getElementById(htmlTableId).getElementsByTagName('thead')[0].rows[0].cells;
+              for (let x = 0; x < headerCells.length; ++x) {
+                headerCells[x].innerText = columnHeadings === 'Label' ? columnMetaData[x].label : columnMetaData[x].name;
+              }
+            }
           }
         </script>
       </head>
