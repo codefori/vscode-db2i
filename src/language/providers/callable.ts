@@ -73,12 +73,18 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
           }
 
           if (parm.LONG_COMMENT) {
+            // This logic can take a LONG_COMMENT such as this:
+            //   A, B, C - some comment
+            //   0=no, 1=yes - some comment
+            // and turn it into a snippet of options for a parameter
+
             const splitIndex = parm.LONG_COMMENT.indexOf(`-`);
             if (splitIndex !== -1) {
               const possibleItems = parm.LONG_COMMENT.substring(0, splitIndex).trim();
               if (possibleItems.includes(`,`)) {
                 const literalValues = possibleItems
                   .split(`,`)
+                  .map((item) => item.includes(`=`) ? item.split(`=`)[0].trim() : item.trim())
                   .map((item) => parm.CHARACTER_MAXIMUM_LENGTH !== null ? `${item.trim()}` : item.trim())
 
                 // If there are no spaces in the literal values, then it's likely to be a good candidate for a snippet
