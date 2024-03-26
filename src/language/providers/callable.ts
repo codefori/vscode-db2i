@@ -41,16 +41,20 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
 export function getCallableParameters(ref: CallableReference, offset: number): CompletionItem[] {
   const signatures = getCachedSignatures(ref);
   if (signatures) {
+    const { firstNamedParameter } = getPositionData(ref, offset);
+
     // find signature with the most parameters
     const parms: SQLParm[] = signatures.reduce((acc, val) => acc.length > val.parms.length ? acc : val.parms, []);
 
     // Find any already referenced parameters in this list
     const usedParms = ref.tokens.filter((token) => parms.some((parm) => parm.PARAMETER_NAME === token.value?.toUpperCase()));
 
+    //call ifs_write(a, b, ifs => '')
+
     // Get a list of the available parameters
-    const availableParms = parms.filter((parm, i) => 
-      parm.DEFAULT !== null && 
-      (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase())) // Hide parameters that have already been named
+    const availableParms = parms.filter((parm, i) =>
+      (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase())) && // Hide parameters that have already been named
+      parm.ORDINAL_POSITION >= ((firstNamedParameter+1) || 1) // Hide parameters that are before the first named parameter
     );
 
     return availableParms.map((parm) => {
