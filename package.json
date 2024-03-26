@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "preview": true,
   "engines": {
     "vscode": "^1.70.0"
@@ -215,7 +215,7 @@
         },
         {
           "id": "queryHistory",
-          "name": "Query History",
+          "name": "Statement History",
           "visibility": "visible",
           "when": "code-for-ibmi:connected == true"
         },
@@ -240,7 +240,7 @@
     "viewsWelcome": [
       {
         "view": "queryHistory",
-        "contents": "Query history will appear here."
+        "contents": "Statement history will appear here."
       },
       {
         "view": "jobManager",
@@ -413,13 +413,13 @@
       },
       {
         "command": "vscode-db2i.queryHistory.remove",
-        "title": "Remove query from history",
+        "title": "Remove statement from history",
         "category": "Db2 for i",
         "icon": "$(trash)"
       },
       {
         "command": "vscode-db2i.queryHistory.clear",
-        "title": "Clear query history",
+        "title": "Clear statement history",
         "category": "Db2 for i",
         "icon": "$(trash)"
       },
