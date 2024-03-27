@@ -14,15 +14,17 @@ interface TableColumn {
 }
 
 interface SQLParm {
+  SPECIFIC_NAME: string,
   PARAMETER_NAME: string,
   PARAMETER_MODE: "IN" | "OUT" | "INOUT",
   DATA_TYPE: string,
   CHARACTER_MAXIMUM_LENGTH?: number,
   NUMERIC_SCALE?: number,
   NUMERIC_PRECISION?: number,
-  IS_NULLABLE: "Y" | "N",
+  IS_NULLABLE: "YES" | "NO",
   DEFAULT?: string,
-  LONG_COMMENT?: string
+  LONG_COMMENT?: string,
+  ORDINAL_POSITION: number,
 }
 
 interface BasicSQLObject {

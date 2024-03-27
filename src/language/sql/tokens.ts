@@ -88,9 +88,14 @@ export default class SQLTokeniser {
       match: [{ type: `newliner` }, { type: `newline` }],
       becomes: `newline`,
     },
+    {
+      name: `PIPE`,
+      match: [{ type: `equals` }, { type: `morethan` }],
+      becomes: `rightpipe`,
+    },
   ];
   readonly spaces = [`\t`, ` `];
-  readonly splitParts: string[] = [`(`, `)`, `/`, `.`, `*`, `-`, `+`, `;`, `"`, `&`, `%`, `,`, `|`, `?`, `:`, `\n`, `\r`, ...this.spaces];
+  readonly splitParts: string[] = [`(`, `)`, `/`, `.`, `*`, `-`, `+`, `;`, `"`, `&`, `%`, `,`, `|`, `?`, `:`, `=`, `<`, `>`, `\n`, `\r`, ...this.spaces];
   readonly types: { [part: string]: string } = {
     '(': `openbracket`,
     ')': `closebracket`,
@@ -107,6 +112,9 @@ export default class SQLTokeniser {
     '|': `pipe`,
     '?': `questionmark`,
     ':': `colon`,
+    '=': `equals`,
+    '<': `lessthan`,
+    '>': `morethan`,
     '\n': `newline`,
     '\r': `newliner`,
   };
