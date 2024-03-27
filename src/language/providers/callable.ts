@@ -41,29 +41,42 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
 export function getCallableParameters(ref: CallableReference, offset: number): CompletionItem[] {
   const signatures = getCachedSignatures(ref);
   if (signatures) {
-    const { firstNamedParameter } = getPositionData(ref, offset);
+    const { firstNamedParameter, currentCount } = getPositionData(ref, offset);
+
+    const allParms = signatures.reduce((acc, val) => acc.concat(val.parms), []);
+    const usedParms = ref.tokens.filter((token) => allParms.some((parm) => parm.PARAMETER_NAME.toUpperCase() === token.value?.toUpperCase())).map(token => token.value.toUpperCase());
+
+    let validParms: SQLParm[] = [];
+
+    // Push all signatures that have less than the current count
+    for (const signature of signatures) {
+      if (usedParms.length === 0 || signature.parms.some(parm => usedParms.some(usedParm => usedParm === parm.PARAMETER_NAME.toUpperCase()))) {
+        if (currentCount <= signature.parms.length) {
+          validParms.push(...signature.parms);
+        }
+      }
+    }
 
     // find signature with the most parameters
-    const parms: SQLParm[] = signatures.reduce((acc, val) => acc.length > val.parms.length ? acc : val.parms, []);
+    // const parms: SQLParm[] = signatures.reduce((acc, val) => acc.length > val.parms.length ? acc : val.parms, []);
 
     // Find any already referenced parameters in this list
-    const usedParms = ref.tokens.filter((token) => parms.some((parm) => parm.PARAMETER_NAME === token.value?.toUpperCase()));
 
     //call ifs_write(a, b, ifs => '')
 
     // Get a list of the available parameters
-    const availableParms = parms.filter((parm, i) =>
-      (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase())) && // Hide parameters that have already been named
-      parm.ORDINAL_POSITION >= ((firstNamedParameter + 1) || 1) // Hide parameters that are before the first named parameter
+    const availableParms = validParms.filter((parm, i) =>
+      (!usedParms.some((usedParm) => usedParm === parm.PARAMETER_NAME.toUpperCase())) && // Hide parameters that have already been named
+      parm.ORDINAL_POSITION >= ((firstNamedParameter + 1) || currentCount) // Hide parameters that are before the first named parameter
     );
 
     return availableParms.map((parm) => {
       const item = createCompletionItem(
-        Statement.prettyName(parm.PARAMETER_NAME),
+        Statement.noQuotes(Statement.prettyName(parm.PARAMETER_NAME)),
         parm.DEFAULT ? CompletionItemKind.Variable : CompletionItemKind.Constant,
         getParmAttributes(parm),
         parm.LONG_COMMENT,
-        `p@` + String(parm.ORDINAL_POSITION)
+        `@` + String(parm.ORDINAL_POSITION)
       );
 
       switch (parm.PARAMETER_MODE) {
