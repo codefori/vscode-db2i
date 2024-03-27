@@ -54,7 +54,7 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
     // Get a list of the available parameters
     const availableParms = parms.filter((parm, i) =>
       (!usedParms.some((usedParm) => usedParm.value?.toUpperCase() === parm.PARAMETER_NAME.toUpperCase())) && // Hide parameters that have already been named
-      parm.ORDINAL_POSITION >= ((firstNamedParameter+1) || 1) // Hide parameters that are before the first named parameter
+      parm.ORDINAL_POSITION >= ((firstNamedParameter + 1) || 1) // Hide parameters that are before the first named parameter
     );
 
     return availableParms.map((parm) => {
@@ -63,7 +63,7 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
         parm.DEFAULT ? CompletionItemKind.Variable : CompletionItemKind.Constant,
         getParmAttributes(parm),
         parm.LONG_COMMENT,
-        String(parm.ORDINAL_POSITION)
+        `p@` + String(parm.ORDINAL_POSITION)
       );
 
       switch (parm.PARAMETER_MODE) {
@@ -114,7 +114,7 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
 
 export function getPositionData(ref: CallableReference, offset: number) {
   const paramCommas = ref.tokens.filter(token => token.type === `comma`);
-    
+
   let currentParm = paramCommas.findIndex(t => offset < t.range.end);
 
   if (currentParm === -1) {
@@ -135,7 +135,7 @@ export function getPositionData(ref: CallableReference, offset: number) {
   };
 }
 
-export function getCachedSignatures(ref: CallableReference): CallableSignature[]|undefined {
+export function getCachedSignatures(ref: CallableReference): CallableSignature[] | undefined {
   const key = toCacheKey(ref.parentRef.object);
   if (completionItemCache.has(key)) {
     return completionItemCache.get(key);
