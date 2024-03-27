@@ -19,7 +19,6 @@ export function createCompletionItem(
 
 export function getParmAttributes(parm: SQLParm): string {
   const lines: string[] = [
-    `Column: ${parm.PARAMETER_NAME}`,
     `Type: ${prepareParamType(parm)}`,
     `Default: ${parm.DEFAULT || `-`}`,
     `Pass: ${parm.PARAMETER_MODE}`,
