@@ -44,11 +44,11 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
     const { firstNamedParameter, currentCount } = getPositionData(ref, offset);
 
     const allParms = signatures.reduce((acc, val) => acc.concat(val.parms), []);
-    const usedParms = ref.tokens.filter((token) => allParms.some((parm) => parm.PARAMETER_NAME.toUpperCase() === token.value?.toUpperCase())).map(token => token.value.toUpperCase());
+    const usedParms = ref.tokens.filter((token) => allParms.some((parm) => parm.PARAMETER_NAME.toUpperCase() === Statement.noQuotes(token.value?.toUpperCase()))).map(token => Statement.noQuotes(token.value.toUpperCase()));
 
     let validParms: SQLParm[] = [];
 
-    // Push all signatures that have less than the current count
+    // Only show signatures that match the current list of arguments
     for (const signature of signatures) {
       if (usedParms.length === 0 || signature.parms.some(parm => usedParms.some(usedParm => usedParm === parm.PARAMETER_NAME.toUpperCase()))) {
         if (currentCount <= signature.parms.length) {
@@ -72,7 +72,7 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
 
     return availableParms.map((parm) => {
       const item = createCompletionItem(
-        Statement.noQuotes(Statement.prettyName(parm.PARAMETER_NAME)),
+        Statement.prettyName(parm.PARAMETER_NAME),
         parm.DEFAULT ? CompletionItemKind.Variable : CompletionItemKind.Constant,
         getParmAttributes(parm),
         parm.LONG_COMMENT,
