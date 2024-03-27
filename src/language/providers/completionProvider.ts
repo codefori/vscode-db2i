@@ -459,6 +459,15 @@ async function getCompletionItems(
   offset?: number
 ) {
 
+  const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
+
+  if (trigger === "." || (s && s.type === `dot`) || trigger === "/") {
+    return getCompletionItemsForTriggerDot(
+      currentStatement,
+      offset,
+      trigger
+    );
+  }
 
   if (currentStatement) {
     const callableRef = currentStatement.getCallableDetail(offset, true);
@@ -488,16 +497,6 @@ async function getCompletionItems(
   }
 
   // TODO: if they're inside a CTE, then also prompt the expecting columns
-
-  const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
-
-  if (trigger === "." || (s && s.type === `dot`) || trigger === "/") {
-    return getCompletionItemsForTriggerDot(
-      currentStatement,
-      offset,
-      trigger
-    );
-  }
 
   return getCompletionItemsForRefs(currentStatement, offset, insideCte ? insideCte.columns : undefined);
 }
