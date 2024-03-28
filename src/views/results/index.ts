@@ -352,6 +352,11 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
         }
       });
     }
+
+    if (statementInfo.qualifier === `cl`) {
+      const eol = document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+      statementInfo.content = statementInfo.content.split(eol).map(line => line.trim()).join(` `);
+    }
   }
 
   statementInfo.statement = statementInfo.group.statements[0];

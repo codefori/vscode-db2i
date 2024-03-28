@@ -104,3 +104,8 @@ export interface ParsedEmbeddedStatement {
 	content: string;
 	parameterCount: number;
 }
+
+export interface CallableReference {
+	tokens: Token[], 
+	parentRef: ObjectRef
+};

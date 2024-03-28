@@ -7,7 +7,7 @@ import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
 import { getInstance, loadBase } from "./base";
-import { JobManager, determineFeatures, fetchSystemInfo, setupConfig, turnOffAllFeatures } from "./config";
+import { JobManager, fetchSystemInfo, onConnectOrServerInstall, setupConfig, turnOffAllFeatures } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { languageInit } from "./language";
@@ -85,8 +85,8 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   instance.onEvent(`connected`, () => {
     // We need to fetch the system info
     fetchSystemInfo().then(() => {
-      determineFeatures();
       // Refresh the examples when we have it, so we only display certain examples
+      onConnectOrServerInstall();
       exampleBrowser.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`autoRefreshSelfCodesView`) || false)
     })

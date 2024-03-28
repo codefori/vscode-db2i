@@ -9,13 +9,13 @@ import Statement from "../../database/statement";
 import Table from "../../database/table";
 import Document from "../sql/document";
 import * as LanguageStatement from "../sql/statement";
-import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
+import { CTEReference, CallableReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
 import CompletionItemCache, { changedCache } from "./completionItemCache";
-import Callable from "../../database/callable";
+import Callable, { CallableType } from "../../database/callable";
 import { ServerComponent } from "../../connection/serverComponent";
 import { env } from "process";
-
-const completionItemCache = new CompletionItemCache();
+import { prepareParamType, createCompletionItem, getParmAttributes, completionItemCache } from "./completion";
+import { isCallableType, getCallableParameters } from "./callable";
 
 export interface CompletionType {
   order: string;
@@ -51,44 +51,9 @@ const completionTypes: { [index: string]: CompletionType } = {
   }
 };
 
-function createCompletionItem(
-  name: string,
-  kind: CompletionItemKind,
-  detail?: string,
-  documentation?: string,
-  sortText?: string
-): CompletionItem {
-  const item = new CompletionItem(name, kind);
-  item.detail = detail;
-  item.documentation = documentation;
-  item.sortText = sortText;
-  return item;
-}
 
 function isEnabled() {
   return (env.DB2I_DISABLE_CA !== `true`);
-}
-
-function getParmAttributes(parm: SQLParm): string {
-  const lines: string[] = [
-    `Column: ${parm.PARAMETER_NAME}`,
-    `Type: ${prepareParamType(parm)}`,
-    `HAS_DEFAULT: ${parm.DEFAULT || `-`}`,
-    `IS_NULLABLE: ${parm.IS_NULLABLE}`,
-  ];
-  return lines.join(`\n `);
-}
-
-function prepareParamType(param: TableColumn | SQLParm): string {
-  if (param.CHARACTER_MAXIMUM_LENGTH) {
-    return `${param.DATA_TYPE}(${param.CHARACTER_MAXIMUM_LENGTH})`;
-  }
-
-  if (param.NUMERIC_PRECISION !== null && param.NUMERIC_SCALE !== null) {
-    return `${param.DATA_TYPE}(${param.NUMERIC_PRECISION}, ${param.NUMERIC_SCALE})`;
-  }
-
-  return `${param.DATA_TYPE}`;
 }
 
 
@@ -183,10 +148,10 @@ async function getObjectCompletions(
   forSchema: string,
   sqlTypes: { [index: string]: CompletionType }
 ): Promise<CompletionItem[]> {
-  const schemaUpdate: boolean = changedCache.delete(forSchema.toUpperCase());
+  forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
+  const schemaUpdate: boolean = changedCache.delete(forSchema);
   if (!completionItemCache.has(forSchema) || schemaUpdate) {
     const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
-      forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
       const data = await Database.getObjects(forSchema, [value.type]);
       return data.map((table) =>
         createCompletionItem(
@@ -212,15 +177,18 @@ async function getObjectCompletions(
 async function getCompletionItemsForSchema(
   schema: string
 ): Promise<CompletionItem[]> {
-  const data = await Database.getObjects(schema, ["procedures"]);
-  return data.map((item) =>
-    createCompletionItem(
-      item.name,
-      CompletionItemKind.Method,
-      `Type: Procedure`,
-      `Schema: ${item.schema}`
-    )
-  );
+  const data = (await Database.getObjects(schema, ["procedures"]));
+
+  return data
+    .filter((v, i, a) => a.findIndex(t => (t.name === v.name)) === i) //Hide overloads here
+    .map((item) =>
+      createCompletionItem(
+        Statement.prettyName(item.name),
+        CompletionItemKind.Method,
+        `Type: Procedure`,
+        `Schema: ${item.schema}`
+      )
+    );
 }
 
 async function getProcedures(
@@ -492,6 +460,29 @@ async function getCompletionItems(
   currentStatement: LanguageStatement.default|undefined,
   offset?: number
 ) {
+
+  const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
+
+  if (trigger === "." || (s && s.type === `dot`) || trigger === "/") {
+    return getCompletionItemsForTriggerDot(
+      currentStatement,
+      offset,
+      trigger
+    );
+  }
+
+  if (currentStatement) {
+    const callableRef = currentStatement.getCallableDetail(offset, true);
+    // TODO: check the function actually exists before returning
+    if (callableRef) {
+      const routineType: CallableType = currentStatement.type === StatementType.Call ? `PROCEDURE` : `FUNCTION`;
+      const isValid = await isCallableType(callableRef.parentRef, routineType);
+      if (isValid) {
+        return await getCallableParameters(callableRef, offset);
+      }
+    }
+  }
+
   if (currentStatement && currentStatement.type === StatementType.Call) {
     const curClause = currentStatement.getClauseForOffset(offset);
     if (curClause === ClauseType.Unknown) {
@@ -508,16 +499,6 @@ async function getCompletionItems(
   }
 
   // TODO: if they're inside a CTE, then also prompt the expecting columns
-
-  const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
-
-  if (trigger === "." || (s && s.type === `dot`) || trigger === "/") {
-    return getCompletionItemsForTriggerDot(
-      currentStatement,
-      offset,
-      trigger
-    );
-  }
 
   return getCompletionItemsForRefs(currentStatement, offset, insideCte ? insideCte.columns : undefined);
 }

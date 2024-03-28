@@ -987,9 +987,10 @@ describe(`PL body tests`, () => {
     expect(medianResultSetProc.type).toBe(StatementType.Create);
     expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
+
     const parameterTokens = medianResultSetProc.getBlockAt(46);
     expect(parameterTokens.length).toBeGreaterThan(0);
-    expect(parameterTokens.map(t => t.type).join()).toBe([`word`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join())
+    expect(parameterTokens.map(t => t.type).join()).toBe([`word`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join());
 
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
@@ -1000,6 +1001,11 @@ describe(`PL body tests`, () => {
     const callStatement = statements[statements.length - 1];
     expect(callStatement.type).toBe(StatementType.Call);
     expect(callStatement.isBlockOpener()).toBe(false);
+
+    const blockParent = callStatement.getCallableDetail(callStatement.tokens[3].range.start);
+    expect(blockParent).toBeDefined();
+    expect(blockParent.tokens.length).toBe(3);
+    expect(blockParent.parentRef.object.name).toBe(`MEDIAN_RESULT_SET`);
   });
 
   test(`WITH: no explicit columns`, () => {
@@ -1450,4 +1456,48 @@ describe(`Prefix tests`, () => {
 
     expect(statement.type).toBe(StatementType.Select);
   });
+});
+
+test(`Callable blocks`, () => {
+  const lines = [
+      `call qsys2.create_abcd();`,
+      `call qsys2.create_abcd(a, cool(a + b));`,
+  ].join(` `);
+
+  const document = new Document(lines);
+  const statements = document.statements;
+
+  expect(statements.length).toBe(2);
+
+  const a = statements[0];
+  expect(a.type).toBe(StatementType.Call);
+
+  const b = statements[1];
+  expect(b.type).toBe(StatementType.Call);
+
+  const blockA = a.getBlockRangeAt(23);
+  expect(blockA).toMatchObject({ start: 5, end: 5 });
+
+  const callableA = a.getCallableDetail(23);
+  expect(callableA).toBeDefined();
+  expect(callableA.parentRef.object.schema).toBe(`qsys2`);
+  expect(callableA.parentRef.object.name).toBe(`create_abcd`);
+
+  const blockB = a.getBlockRangeAt(24);
+  expect(blockB).toMatchObject({ start: 5, end: 5 });
+
+  const callableB = a.getCallableDetail(24);
+  expect(callableB).toBeDefined();
+  expect(callableB.parentRef.object.schema).toBe(`qsys2`);
+  expect(callableB.parentRef.object.name).toBe(`create_abcd`);
+
+  const blockC = b.getBlockRangeAt(49);
+  expect(blockC).toMatchObject({ start: 5, end: 13 });
+
+  const callableC = b.getCallableDetail(49, true);
+  expect(callableC).toBeDefined();
+  expect(callableC.tokens.length).toBe(4);
+  expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
+  expect(callableC.parentRef.object.schema).toBe(`qsys2`);
+  expect(callableC.parentRef.object.name).toBe(`create_abcd`);
 });

@@ -31,6 +31,9 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
   const instance = getInstance();
 
   Config.setConnectionName(instance.getConnection().currentConnectionName);
+  determineFeatures();
+
+  await Config.fixPastQueries();
 
   await ServerComponent.initialise().then(installed => {
     if (installed) {
@@ -74,8 +77,6 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
 
 export function setupConfig(context: ExtensionContext) {
   Config = new ConnectionStorage(context);
-
-  getInstance().onEvent(`connected`, onConnectOrServerInstall);
 
   getInstance().onEvent(`disconnected`, async () => {
     JobManagerView.setVisible(false);
