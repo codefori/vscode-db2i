@@ -95,7 +95,7 @@ export const Examples: SQLExamplesList = {
         `--Which types of AF failures are being hit?`,
         `bar: select VIOLATION_TYPE_DETAIL as label, count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by VIOLATION_TYPE_DETAIL\n  order by AF_count desc`,
         `--Which objects are having the authorization failures?`,
-        `bar: select coalesce(\n         path_name, object_library concat '/' concat object_name concat ' ' concat object_type) as label,\n       count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by coalesce(\n      path_name, object_library concat '/' concat object_name concat ' ' concat object_type)\n  limit 10 order by AF_count desc`
+        `bar: select coalesce(\n         path_name, object_library concat '/' concat object_name concat ' ' concat object_type) as label,\n       count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by coalesce(\n      path_name, object_library concat '/' concat object_name concat ' ' concat object_type)\n  order by AF_count desc limit 10 `
       ],
       isNotebook: true
     },
