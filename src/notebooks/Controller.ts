@@ -6,10 +6,10 @@ import * as mdTable from 'json-to-markdown-table';
 import { getInstance } from '../base';
 import { CommandResult } from '@halcyontech/vscode-ibmi-types';
 import { JobManager } from '../config';
-import { ChartDetail, ChartJsType, chartJsTypes, generateChart } from './logic/chartJs';
+import { ChartJsType, chartJsTypes, generateChartHTML } from './logic/chartJs';
 import { JobStatus } from '../connection/sqlJob';
-
-const chartTypes = [...chartJsTypes];
+import { ChartDetail, chartTypes, generateChart } from './logic/chart';
+import { MermaidType, generateMermaidChart, mermaidTypes } from './logic/mermaidJs';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -110,7 +110,7 @@ export class IBMiController {
               }
 
               // Perhaps the chart type is defined by the statement prefix
-              const chartType: ChartJsType|undefined = chartTypes.find(type => content.startsWith(`${type}:`));
+              const chartType: ChartJsType|MermaidType|undefined = chartTypes.find(type => content.startsWith(`${type}:`));
               if (chartType) {
                 chartDetail.type = chartType;
                 content = content.substring(chartType.length + 1);
@@ -136,13 +136,21 @@ export class IBMiController {
               let fallbackToTable = true;
 
               if (chartDetail.type) {
-                if (chartJsTypes.includes(chartDetail.type)) {
-                  const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table);
+                if (chartJsTypes.includes(chartDetail.type as ChartJsType)) {
+                  const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table, generateChartHTML);
                   if (possibleChart) {
                     items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
                     fallbackToTable = false;
                   }
                 }
+                else if (mermaidTypes.includes(chartDetail.type as MermaidType)) {
+                    const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table, generateMermaidChart);
+                    if (possibleChart) {
+                      items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/markdown`));
+                      fallbackToTable = false;
+                    }
+                  }
+              
               }
 
               if (fallbackToTable) {
