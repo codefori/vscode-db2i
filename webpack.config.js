@@ -57,7 +57,7 @@ const config = {
     rules: [
       {
         test: /\.umd\.(js)$/i,
-        include: path.resolve(__dirname, `node_modules`, `chart.js`, `dist`),
+        include: path.resolve(__dirname, `node_modules`, `chart.js`, `dist`, `chart.umd.js`),
         type: `asset/source`,
         
       },
