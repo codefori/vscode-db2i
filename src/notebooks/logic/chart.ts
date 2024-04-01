@@ -1,10 +1,9 @@
 import { ChartJsType, chartJsTypes } from "./chartJs";
-import { MermaidType, mermaidTypes } from "./mermaidJs";
 
-export const chartTypes = [...chartJsTypes, ...mermaidTypes];
+export const chartTypes = [...chartJsTypes];
 
 export interface ChartDetail {
-  type?: ChartJsType|MermaidType;
+  type?: ChartJsType;
   title?: string;
   y?: string;
 }
