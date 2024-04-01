@@ -8,32 +8,23 @@ import Configuration from "./configuration";
 import { ConfigManager } from "./views/jobManager/ConfigManager";
 import { Examples, ServiceInfoLabel } from "./views/examples";
 import { updateStatusBar } from "./views/jobManager/statusBar";
-
-interface IBMiLevels {
-  version: number;
-  db2Level: number;
-}
+import { IBMiDetail } from "./IBMiDetail";
 
 export let Config: ConnectionStorage;
-export let OSData: IBMiLevels|undefined;
+export let osDetail: IBMiDetail;
 export let JobManager: SQLJobManager = new SQLJobManager();
 
-export type Db2Features = `SELF`;
-
-const featureRequirements: {[id in Db2Features]: {[osVersion: number]: number}} = {
-  'SELF': {
-    7.4: 26,
-    7.5: 5
-  }
-}
 
 export async function onConnectOrServerInstall(): Promise<boolean> {
   const instance = getInstance();
 
   Config.setConnectionName(instance.getConnection().currentConnectionName);
-  determineFeatures();
 
   await Config.fixPastQueries();
+
+  osDetail = new IBMiDetail();
+
+  await osDetail.fetchSystemInfo();
 
   await ServerComponent.initialise().then(installed => {
     if (installed) {
@@ -44,6 +35,7 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
   await ServerComponent.checkForUpdate();
 
   updateStatusBar();
+  toggleViews();
 
   if (ServerComponent.isInstalled()) {
     JobManagerView.setVisible(true);
@@ -75,7 +67,7 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
   return false;
 }
 
-export function setupConfig(context: ExtensionContext) {
+export function initConfig(context: ExtensionContext) {
   Config = new ConnectionStorage(context);
 
   getInstance().onEvent(`disconnected`, async () => {
@@ -91,55 +83,12 @@ export function setupConfig(context: ExtensionContext) {
   });
 }
 
-export async function fetchSystemInfo() {
-  const instance = getInstance();
-  const content = instance.getContent();
+export function toggleViews() {
+  const features = osDetail.getFeatures();
 
-  const [versionResults, db2LevelResults] = await Promise.all([
-    content.runSQL(`select OS_VERSION concat '.' concat OS_RELEASE as VERSION from sysibmadm.env_sys_info`),
-    content.runSQL([
-      `select max(ptf_group_level) as HIGHEST_DB2_PTF_GROUP_LEVEL`,
-      `from qsys2.group_ptf_info`,
-      `where PTF_GROUP_DESCRIPTION like 'DB2 FOR IBM I%' and`,
-      `ptf_group_status = 'INSTALLED';`
-    ].join(` `))
-  ]);
-
-  const version = Number(versionResults[0].VERSION);
-  const db2Level = Number(db2LevelResults[0].HIGHEST_DB2_PTF_GROUP_LEVEL);
-
-  if (version && db2Level) {
-    OSData = {
-      version,
-      db2Level
-    }
-  }
-}
-
-export function determineFeatures() {
-  const result: {[id in Db2Features]: boolean} = {
-    'SELF': false
-  };
-
-  if (OSData) {
-    const {version, db2Level} = OSData;
-    
-    const features = Object.keys(featureRequirements) as Db2Features[];
-    for (const featureId of features) {
-      const requiredLevelForFeature = featureRequirements[featureId][String(version)];
-      const supported = requiredLevelForFeature && db2Level >= requiredLevelForFeature;
-      commands.executeCommand(`setContext`, `vscode-db2i:${featureId}Supported`, supported);
-      result[featureId] = supported;
-    }
-  }
-  
-  return result;
-}
-
-export function turnOffAllFeatures() {
-  const features = Object.keys(featureRequirements);
-  for (const featureId of features) {
-    commands.executeCommand(`setContext`, `vscode-db2i:${featureId}Supported`, false);
+  const featureIds = Object.keys(features) as (keyof typeof features)[];
+  for (const featureId of featureIds) {
+    commands.executeCommand(`setContext`, `vscode-db2i:${featureId}Supported`, features[featureId]);
   }
 }
 

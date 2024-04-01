@@ -4,7 +4,7 @@ import { Query } from "./query";
 import { ServerComponent, UpdateStatus } from "./serverComponent";
 import { JobStatus, SQLJob } from "./sqlJob";
 import { QueryOptions } from "./types";
-import { askAboutNewJob, determineFeatures, onConnectOrServerInstall } from "../config";
+import { askAboutNewJob, onConnectOrServerInstall, osDetail } from "../config";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import Configuration from "../configuration";
 
@@ -24,7 +24,7 @@ export class SQLJobManager {
 
   async newJob(predefinedJob?: SQLJob, name?: string) {
     if (ServerComponent.isInstalled()) {
-      const features = determineFeatures();
+      const features = osDetail.getFeatures();
 
       const instance = getInstance();
       const config = instance.getConfig();
