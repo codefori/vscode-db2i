@@ -53,8 +53,9 @@
         "title": "General",
         "order": 1,
         "properties": {
-          "vscode-db2i.autoRefreshSelfCodesView": {
+          "vscode-db2i.jobSelfViewAutoRefresh": {
             "type": "boolean",
+            "title": "Auto-refresh SELF Codes view",
             "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
             "default": false
           },

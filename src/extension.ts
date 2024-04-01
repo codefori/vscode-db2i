@@ -85,7 +85,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     // Refresh the examples when we have it, so we only display certain examples
     onConnectOrServerInstall().then(() => {
       exampleBrowser.refresh();
-      selfCodesView.setRefreshEnabled(Configuration.get(`autoRefreshSelfCodesView`) || false)
+      selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false)
     });
   });
 
