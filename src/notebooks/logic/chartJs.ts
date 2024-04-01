@@ -1,6 +1,6 @@
 
 export interface ChartDetail {
-  type?: ChartType;
+  type?: ChartJsType;
   title?: string;
   y?: string;
 }
@@ -19,8 +19,8 @@ interface Dataset {
   borderWidth?: number;
 }
 
-export type ChartType = `bar` | `line` | `doughnut` | `pie` | `polarArea` | `radar`;
-export const chartTypes: ChartType[] = [`bar`, `line`, `doughnut`, `pie`, `polarArea`, `radar`];
+export type ChartJsType = `bar` | `line` | `doughnut` | `pie` | `polarArea` | `radar`;
+export const chartJsTypes: ChartJsType[] = [`bar`, `line`, `doughnut`, `pie`, `polarArea`, `radar`];
 
 import chartjs from 'chart.js/dist/chart.umd.js';
 

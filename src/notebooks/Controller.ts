@@ -6,8 +6,10 @@ import * as mdTable from 'json-to-markdown-table';
 import { getInstance } from '../base';
 import { CommandResult } from '@halcyontech/vscode-ibmi-types';
 import { JobManager } from '../config';
-import { ChartDetail, ChartType, chartTypes, generateChart } from './logic/charts';
+import { ChartDetail, ChartJsType, chartJsTypes, generateChart } from './logic/chartJs';
 import { JobStatus } from '../connection/sqlJob';
+
+const chartTypes = [...chartJsTypes];
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -89,7 +91,7 @@ export class IBMiController {
                 }
 
                 // Chart settings defined by comments
-                if (settings[`chart`] && chartTypes.includes(settings[`chart`])) {
+                if (settings[`chart`] && chartJsTypes.includes(settings[`chart`])) {
                   chartDetail.type = settings[`chart`];
                 }
 
@@ -108,7 +110,7 @@ export class IBMiController {
               }
 
               // Perhaps the chart type is defined by the statement prefix
-              const chartType: ChartType|undefined = chartTypes.find(type => content.startsWith(`${type}:`));
+              const chartType: ChartJsType|undefined = chartTypes.find(type => content.startsWith(`${type}:`));
               if (chartType) {
                 chartDetail.type = chartType;
                 content = content.substring(chartType.length + 1);
@@ -134,10 +136,12 @@ export class IBMiController {
               let fallbackToTable = true;
 
               if (chartDetail.type) {
-                const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table);
-                if (possibleChart) {
-                  items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
-                  fallbackToTable = false;
+                if (chartJsTypes.includes(chartDetail.type)) {
+                  const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table);
+                  if (possibleChart) {
+                    items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
+                    fallbackToTable = false;
+                  }
                 }
               }
 
