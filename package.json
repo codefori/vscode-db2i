@@ -298,7 +298,7 @@
     ],
     "commands": [
       {
-        "command": "vscode-db2i.openNotebook",
+        "command": "vscode-db2i.notebook.open",
         "title": "New Notebook",
         "category": "IBM i Notebooks",
         "enablement": "code-for-ibmi:connected == true",
@@ -812,7 +812,7 @@
           "when": "view == jobManager"
         },
         {
-          "command": "vscode-db2i.openNotebook",
+          "command": "vscode-db2i.notebook.open",
           "group": "navigation@4",
           "when": "view == jobManager"
         },

@@ -13,7 +13,7 @@ interface RawNotebookCell {
 let newNotebookCount = 1;
 
 export function notebookInit() {
-  const openBlankNotebook = vscode.commands.registerCommand(`vscode-db2i.openNotebook`, () => {
+  const openBlankNotebook = vscode.commands.registerCommand(`vscode-db2i.notebook.open`, () => {
     vscode.workspace.openNotebookDocument(
       `db2i-notebook`,
       {cells: []}
