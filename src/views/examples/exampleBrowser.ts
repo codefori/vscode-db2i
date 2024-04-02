@@ -1,9 +1,8 @@
 import { Event, EventEmitter, ExtensionContext, MarkdownString, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, commands, window, workspace } from "vscode";
 import { Examples, SQLExample, ServiceInfoLabel } from ".";
-import { getInstance } from "../../base";
-import { OSData, fetchSystemInfo } from "../../config";
 import { getServiceInfo } from "../../database/serviceInfo";
 import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
+import { osDetail } from "../../config";
 
 export const openExampleCommand = `vscode-db2i.examples.open`;
 
@@ -118,13 +117,14 @@ class SQLExampleItem extends TreeItem {
 }
 
 function exampleWorksForOnOS(example: SQLExample): boolean {
-  if (OSData) {
-    const myOsVersion = OSData.version;
+  
+  if (osDetail) {
+    const myOsVersion = osDetail.getVersion();
 
     // If this example has specific system requirements defined
     if (example.requirements &&
       example.requirements[myOsVersion] &&
-      OSData.db2Level < example.requirements[myOsVersion]) {
+      osDetail.getDb2Level() < example.requirements[myOsVersion]) {
       return false;
     }
   }

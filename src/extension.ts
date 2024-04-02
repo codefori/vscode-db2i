@@ -7,7 +7,7 @@ import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
 import { getInstance, loadBase } from "./base";
-import { JobManager, fetchSystemInfo, onConnectOrServerInstall, setupConfig, turnOffAllFeatures } from "./config";
+import { JobManager, onConnectOrServerInstall, initConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { languageInit } from "./language";
@@ -72,7 +72,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   JSONServices.initialise(context);
   resultsProvider.initialise(context);
 
-  setupConfig(context);
+  initConfig(context);
 
   console.log(`Developer environment: ${process.env.DEV}`);
   if (process.env.DEV) {
@@ -83,18 +83,13 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   const instance = getInstance();
 
   instance.onEvent(`connected`, () => {
-    // We need to fetch the system info
-    fetchSystemInfo().then(() => {
-      // Refresh the examples when we have it, so we only display certain examples
-      onConnectOrServerInstall();
+    selfCodesView.setRefreshEnabled(false);
+    // Refresh the examples when we have it, so we only display certain examples
+    onConnectOrServerInstall().then(() => {
       exampleBrowser.refresh();
-      selfCodesView.setRefreshEnabled(Configuration.get(`autoRefreshSelfCodesView`) || false)
-    })
+      selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false)
+    });
   });
-
-  instance.onEvent(`disconnected`, () => {
-    turnOffAllFeatures();
-  })
 
   return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new SQLJob(options) };
 }

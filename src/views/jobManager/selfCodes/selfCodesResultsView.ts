@@ -137,11 +137,13 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
     token: vscode.CancellationToken
   ): ProviderResult<TreeItem> {
     if (!item.tooltip) {
-      // Only set the tooltip if it hasn't been set yet
-      item.tooltip = new vscode.MarkdownString(
-        `**SQL Statement:** ${element.STMTTEXT}\n\n---\n\n**Detail:** ${element.MESSAGE_SECOND_LEVEL_TEXT}`
-      );
-      item.tooltip.isTrusted = true; // Make sure to allow Markdown content
+      if (element.STMTTEXT && element.MESSAGE_SECOND_LEVEL_TEXT) {
+        // Only set the tooltip if it hasn't been set yet
+        item.tooltip = new vscode.MarkdownString(
+          `**SQL Statement:** ${element.STMTTEXT}\n\n---\n\n**Detail:** ${element.MESSAGE_SECOND_LEVEL_TEXT}`
+        );
+        item.tooltip.isTrusted = true; // Make sure to allow Markdown content
+      }
     }
     return item;
   }
