@@ -41,9 +41,12 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
           let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
 
+          const jobId = queryObject.getHostJob().id;
+
           data = queryResults.data;
           this._view.webview.postMessage({
             command: `rows`,
+            jobId,
             rows: queryResults.data,
             columnList: queryResults.metadata ? queryResults.metadata.columns.map(x => x.name) : undefined, // Query.fetchMore() doesn't return the metadata
             queryId: queryObject.getId(),
