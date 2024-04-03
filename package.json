@@ -708,7 +708,7 @@
         {
           "command": "vscode-db2i.self.refresh",
           "group": "navigation@1",
-          "when": "view == vscode-db2i.self.nodes"
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
         },
         {
           "command": "vscode-db2i.self.enableAutoRefresh",
@@ -723,7 +723,7 @@
         {
           "command": "vscode-db2i.self.reset",
           "group": "navigation@3",
-          "when": "view == vscode-db2i.self.nodes"
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
         },
         {
           "command": "vscode-db2i.self.help",
