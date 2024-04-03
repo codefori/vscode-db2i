@@ -79,6 +79,7 @@ export const Examples: SQLExamplesList = {
           `         select objcreated, last_used_timestamp, objsize`,
           `           from table (qsys2.object_statistics(lib, type, obj))`,
           `       ) z`,
+          `where objsize is not null`,
           `order by OBJSIZE DESC`,
           `limit 10`,
         ].join(`\n`)
