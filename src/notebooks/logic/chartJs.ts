@@ -1,16 +1,17 @@
 
+import chartjs from 'chart.js/dist/chart.umd.js';
+import { ChartData, ChartDetail, Dataset } from './chart';
 
 export type ChartJsType = `bar` | `line` | `doughnut` | `pie` | `polarArea` | `radar`;
 export const chartJsTypes: ChartJsType[] = [`bar`, `line`, `doughnut`, `pie`, `polarArea`, `radar`];
-
-import chartjs from 'chart.js/dist/chart.umd.js';
-import { ChartData, ChartDetail, Dataset } from './chart';
 
 export function generateChartHTML(id: number, detail: ChartDetail, labels: string[], datasets: Dataset[]): string {
   const chartData: ChartData = {
     labels,
     datasets,
   };
+
+  const hasYaxis = detail.type === `bar` || detail.type === `line`;
 
   // TODO: remove hardcoded version: https://github.com/codefori/vscode-db2i/compare/0.1.0...0.1.1
   return /*html*/`
@@ -53,7 +54,7 @@ export function generateChartHTML(id: number, detail: ChartDetail, labels: strin
                     },
                     scales: {
                       y: {
-                        display: true,
+                        display: ${JSON.stringify(hasYaxis)},
                         title: {
                           display: ${detail.y ? `true` : `false`},
                           text: ${JSON.stringify(detail.y)}
