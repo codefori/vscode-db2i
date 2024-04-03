@@ -346,6 +346,14 @@ export class SQLJob {
 
     this.send(JSON.stringify(exitObject));
 
+    this.responseEmitter.eventNames().forEach(event => {
+      this.responseEmitter.emit(event, JSON.stringify({
+        id: event,
+        success: false,
+        error: `Job ended before response returned.`
+      }));
+    });
+
     this.dispose();
   }
 
