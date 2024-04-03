@@ -36,7 +36,7 @@ export const Examples: SQLExamplesList = {
     {
       "name": "Spool Storage (Line)",
       content: [
-        `-- This notebook will show the top 10 users by storage used`,
+        `-- This notebook will show the top 10 consumers of spool storage.`,
         [
           `line: SELECT USER_NAME as label, SUM(SIZE) AS TOTAL_SPOOL_SPACE FROM `,
           `  TABLE (QSYS2.OBJECT_STATISTICS('QSYS      ', '*LIB') ) as a, `,
