@@ -294,13 +294,14 @@ export class JobManagerView implements TreeDataProvider<any> {
     });
   }
 
-    refresh() {
-    
+  refresh() {
     this._onDidChangeTreeData.fire();
     updateStatusBar();
 
     const selectedJob = JobManager.getSelection();
+
     setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === JobStatus.Busy);
+    commands.executeCommand(`setContext`, `vscode-db2i:jobManager.hasJob`, selectedJob !== undefined);
   }
 
   getTreeItem(element: vscode.TreeItem) {
