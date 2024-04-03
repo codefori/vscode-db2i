@@ -55,7 +55,7 @@ export const Examples: SQLExamplesList = {
       content: [
         `-- Find the top 10 consumers of CPU in the QUSRWRK and QSYSWRK subsystems`,
         [
-          `pie: select JOB_NAME_SHORT as label, CPU_TIME`,
+          `pie: select JOB_NAME as label, CPU_TIME`,
           `from table(QSYS2.ACTIVE_JOB_INFO(SUBSYSTEM_LIST_FILTER => 'QUSRWRK,QSYSWRK')) A `,
           `ORDER BY CPU_TIME DESC `,
           `LIMIT 10`,
