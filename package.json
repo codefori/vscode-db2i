@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "0.9.0",
+  "version": "0.10.1",
   "preview": true,
   "engines": {
     "vscode": "^1.70.0"
@@ -82,11 +82,12 @@
             "default": "*NONE",
             "enum": ["*NONE", "*ALL", "*ERROR", "*WARNING"]
           },
-          "vscode-db2i.autoRefreshSelfCodesView": {
+          "vscode-db2i.jobSelfViewAutoRefresh": {
             "type": "boolean",
+            "title": "Auto-refresh SELF Codes view",
             "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
             "default": false
-          }
+          },
         }
       },
       {
@@ -745,7 +746,7 @@
         {
           "command": "vscode-db2i.self.refresh",
           "group": "navigation@1",
-          "when": "view == vscode-db2i.self.nodes"
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
         },
         {
           "command": "vscode-db2i.self.enableAutoRefresh",
@@ -760,7 +761,7 @@
         {
           "command": "vscode-db2i.self.reset",
           "group": "navigation@3",
-          "when": "view == vscode-db2i.self.nodes"
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
         },
         {
           "command": "vscode-db2i.self.help",
