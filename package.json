@@ -87,7 +87,7 @@
             "title": "Auto-refresh SELF Codes view",
             "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
             "default": false
-          },
+          }
         }
       },
       {
