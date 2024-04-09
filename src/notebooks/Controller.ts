@@ -121,39 +121,44 @@ export class IBMiController {
               const results = await query.run();
 
               const table = results.data;
-              const keys = Object.keys(table[0]);
 
-              // Add `-` for blanks.
-              table.forEach(row => {
-                keys.forEach(key => {
-                  //@ts-ignore
-                  if (!row[key]) { row[key] = `-`; }
+              if (table.length > 0) {
+
+                const keys = Object.keys(table[0]);
+
+                // Add `-` for blanks.
+                table.forEach(row => {
+                  keys.forEach(key => {
+                    //@ts-ignore
+                    if (!row[key]) { row[key] = `-`; }
+                  });
                 });
-              });
 
-              const columns = results.metadata.columns.map(c => c.label);
+                const columns = results.metadata.columns.map(c => c.label);
 
-              let fallbackToTable = true;
+                let fallbackToTable = true;
 
-              if (chartDetail.type) {
-                if (chartJsTypes.includes(chartDetail.type as ChartJsType)) {
-                  const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table, generateChartHTML);
-                  if (possibleChart) {
-                    items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
-                    fallbackToTable = false;
+                if (chartDetail.type) {
+                  if (chartJsTypes.includes(chartDetail.type as ChartJsType)) {
+                    const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table, generateChartHTML);
+                    if (possibleChart) {
+                      items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
+                      fallbackToTable = false;
+                    }
                   }
                 }
-              }
 
-              if (fallbackToTable) {
-                items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columns), `text/markdown`));
+                if (fallbackToTable) {
+                  items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columns), `text/markdown`));
+                }
+              } else {
+                items.push(vscode.NotebookCellOutputItem.stderr(`No rows returned from statement.`));
               }
               
             } else {
-              vscode.NotebookCellOutputItem.stderr(`No job selected in SQL Job Manager.`);
+              items.push(vscode.NotebookCellOutputItem.stderr(`No job selected in SQL Job Manager.`));
             }
           } catch (e) {
-            //@ts-ignore
             items.push(vscode.NotebookCellOutputItem.stderr(e.message));
           }
           break;
