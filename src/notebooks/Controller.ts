@@ -17,6 +17,7 @@ export class IBMiController {
   readonly supportedLanguages = [`sql`, `cl`, `shellscript`];
 
   private readonly _controller: vscode.NotebookController;
+  private globalCancel = false;
   private _executionOrder = 0;
 
   constructor() {
@@ -35,13 +36,19 @@ export class IBMiController {
     this._controller.dispose();
   }
 
+
+
   private async _execute(
     cells: vscode.NotebookCell[],
     _notebook: vscode.NotebookDocument,
     _controller: vscode.NotebookController
   ) {
+    this.globalCancel = false;
+
     for (let cell of cells) {
-      await this._doExecution(cell);
+      if (!this.globalCancel) {
+        await this._doExecution(cell);
+      }
     }
   }
 
@@ -57,7 +64,7 @@ export class IBMiController {
     const selected = JobManager.getSelection();
 
     execution.token.onCancellationRequested(() => {
-      console.log('cancelling ' + selected.job.id);
+      this.globalCancel = true;
       if (selected && selected.job.getStatus() === JobStatus.Busy) {
         selected.job.requestCancel();
       }
