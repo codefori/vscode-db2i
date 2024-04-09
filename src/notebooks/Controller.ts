@@ -35,13 +35,13 @@ export class IBMiController {
     this._controller.dispose();
   }
 
-  private _execute(
+  private async _execute(
     cells: vscode.NotebookCell[],
     _notebook: vscode.NotebookDocument,
     _controller: vscode.NotebookController
-  ): void {
+  ) {
     for (let cell of cells) {
-      this._doExecution(cell);
+      await this._doExecution(cell);
     }
   }
 
@@ -57,6 +57,7 @@ export class IBMiController {
     const selected = JobManager.getSelection();
 
     execution.token.onCancellationRequested(() => {
+      console.log('cancelling ' + selected.job.id);
       if (selected && selected.job.getStatus() === JobStatus.Busy) {
         selected.job.requestCancel();
       }
