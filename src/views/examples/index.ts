@@ -20,6 +20,25 @@ export const ServiceInfoLabel = `IBM i (SQL) Services`;
 export const Examples: SQLExamplesList = {
   "Notebooks": [
     {
+      name: "Local Services (Bar with tooltip)",
+      content: [
+        `-- This will show top services sending/receiving data`,
+        [
+          `bar: `,
+          `  SELECT local_port_name as label, `,
+          `  BYTES_SENT_REMOTELY,`,
+          `  'Segments sent: ' concat char(coalesce(tcp_segments_sent, 0)) as BYTES_SENT_REMOTELY_desc,`,
+          `  BYTES_RECEIVED_LOCALLY,`,
+          `  'Segments received: ' concat char(coalesce(tcp_segments_received, 0)) as BYTES_RECEIVED_LOCALLY_desc`,
+          `  FROM QSYS2.NETSTAT_INFO`,
+          `  where local_port_name is not null and bytes_sent_remotely > 0`,
+          `  ORDER BY BYTES_SENT_REMOTELY + BYTES_RECEIVED_LOCALLY DESC`,
+          `  LIMIT 10;`,
+        ].join('\n')
+      ],
+      isNotebook: true
+    },
+    {
       "name": "User Storage (Bar)",
       content: [
         `-- This notebook will show the top 10 users by storage used`,
