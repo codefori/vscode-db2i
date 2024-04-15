@@ -27,7 +27,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     webviewView.webview.html = html.getLoadingHTML();
     this._view.webview.onDidReceiveMessage(async (message) => {
       if (message.query) {
-        let data = [];
 
         let queryObject = Query.byId(message.queryId);
         try {
