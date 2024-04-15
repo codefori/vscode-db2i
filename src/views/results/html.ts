@@ -102,10 +102,6 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                     appendRows(data.rows);
                   }
 
-                  if (data.jobId) {
-
-                  }
-
                   if (data.rows === undefined && totalRows === 0) {
                     document.getElementById(messageSpanId).innerText = 'Statement executed with no result set returned. Rows affected: ' + data.update_count;
                   } else {
