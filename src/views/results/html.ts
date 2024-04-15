@@ -54,6 +54,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
           const basicSelect = ${JSON.stringify(basicSelect)};
           const htmlTableId = 'resultset';
           const statusId = 'status';
+          const jobId = 'jobId';
           const messageSpanId = 'messageSpan';
 
           let myQueryId = '';
@@ -104,7 +105,8 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   if (data.rows === undefined && totalRows === 0) {
                     document.getElementById(messageSpanId).innerText = 'Statement executed with no result set returned. Rows affected: ' + data.update_count;
                   } else {
-                    document.getElementById(statusId).innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data') : ('Loaded ' + totalRows + '. More available.');
+                    document.getElementById(statusId).innerText = noMoreRows ? ('Loaded ' + totalRows + '. End of data.') : ('Loaded ' + totalRows + '. More available.');
+                    document.getElementById(jobId).innerText = data.jobId ? data.jobId : '';
                     document.getElementById(messageSpanId).style.visibility = "hidden";
                   }
                   break;
@@ -144,10 +146,20 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             // Initialize the footer
             var footer = document.getElementById(htmlTableId).getElementsByTagName('tfoot')[0];
             footer.innerHTML = '';
-            var newCell = footer.insertRow().insertCell();
-            newCell.colSpan = columnMetaData.length;
-            newCell.id = statusId;
-            newCell.appendChild(document.createTextNode(' '));
+            const newRow = footer.insertRow();
+
+            const statusCell = newRow.insertCell();
+            statusCell.id = statusId;
+            statusCell.appendChild(document.createTextNode(' '));
+
+            const jobIdCell = newRow.insertCell();
+            jobIdCell.id = jobId;
+            jobIdCell.appendChild(document.createTextNode(' '));
+
+            if (columns.length > 2) {
+              statusCell.colSpan = 2;
+              jobIdCell.colSpan = columns.length - 2;
+            }
           }
 
           function appendRows(rows) {

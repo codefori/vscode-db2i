@@ -27,7 +27,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     webviewView.webview.html = html.getLoadingHTML();
     this._view.webview.onDidReceiveMessage(async (message) => {
       if (message.query) {
-        let data = [];
 
         let queryObject = Query.byId(message.queryId);
         try {
@@ -42,8 +41,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
           let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
 
+          const jobId = queryObject.getHostJob().id;
+
           this._view.webview.postMessage({
             command: `rows`,
+            jobId,
             rows: queryResults.data,
             columnMetaData: queryResults.metadata ? queryResults.metadata.columns : undefined, // Query.fetchMore() doesn't return the metadata
             columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
