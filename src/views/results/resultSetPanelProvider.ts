@@ -44,7 +44,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
           const jobId = queryObject.getHostJob().id;
 
-          data = queryResults.data;
           this._view.webview.postMessage({
             command: `rows`,
             jobId,
