@@ -13,6 +13,8 @@ import { JobManager } from "../../../config";
 import { SelfCodeNode, SelfIleStackFrame } from "./nodes";
 import { openExampleCommand } from "../../examples/exampleBrowser";
 import { SQLExample } from "../../examples";
+import { JobInfo } from "../../../connection/manager";
+import { JobStatus } from "../../../connection/sqlJob";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -65,7 +67,11 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
     );
     setInterval(async () => {
       if (this.autoRefresh) {
-        this.refresh();
+        const selected = JobManager.getSelection();
+        // Don't refresh if the job is busy.
+        if (selected.job.getStatus() === JobStatus.Ready) {
+          this.refresh();
+        }
       }
     }, 5000);
 
@@ -80,24 +86,24 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
     }
   }
 
-  async getSelfCodes(): Promise<SelfCodeNode[]> {
-    const selected = JobManager.getSelection();
-    if (selected) {
-      const content = `SELECT 
-                        job_name, user_name, reason_code, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, message_text, message_second_level_text,
-                        program_library, program_name, program_type, module_name, client_applname, client_programid, initial_stack
-                      FROM qsys2.sql_error_log, lateral (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
-                      where user_name = current_user
-                      order by logged_time desc`;
+  async getSelfCodes(selected: JobInfo): Promise<SelfCodeNode[]|undefined> {
+    const content = `SELECT 
+                      job_name, user_name, reason_code, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, message_text, message_second_level_text,
+                      program_library, program_name, program_type, module_name, client_applname, client_programid, initial_stack
+                    FROM qsys2.sql_error_log, lateral (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
+                    where user_name = current_user
+                    order by logged_time desc`;
 
-      const data: SelfCodeNode[] = (await JobManager.runSQL<SelfCodeNode>(content)).map((row) => ({
+    const result = await selected.job.query<SelfCodeNode>(content).run(10000);
+    if (result.success) {
+      const data: SelfCodeNode[] = result.data.map((row) => ({
         ...row,
         INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string)
       }));
 
+    
       return data;
     }
-    return;
   }
 
   refresh(): void {
@@ -116,13 +122,17 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
         return element.getChildren();
       }
     } else {
-      const selfCodes = await this.getSelfCodes();
+      const selected = JobManager.getSelection();
 
-      if (selfCodes) {
-        return selfCodes.map((error) => {
-          const treeItem = new SelfCodeTreeItem(error);
-          return treeItem;
-        });
+      if (selected) {
+        const selfCodes = await this.getSelfCodes(selected);
+
+        if (selfCodes) {
+          return selfCodes.map((error) => {
+            const treeItem = new SelfCodeTreeItem(error);
+            return treeItem;
+          });
+        }
       }
 
       return [];
