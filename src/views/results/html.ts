@@ -156,9 +156,9 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
             jobIdCell.id = jobId;
             jobIdCell.appendChild(document.createTextNode(' '));
 
-            if (columns.length > 2) {
+            if (columnMetaData.length > 2) {
               statusCell.colSpan = 2;
-              jobIdCell.colSpan = columns.length - 2;
+              jobIdCell.colSpan = columnMetaData.length - 2;
             }
           }
 
