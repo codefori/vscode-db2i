@@ -4,6 +4,7 @@ import { setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
 import { Query, QueryState } from "../../connection/query";
 import { updateStatusBar } from "../jobManager/statusBar";
+import Configuration from "../../configuration";
 import * as html from "./html";
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
@@ -26,7 +27,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     webviewView.webview.html = html.getLoadingHTML();
     this._view.webview.onDidReceiveMessage(async (message) => {
       if (message.query) {
-        let data = [];
 
         let queryObject = Query.byId(message.queryId);
         try {
@@ -41,11 +41,14 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
           let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
 
-          data = queryResults.data;
+          const jobId = queryObject.getHostJob().id;
+
           this._view.webview.postMessage({
             command: `rows`,
+            jobId,
             rows: queryResults.data,
-            columnList: queryResults.metadata ? queryResults.metadata.columns.map(x => x.name) : undefined, // Query.fetchMore() doesn't return the metadata
+            columnMetaData: queryResults.metadata ? queryResults.metadata.columns : undefined, // Query.fetchMore() doesn't return the metadata
+            columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
             queryId: queryObject.getId(),
             update_count: queryResults.update_count,
             isDone: queryResults.is_done
@@ -98,6 +101,16 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
 
     html.setLoadingText(this._view.webview, content);
+  }
+
+  /** Update the result table column headings based on the configuration setting */
+  async updateHeader() {
+    if (this._view) {
+      this._view.webview.postMessage({
+        command: `header`,
+        columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
+      });
+    }
   }
 
   async setScrolling(basicSelect, isCL = false, queryId: string = ``) {
