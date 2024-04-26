@@ -80,7 +80,12 @@
             "order": 0,
             "description": "Default SELF setting for new jobs",
             "default": "*NONE",
-            "enum": ["*NONE", "*ALL", "*ERROR", "*WARNING"]
+            "enum": [
+              "*NONE",
+              "*ALL",
+              "*ERROR",
+              "*WARNING"
+            ]
           },
           "vscode-db2i.jobSelfViewAutoRefresh": {
             "type": "boolean",
@@ -133,12 +138,15 @@
             "order": 0,
             "description": "Descriptor to use for column headings when viewing data",
             "default": "Name",
-            "enum": ["Name", "Label"],
+            "enum": [
+              "Name",
+              "Label"
+            ],
             "enumDescriptions": [
               "Show the column name",
               "Show the column label\n'Extended metadata' must be set to true in the JDBC configuration"
             ]
-            },
+          },
           "vscode-db2i.collapsedResultSet": {
             "type": "boolean",
             "description": "Make larger cells collapsed by default",
@@ -995,7 +1003,7 @@
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
         },
-{
+        {
           "command": "vscode-db2i.jobManager.editSelfCodes",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "self@2"
@@ -1155,6 +1163,7 @@
     "json-to-markdown-table": "^1.0.0",
     "lru-cache": "^6.0.0",
     "node-fetch": "^3.3.1",
+    "showdown": "^2.1.0",
     "sql-formatter": "^14.0.0"
   }
 }

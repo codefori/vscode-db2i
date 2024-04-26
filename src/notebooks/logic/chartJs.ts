@@ -13,9 +13,8 @@ export function generateChartHTMLCell(id: number, detail: ChartDetail, labels: s
 
   const hasYaxis = detail.type === `bar` || detail.type === `line`;
 
-  const bodies = generateChartHTMLEmbedded(id, detail, labels, datasets);
+  const bodies = generateChartHTMLEmbedded(id, detail, labels, datasets, `message`);
 
-  // TODO: remove hardcoded version: https://github.com/codefori/vscode-db2i/compare/0.1.0...0.1.1
   return /*html*/`
     <head>
       <script>${chartjs}</script>
@@ -24,12 +23,15 @@ export function generateChartHTMLCell(id: number, detail: ChartDetail, labels: s
       </script>
     </head>
     <body>
-      ${bodies.html}
+
+      <div style="max-height: 700px">
+        ${bodies.html}
+      </div>
     </body>
   `;
 }
 
-export function generateChartHTMLEmbedded(id: number, detail: ChartDetail, labels: string[], datasets: Dataset[], loadEvent: string = `message`): { html: string, script: string } {
+export function generateChartHTMLEmbedded(id: number, detail: ChartDetail, labels: string[], datasets: Dataset[], loadEvent: string = `load`): { html: string, script: string } {
   const chartData: ChartData = {
     labels,
     datasets,
@@ -93,9 +95,7 @@ export function generateChartHTMLEmbedded(id: number, detail: ChartDetail, label
   `;
 
   const html = /*html*/`
-    <div style="max-height: 700px">
-      <canvas id="myChart${id}"></canvas>
-    </div>
+    <canvas id="myChart${id}"></canvas>
     <p id="errorText${id}"></p>
   `;
 

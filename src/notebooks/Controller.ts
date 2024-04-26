@@ -4,11 +4,10 @@ import * as vscode from 'vscode';
 import * as mdTable from 'json-to-markdown-table';
 
 import { getInstance } from '../base';
-import { CommandResult } from '@halcyontech/vscode-ibmi-types';
 import { JobManager } from '../config';
 import { ChartJsType, chartJsTypes, generateChartHTMLCell } from './logic/chartJs';
 import { JobStatus } from '../connection/sqlJob';
-import { ChartDetail, chartTypes, generateChart } from './logic/chart';
+import { ChartDetail, generateChart } from './logic/chart';
 import { getStatementDetail } from './logic/statement';
 
 export class IBMiController {
