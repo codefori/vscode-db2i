@@ -22,9 +22,9 @@ export interface Dataset {
   borderWidth?: number;
 }
 
-export type GeneratorFunction = (id: number, detail: ChartDetail, columns: string[], rows: any[]) => string | undefined;
+export type GeneratorFunction<T> = (id: number, detail: ChartDetail, columns: string[], rows: any[]) => T;
 
-export function generateChart(id: number, detail: ChartDetail, columns: string[], rows: any[], gen: GeneratorFunction): string | undefined {
+export function generateChart<T>(id: number, detail: ChartDetail, columns: string[], rows: any[], gen: GeneratorFunction<T>) {
   if (rows.length === 1) {
     const labels = columns;
     const data = Object.values(rows[0]);

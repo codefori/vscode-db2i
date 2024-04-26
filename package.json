@@ -341,6 +341,12 @@
         "icon": "$(notebook)"
       },
       {
+        "command": "vscode-db2i.notebook.exportAsHtml",
+        "title": "Export",
+        "category": "IBM i Notebooks",
+        "icon": "$(save)"
+      },
+      {
         "command": "vscode-db2i.openSqlDocument",
         "title": "Open SQL Document",
         "category": "Db2 for i",
@@ -660,6 +666,13 @@
       }
     ],
     "menus": {
+      "notebook/toolbar": [
+        {
+          "command": "vscode-db2i.notebook.exportAsHtml",
+          "when": "code-for-ibmi:connected == true",
+          "group": "navigation"
+        }
+      ],
       "commandPalette": [
         {
           "command": "vscode-db2i.queryHistory.remove",

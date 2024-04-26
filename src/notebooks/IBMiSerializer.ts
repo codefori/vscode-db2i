@@ -3,6 +3,7 @@ import { TextDecoder, TextEncoder } from 'util';
 import { IBMiController } from './Controller';
 import { notebookFromSqlUri } from './logic/openAsNotebook';
 import { Cell, CodeCell, MarkdownCell, Notebook, Output } from './jupyter';
+import { exportNotebookAsHtml } from './logic/export';
 
 interface RawNotebookCell {
   language: string;
@@ -27,7 +28,8 @@ export function notebookInit() {
     vscode.workspace.registerNotebookSerializer(`db2i-notebook`, new IBMiSerializer()),
     new IBMiController(),
     notebookFromSqlUri,
-    openBlankNotebook
+    openBlankNotebook,
+    exportNotebookAsHtml
   ];
 }
 

@@ -6,9 +6,10 @@ import * as mdTable from 'json-to-markdown-table';
 import { getInstance } from '../base';
 import { CommandResult } from '@halcyontech/vscode-ibmi-types';
 import { JobManager } from '../config';
-import { ChartJsType, chartJsTypes, generateChartHTML } from './logic/chartJs';
+import { ChartJsType, chartJsTypes, generateChartHTMLCell } from './logic/chartJs';
 import { JobStatus } from '../connection/sqlJob';
 import { ChartDetail, chartTypes, generateChart } from './logic/chart';
+import { getStatementDetail } from './logic/statement';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -75,53 +76,12 @@ export class IBMiController {
         case `sql`:
           try {
             if (selected) {
+              const eol = cell.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+              
               let content = cell.document.getText().trim();
+              let chartDetail: ChartDetail | undefined;
 
-              let chartDetail: ChartDetail = {};
-
-              // Strip out starting comments
-              if (content.startsWith(`--`)) {
-                const eol = cell.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
-                const lines = content.split(eol);
-                const firstNonCommentLine = lines.findIndex(line => !line.startsWith(`--`));
-
-                const startingComments = lines.slice(0, firstNonCommentLine).map(line => line.substring(2).trim());
-                content = lines.slice(firstNonCommentLine).join(eol);
-
-                let settings = {};
-
-                for (let comment of startingComments) {
-                  const sep = comment.indexOf(`:`);
-                  const key = comment.substring(0, sep).trim();
-                  const value = comment.substring(sep + 1).trim();
-                  settings[key] = value;
-                }
-
-                // Chart settings defined by comments
-                if (settings[`chart`] && chartJsTypes.includes(settings[`chart`])) {
-                  chartDetail.type = settings[`chart`];
-                }
-
-                if (settings[`title`]) {
-                  chartDetail.title = settings[`title`];
-                }
-
-                if (settings[`y`]) {
-                  chartDetail.y = settings[`y`];
-                }
-              }
-
-              // Remove trailing semicolon. The Service Component doesn't like it.
-              if (content.endsWith(`;`)) {
-                content = content.substring(0, content.length - 1);
-              }
-
-              // Perhaps the chart type is defined by the statement prefix
-              const chartType: ChartJsType|undefined = chartTypes.find(type => content.startsWith(`${type}:`));
-              if (chartType) {
-                chartDetail.type = chartType;
-                content = content.substring(chartType.length + 1);
-              }
+              ({ chartDetail, content } = getStatementDetail(content, eol));
 
               // Execute the query
               const query = selected.job.query(content);
@@ -147,7 +107,7 @@ export class IBMiController {
 
                 if (chartDetail.type) {
                   if (chartJsTypes.includes(chartDetail.type as ChartJsType)) {
-                    const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table, generateChartHTML);
+                    const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table, generateChartHTMLCell);
                     if (possibleChart) {
                       items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
                       fallbackToTable = false;
