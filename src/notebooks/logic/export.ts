@@ -52,15 +52,16 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
               let executionId = 0;
               for (const cell of cells) {
                 if (token.isCancellationRequested) return;
-
                 executionId += 1;
 
                 progress.report({ message: `Exporting ${cell.document.languageId.toUpperCase()} cell ${executionId} of ${cells.length}..` });
 
+                const cellContents: string[] = [];
+
                 switch (cell.document.languageId) {
                   case `markdown`:
                     const markdown = cell.document.getText();
-                    cellsHTML.push(converter.makeHtml(markdown));
+                    cellContents.push(converter.makeHtml(markdown));
                     break;
             
                   case `sql`:
@@ -73,7 +74,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
   
                         ({ chartDetail, content } = getStatementDetail(content, eol));
 
-                        cellsHTML.push(`<pre>${content}</pre>`);
+                        cellContents.push(`<pre>${content}</pre>`);
   
                         // Execute the query
                         const query = selected.job.query(content);
@@ -102,7 +103,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                               const possibleChart = generateChart(executionId, chartDetail, columns, table, generateChartHTMLEmbedded);
                               if (possibleChart) {
                                 scripts.push(possibleChart.script);
-                                cellsHTML.push(possibleChart.html);
+                                cellContents.push(possibleChart.html);
                                 fallbackToTable = false;
                                 requiresChartJs = true;
                               }
@@ -110,7 +111,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                           }
   
                           if (fallbackToTable) {
-                            cellsHTML.push([
+                            cellContents.push([
                               `<table style="width: 100%; margin-left: auto; margin-right: auto;">`,
                               `<thead>`,
                               `<tr>`,
@@ -143,7 +144,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
   
                   case `cl`:
                     const commandText = cell.document.getText();
-                    cellsHTML.push(`<pre>${commandText}</pre>`);
+                    cellContents.push(`<pre>${commandText}</pre>`);
               
                     try {
                       const command = await connection.runCommand({
@@ -152,7 +153,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                       });
   
                       if (command.stdout) {
-                        cellsHTML.push([
+                        cellContents.push([
                           `<pre>`,
                           command.stdout,
                           `</pre>`
@@ -160,7 +161,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                       }
   
                       if (command.stderr) {
-                        cellsHTML.push([
+                        cellContents.push([
                           `<pre>`,
                           command.stderr,
                           `</pre>`
@@ -177,7 +178,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                   case `shellscript`:
                     const shellText = cell.document.getText();
 
-                    cellsHTML.push(`<pre>${shellText}</pre>`);
+                    cellContents.push(`<pre>${shellText}</pre>`);
 
                     try {
                       const command = await connection.runCommand({
@@ -186,7 +187,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                       });
   
                       if (command.stdout) {
-                        cellsHTML.push([
+                        cellContents.push([
                           `<pre>`,
                           command.stdout,
                           `</pre>`
@@ -194,7 +195,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                       }
   
                       if (command.stderr) {
-                        cellsHTML.push([
+                        cellContents.push([
                           `<pre>`,
                           command.stderr,
                           `</pre>`
@@ -211,7 +212,8 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                     break;
                 }
 
-                cellsHTML.push(`<hr />`);
+                cellsHTML.push(asCell(cellContents.join(`<br />`)));
+                cellsHTML.push(asCell(`<hr />`));
               }
 
               if (cells.length > 0) {
@@ -228,12 +230,12 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                         border: 0;
                         border-top: 1px solid #e8e8e8;
                       }
-                      tr {
+                      .notebookCell {
                         padding-top: 1em;
                         padding-bottom: 1em;
                       }
                       @media print {
-                        td {
+                        .notebookCell {
                           break-inside: avoid;
                         }
                       }
@@ -247,7 +249,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                   <body>
                     <table style="margin-left: auto; margin-right: auto; width: 60%;">
                       <tbody style="width: 100%;">
-                        ${cellsHTML.map(content => `<tr><td style="padding-top: 0.2em; padding-bottom: 0.2em;">${content}</td></tr>`).join(``)}
+                        ${cellsHTML.join(``)}
                       </tbody>
                     </table>
                   </body>
@@ -267,3 +269,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
     }
   }
 });
+
+function asCell(content: string) {
+  return `<tr><td class="notebookCell" style="padding-top: 0.2em; padding-bottom: 0.2em;">${content}</td></tr>`;
+}
