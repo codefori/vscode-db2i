@@ -677,7 +677,7 @@
       "notebook/toolbar": [
         {
           "command": "vscode-db2i.notebook.exportAsHtml",
-          "when": "code-for-ibmi:connected == true",
+          "when": "code-for-ibmi:connected == true && resourceExtname == .inb",
           "group": "navigation"
         }
       ],
