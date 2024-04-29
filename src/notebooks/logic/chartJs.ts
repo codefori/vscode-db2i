@@ -6,13 +6,6 @@ export type ChartJsType = `bar` | `line` | `doughnut` | `pie` | `polarArea` | `r
 export const chartJsTypes: ChartJsType[] = [`bar`, `line`, `doughnut`, `pie`, `polarArea`, `radar`];
 
 export function generateChartHTMLCell(id: number, detail: ChartDetail, labels: string[], datasets: Dataset[]): string {
-  const chartData: ChartData = {
-    labels,
-    datasets,
-  };
-
-  const hasYaxis = detail.type === `bar` || detail.type === `line`;
-
   const bodies = generateChartHTMLEmbedded(id, detail, labels, datasets, `message`);
 
   return /*html*/`
