@@ -70,11 +70,14 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                         const eol = cell.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
                 
                         let content = cell.document.getText().trim();
-                        let chartDetail: ChartDetail | undefined;
   
-                        ({ chartDetail, content } = getStatementDetail(content, eol));
+                        const detail = getStatementDetail(content, eol);
 
-                        cellContents.push(`<pre>${content}</pre>`);
+                        content = detail.content;
+
+                        if (detail.settings.hideStatement !== `true`) {
+                          cellContents.push(`<pre>${content}</pre>`);
+                        }
   
                         // Execute the query
                         const query = selected.job.query(content);
@@ -98,6 +101,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
   
                           let fallbackToTable = true;
   
+                          const { chartDetail } = detail;
                           if (chartDetail.type) {
                             if (chartJsTypes.includes(chartDetail.type as ChartJsType)) {
                               const possibleChart = generateChart(executionId, chartDetail, columns, table, generateChartHTMLEmbedded);

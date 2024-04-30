@@ -1,8 +1,17 @@
 import { ChartDetail, chartTypes } from "./chart";
 import { ChartJsType, chartJsTypes } from "./chartJs";
 
+export interface StatementSettings {
+  chart?: ChartJsType;
+  title?: string;
+  y?: string;
+  hideStatement?: string;
+  [key: string]: string
+};
+
 export function getStatementDetail(content: string, eol: string) {
   let chartDetail: ChartDetail = {};
+  let settings: StatementSettings = {};
 
   // Strip out starting comments
   if (content.startsWith(`--`)) {
@@ -11,8 +20,6 @@ export function getStatementDetail(content: string, eol: string) {
 
     const startingComments = lines.slice(0, firstNonCommentLine).map(line => line.substring(2).trim());
     content = lines.slice(firstNonCommentLine).join(eol);
-
-    let settings = {};
 
     for (let comment of startingComments) {
       const sep = comment.indexOf(`:`);
@@ -46,5 +53,5 @@ export function getStatementDetail(content: string, eol: string) {
     chartDetail.type = chartType;
     content = content.substring(chartType.length + 1);
   }
-  return { chartDetail, content };
+  return { chartDetail, content, settings };
 }
