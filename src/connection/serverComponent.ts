@@ -107,7 +107,10 @@ export class ServerComponent {
             command: `echo ${ExecutablePathDir}`
           });
 
-          if (commandResult.code === 0 && commandResult.stderr === ``) {
+          this.writeOutput(JSON.stringify(commandResult));
+
+          if (commandResult.code === 0) {
+            const stuffInStderr = commandResult.stderr.length > 0;
             const remotePath = path.posix.join(commandResult.stdout, basename);
 
             ServerComponent.writeOutput(JSON.stringify({remotePath, ExecutablePathDir}));
@@ -122,6 +125,10 @@ export class ServerComponent {
 
             await Config.setServerComponentName(basename);
 
+            if (stuffInStderr) {
+              ServerComponent.writeOutput(`Server component was uploaded to ${remotePath} but there was something in stderr, which is not right. It might be worth seeing your user profile startup scripts.`);
+            }
+
             window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
             this.installed = true;
             updateResult = UpdateStatus.JUST_UPDATED;
@@ -129,7 +136,6 @@ export class ServerComponent {
           } else {
             updateResult = UpdateStatus.FAILED;
 
-            this.writeOutput(JSON.stringify(commandResult));
             window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`).then(chosen => {
               if (chosen === `Show`) {
                 this.outputChannel.show();
