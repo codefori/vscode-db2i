@@ -69,7 +69,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
       if (this.autoRefresh) {
         const selected = JobManager.getSelection();
         // Don't refresh if the job is busy.
-        if (selected.job.getStatus() === JobStatus.Ready) {
+        if ((selected && selected.job.getStatus() === JobStatus.Ready) || selected === undefined) {
           this.refresh();
         }
       }
