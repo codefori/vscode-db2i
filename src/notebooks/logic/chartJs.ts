@@ -16,8 +16,7 @@ export function generateChartHTMLCell(id: number, detail: ChartDetail, labels: s
       </script>
     </head>
     <body>
-
-      <div style="max-height: 700px">
+      <div style="max-width: 900px">
         ${bodies.html}
       </div>
     </body>
