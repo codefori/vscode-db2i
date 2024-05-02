@@ -1,3 +1,4 @@
+import { commands } from "vscode";
 import { getInstance } from "./base";
 import { ServerComponent } from "./connection/serverComponent";
 
@@ -19,6 +20,7 @@ export class IBMiDetail {
 
   setFeatureSupport(featureId: Db2FeatureIds, supported: boolean) {
     this.features[featureId] = supported;
+    commands.executeCommand(`setContext`, `vscode-db2i:${featureId}Supported`, supported);
   }
 
   getVersion() {
@@ -30,6 +32,12 @@ export class IBMiDetail {
   }
 
   async fetchSystemInfo() {
+    // Disable all features
+    const features = Object.keys(featureRequirements) as Db2FeatureIds[];
+    for (const featureId of features) {
+      this.setFeatureSupport(featureId, false);
+    }
+
     const instance = getInstance();
     const content = instance.getContent();
 
@@ -52,7 +60,6 @@ export class IBMiDetail {
       levelCheckFailed = true;
     }
 
-    const features = Object.keys(featureRequirements) as Db2FeatureIds[];
     for (const featureId of features) {
       const requiredLevelForFeature = featureRequirements[featureId][String(this.version)];
       const supported = requiredLevelForFeature && this.db2Level >= requiredLevelForFeature;

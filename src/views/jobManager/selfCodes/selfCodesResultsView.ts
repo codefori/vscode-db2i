@@ -9,7 +9,7 @@ import {
   Uri,
   Disposable
 } from "vscode";
-import { JobManager } from "../../../config";
+import { JobManager, osDetail } from "../../../config";
 import { SelfCodeNode, SelfIleStackFrame } from "./nodes";
 import { openExampleCommand } from "../../examples/exampleBrowser";
 import { SQLExample } from "../../examples";
@@ -94,15 +94,21 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
                     where user_name = current_user
                     order by logged_time desc`;
 
-    const result = await selected.job.query<SelfCodeNode>(content).run(10000);
-    if (result.success) {
-      const data: SelfCodeNode[] = result.data.map((row) => ({
-        ...row,
-        INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string)
-      }));
+    try {
+      const result = await selected.job.query<SelfCodeNode>(content).run(10000);
+      if (result.success) {
+        const data: SelfCodeNode[] = result.data.map((row) => ({
+          ...row,
+          INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string)
+        }));
 
-    
-      return data;
+      
+        return data;
+      }
+    } catch (e) {
+      this.setRefreshEnabled(false);
+      osDetail.setFeatureSupport(`SELF`, false);
+      vscode.window.showErrorMessage(`An error occured fetching SELF code errors, and therefore will be disabled.`);
     }
   }
 
