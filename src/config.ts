@@ -35,7 +35,6 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
   await ServerComponent.checkForUpdate();
 
   updateStatusBar();
-  toggleViews();
 
   if (ServerComponent.isInstalled()) {
     JobManagerView.setVisible(true);
@@ -81,15 +80,6 @@ export function initConfig(context: ExtensionContext) {
     // Close out the Visual Explain panels
     commands.executeCommand('vscode-db2i.dove.close');
   });
-}
-
-export function toggleViews() {
-  const features = osDetail.getFeatures();
-
-  const featureIds = Object.keys(features) as (keyof typeof features)[];
-  for (const featureId of featureIds) {
-    commands.executeCommand(`setContext`, `vscode-db2i:${featureId}Supported`, features[featureId]);
-  }
 }
 
 export async function askAboutNewJob(startup?: boolean): Promise<boolean> {
