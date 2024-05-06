@@ -1,6 +1,7 @@
 import { Event, EventEmitter, ExtensionContext, MarkdownString, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, commands, window, workspace } from "vscode";
 import { Examples, SQLExample, ServiceInfoLabel } from ".";
 import { getServiceInfo } from "../../database/serviceInfo";
+import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
 import { osDetail } from "../../config";
 
 export const openExampleCommand = `vscode-db2i.examples.open`;
@@ -15,12 +16,16 @@ export class ExampleBrowser implements TreeDataProvider<any> {
     context.subscriptions.push(
       commands.registerCommand(openExampleCommand, (example: SQLExample) => {
         if (example) {
-          workspace.openTextDocument({
-            content: example.content.join(`\n`),
-            language: `sql`
-          }).then(doc => {
-            window.showTextDocument(doc);
-          });
+          if (example.isNotebook) {
+            notebookFromStatements(example.content);
+          } else {
+            workspace.openTextDocument({
+              content: example.content.join(`\n`),
+              language: `sql`
+            }).then(doc => {
+              window.showTextDocument(doc);
+            });
+          }
         }
       }),
 

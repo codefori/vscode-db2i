@@ -17,6 +17,7 @@ import { ServerComponent } from "./connection/serverComponent";
 import { SQLJobManager } from "./connection/manager";
 import { JDBCOptions } from "./connection/types";
 import { SQLJob } from "./connection/sqlJob";
+import { notebookInit } from "./notebooks/IBMiSerializer";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import Configuration from "./configuration";
 
@@ -41,6 +42,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   context.subscriptions.push(
     ...languageInit(),
+    ...notebookInit(),
     ServerComponent.initOutputChannel(),
     vscode.window.registerTreeDataProvider(
       `jobManager`,

@@ -1437,6 +1437,27 @@ describe(`Parameter statement tests`, () => {
   });
 });
 
+describe(`Prefix tests`, () => {
+  test('CL prefix', () => {
+    const content = [
+      `-- example`,
+      `bar: SELECT A.AUTHORIZATION_NAME as label, SUM(A.STORAGE_USED) AS TOTAL_STORAGE_USED`,
+      `  FROM QSYS2.USER_STORAGE A `,
+      `  INNER JOIN QSYS2.USER_INFO B ON B.USER_NAME = A.AUTHORIZATION_NAME WHERE B.USER_NAME NOT LIKE 'Q%' `,
+      `  GROUP BY A.AUTHORIZATION_NAME, B.TEXT_DESCRIPTION, B.ACCOUNTING_CODE, B.MAXIMUM_ALLOWED_STORAGE`,
+      `  ORDER BY TOTAL_STORAGE_USED DESC FETCH FIRST 10 ROWS ONLY`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    expect(statement.type).toBe(StatementType.Select);
+  });
+});
+
 test(`Callable blocks`, () => {
   const lines = [
       `call qsys2.create_abcd();`,
