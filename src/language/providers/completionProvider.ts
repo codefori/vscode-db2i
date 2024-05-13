@@ -290,12 +290,17 @@ async function getCompletionItemsForTriggerDot(
     }
   } else {
     
+    if (currentStatement.type === StatementType.Call) {
+      const procs = await getProcedures([curRef], getDefaultSchema());
+      list.push(...procs);
 
-    const objectCompletions = await getObjectCompletions(
-      curSchema,
-      completionTypes
-    );
-    list.push(...objectCompletions);
+    } else {
+      const objectCompletions = await getObjectCompletions(
+        curSchema,
+        completionTypes
+      );
+      list.push(...objectCompletions);
+    }
   }
 
   return list;
