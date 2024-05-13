@@ -8,13 +8,16 @@ export interface FormatOptions {
 export function formatSql(document: Document, options?: FormatOptions): string {
   let result: string = ``;
 
-  for (const statement of document.statements) {
-    for (const token of statement.tokens) {
-      if (tokenIs(token, `clause`)) {
-        result += `\n`;
-      }
+  const statementGroups = document.getStatementGroups();
+  for (const statementGroup of statementGroups) {
+    for (const statement of statementGroup.statements) {
+      for (const token of statement.tokens) {
+        if (tokenIs(token, `clause`)) {
+          result += `\n`;
+        }
 
-      result += token.value + ` `;
+        result += token.value + ` `;
+      }
     }
   }
 

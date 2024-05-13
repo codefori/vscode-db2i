@@ -842,7 +842,6 @@ describe(`Object references`, () => {
 
     expect(createStatement.type).toBe(StatementType.Create);
     const refs = createStatement.getObjectReferences();
-    console.log(refs);
     expect(refs.length).toBe(2);
 
     expect(refs[0].createType).toBe(`procedure`);
