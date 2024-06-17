@@ -1,4 +1,4 @@
-import { CancellationToken, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
+import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
 
 import { setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
@@ -8,16 +8,23 @@ import Configuration from "../../configuration";
 import * as html from "./html";
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
-  _view: WebviewView;
+  _view: WebviewView|WebviewPanel;
   loadingState: boolean;
+  currentQuery: Query<any>;
   constructor() {
     this._view = undefined;
     this.loadingState = false;
   }
 
-  resolveWebviewView(webviewView: WebviewView, context: WebviewViewResolveContext, _token: CancellationToken) {
+  resolveWebviewView(webviewView: WebviewView|WebviewPanel, context?: WebviewViewResolveContext, _token?: CancellationToken) {
     this._view = webviewView;
-    this._view.onDidDispose(() => this._view = undefined);
+
+    this._view.onDidDispose(() => {
+      this._view = undefined;
+      this.currentQuery.close().then(() => {
+        this.currentQuery = undefined;
+      });
+    });
 
     webviewView.webview.options = {
       // Allow scripts in the webview
@@ -28,20 +35,28 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     this._view.webview.onDidReceiveMessage(async (message) => {
       if (message.query) {
 
-        let queryObject = Query.byId(message.queryId);
+        if (this.currentQuery) {
+          // If we get a request for a new query, then we need to close the old one
+          if (this.currentQuery.getId() !== message.queryId) {
+            // This is a new query, so we need to clean up the old one
+            await this.currentQuery.close();
+            this.currentQuery = undefined;
+          }
+        }
+        
         try {
           setCancelButtonVisibility(true);
-          if (queryObject === undefined) {
+          if (this.currentQuery === undefined) {
             // We will need to revisit this if we ever allow multiple result tabs like ACS does
-            Query.cleanup();
+            // Query.cleanup();
 
             let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
-            queryObject = query;
+            this.currentQuery = query;
           }
 
-          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
+          let queryResults = this.currentQuery.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await this.currentQuery.fetchMore() : await this.currentQuery.run();
 
-          const jobId = queryObject.getHostJob().id;
+          const jobId = this.currentQuery.getHostJob().id;
 
           this._view.webview.postMessage({
             command: `rows`,
@@ -49,7 +64,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             rows: queryResults.data,
             columnMetaData: queryResults.metadata ? queryResults.metadata.columns : undefined, // Query.fetchMore() doesn't return the metadata
             columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
-            queryId: queryObject.getId(),
+            queryId: this.currentQuery.getId(),
             update_count: queryResults.update_count,
             isDone: queryResults.is_done
           });
@@ -77,7 +92,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       await delay(100);
       currentLoop += 1;
     }
-    this._view.show(true);
+    
+    if (this._view && 'show' in this._view) {
+      this._view.show(true);
+    }
+    
   }
 
   async focus() {

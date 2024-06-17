@@ -1,4 +1,4 @@
-import vscode, { SnippetString, ViewColumn, TreeView } from "vscode"
+import vscode, { SnippetString, ViewColumn, TreeView, window } from "vscode"
 
 import * as csv from "csv/sync";
 
@@ -141,6 +141,7 @@ export function initialise(context: vscode.ExtensionContext) {
 
     vscode.commands.registerCommand(`vscode-db2i.editorExplain.withRun`, (options?: StatementInfo) => { runHandler({ qualifier: `explain`, ...options }) }),
     vscode.commands.registerCommand(`vscode-db2i.editorExplain.withoutRun`, (options?: StatementInfo) => { runHandler({ qualifier: `onlyexplain`, ...options }) }),
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.inView`, (options?: StatementInfo) => { runHandler({ viewColumn: ViewColumn.Beside, ...options }) }),
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, (options?: StatementInfo) => { runHandler(options) })
   )
 }
@@ -155,6 +156,13 @@ async function runHandler(options?: StatementInfo) {
 
   if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
     await resultSetProvider.ensureActivation();
+    let chosenView = resultSetProvider;
+
+    const useWindow = (title: string, column?: ViewColumn) => {
+      const webview = window.createWebviewPanel(`sqlResultSet`, title, column || ViewColumn.Two, {retainContextWhenHidden: true, enableScripts: true, enableFindWidget: true});
+      chosenView = new ResultSetPanelProvider();
+      chosenView.resolveWebviewView(webview);
+    }
 
     const statementDetail = parseStatement(editor, optionsIsValid ? options : undefined);
 
@@ -178,10 +186,15 @@ async function runHandler(options?: StatementInfo) {
     }
 
     const statement = statementDetail.statement;
+    const refs = statement.getObjectReferences();
+    const ref = refs[0];
+
+    let possibleTitle = `SQL Results`;
+    if (ref && ref.object.name) {
+      possibleTitle = (ref.object.schema ? ref.object.schema + `.` : ``) + ref.object.name;
+    }
 
     if (statement.type === StatementType.Create || statement.type === StatementType.Alter) {
-      const refs = statement.getObjectReferences();
-      const ref = refs[0];
       const databaseObj =
         statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
           ? ref.object.schema || ``
@@ -192,10 +205,16 @@ async function runHandler(options?: StatementInfo) {
     if (statementDetail.content.trim().length > 0) {
       try {
         if (statementDetail.qualifier === `cl`) {
-          resultSetProvider.setScrolling(statementDetail.content, true); // Never errors
+          if (options && options.viewColumn) {
+            useWindow(`CL results`, options.viewColumn);
+          }
+          chosenView.setScrolling(statementDetail.content, true); // Never errors
         } else if (statementDetail.qualifier === `statement`) {
           // If it's a basic statement, we can let it scroll!
-          resultSetProvider.setScrolling(statementDetail.content); // Never errors
+          if (options && options.viewColumn) {
+            useWindow(possibleTitle, options.viewColumn);
+          }
+          chosenView.setScrolling(statementDetail.content); // Never errors
 
         } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
           // If it's an explain, we need to 
@@ -203,7 +222,7 @@ async function runHandler(options?: StatementInfo) {
           if (selectedJob) {
             const onlyExplain = statementDetail.qualifier === `onlyexplain`;
 
-            resultSetProvider.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
+            chosenView.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
             const explainType: ExplainType = onlyExplain ? ExplainType.DoNotRun : ExplainType.Run;
 
               setCancelButtonVisibility(true);
@@ -211,9 +230,9 @@ async function runHandler(options?: StatementInfo) {
               setCancelButtonVisibility(false);
 
             if (onlyExplain) {
-              resultSetProvider.setLoadingText(`Explained.`, false);
+              chosenView.setLoadingText(`Explained.`, false);
             } else {
-              resultSetProvider.setScrolling(statementDetail.content, false, explained.id); // Never errors
+              chosenView.setScrolling(statementDetail.content, false, explained.id); // Never errors
             }
 
             explainTree = new ExplainTree(explained.vedata);
@@ -226,7 +245,7 @@ async function runHandler(options?: StatementInfo) {
           }
         } else {
           // Otherwise... it's a bit complicated.
-          resultSetProvider.setLoadingText(`Executing SQL statement...`, false);
+          chosenView.setLoadingText(`Executing SQL statement...`, false);
 
           setCancelButtonVisibility(true);
           updateStatusBar({executing: true});
@@ -279,13 +298,13 @@ async function runHandler(options?: StatementInfo) {
 
                 const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
                 await vscode.window.showTextDocument(textDoc);
-                resultSetProvider.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
+                chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
                 break;
             }
 
           } else {
             vscode.window.showInformationMessage(`Statement executed with no data returned.`);
-            resultSetProvider.setLoadingText(`Statement executed with no data returned.`);
+            chosenView.setLoadingText(`Statement executed with no data returned.`);
           }
         }
 
@@ -304,7 +323,7 @@ async function runHandler(options?: StatementInfo) {
         }
 
         if ([`statement`, `explain`, `onlyexplain`].includes(statementDetail.qualifier) && statementDetail.history !== false) {
-          resultSetProvider.setError(errorText);
+          chosenView.setError(errorText);
         } else {
           vscode.window.showErrorMessage(errorText);
         }
