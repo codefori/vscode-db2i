@@ -6,6 +6,7 @@ import { Query, QueryState } from "../../connection/query";
 import { updateStatusBar } from "../jobManager/statusBar";
 import Configuration from "../../configuration";
 import * as html from "./html";
+import { JobStatus } from "../../connection/sqlJob";
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel;
@@ -16,14 +17,25 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     this.loadingState = false;
   }
 
+  endQuery() {
+    if (this.currentQuery) {
+      const hostJob = this.currentQuery.getHostJob();
+      if (hostJob && hostJob.getStatus() === JobStatus.Busy) {
+        // We are assuming the job is the same here.
+        commands.executeCommand(`vscode-db2i.statement.cancel`, hostJob.id);
+      }
+      this.currentQuery.close().then(() => {
+        this.currentQuery = undefined;
+      });
+    }
+  }
+
   resolveWebviewView(webviewView: WebviewView | WebviewPanel, context?: WebviewViewResolveContext, _token?: CancellationToken) {
     this._view = webviewView;
 
     this._view.onDidDispose(() => {
       this._view = undefined;
-      this.currentQuery.close().then(() => {
-        this.currentQuery = undefined;
-      });
+      this.endQuery();
     });
 
     webviewView.webview.options = {
@@ -35,10 +47,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     this._view.webview.onDidReceiveMessage(async (message) => {
       switch (message.command) {
         case `cancel`:
-          commands.executeCommand(`vscode-db2i.statement.cancel`);
-          if (this.currentQuery) {
-            await this.currentQuery.close();
-          }
+          this.endQuery();
           break;
 
         default:

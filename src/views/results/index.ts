@@ -57,8 +57,8 @@ export function initialise(context: vscode.ExtensionContext) {
       webviewOptions: { retainContextWhenHidden: true },
     }),
 
-    vscode.commands.registerCommand(`vscode-db2i.statement.cancel`, async () => {
-      const selected = JobManager.getSelection();
+    vscode.commands.registerCommand(`vscode-db2i.statement.cancel`, async (jobName?: string) => {
+      const selected = typeof jobName === `string` ? JobManager.getJob(jobName) : JobManager.getSelection();
       if (selected) {
         updateStatusBar({canceling: true});
         const cancelled = await selected.job.requestCancel();
