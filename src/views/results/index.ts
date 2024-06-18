@@ -207,17 +207,20 @@ async function runHandler(options?: StatementInfo) {
 
     if (statementDetail.content.trim().length > 0) {
       try {
+        const inWindow = Boolean(options && options.viewColumn);
+
         if (statementDetail.qualifier === `cl`) {
-          if (options && options.viewColumn) {
+          if (inWindow) {
             useWindow(`CL results`, options.viewColumn);
           }
           chosenView.setScrolling(statementDetail.content, true); // Never errors
+          
         } else if (statementDetail.qualifier === `statement`) {
           // If it's a basic statement, we can let it scroll!
-          if (options && options.viewColumn) {
+          if (inWindow) {
             useWindow(possibleTitle, options.viewColumn);
           }
-          chosenView.setScrolling(statementDetail.content); // Never errors
+          chosenView.setScrolling(statementDetail.content, false, undefined, inWindow); // Never errors
 
         } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
           // If it's an explain, we need to 

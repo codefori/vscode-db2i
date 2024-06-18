@@ -38,7 +38,7 @@ export function getLoadingHTML(): string {
   `;
 }
 
-export function generateScroller(basicSelect: string, isCL: boolean): string {
+export function generateScroller(basicSelect: string, isCL: boolean, withCancel?: boolean): string {
   const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
 
   return /*html*/`
@@ -121,6 +121,17 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   break;
               }
             });
+
+            const cancelButton = document.getElementById('cancelButton');
+
+            if (cancelButton) {
+              cancelButton.addEventListener('click', () => {
+                vscode.postMessage({
+                  command: 'cancel',
+                  queryId: myQueryId
+                });
+              });
+            }
           }
 
           function fetchNextPage() {
@@ -206,6 +217,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
         <div id="spinnerContent" class="center-screen">
           <p id="loadingText">Running statement</p>
           <span class="loader"></span>
+          ${withCancel ? `<button id="cancelButton" class="primaryButton">Cancel</button>` : ``}
         </div>
       </body>
     </html>

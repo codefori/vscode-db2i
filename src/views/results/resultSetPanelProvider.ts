@@ -8,7 +8,7 @@ import Configuration from "../../configuration";
 import * as html from "./html";
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
-  _view: WebviewView|WebviewPanel;
+  _view: WebviewView | WebviewPanel;
   loadingState: boolean;
   currentQuery: Query<any>;
   constructor() {
@@ -16,7 +16,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     this.loadingState = false;
   }
 
-  resolveWebviewView(webviewView: WebviewView|WebviewPanel, context?: WebviewViewResolveContext, _token?: CancellationToken) {
+  resolveWebviewView(webviewView: WebviewView | WebviewPanel, context?: WebviewViewResolveContext, _token?: CancellationToken) {
     this._view = webviewView;
 
     this._view.onDidDispose(() => {
@@ -33,54 +33,65 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
     webviewView.webview.html = html.getLoadingHTML();
     this._view.webview.onDidReceiveMessage(async (message) => {
-      if (message.query) {
-
-        if (this.currentQuery) {
-          // If we get a request for a new query, then we need to close the old one
-          if (this.currentQuery.getId() !== message.queryId) {
-            // This is a new query, so we need to clean up the old one
+      switch (message.command) {
+        case `cancel`:
+          commands.executeCommand(`vscode-db2i.statement.cancel`);
+          if (this.currentQuery) {
             await this.currentQuery.close();
-            this.currentQuery = undefined;
           }
-        }
-        
-        try {
-          setCancelButtonVisibility(true);
-          if (this.currentQuery === undefined) {
-            // We will need to revisit this if we ever allow multiple result tabs like ACS does
-            // Query.cleanup();
+          break;
 
-            let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
-            this.currentQuery = query;
+        default:
+          if (message.query) {
+
+            if (this.currentQuery) {
+              // If we get a request for a new query, then we need to close the old one
+              if (this.currentQuery.getId() !== message.queryId) {
+                // This is a new query, so we need to clean up the old one
+                await this.currentQuery.close();
+                this.currentQuery = undefined;
+              }
+            }
+
+            try {
+              setCancelButtonVisibility(true);
+              if (this.currentQuery === undefined) {
+                // We will need to revisit this if we ever allow multiple result tabs like ACS does
+                // Query.cleanup();
+
+                let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
+                this.currentQuery = query;
+              }
+
+              let queryResults = this.currentQuery.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await this.currentQuery.fetchMore() : await this.currentQuery.run();
+
+              const jobId = this.currentQuery.getHostJob().id;
+
+              this._view.webview.postMessage({
+                command: `rows`,
+                jobId,
+                rows: queryResults.data,
+                columnMetaData: queryResults.metadata ? queryResults.metadata.columns : undefined, // Query.fetchMore() doesn't return the metadata
+                columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
+                queryId: this.currentQuery.getId(),
+                update_count: queryResults.update_count,
+                isDone: queryResults.is_done
+              });
+
+            } catch (e) {
+              this.setError(e.message);
+              this._view.webview.postMessage({
+                command: `rows`,
+                rows: [],
+                queryId: ``,
+                isDone: true
+              });
+            }
+
+            setCancelButtonVisibility(false);
+            updateStatusBar();
           }
-
-          let queryResults = this.currentQuery.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await this.currentQuery.fetchMore() : await this.currentQuery.run();
-
-          const jobId = this.currentQuery.getHostJob().id;
-
-          this._view.webview.postMessage({
-            command: `rows`,
-            jobId,
-            rows: queryResults.data,
-            columnMetaData: queryResults.metadata ? queryResults.metadata.columns : undefined, // Query.fetchMore() doesn't return the metadata
-            columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
-            queryId: this.currentQuery.getId(),
-            update_count: queryResults.update_count,
-            isDone: queryResults.is_done
-          });
-
-        } catch (e) {
-          this.setError(e.message);
-          this._view.webview.postMessage({
-            command: `rows`,
-            rows: [],
-            queryId: ``,
-            isDone: true
-          });
-        }
-
-        setCancelButtonVisibility(false);
-        updateStatusBar();
+          break;
       }
     });
   }
@@ -92,11 +103,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       await delay(100);
       currentLoop += 1;
     }
-    
+
     if (this._view && 'show' in this._view) {
       this._view.show(true);
     }
-    
+
   }
 
   async focus() {
@@ -132,11 +143,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
   }
 
-  async setScrolling(basicSelect, isCL = false, queryId: string = ``) {
+  async setScrolling(basicSelect, isCL = false, queryId: string = ``, withCancel = false) {
     this.loadingState = false;
     await this.focus();
 
-    this._view.webview.html = html.generateScroller(basicSelect, isCL);
+    this._view.webview.html = html.generateScroller(basicSelect, isCL, withCancel);
 
     this._view.webview.postMessage({
       command: `fetch`,
