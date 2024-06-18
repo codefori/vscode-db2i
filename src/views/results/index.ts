@@ -147,6 +147,10 @@ export function initialise(context: vscode.ExtensionContext) {
 }
 
 async function runHandler(options?: StatementInfo) {
+  if (options === undefined || options.viewColumn === undefined) {
+    await resultSetProvider.ensureActivation();
+  }
+
   // Options here can be a vscode.Uri when called from editor context.
   // But that isn't valid here.
   const optionsIsValid = (options?.content !== undefined);
@@ -155,7 +159,6 @@ async function runHandler(options?: StatementInfo) {
   vscode.commands.executeCommand('vscode-db2i.dove.close');
 
   if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
-    await resultSetProvider.ensureActivation();
     let chosenView = resultSetProvider;
 
     const useWindow = (title: string, column?: ViewColumn) => {
