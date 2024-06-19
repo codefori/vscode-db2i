@@ -67,7 +67,10 @@ export class IBMiController {
     const execution = this._controller.createNotebookCellExecution(cell);
     execution.executionOrder = ++this._executionOrder;
     execution.start(Date.now()); // Keep track of elapsed time to execute cell.
-
+    if (cell.outputs.length > 0) {
+      execution.clearOutput();
+    }
+    
     const selected = JobManager.getSelection();
 
     execution.token.onCancellationRequested(() => {
