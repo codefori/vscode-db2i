@@ -125,7 +125,7 @@ export class IBMiController {
                 }
 
                 if (fallbackToTable) {
-                  items.push(vscode.NotebookCellOutputItem.text(JSON.stringify(table), `text/plain`));
+                  items.push(vscode.NotebookCellOutputItem.text(JSON.stringify(table, null, 2), `application/json`));
                 }
               } else {
                 items.push(vscode.NotebookCellOutputItem.stderr(`No rows returned from statement.`));
