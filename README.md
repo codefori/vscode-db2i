@@ -2,14 +2,15 @@
 
 <img src="./media/logo.png" align="right" width="150px">
 
-[GitHub star this repo 🌟](https://github.com/halcyon-tech/vscode-db2i)
+[GitHub star this repo 🌟](https://github.com/codefori/vscode-db2i)
+[View our documentation 📘](https://codefori.github.io/docs/extensions/db2i/)
 
 Db2 for IBM i tools provides SQL functionality to VS Code. **Currently in preview**.
 
-* Statement executor and result set view
-* Schemas view
-* Query history
-* SQL Job Manager, with JDBC options editor and configuration manager
+- Statement executor and result set view
+- Schemas view
+- Query history
+- SQL Job Manager, with JDBC options editor and configuration manager
 
 ---
 
@@ -25,4 +26,4 @@ As of 0.3.0, the Db2 for i extension requires a server component. The component 
 2. fork & clone repo
 3. `npm i`
 4. `npm run dsc` (to fetch the Server Component)
-4. 'Run Extension' from vscode debug.
+5. 'Run Extension' from vscode debug.

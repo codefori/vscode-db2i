@@ -1,10 +1,10 @@
 import { Event, EventEmitter, ExtensionContext, MarkdownString, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, commands, window, workspace } from "vscode";
 import { Examples, SQLExample, ServiceInfoLabel } from ".";
-import { getInstance } from "../../base";
-import { OSData, fetchSystemInfo } from "../../config";
 import { getServiceInfo } from "../../database/serviceInfo";
+import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
+import { osDetail } from "../../config";
 
-const openExampleCommand = `vscode-db2i.examples.open`;
+export const openExampleCommand = `vscode-db2i.examples.open`;
 
 export class ExampleBrowser implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
@@ -16,12 +16,16 @@ export class ExampleBrowser implements TreeDataProvider<any> {
     context.subscriptions.push(
       commands.registerCommand(openExampleCommand, (example: SQLExample) => {
         if (example) {
-          workspace.openTextDocument({
-            content: example.content.join(`\n`),
-            language: `sql`
-          }).then(doc => {
-            window.showTextDocument(doc);
-          });
+          if (example.isNotebook) {
+            notebookFromStatements(example.content);
+          } else {
+            workspace.openTextDocument({
+              content: example.content.join(`\n`),
+              language: `sql`
+            }).then(doc => {
+              window.showTextDocument(doc);
+            });
+          }
         }
       }),
 
@@ -113,13 +117,14 @@ class SQLExampleItem extends TreeItem {
 }
 
 function exampleWorksForOnOS(example: SQLExample): boolean {
-  if (OSData) {
-    const myOsVersion = OSData.version;
+  
+  if (osDetail) {
+    const myOsVersion = osDetail.getVersion();
 
     // If this example has specific system requirements defined
     if (example.requirements &&
       example.requirements[myOsVersion] &&
-      OSData.db2Level < example.requirements[myOsVersion]) {
+      osDetail.getDb2Level() < example.requirements[myOsVersion]) {
       return false;
     }
   }

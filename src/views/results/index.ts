@@ -78,6 +78,17 @@ export function initialise(context: vscode.ExtensionContext) {
       resultSetProvider.setLoadingText(`View will be active when a statement is executed.`);
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.resultset.settings`, async () => {
+      vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.resultsets');
+    }),
+
+    vscode.workspace.onDidChangeConfiguration(e => {
+      // If the result set column headings setting has changed, update the header of the current result set
+      if (e.affectsConfiguration('vscode-db2i.resultsets.columnHeadings')) {
+        resultSetProvider.updateHeader();
+      }
+    }),
+
     vscode.commands.registerCommand(`vscode-db2i.dove.close`, () => {
       doveResultsView.close();
       doveNodeView.close();
@@ -351,6 +362,11 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
           statementInfo.qualifier = mode;
         }
       });
+    }
+
+    if (statementInfo.qualifier === `cl`) {
+      const eol = document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+      statementInfo.content = statementInfo.content.split(eol).map(line => line.trim()).join(` `);
     }
   }
 

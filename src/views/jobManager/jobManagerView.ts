@@ -29,7 +29,7 @@ export class JobManagerView implements TreeDataProvider<any> {
       ...ConfigManager.initialiseSaveCommands(),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.defaultSelfSettings`, () => {
-        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobSelfDefault');
+        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobSelf');
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (options?: JDBCOptions, name?: string) => {
@@ -175,7 +175,7 @@ export class JobManagerView implements TreeDataProvider<any> {
             quickPick.onDidChangeSelection(async () => {
               const selections = quickPick.selectedItems;
               // SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('-514, -204, -501, +30, -199');
-              if (selections && selections[0].label !== currentSelfCodes) {
+              if (selections && selections[0] && selections[0].label !== currentSelfCodes) {
                 const code = selections[0].label as SelfValue;
                 try {
                   await selected.job.setSelfState(code);
@@ -294,13 +294,14 @@ export class JobManagerView implements TreeDataProvider<any> {
     });
   }
 
-    refresh() {
-    
+  refresh() {
     this._onDidChangeTreeData.fire();
     updateStatusBar();
 
     const selectedJob = JobManager.getSelection();
+
     setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === JobStatus.Busy);
+    commands.executeCommand(`setContext`, `vscode-db2i:jobManager.hasJob`, selectedJob !== undefined);
   }
 
   getTreeItem(element: vscode.TreeItem) {

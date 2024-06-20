@@ -1,12 +1,13 @@
-import { CancellationToken, WebviewView, WebviewViewResolveContext, commands } from "vscode";
+import { CancellationToken, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
 
 import { setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
 import { Query, QueryState } from "../../connection/query";
 import { updateStatusBar } from "../jobManager/statusBar";
+import Configuration from "../../configuration";
 import * as html from "./html";
 
-export class ResultSetPanelProvider {
+export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView;
   loadingState: boolean;
   constructor() {
@@ -16,6 +17,7 @@ export class ResultSetPanelProvider {
 
   resolveWebviewView(webviewView: WebviewView, context: WebviewViewResolveContext, _token: CancellationToken) {
     this._view = webviewView;
+    this._view.onDidDispose(() => this._view = undefined);
 
     webviewView.webview.options = {
       // Allow scripts in the webview
@@ -25,7 +27,6 @@ export class ResultSetPanelProvider {
     webviewView.webview.html = html.getLoadingHTML();
     this._view.webview.onDidReceiveMessage(async (message) => {
       if (message.query) {
-        let data = [];
 
         let queryObject = Query.byId(message.queryId);
         try {
@@ -40,11 +41,14 @@ export class ResultSetPanelProvider {
 
           let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
 
-          data = queryResults.data;
+          const jobId = queryObject.getHostJob().id;
+
           this._view.webview.postMessage({
             command: `rows`,
+            jobId,
             rows: queryResults.data,
-            columnList: queryResults.metadata ? queryResults.metadata.columns.map(x => x.name) : undefined, // Query.fetchMore() doesn't return the metadata
+            columnMetaData: queryResults.metadata ? queryResults.metadata.columns : undefined, // Query.fetchMore() doesn't return the metadata
+            columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
             queryId: queryObject.getId(),
             update_count: queryResults.update_count,
             isDone: queryResults.is_done
@@ -73,6 +77,7 @@ export class ResultSetPanelProvider {
       await delay(100);
       currentLoop += 1;
     }
+    this._view.show(true);
   }
 
   async focus() {
@@ -82,8 +87,6 @@ export class ResultSetPanelProvider {
       // 1. calls resolveWebviewView
       // 2. sets this._view
       await commands.executeCommand(`vscode-db2i.resultset.focus`);
-    } else {
-      this._view.show(true);
     }
   }
 
@@ -98,6 +101,16 @@ export class ResultSetPanelProvider {
     }
 
     html.setLoadingText(this._view.webview, content);
+  }
+
+  /** Update the result table column headings based on the configuration setting */
+  async updateHeader() {
+    if (this._view) {
+      this._view.webview.postMessage({
+        command: `header`,
+        columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
+      });
+    }
   }
 
   async setScrolling(basicSelect, isCL = false, queryId: string = ``) {

@@ -3,6 +3,7 @@
 'use strict';
 
 const path = require(`path`);
+const fs = require(`fs`);
 const webpack = require(`webpack`);
 
 const npm_runner = process.env[`npm_lifecycle_script`];
@@ -17,6 +18,12 @@ let exclude = undefined;
 if (isProduction) {
   exclude = path.resolve(__dirname, `src`, `testing`)
 }
+
+// We need to hack our chart.js copy and remove the hardcoded exports for our build.
+const chartJsPackagePath = path.resolve(__dirname, `node_modules`, `chart.js`, `package.json`);
+let chartJsPackage = JSON.parse(fs.readFileSync(chartJsPackagePath, `utf8`));
+delete chartJsPackage.exports;
+fs.writeFileSync(chartJsPackagePath, JSON.stringify(chartJsPackage, null, 2), `utf8`);
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -36,7 +43,7 @@ const config = {
         DEV: JSON.stringify(!isProduction),
         DB2I_VERSION: JSON.stringify(packageVer)
       }
-    })
+    }),
   ],
   devtool: `source-map`,
   externals: {
@@ -48,6 +55,12 @@ const config = {
   },
   module: {
     rules: [
+      {
+        test: /\.umd\.(js)$/i,
+        include: path.resolve(__dirname, `node_modules`, `chart.js`, `dist`, `chart.umd.js`),
+        type: `asset/source`,
+        
+      },
       {
         test: /\.(ts|tsx)$/i,
         exclude: /node_modules/,
@@ -64,4 +77,5 @@ const config = {
     ]
   }
 };
+
 module.exports = config;

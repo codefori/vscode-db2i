@@ -1,3 +1,19 @@
+
+export interface SelfIleStackFrame {
+  ORD: number;
+  TYPE: string;
+  LIB: string;
+  PGM: string;
+  MODULE: string;
+  PROC: string;
+  STMT: string;
+  ACTGRP: string;
+}
+
+export interface InitialStackData {
+  initial_stack: SelfIleStackFrame[];
+}
+
 export interface SelfCodeNode {
   JOB_NAME: string,
   USER_NAME: string;
@@ -9,6 +25,14 @@ export interface SelfCodeNode {
   STMTTEXT: string;
   MESSAGE_TEXT: string;
   MESSAGE_SECOND_LEVEL_TEXT: string;
+
+  PROGRAM_LIBRARY: string;
+  PROGRAM_NAME: string;
+  PROGRAM_TYPE: "*PGM"|"*SRVPGM";
+  MODULE_NAME: string;
+  CLIENT_APPLNAME: string
+  CLIENT_PROGRAMID: string;
+  INITIAL_STACK: InitialStackData;
 }
 
 export type SelfValue = "*ALL" | "*ERROR" | "*WARNING" | "*NONE";
