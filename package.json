@@ -36,8 +36,10 @@
     "chatParticipants": [
       {
         "id": "vscode-db2i.chat",
-        "name": "Db2i",
+        "name": "db2i",
+        "fullName": "Db2 for i",
         "description": "Chat with the Db2 for i AI assistant",
+        "isSticky": true,
         "commands": [
           {
             "name": "build",
@@ -171,7 +173,7 @@
             "dependencies": {
               "vscode-db2i.ai.model": "Ollama"
             },
-            "default": "ibm-granite/granite-8b-code-base"
+            "default": "ibm-granite"
           }
         }
       },

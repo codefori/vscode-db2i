@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { JobManager } from "../config";
 import Statement from "../database/statement";
-import { GptMessage, chatRequest } from "./send";
+import { chatRequest } from "./send";
 import Configuration from "../configuration";
 
 const CHAT_ID = `vscode-db2i.chat`;
@@ -14,25 +14,28 @@ interface IDB2ChatResult extends vscode.ChatResult {
 
 const getDefaultSchema = (): string => {
   const currentJob = JobManager.getSelection();
-  return currentJob && currentJob.job.options.libraries[0] ? currentJob.job.options.libraries[0] : `QGPL`;
-}
+  return currentJob && currentJob.job.options.libraries[0]
+    ? currentJob.job.options.libraries[0]
+    : `QGPL`;
+};
 
 type TableRefs = { [key: string]: TableColumn[] };
 
 async function findPossibleTables(schema: string, words: string[]) {
-  words = words.map(word => word.replace(/[.,\/#!?$%\^&\*;:{}=\-_`~()]/g,""))
+  words = words.map((word) =>
+    word.replace(/[.,\/#!?$%\^&\*;:{}=\-_`~()]/g, "")
+  );
 
   // Add extra words for words with S at the end, to ignore possible plurals
-  words
-    .forEach(item => {
-      if (item.endsWith(`s`)) {
-        words.push(item.slice(0, -1));
-      }
-    })
+  words.forEach((item) => {
+    if (item.endsWith(`s`)) {
+      words.push(item.slice(0, -1));
+    }
+  });
 
   const validWords = words
-    .filter(item => item.length > 2 && !item.includes(`'`))
-    .map(item => `'${Statement.delimName(item, true)}'`);
+    .filter((item) => item.length > 2 && !item.includes(`'`))
+    .map((item) => `'${Statement.delimName(item, true)}'`);
 
   const objectFindStatement = [
     `SELECT `,
@@ -55,7 +58,11 @@ async function findPossibleTables(schema: string, words: string[]) {
     `    column.table_name = key.table_name and`,
     `    column.column_name = key.column_name`,
     `WHERE column.TABLE_SCHEMA = '${schema}'`,
-    ...[words.length > 0 ? `AND column.TABLE_NAME in (${validWords.join(`, `)})` : ``],
+    ...[
+      words.length > 0
+        ? `AND column.TABLE_NAME in (${validWords.join(`, `)})`
+        : ``,
+    ],
     `ORDER BY column.ORDINAL_POSITION`,
   ].join(` `);
 
@@ -89,14 +96,20 @@ function refsToMarkdown(refs: TableRefs) {
       markdown.push(`| Column | Type | Text |`);
       markdown.push(`| - | - | - |`);
     } else {
-      markdown.push(`| Column | Type | Nullable | Identity | Text | Constraint |`);
+      markdown.push(
+        `| Column | Type | Nullable | Identity | Text | Constraint |`
+      );
       markdown.push(`| - | - | - | - | - | - |`);
     }
     for (const column of refs[tableName]) {
       if (condensedResult) {
-        markdown.push(`| ${column.COLUMN_NAME} | ${column.DATA_TYPE} | ${column.COLUMN_TEXT} |`);
+        markdown.push(
+          `| ${column.COLUMN_NAME} | ${column.DATA_TYPE} | ${column.COLUMN_TEXT} |`
+        );
       } else {
-        markdown.push(`| ${column.COLUMN_NAME} | ${column.DATA_TYPE} | ${column.IS_NULLABLE} | ${column.IS_IDENTITY} | ${column.COLUMN_TEXT} | ${column.CONSTRAINT_NAME} |`);
+        markdown.push(
+          `| ${column.COLUMN_NAME} | ${column.DATA_TYPE} | ${column.IS_NULLABLE} | ${column.IS_IDENTITY} | ${column.COLUMN_TEXT} | ${column.CONSTRAINT_NAME} |`
+        );
       }
     }
 
@@ -107,7 +120,6 @@ function refsToMarkdown(refs: TableRefs) {
 }
 
 export function activateChat(context: vscode.ExtensionContext) {
-
   // chatHandler deals with the input from the chat windows,
   // and uses streamModelResponse to send the response back to the chat window
   const chatHandler: vscode.ChatRequestHandler = async (
@@ -116,39 +128,46 @@ export function activateChat(context: vscode.ExtensionContext) {
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken
   ): Promise<IDB2ChatResult> => {
-    let messages: GptMessage[];
+    let messages: vscode.LanguageModelChatMessage[];
 
     const usingSchema = getDefaultSchema();
-
-    request.variables
 
     switch (request.command) {
       case `activity`:
         stream.progress(`Grabbing Information about IBM i system`);
         const data = await processUserMessage();
-        console.log(`summarize the following data in a readable paragraph: ${data}`)
+        console.log(
+          `summarize the following data in a readable paragraph: ${data}`
+        );
         messages = [
-          new vscode.LanguageModelChatSystemMessage(
+          vscode.LanguageModelChatMessage.User(
             `You are a an IBM i savant speciallizing in database features in Db2 for i. Please provide a summary of the current IBM i system state based on the developer requirement.`
           ),
-          new vscode.LanguageModelChatSystemMessage(
+          vscode.LanguageModelChatMessage.User(
             `Here is the current IBM i state: ${data}`
           ),
-          new vscode.LanguageModelChatUserMessage(request.prompt),
+          vscode.LanguageModelChatMessage.User(request.prompt),
         ];
 
         await streamModelResponse(messages, stream, token);
 
         return { metadata: { command: "activity" } };
-        
-      default:
-        context
-        stream.progress(`Getting information from ${Statement.prettyName(usingSchema)}...`);
-        let refs = await findPossibleTables(usingSchema, request.prompt.split(` `));
 
-        messages = [new vscode.LanguageModelChatSystemMessage(
-          `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice.`
-        )];
+      default:
+        context;
+        stream.progress(
+          `Getting information from ${Statement.prettyName(usingSchema)}...`
+        );
+        let refs = await findPossibleTables(
+          usingSchema,
+          request.prompt.split(` `)
+        );
+
+        messages = [
+          vscode.LanguageModelChatMessage.User(
+            `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice.`
+          ),
+        ];
 
         if (Object.keys(refs).length === 0) {
           stream.progress(`No references found. Doing bigger lookup...`);
@@ -158,24 +177,25 @@ export function activateChat(context: vscode.ExtensionContext) {
         if (Object.keys(refs).length > 0) {
           stream.progress(`Building response...`);
           messages.push(
-            new vscode.LanguageModelChatSystemMessage(
+            vscode.LanguageModelChatMessage.User(
               `Give the developer an SQL statement or information based on the prompt and following table references. Always include code examples where is makes sense. Do not make suggestions for reference you do not have.`
             ),
-            new vscode.LanguageModelChatSystemMessage(
-              `Here are the table references for current schema ${usingSchema}\n${refsToMarkdown(refs)}`
+            vscode.LanguageModelChatMessage.User(
+              `Here are the table references for current schema ${usingSchema}\n${refsToMarkdown(
+                refs
+              )}`
             ),
-            new vscode.LanguageModelChatUserMessage(request.prompt),
+            vscode.LanguageModelChatMessage.User(request.prompt)
           );
-
         } else {
           stream.progress(`No references found.`);
           messages.push(
-            new vscode.LanguageModelChatSystemMessage(
+            vscode.LanguageModelChatMessage.User(
               `Warn the developer that their request is not clear or that no references were found. Provide a suggestion or ask for more information.`
             ),
-            new vscode.LanguageModelChatSystemMessage(
+            vscode.LanguageModelChatMessage.User(
               `The developers current schema is ${usingSchema}.`
-            ),
+            )
           );
         }
 
@@ -185,22 +205,11 @@ export function activateChat(context: vscode.ExtensionContext) {
     }
   };
 
-  const variableResolver = vscode.chat.registerChatVariableResolver(`coolness`, `Selected value`, 
-    {
-      resolve: async (name, context, token) => {
-        const editor = vscode.window.activeTextEditor;
-        return [{value: 'Hello world', level: vscode.ChatVariableLevel.Full}];
-      }
-    }
-  );
-
   const chat = vscode.chat.createChatParticipant(CHAT_ID, chatHandler);
-  chat.isSticky = true;
   chat.iconPath = new vscode.ThemeIcon(`database`);
 
-  context.subscriptions.push(chat, variableResolver);
+  context.subscriptions.push(chat);
 }
-
 
 async function processUserMessage(): Promise<string> {
   const sqlStatment = `SELECT * FROM TABLE(QSYS2.SYSTEM_STATUS(RESET_STATISTICS=>'YES',DETAILED_INFO=>'ALL')) X`;
@@ -209,21 +218,19 @@ async function processUserMessage(): Promise<string> {
 }
 
 async function streamModelResponse(
-  messages: GptMessage[],
+  messages: vscode.LanguageModelChatMessage[],
   stream: vscode.ChatResponseStream,
   token: vscode.CancellationToken
 ) {
   try {
-    const chosenModel = Configuration.get<string>(`vscode-db2i.ai.model`);
+    const chosenModel = vscode.workspace
+      .getConfiguration()
+      .get<string>("vscode-db2i.ai.ollama.model");
+    stream.progress(`Using model ${chosenModel} with Ollama...`);
 
-    const chatResponse = await chatRequest(
-      chosenModel,
-      messages,
-      {},
-      token
-    );
+    const chatResponse = await chatRequest(chosenModel, messages, {}, token);
 
-    for await (const fragement of chatResponse.stream) {
+    for await (const fragement of chatResponse.text) {
       stream.markdown(fragement);
     }
   } catch (err) {
@@ -235,4 +242,4 @@ async function streamModelResponse(
   }
 }
 
-export function deactivate() { }
+export function deactivate() {}

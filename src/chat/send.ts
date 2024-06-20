@@ -1,48 +1,50 @@
-import { LanguageModelChatUserMessage, LanguageModelChatSystemMessage, LanguageModelChatRequestOptions, CancellationToken, LanguageModelChatResponse, lm } from "vscode";
-import ollama from 'ollama'
+import * as vscode from "vscode";
+import ollama from "ollama";
+import {
+  CancellationToken,
+  LanguageModelChatMessage,
+  LanguageModelChatRequestOptions,
+  LanguageModelChatResponse,
+} from "vscode";
 
-export type GptMessage = (
-  | LanguageModelChatUserMessage
-  | LanguageModelChatSystemMessage
-);
-
-export function chatRequest(model: string, messages: GptMessage[], options: LanguageModelChatRequestOptions, token?: CancellationToken): Thenable<LanguageModelChatResponse> {
-  if (lm.languageModels.includes(model)) {
-    return lm.sendChatRequest(model, messages, options, token);
+export async function chatRequest(
+  model: string,
+  messages: LanguageModelChatMessage[],
+  options: LanguageModelChatRequestOptions,
+  token?: CancellationToken
+): Promise<Thenable<LanguageModelChatResponse>> {
+  const models = await vscode.lm.selectChatModels({ family: model });
+  if (models.length > 0) {
+    const [first] = models;
+    const response = await first.sendRequest(messages, options, token);
+    return response;
   }
 
   return ollamaRequest(model, messages);
 }
 
-async function ollamaRequest(model: string, messages: GptMessage[]): Promise<LanguageModelChatResponse> {
+async function ollamaRequest(
+  modelID: string,
+  messages: LanguageModelChatMessage[]
+): Promise<LanguageModelChatResponse> {
+  const chats = [];
+  for (const message of messages) {
+    chats.push({
+      role: "user",
+      content: message.content,
+    });
+  }
   const response = await ollama.chat({
-    model,
-    messages: messages.map((copilotMessage, i) => {
-      const role = i === messages.length - 1 ? 'user' : 'system'; // We assume the last message is the user message
-      return {
-        role,
-        content: copilotMessage.content
-      }
-    }),
-    stream: true
+    model: modelID,
+    messages: chats,
   });
+  console.log(response.message.content);
 
   return {
-    stream: {
-      [Symbol.asyncIterator]: async function* () {
-        for await (const part of response) {
-          yield part.message.content;
-        }
-      }
-    },    
     text: {
       [Symbol.asyncIterator]: async function* () {
-        let text = '';
-        for await (const part of response) {
-          text += part.message.content;
-        }
-        return text;
-      }
+        yield response.message.content;
+      },
     },
-  }
+  };
 }
