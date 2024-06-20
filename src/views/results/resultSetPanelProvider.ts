@@ -68,8 +68,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 // We will need to revisit this if we ever allow multiple result tabs like ACS does
                 // Query.cleanup();
 
-                let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
-                this.currentQuery = query;
+                this.currentQuery = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
               }
 
               let queryResults = this.currentQuery.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await this.currentQuery.fetchMore() : await this.currentQuery.run();
