@@ -16,8 +16,11 @@ import { ResultSetPanelProvider } from "./resultSetPanelProvider";
 import { ExplainType } from "../../connection/sqlJob";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
+import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs/promises'; 
 
-export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
+export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "preview";
 
 export interface StatementInfo {
   content: string,
@@ -239,6 +242,7 @@ async function runHandler(options?: StatementInfo) {
               case `csv`:
               case `json`:
               case `sql`:
+              case `preview`:
                 let content = ``;
                 switch (statementDetail.qualifier) {
                   case `csv`: content = csv.stringify(data, {
@@ -246,6 +250,21 @@ async function runHandler(options?: StatementInfo) {
                     quoted_string: true,
                   }); break;
                   case `json`: content = JSON.stringify(data, null, 2); break;
+                  case `preview`:
+                    // Generate content for preview
+                    content = JSON.stringify(data, null, 2);
+
+                    // Create a temporary file for rendering preview
+                    const tempDir = os.tmpdir();
+                    const fileName = `preview-${Date.now()}.json`; 
+                    let filePath = path.join(tempDir, fileName);
+
+                    // Write resultset to temp file
+                    await fs.writeFile(filePath, content, 'utf8');
+                    const textDoc = await vscode.workspace.openTextDocument({ language: 'json', content });
+                    vscode.commands.executeCommand(`data.preview.on.side`, vscode.Uri.file(filePath), textDoc);
+
+                    break;
 
                   case `sql`:
                     const keys = Object.keys(data[0]);
@@ -277,8 +296,10 @@ async function runHandler(options?: StatementInfo) {
                     break;
                 }
 
-                const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
-                await vscode.window.showTextDocument(textDoc);
+                if (statementDetail.qualifier !== `preview`) {
+                  const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
+                  await vscode.window.showTextDocument(textDoc);
+                }
                 resultSetProvider.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
                 break;
             }
@@ -354,7 +375,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     }
 
     if (statementInfo.content) {
-      [`cl`, `json`, `csv`, `sql`, `explain`].forEach(mode => {
+      [`cl`, `json`, `csv`, `sql`, `explain`, `preview`].forEach(mode => {
         if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
           statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 
