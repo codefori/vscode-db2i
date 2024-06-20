@@ -1,9 +1,10 @@
 import * as vscode from "vscode";
 import { JobManager } from "../config";
 import Statement from "../database/statement";
+import { GptMessage, chatRequest } from "./send";
+import Configuration from "../configuration";
 
 const CHAT_ID = `vscode-db2i.chat`;
-const LANGUAGE_MODEL_ID = `copilot-gpt-3.5-turbo`;
 
 interface IDB2ChatResult extends vscode.ChatResult {
   metadata: {
@@ -104,11 +105,6 @@ function refsToMarkdown(refs: TableRefs) {
 
   return markdown.join(`\n`);
 }
-
-type GptMessage = (
-  | vscode.LanguageModelChatUserMessage
-  | vscode.LanguageModelChatSystemMessage
-);
 
 export function activateChat(context: vscode.ExtensionContext) {
 
@@ -212,39 +208,16 @@ async function processUserMessage(): Promise<string> {
   return JSON.stringify(result);
 }
 
-async function sendChatMessage(messages: GptMessage[]) {
-  let chatResponse: vscode.LanguageModelChatResponse | undefined;
-  try {
-    chatResponse = await vscode.lm.sendChatRequest(LANGUAGE_MODEL_ID, messages, {}, new vscode.CancellationTokenSource().token);
-
-    // for await (const fragment of chatResponse.stream) {
-    //   await textEditor.edit(edit => {
-    //     const lastLine = textEditor.document.lineAt(textEditor.document.lineCount - 1);
-    //     const position = new vscode.Position(lastLine.lineNumber, lastLine.text.length);
-    //     edit.insert(position, fragment);
-    //   });
-    // }
-
-  } catch (err) {
-    // making the chat request might fail because
-    // - model does not exist
-    // - user consent not given
-    // - quote limits exceeded
-    if (err instanceof vscode.LanguageModelError) {
-      console.log(err.message, err.code)
-    }
-    return
-  }
-}
-
 async function streamModelResponse(
   messages: GptMessage[],
   stream: vscode.ChatResponseStream,
   token: vscode.CancellationToken
 ) {
   try {
-    const chatResponse = await vscode.lm.sendChatRequest(
-      LANGUAGE_MODEL_ID,
+    const chosenModel = Configuration.get<string>(`vscode-db2i.ai.model`);
+
+    const chatResponse = await chatRequest(
+      chosenModel,
       messages,
       {},
       token

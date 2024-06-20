@@ -35,7 +35,7 @@
   "contributes": {
     "chatParticipants": [
       {
-        "id":"vscode-db2i.chat",
+        "id": "vscode-db2i.chat",
         "name": "Db2i",
         "description": "Chat with the Db2 for i AI assistant",
         "commands": [
@@ -143,6 +143,35 @@
               "Format reserved SQL keywords in lowercase",
               "Format reserved SQL keywords in uppercase"
             ]
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.ai",
+        "title": "Db2 for IBM i with AI",
+        "properties": {
+          "vscode-db2i.ai.model": {
+            "type": "string",
+            "description": "Model Provider",
+            "default": "Ollama",
+            "enum": [
+              "Ollama",
+              "gpt-4",
+              "gpt-3.5-turbo"
+            ],
+            "enumDescriptions": [
+              "Ollama instance, with specific model",
+              "Copilot GPT-4. Requires GitHub Copilot",
+              "Copilot GPT-3.5 Turbo. Requires GitHub Copilot"
+            ]
+          },
+          "vscode-db2i.ai.ollama.model": {
+            "type": "string",
+            "description": "Model to use inside of Ollama",
+            "dependencies": {
+              "vscode-db2i.ai.model": "Ollama"
+            },
+            "default": "ibm-granite/granite-8b-code-base"
           }
         }
       },
@@ -1180,6 +1209,7 @@
     "json-to-markdown-table": "^1.0.0",
     "lru-cache": "^6.0.0",
     "node-fetch": "^3.3.1",
+    "ollama": "^0.5.2",
     "showdown": "^2.1.0",
     "sql-formatter": "^14.0.0"
   }
