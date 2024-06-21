@@ -138,26 +138,13 @@ async function streamModelResponse(
     return;
   }
 
-  try {
-    stream.progress(`Using ${chosenProvider}...`);
+  stream.progress(`Using ${chosenProvider}...`);
 
-    const chatResponse = await chatRequest(chosenProvider, messages, {}, token);
-
-    for await (const fragement of chatResponse.text) {
-      stream.markdown(fragement);
-    }
-  } catch (err) {
-    if (err instanceof vscode.LanguageModelError) {
-      console.log(err.message, err.code, err.stack);
-    } else {
-      console.log(err);
-    }
-
-    stream.markdown(`Failed to get a response from ${chosenProvider}.`);
-  }
+  await chatRequest(chosenProvider, messages, {}, token, stream);
 }
 
 async function selectProviderAndModel() {
+  const selected = AiConfig.getModel();
   const copilotModels = await vscode.lm.selectChatModels();
   let ollamaModels: ListResponse = {models: []};
   
@@ -167,15 +154,17 @@ async function selectProviderAndModel() {
 
   const provider = await vscode.window.showQuickPick(
     [
-      ...ollamaModels.models.map((model): ModelQuickPickItem => ({ label: model.name, family: model.name, provider: "Ollama", iconPath: new vscode.ThemeIcon("heart") })),
-      ...copilotModels.map((model): ModelQuickPickItem => ({ label: model.name, family: model.family, provider: "GitHub Copilot", iconPath: new vscode.ThemeIcon("copilot") })),
+      {kind: vscode.QuickPickItemKind.Separator, label: "Ollama Models"}, 
+      ...ollamaModels.models.map((model): ModelQuickPickItem => ({ label: model.name, family: model.name, provider: "Ollama", iconPath: new vscode.ThemeIcon("heart"), picked: model.name === selected})),
+      {kind: vscode.QuickPickItemKind.Separator, label: "GitHub Copilot Models"},
+      ...copilotModels.map((model): ModelQuickPickItem => ({ label: model.name, family: model.family, provider: "GitHub Copilot", iconPath: new vscode.ThemeIcon("copilot")})),
     ],
     {
       title: "Select the AI model",
     }
   );
 
-  if (provider) {
+  if (provider && 'provider' in provider && 'family' in provider) {
     AiConfig.setProvider(provider.provider);
     AiConfig.setModel(provider.family);
   }

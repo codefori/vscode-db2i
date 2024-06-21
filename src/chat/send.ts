@@ -9,19 +9,20 @@ import {
 import Configuration from "../configuration";
 import { AiConfig, AiProvider } from "./aiConfig";
 
-export async function chatRequest(
+export function chatRequest(
   provider: AiProvider,
   messages: LanguageModelChatMessage[],
   options: LanguageModelChatRequestOptions,
-  token?: CancellationToken
-): Promise<Thenable<LanguageModelChatResponse>> {
+  token: CancellationToken,
+  stream: vscode.ChatResponseStream
+): Promise<void> {
   const chosenModel = AiConfig.getModel();
 
   switch (provider) {
     case "Ollama":
-      return ollamaRequest(chosenModel, messages);
+      return ollamaRequest(chosenModel, messages, stream);
     case "GitHub Copilot":
-      return copilotRequest(chosenModel, messages, options, token);
+      return copilotRequest(chosenModel, messages, options, token, stream);
   }
 }
 
@@ -29,20 +30,25 @@ async function copilotRequest(
   model: string,
   messages: LanguageModelChatMessage[],
   options: LanguageModelChatRequestOptions,
-  token?: CancellationToken
-): Promise<LanguageModelChatResponse> {
+  token: CancellationToken,
+  stream: vscode.ChatResponseStream
+): Promise<void> {
   const models = await vscode.lm.selectChatModels({ family: model });
   if (models.length > 0) {
     const [first] = models;
     const response = await first.sendRequest(messages, options, token);
-    return response;
+
+    for await (const fragment of response.text) {
+      stream.markdown(fragment);
+    }
   }
 }
 
 async function ollamaRequest(
   model: string,
-  messages: LanguageModelChatMessage[]
-): Promise<LanguageModelChatResponse> {
+  messages: LanguageModelChatMessage[],
+  stream: vscode.ChatResponseStream
+): Promise<void> {
   const chats = [];
   for (const message of messages) {
     chats.push({
@@ -58,11 +64,5 @@ async function ollamaRequest(
 
   console.log(response.message.content);
 
-  return {
-    text: {
-      [Symbol.asyncIterator]: async function* () {
-        yield response.message.content;
-      },
-    },
-  };
+  stream.markdown(response.message.content);
 }
