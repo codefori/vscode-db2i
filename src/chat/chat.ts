@@ -4,6 +4,7 @@ import Statement from "../database/statement";
 import { chatRequest } from "./send";
 import Configuration from "../configuration";
 import { getDefaultSchema, findPossibleTables, refsToMarkdown, getSystemStatus } from "./context";
+import { AiConfig } from "./aiConfig";
 
 const CHAT_ID = `vscode-db2i.chat`;
 
@@ -110,13 +111,12 @@ async function streamModelResponse(
   stream: vscode.ChatResponseStream,
   token: vscode.CancellationToken
 ) {
-  try {
-    const chosenModel = vscode.workspace
-      .getConfiguration()
-      .get<string>("vscode-db2i.ai.ollama.model");
-    stream.progress(`Using model ${chosenModel} with Ollama...`);
+  const chosenProvider = AiConfig.getProvider();
 
-    const chatResponse = await chatRequest(chosenModel, messages, {}, token);
+  try {
+    stream.progress(`Using model ${chosenProvider} with Ollama...`);
+
+    const chatResponse = await chatRequest(chosenProvider, messages, {}, token);
 
     for await (const fragement of chatResponse.text) {
       stream.markdown(fragement);
@@ -127,6 +127,8 @@ async function streamModelResponse(
     } else {
       console.log(err);
     }
+
+    stream.markdown(`Failed to get a response from ${chosenProvider}.`);
   }
 }
 

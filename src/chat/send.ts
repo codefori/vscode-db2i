@@ -6,25 +6,43 @@ import {
   LanguageModelChatRequestOptions,
   LanguageModelChatResponse,
 } from "vscode";
+import Configuration from "../configuration";
+import { AiConfig, AiProvider } from "./aiConfig";
 
 export async function chatRequest(
-  model: string,
+  provider: AiProvider,
   messages: LanguageModelChatMessage[],
   options: LanguageModelChatRequestOptions,
   token?: CancellationToken
 ): Promise<Thenable<LanguageModelChatResponse>> {
+  const chosenModel = AiConfig.getModel(provider);
+
+  switch (chosenModel) {
+    case "Ollama":
+      return ollamaRequest(chosenModel, messages);
+    case "GitHub Copilot":
+      return copilotRequest(chosenModel, messages, options, token);
+  }
+
+  return ollamaRequest(chosenModel, messages);
+}
+
+async function copilotRequest(
+  model: string,
+  messages: LanguageModelChatMessage[],
+  options: LanguageModelChatRequestOptions,
+  token?: CancellationToken
+): Promise<LanguageModelChatResponse> {
   const models = await vscode.lm.selectChatModels({ family: model });
   if (models.length > 0) {
     const [first] = models;
     const response = await first.sendRequest(messages, options, token);
     return response;
   }
-
-  return ollamaRequest(model, messages);
 }
 
 async function ollamaRequest(
-  modelID: string,
+  model: string,
   messages: LanguageModelChatMessage[]
 ): Promise<LanguageModelChatResponse> {
   const chats = [];
@@ -34,10 +52,12 @@ async function ollamaRequest(
       content: message.content,
     });
   }
+
   const response = await ollama.chat({
-    model: modelID,
+    model: model,
     messages: chats,
   });
+
   console.log(response.message.content);
 
   return {

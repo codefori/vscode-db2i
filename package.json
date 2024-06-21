@@ -152,28 +152,41 @@
         "id": "vscode-db2i.ai",
         "title": "Db2 for IBM i with AI",
         "properties": {
-          "vscode-db2i.ai.model": {
+          "vscode-db2i.ai.provider": {
+            "order": 0,
             "type": "string",
             "description": "Model Provider",
             "default": "Ollama",
             "enum": [
               "Ollama",
+              "GitHub Copilot"
+            ],
+            "enumDescriptions": [
+              "Ollama instance, with specific model",
+              "GitHub Copilot. Requires the GitHub Copilot extension to be installed"
+            ]
+          },
+          "vscode-db2i.ai.ollama.model": {
+            "order": 1,
+            "if": "vscode-db2i.ai.provider == 'Ollama'",
+            "type": "string",
+            "description": "Model to use inside of Ollama",
+            "default": "ibm-granite"
+          },
+          "vscode-db2i.ai.ghCopilot.model": {
+            "order": 2,
+            "if": "vscode-db2i.ai.provider == 'GitHub Copilot'",
+            "type": "string",
+            "description": "Model to use inside of GitHub Copilot",
+            "default": "gpt-4",
+            "enum": [
               "gpt-4",
               "gpt-3.5-turbo"
             ],
             "enumDescriptions": [
-              "Ollama instance, with specific model",
               "Copilot GPT-4. Requires GitHub Copilot",
               "Copilot GPT-3.5 Turbo. Requires GitHub Copilot"
             ]
-          },
-          "vscode-db2i.ai.ollama.model": {
-            "type": "string",
-            "description": "Model to use inside of Ollama",
-            "dependencies": {
-              "vscode-db2i.ai.model": "Ollama"
-            },
-            "default": "ibm-granite"
           }
         }
       },
