@@ -15,16 +15,14 @@ export async function chatRequest(
   options: LanguageModelChatRequestOptions,
   token?: CancellationToken
 ): Promise<Thenable<LanguageModelChatResponse>> {
-  const chosenModel = AiConfig.getModel(provider);
+  const chosenModel = AiConfig.getModel();
 
-  switch (chosenModel) {
+  switch (provider) {
     case "Ollama":
       return ollamaRequest(chosenModel, messages);
     case "GitHub Copilot":
       return copilotRequest(chosenModel, messages, options, token);
   }
-
-  return ollamaRequest(chosenModel, messages);
 }
 
 async function copilotRequest(

@@ -1,18 +1,24 @@
 import Configuration from "../configuration";
 
-export type AiProvider = "Ollama"|"GitHub Copilot";
+/**
+ * Matches config vscode-db2i.ai.provider
+ */
+export type AiProvider = "none"|"Ollama"|"GitHub Copilot";
 
 export class AiConfig {
   static getProvider(): AiProvider {
     return Configuration.get<AiProvider>(`ai.provider`);
   }
 
-  static getModel(provider: AiProvider): string {
-    switch (provider) {
-      case "Ollama":
-        return Configuration.get<string>("ai.ollama.model");
-      case "GitHub Copilot":
-        return Configuration.get<string>("ai.ghCopilot.model");
-    }
+  static getModel(): string {
+    return Configuration.get<string>("ai.model");
+  }
+
+  static setProvider(provider: AiProvider) {
+    return Configuration.set(`ai.provider`, provider);
+  }
+
+  static setModel(model: string) {
+    return Configuration.set(`ai.model`, model);
   }
 }

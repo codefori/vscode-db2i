@@ -1,6 +1,10 @@
 import { JobManager } from "../config";
 import Statement from "../database/statement";
 
+export function canTalkToDb() {
+  return JobManager.getSelection() !== undefined;
+}
+
 export function getDefaultSchema(): string {
   const currentJob = JobManager.getSelection();
   return currentJob && currentJob.job.options.libraries[0]

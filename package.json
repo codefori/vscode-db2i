@@ -156,8 +156,9 @@
             "order": 0,
             "type": "string",
             "description": "Model Provider",
-            "default": "Ollama",
+            "default": "none",
             "enum": [
+              "none",
               "Ollama",
               "GitHub Copilot"
             ],
@@ -166,27 +167,11 @@
               "GitHub Copilot. Requires the GitHub Copilot extension to be installed"
             ]
           },
-          "vscode-db2i.ai.ollama.model": {
+          "vscode-db2i.ai.model": {
             "order": 1,
-            "if": "vscode-db2i.ai.provider == 'Ollama'",
             "type": "string",
-            "description": "Model to use inside of Ollama",
+            "description": "Model to use with the provider",
             "default": "ibm-granite"
-          },
-          "vscode-db2i.ai.ghCopilot.model": {
-            "order": 2,
-            "if": "vscode-db2i.ai.provider == 'GitHub Copilot'",
-            "type": "string",
-            "description": "Model to use inside of GitHub Copilot",
-            "default": "gpt-4",
-            "enum": [
-              "gpt-4",
-              "gpt-3.5-turbo"
-            ],
-            "enumDescriptions": [
-              "Copilot GPT-4. Requires GitHub Copilot",
-              "Copilot GPT-3.5 Turbo. Requires GitHub Copilot"
-            ]
           }
         }
       },
@@ -396,6 +381,11 @@
       }
     ],
     "commands": [
+      {
+        "command": "vscode-db2i.ai.changeModel",
+        "title": "Change AI Model",
+        "category": "Db2 for i"
+      },
       {
         "command": "vscode-db2i.notebook.open",
         "title": "New Notebook",
