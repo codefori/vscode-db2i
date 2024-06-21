@@ -140,7 +140,7 @@ async function streamModelResponse(
 
   stream.progress(`Using ${chosenProvider}...`);
 
-  await chatRequest(chosenProvider, messages, {}, token, stream);
+  return chatRequest(chosenProvider, messages, {}, token, stream);
 }
 
 async function selectProviderAndModel() {
