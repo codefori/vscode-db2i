@@ -1,11 +1,15 @@
-import * as vscode from "vscode";
-import { JobManager } from "../config";
-import Statement from "../database/statement";
-import { chatRequest } from "./send";
-import Configuration from "../configuration";
-import { getDefaultSchema, findPossibleTables, refsToMarkdown, getSystemStatus, canTalkToDb } from "./context";
-import { AiConfig, AiProvider } from "./aiConfig";
 import ollama, { ListResponse } from "ollama";
+import * as vscode from "vscode";
+import Statement from "../database/statement";
+import { AiConfig, AiProvider } from "./aiConfig";
+import {
+  canTalkToDb,
+  findPossibleTables,
+  getDefaultSchema,
+  getSystemStatus,
+  refsToMarkdown,
+} from "./context";
+import { chatRequest } from "./send";
 
 const CHAT_ID = `vscode-db2i.chat`;
 
@@ -32,7 +36,6 @@ export function activateChat(context: vscode.ExtensionContext) {
     let messages: vscode.LanguageModelChatMessage[];
 
     if (canTalkToDb()) {
-
       const usingSchema = getDefaultSchema();
 
       switch (request.command) {
@@ -107,19 +110,21 @@ export function activateChat(context: vscode.ExtensionContext) {
           return { metadata: { command: "build" } };
       }
     } else {
-      throw new Error(`Not connected to the database. Please check your configuration.`)
+      throw new Error(
+        `Not connected to the database. Please check your configuration.`
+      );
     }
   };
 
   const chat = vscode.chat.createChatParticipant(CHAT_ID, chatHandler);
   chat.iconPath = new vscode.ThemeIcon(`database`);
 
-  const changeModelCommand = vscode.commands.registerCommand(`vscode-db2i.ai.changeModel`, selectProviderAndModel);
-
-  context.subscriptions.push(
-    chat,
-    changeModelCommand
+  const changeModelCommand = vscode.commands.registerCommand(
+    `vscode-db2i.ai.changeModel`,
+    selectProviderAndModel
   );
+
+  context.subscriptions.push(chat, changeModelCommand);
 }
 
 async function streamModelResponse(
@@ -128,9 +133,12 @@ async function streamModelResponse(
   token: vscode.CancellationToken
 ) {
   const chosenProvider = AiConfig.getProvider();
+  const chosenModel = AiConfig.getModel();
 
   if (chosenProvider === `none`) {
-    stream.markdown(`No AI provider selected. Please select an AI provider and model.`);
+    stream.markdown(
+      `No AI provider selected. Please select an AI provider and model.`
+    );
     stream.button({
       command: `vscode-db2i.ai.changeModel`,
       title: `Select AI Provider and Model`,
@@ -138,7 +146,7 @@ async function streamModelResponse(
     return;
   }
 
-  stream.progress(`Using ${chosenProvider}...`);
+  stream.progress(`Provider: ${chosenProvider} Model: ${chosenModel}`);
 
   return chatRequest(chosenProvider, messages, {}, token, stream);
 }
@@ -150,33 +158,40 @@ async function selectProviderAndModel() {
 
   try {
     ollamaModels = await ollama.list();
-  } catch (e) { }
+  } catch (e) {}
 
   const provider = await vscode.window.showQuickPick(
     [
       { kind: vscode.QuickPickItemKind.Separator, label: "Ollama Models" },
-      ...ollamaModels.models.map((model): ModelQuickPickItem => ({ 
-        label: model.name, 
-        family: model.name, 
-        provider: "Ollama", 
-        iconPath: new vscode.ThemeIcon("heart"), 
-        description: selected === model.name ? "Selected" : "" 
-      })),
-      { kind: vscode.QuickPickItemKind.Separator, label: "GitHub Copilot Models" },
-      ...copilotModels.map((model): ModelQuickPickItem => ({ 
-        label: model.name, 
-        family: model.family, 
-        provider: "GitHub Copilot", 
-        iconPath: new vscode.ThemeIcon("copilot"), 
-        description: selected === model.name ? "Selected" : "" 
-      })),
+      ...ollamaModels.models.map(
+        (model): ModelQuickPickItem => ({
+          label: model.name,
+          family: model.name,
+          provider: "Ollama",
+          iconPath: new vscode.ThemeIcon("heart"),
+          description: selected === model.name ? "Selected" : "",
+        })
+      ),
+      {
+        kind: vscode.QuickPickItemKind.Separator,
+        label: "GitHub Copilot Models",
+      },
+      ...copilotModels.map(
+        (model): ModelQuickPickItem => ({
+          label: model.name,
+          family: model.family,
+          provider: "GitHub Copilot",
+          iconPath: new vscode.ThemeIcon("copilot"),
+          description: selected === model.family ? "Selected" : "",
+        })
+      ),
     ],
     {
       title: "Select the AI model",
     }
   );
 
-  if (provider && 'provider' in provider && 'family' in provider) {
+  if (provider && "provider" in provider && "family" in provider) {
     AiConfig.setProvider(provider.provider);
     AiConfig.setModel(provider.family);
   }
