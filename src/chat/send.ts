@@ -64,5 +64,7 @@ async function ollamaRequest(
 
   console.log(response.message.content);
 
-  stream.markdown(response.message.content);
+  for await (const fragment of response.message.content) {
+    stream.markdown(fragment);
+  }
 }
