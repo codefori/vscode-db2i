@@ -7,7 +7,8 @@ import {
   LanguageModelChatResponse,
 } from "vscode";
 import Configuration from "../configuration";
-import { AiConfig, AiProvider } from "./aiConfig";
+import { AiConfig } from "./aiConfig";
+import { AiProvider } from "./types";
 
 export async function chatRequest(
   provider: AiProvider,
