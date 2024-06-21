@@ -127,6 +127,23 @@ export function activateChat(context: vscode.ExtensionContext) {
   context.subscriptions.push(chat, changeModelCommand);
 }
 
+let lastSelectedModel: string | null = null;
+
+async function showModelProviderIfNeeded(
+  stream: vscode.ChatResponseStream,
+  chosenProvider: AiProvider,
+  chosenModel: string
+) {
+  const currentModel = AiConfig.getModel();
+
+  if (lastSelectedModel === null || lastSelectedModel !== currentModel) {
+    stream.markdown(
+      `**Provider👨‍💻:** ${chosenProvider}\n\n**Model🧠:** ${chosenModel}\n\n***\n\n`
+    );
+    lastSelectedModel = currentModel;
+  }
+}
+
 async function streamModelResponse(
   messages: vscode.LanguageModelChatMessage[],
   stream: vscode.ChatResponseStream,
@@ -146,6 +163,7 @@ async function streamModelResponse(
     return;
   }
 
+  showModelProviderIfNeeded(stream, chosenProvider, chosenModel);
   stream.progress(`Provider: ${chosenProvider} Model: ${chosenModel}`);
 
   return chatRequest(chosenProvider, messages, {}, token, stream);
