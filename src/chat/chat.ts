@@ -146,18 +146,30 @@ async function streamModelResponse(
 async function selectProviderAndModel() {
   const selected = AiConfig.getModel();
   const copilotModels = await vscode.lm.selectChatModels();
-  let ollamaModels: ListResponse = {models: []};
-  
+  let ollamaModels: ListResponse = { models: [] };
+
   try {
     ollamaModels = await ollama.list();
-  } catch (e) {}
+  } catch (e) { }
 
   const provider = await vscode.window.showQuickPick(
     [
-      {kind: vscode.QuickPickItemKind.Separator, label: "Ollama Models"}, 
-      ...ollamaModels.models.map((model): ModelQuickPickItem => ({ label: model.name, family: model.name, provider: "Ollama", iconPath: new vscode.ThemeIcon("heart"), picked: model.name === selected})),
-      {kind: vscode.QuickPickItemKind.Separator, label: "GitHub Copilot Models"},
-      ...copilotModels.map((model): ModelQuickPickItem => ({ label: model.name, family: model.family, provider: "GitHub Copilot", iconPath: new vscode.ThemeIcon("copilot")})),
+      { kind: vscode.QuickPickItemKind.Separator, label: "Ollama Models" },
+      ...ollamaModels.models.map((model): ModelQuickPickItem => ({ 
+        label: model.name, 
+        family: model.name, 
+        provider: "Ollama", 
+        iconPath: new vscode.ThemeIcon("heart"), 
+        description: selected === model.name ? "Selected" : "" 
+      })),
+      { kind: vscode.QuickPickItemKind.Separator, label: "GitHub Copilot Models" },
+      ...copilotModels.map((model): ModelQuickPickItem => ({ 
+        label: model.name, 
+        family: model.family, 
+        provider: "GitHub Copilot", 
+        iconPath: new vscode.ThemeIcon("copilot"), 
+        description: selected === model.name ? "Selected" : "" 
+      })),
     ],
     {
       title: "Select the AI model",
