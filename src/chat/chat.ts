@@ -139,7 +139,7 @@ async function streamModelResponse(
   }
 
   try {
-    stream.progress(`Using model ${chosenProvider} with Ollama...`);
+    stream.progress(`Using ${chosenProvider}...`);
 
     const chatResponse = await chatRequest(chosenProvider, messages, {}, token);
 
