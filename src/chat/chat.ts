@@ -122,7 +122,7 @@ function refsToMarkdown(refs: TableRefs) {
 export function activateChat(context: vscode.ExtensionContext) {
   // chatHandler deals with the input from the chat windows,
   // and uses streamModelResponse to send the response back to the chat window
-  const chatHandler: vscode.ChatRequestHandler = async (
+  const chatHandler: vscode.ChatRequestHandler =async (
     request: vscode.ChatRequest,
     context: vscode.ChatContext,
     stream: vscode.ChatResponseStream,
