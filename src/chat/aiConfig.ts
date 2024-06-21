@@ -6,6 +6,7 @@ import Configuration from "../configuration";
 export type AiProvider = "none"|"Ollama"|"GitHub Copilot";
 
 export class AiConfig {
+
   static getProvider(): AiProvider {
     return Configuration.get<AiProvider>(`ai.provider`);
   }
