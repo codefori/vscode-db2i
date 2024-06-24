@@ -24,9 +24,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         // We are assuming the job is the same here.
         commands.executeCommand(`vscode-db2i.statement.cancel`, hostJob.id);
       }
-      this.currentQuery.close().then(() => {
-        this.currentQuery = undefined;
-      });
+      this.currentQuery.close();
     }
   }
 
@@ -63,7 +61,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             }
 
             try {
-              setCancelButtonVisibility(true);
               if (this.currentQuery === undefined) {
                 // We will need to revisit this if we ever allow multiple result tabs like ACS does
                 // Query.cleanup();
@@ -71,20 +68,24 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 this.currentQuery = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
               }
 
-              let queryResults = this.currentQuery.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await this.currentQuery.fetchMore() : await this.currentQuery.run();
+              if (this.currentQuery.getState() !== QueryState.RUN_DONE) {
+                setCancelButtonVisibility(true);
+                
+                let queryResults = this.currentQuery.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await this.currentQuery.fetchMore() : await this.currentQuery.run();
 
-              const jobId = this.currentQuery.getHostJob().id;
+                const jobId = this.currentQuery.getHostJob().id;
 
-              this._view.webview.postMessage({
-                command: `rows`,
-                jobId,
-                rows: queryResults.data,
-                columnMetaData: queryResults.metadata ? queryResults.metadata.columns : undefined, // Query.fetchMore() doesn't return the metadata
-                columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
-                queryId: this.currentQuery.getId(),
-                update_count: queryResults.update_count,
-                isDone: queryResults.is_done
-              });
+                this._view.webview.postMessage({
+                  command: `rows`,
+                  jobId,
+                  rows: queryResults.data,
+                  columnMetaData: queryResults.metadata ? queryResults.metadata.columns : undefined, // Query.fetchMore() doesn't return the metadata
+                  columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
+                  queryId: this.currentQuery.getId(),
+                  update_count: queryResults.update_count,
+                  isDone: queryResults.is_done
+                });
+              }
 
             } catch (e) {
               this.setError(e.message);
