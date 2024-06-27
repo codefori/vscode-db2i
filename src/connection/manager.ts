@@ -94,8 +94,8 @@ export class SQLJobManager {
     return this.jobs;
   }
 
-  getJob(name: string): JobInfo | undefined {
-    return this.jobs.find(info => info.name === name);
+  getJob(nameOrId: string): JobInfo | undefined {
+    return this.jobs.find(info => info.name === nameOrId || info.job.id === nameOrId);
   }
 
   setSelection(selectedName: string): JobInfo|undefined {
