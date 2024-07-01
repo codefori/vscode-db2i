@@ -67,6 +67,15 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       min-height: 100vh;
     }
 
+    .primaryButton {
+      background-color: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
     /* https://cssloaders.github.io */
     .loader {
       width: 32px;

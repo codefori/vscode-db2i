@@ -362,6 +362,12 @@
         "when": "editorLangId == sql && resourceExtname != .inb"
       },
       {
+        "command": "vscode-db2i.runEditorStatement.inView",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+ctrl+r",
+        "when": "editorLangId == sql"
+      },
+      {
         "command": "vscode-db2i.editorExplain.withRun",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
@@ -525,6 +531,12 @@
         "title": "Run statement",
         "category": "Db2 for i",
         "icon": "$(notebook-execute)"
+      },
+      {
+        "command": "vscode-db2i.runEditorStatement.inView",
+        "title": "Run statement in new view",
+        "category": "Db2 for i",
+        "icon": "$(window)"
       },
       {
         "command": "vscode-db2i.statement.cancel",
@@ -832,6 +844,11 @@
       "sql/editor/context": [
         {
           "command": "vscode-db2i.runEditorStatement",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.runEditorStatement.inView",
           "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
           "group": "navigation@1"
         },
