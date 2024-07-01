@@ -1,5 +1,5 @@
 
-import vscode from "vscode";
+import * as vscode from "vscode";
 
 const getConfiguration = (): vscode.WorkspaceConfiguration => {
   return vscode.workspace.getConfiguration(`vscode-db2i`);
