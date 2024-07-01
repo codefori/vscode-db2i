@@ -1,4 +1,5 @@
 import { JobManager } from "../config";
+import * as vscode from "vscode";
 import Statement from "../database/statement";
 
 export function canTalkToDb() {
@@ -14,21 +15,60 @@ export function getDefaultSchema(): string {
 
 export type TableRefs = { [key: string]: TableColumn[] };
 
-export async function findPossibleTables(schema: string, words: string[]) {
-  words = words.map((word) =>
-    word.replace(/[.,\/#!?$%\^&\*;:{}=\-_`~()]/g, "")
-  );
+export async function getTableMetaData(schema: string, tableName: string): Promise<TableColumn[]> {
+  const objectFindStatement = [
+    `SELECT `,
+    `  column.TABLE_NAME,`,
+    `  column.COLUMN_NAME,`,
+    `  key.CONSTRAINT_NAME,`,
+    `  column.DATA_TYPE, `,
+    `  column.CHARACTER_MAXIMUM_LENGTH,`,
+    `  column.NUMERIC_SCALE, `,
+    `  column.NUMERIC_PRECISION,`,
+    `  column.IS_NULLABLE, `,
+    // `  column.HAS_DEFAULT, `,
+    // `  column.COLUMN_DEFAULT, `,
+    `  column.COLUMN_TEXT, `,
+    `  column.IS_IDENTITY`,
+    `FROM QSYS2.SYSCOLUMNS2 as column`,
+    `LEFT JOIN QSYS2.syskeycst as key`,
+    `  on `,
+    `    column.table_schema = key.table_schema and`,
+    `    column.table_name = key.table_name and`,
+    `    column.column_name = key.column_name`,
+    `WHERE column.TABLE_SCHEMA = '${Statement.delimName(schema, true)}'`,
+    `AND column.TABLE_NAME = '${Statement.delimName(tableName, true)}'`,
+    `ORDER BY column.ORDINAL_POSITION`,
+  ].join(` `);
 
-  // Add extra words for words with S at the end, to ignore possible plurals
-  words.forEach((item) => {
-    if (item.endsWith(`s`)) {
-      words.push(item.slice(0, -1));
+  return await JobManager.runSQL(objectFindStatement);
+}
+
+export async function parsePromptForRefs(stream: vscode.ChatResponseStream, prompt: string[]): Promise<TableRefs> {
+  const tables: TableRefs = {};
+  for (const word of prompt) {
+    const [schema, table] = word.split(`.`);
+    if (schema && table) {
+      stream.progress(`looking up information for ${schema}.${table}`)
+      const data = await getTableMetaData(schema, table);
+      tables[table] = tables[table] || [];
+      tables[table].push(...data);
     }
-  });
+  }
+  return tables;
+}
 
-  const validWords = words
-    .filter((item) => item.length > 2 && !item.includes(`'`))
-    .map((item) => `'${Statement.delimName(item, true)}'`);
+export async function findPossibleTables(stream: vscode.ChatResponseStream, schema: string, words: string[]) {
+
+  let tables: TableRefs = {}
+
+  // parse all SCHEMA.TABLE references first
+  tables = await parsePromptForRefs(stream, words.filter(word => word.includes('.')));
+
+  // filter prompt for possible refs to tables
+  const validWords = words.map(word => word.replace(/[.,\/#!?$%\^&\*;:{}=\-_`~()]/g, ""))
+    .filter(word => word.length > 2 && !word.endsWith('s') && !word.includes(`'`))
+    .map(word => `'${Statement.delimName(word, true)}'`);
 
   const objectFindStatement = [
     `SELECT `,
@@ -62,16 +102,10 @@ export async function findPossibleTables(schema: string, words: string[]) {
   // TODO
   const result: TableColumn[] = await JobManager.runSQL(objectFindStatement);
 
-  const tables: TableRefs = {};
-
-  for (const row of result) {
-    if (!tables[row.TABLE_NAME]) {
-      tables[row.TABLE_NAME] = [];
-    }
-
+  result.forEach(row => {
+    if (!tables[row.TABLE_NAME]) tables[row.TABLE_NAME] = [];
     tables[row.TABLE_NAME].push(row);
-  }
-
+  });
   return tables;
 }
 

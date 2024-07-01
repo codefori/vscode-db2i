@@ -65,6 +65,7 @@ export function activateChat(context: vscode.ExtensionContext) {
             `Getting information from ${Statement.prettyName(usingSchema)}...`
           );
           let refs = await findPossibleTables(
+            stream,
             usingSchema,
             request.prompt.split(` `)
           );
@@ -77,17 +78,17 @@ export function activateChat(context: vscode.ExtensionContext) {
 
           if (Object.keys(refs).length === 0) {
             stream.progress(`No references found. Doing bigger lookup...`);
-            refs = await findPossibleTables(usingSchema, []);
+            refs = await findPossibleTables(stream, usingSchema, []);
           }
 
           if (Object.keys(refs).length > 0) {
             stream.progress(`Building response...`);
             messages.push(
               vscode.LanguageModelChatMessage.User(
-                `Give the developer an SQL statement or information based on the prompt and following table references. Always include code examples where is makes sense. Do not make suggestions for reference you do not have.`
+                `Provide the developer with SQL statements or relevant information based on the user's prompt and referenced table structures. Always include practical code examples where applicable. Ensure all suggestions are directly applicable to the structures and data provided and avoid making suggestions outside the scope of the available information.`
               ),
               vscode.LanguageModelChatMessage.User(
-                `Here are the table references for current schema ${usingSchema}\n${refsToMarkdown(
+                `Here are the table references ${refsToMarkdown(
                   refs
                 )}`
               ),
