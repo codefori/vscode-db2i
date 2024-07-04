@@ -94,6 +94,11 @@
               "Format reserved SQL keywords in lowercase",
               "Format reserved SQL keywords in uppercase"
             ]
+          },
+          "vscode-db2i.sqlFormat.autoIndent": {
+            "type": "boolean",
+            "description": "Automatically indent",
+            "default": true
           }
         }
       },
