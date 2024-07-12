@@ -1,7 +1,7 @@
 import ollama, { ListResponse } from "ollama";
 import { AiConfig, AiProvider } from "./aiConfig";
 import { lm, window, QuickPickItemKind, ThemeIcon, QuickPickItem } from "vscode";
-import { initWatsonX, WATSONX_MODELS } from "./watsonX";
+import { getWatsonXModels, initWatsonX } from "./watsonX";
 
 interface ModelQuickPickItem extends QuickPickItem {
   provider: AiProvider;
@@ -16,6 +16,8 @@ export async function selectProviderAndModel() {
   try {
     ollamaModels = await ollama.list();
   } catch (e) { }
+
+  const watsonXModels = await getWatsonXModels();
 
   const provider = await window.showQuickPick(
     [
@@ -44,7 +46,7 @@ export async function selectProviderAndModel() {
       ),
 
       { kind: QuickPickItemKind.Separator, label: "WatsonX Models" },
-      ...WATSONX_MODELS.map(model => ({
+      ...watsonXModels.map(model => ({
         label: model,
         family: model,
         provider: "WatsonX",

@@ -10,6 +10,7 @@ import {
 } from "./context";
 import { chatRequest } from "./send";
 import { selectProviderAndModel } from "./models";
+import { authenticateToWatsonX } from "./watsonX";
 
 const CHAT_ID = `vscode-db2i.chat`;
 
@@ -120,6 +121,8 @@ export function activateChat(context: vscode.ExtensionContext) {
     selectProviderAndModel
   );
 
+  authenticateToWatsonX();
+
   context.subscriptions.push(chat, changeModelCommand);
 }
 
@@ -159,8 +162,8 @@ async function streamModelResponse(
     return;
   }
 
-  showModelProviderIfNeeded(stream, chosenProvider, chosenModel);
-  stream.progress(`Provider: ${chosenProvider} Model: ${chosenModel}`);
+  // showModelProviderIfNeeded(stream, chosenProvider, chosenModel);
+  stream.progress(`Using ${chosenModel} (${chosenProvider})`);
 
   return chatRequest(chosenProvider, messages, {}, token, stream);
 }

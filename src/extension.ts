@@ -95,50 +95,6 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   activateChat(context);
 
-
-  // /**
-  //  * The Following is an experimental implemenation of chat extension for Db2 for i
-  //  */
-  // const chatHandler: vscode.ChatRequestHandler = async (
-  //   request: vscode.ChatRequest,
-  //   context: vscode.ChatContext,
-  //   stream: vscode.ChatResponseStream,
-  //   token: vscode.CancellationToken
-  // ): Promise<IDB2ChatResult> => {
-
-  //   if (request.command == `build`) {
-  //     stream.progress(`Querying database for information...`);
-  //     // const text  = processUserMessage(request.prompt);
-  //     const messages = [
-  //       new vscode.LanguageModelChatSystemMessage(`You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice. Help the developer write an SQL statement based on the prompt information. Always include code examples where is makes sense.`),
-  //       new vscode.LanguageModelChatUserMessage(request.prompt)
-  //     ];
-  //     try {
-  //       const chatResponse = await vscode.lm.sendChatRequest(LANGUAGE_MODEL_ID, messages, {}, token);
-  //       for await (const fragement of chatResponse.stream) {
-  //         stream.markdown(fragement);
-  //       }
-
-  //     } catch (err) {
-  //       if (err instanceof vscode.LanguageModelError) {
-  //         console.log(err.message, err.code, err.stack);
-  //       } else {
-  //         console.log(err);
-  //       }
-  //     }
-
-  //     return { metadata: { command: '' } };
-  //   }
-
-  // };
-
-  // const chat = vscode.chat.createChatParticipant(CHAT_ID, chatHandler);
-  // chat.isSticky = true;
-  // chat.iconPath = new vscode.ThemeIcon(`database`);
-
-
-
-
   return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new SQLJob(options) };
 }
 

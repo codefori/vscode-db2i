@@ -10,10 +10,6 @@ import Configuration from "../configuration";
 const WATSONX_KEY = `watsonx.apiKey`;
 const WATSONX_ACCESS_TOKEN = `watsonx.accessToken`;
 
-export const WATSONX_MODELS = [
-  `ibm/granite-13b-chat-v2`,
-]
-
 export function getWatsonXAccessToken() {
   return Configuration.getSecret(WATSONX_ACCESS_TOKEN);
 }
@@ -43,6 +39,16 @@ export async function initWatsonX(withPrompt = false) {
   }
 
   return false;
+}
+
+// TODO: convert to API call to get model list
+export async function getWatsonXModels() {
+  return [
+    `ibm/granite-13b-chat-v2`,
+    `ibm-mistralai/merlinite-7b`,
+    `ibm/granite-13b-instruct-v2`,
+    `ibm/granite-20b-code-instruct`
+  ];
 }
 
 // TODO: Consider swapping out this fetch call with the official sdk
