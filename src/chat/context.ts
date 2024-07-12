@@ -74,6 +74,8 @@ export async function findPossibleTables(stream: vscode.ChatResponseStream, sche
   const validWords = justWords
     .filter(word => word.length > 2 && !word.endsWith('s') && !word.includes(`'`))
     .map(word => `'${Statement.delimName(word, true)}'`);
+  
+  const isDetailed = validWords.length > 0;
 
   const objectFindStatement = [
     `SELECT `,
@@ -81,9 +83,9 @@ export async function findPossibleTables(stream: vscode.ChatResponseStream, sche
     `  column.COLUMN_NAME,`,
     `  key.CONSTRAINT_NAME,`,
     `  column.DATA_TYPE, `,
-    `  column.CHARACTER_MAXIMUM_LENGTH,`,
-    `  column.NUMERIC_SCALE, `,
-    `  column.NUMERIC_PRECISION,`,
+    isDetailed ? `  column.CHARACTER_MAXIMUM_LENGTH,` : ``,
+    isDetailed ? `  column.NUMERIC_SCALE, ` : ``,
+    isDetailed ? `  column.NUMERIC_PRECISION,` : ``,
     `  column.IS_NULLABLE, `,
     // `  column.HAS_DEFAULT, `,
     // `  column.COLUMN_DEFAULT, `,
@@ -97,7 +99,7 @@ export async function findPossibleTables(stream: vscode.ChatResponseStream, sche
     `    column.column_name = key.column_name`,
     `WHERE column.TABLE_SCHEMA = '${schema}'`,
     ...[
-      words.length > 0
+      isDetailed
         ? `AND column.TABLE_NAME in (${validWords.join(`, `)})`
         : ``,
     ],

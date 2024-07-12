@@ -31,19 +31,21 @@ export async function selectProviderAndModel() {
           description: selected === model.name ? "Selected" : "",
         })
       ),
-      {
-        kind: QuickPickItemKind.Separator,
-        label: "GitHub Copilot Models",
-      },
-      ...copilotModels.map(
-        (model): ModelQuickPickItem => ({
-          label: model.name,
-          family: model.family,
-          provider: "GitHub Copilot",
-          iconPath: new ThemeIcon("copilot"),
-          description: selected === model.family ? "Selected" : "",
-        })
-      ),
+
+      // Turn these off for the challenge
+      // {
+      //   kind: QuickPickItemKind.Separator,
+      //   label: "GitHub Copilot Models",
+      // },
+      // ...copilotModels.map(
+      //   (model): ModelQuickPickItem => ({
+      //     label: model.name,
+      //     family: model.family,
+      //     provider: "GitHub Copilot",
+      //     iconPath: new ThemeIcon("copilot"),
+      //     description: selected === model.family ? "Selected" : "",
+      //   })
+      // ),
 
       { kind: QuickPickItemKind.Separator, label: "WatsonX Models" },
       ...watsonXModels.map(model => ({
