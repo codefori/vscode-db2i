@@ -1,4 +1,3 @@
-import ollama, { ListResponse } from "ollama";
 import * as vscode from "vscode";
 import Statement from "../database/statement";
 import { AiConfig, AiProvider } from "./aiConfig";
@@ -10,6 +9,7 @@ import {
   refsToMarkdown,
 } from "./context";
 import { chatRequest } from "./send";
+import { selectProviderAndModel } from "./models";
 
 const CHAT_ID = `vscode-db2i.chat`;
 
@@ -17,11 +17,6 @@ interface IDB2ChatResult extends vscode.ChatResult {
   metadata: {
     command: string;
   };
-}
-
-interface ModelQuickPickItem extends vscode.QuickPickItem {
-  provider: AiProvider;
-  family: string;
 }
 
 export function activateChat(context: vscode.ExtensionContext) {
@@ -168,50 +163,4 @@ async function streamModelResponse(
   stream.progress(`Provider: ${chosenProvider} Model: ${chosenModel}`);
 
   return chatRequest(chosenProvider, messages, {}, token, stream);
-}
-
-async function selectProviderAndModel() {
-  const selected = AiConfig.getModel();
-  const copilotModels = await vscode.lm.selectChatModels();
-  let ollamaModels: ListResponse = { models: [] };
-
-  try {
-    ollamaModels = await ollama.list();
-  } catch (e) {}
-
-  const provider = await vscode.window.showQuickPick(
-    [
-      { kind: vscode.QuickPickItemKind.Separator, label: "Ollama Models" },
-      ...ollamaModels.models.map(
-        (model): ModelQuickPickItem => ({
-          label: model.name,
-          family: model.name,
-          provider: "Ollama",
-          iconPath: new vscode.ThemeIcon("heart"),
-          description: selected === model.name ? "Selected" : "",
-        })
-      ),
-      {
-        kind: vscode.QuickPickItemKind.Separator,
-        label: "GitHub Copilot Models",
-      },
-      ...copilotModels.map(
-        (model): ModelQuickPickItem => ({
-          label: model.name,
-          family: model.family,
-          provider: "GitHub Copilot",
-          iconPath: new vscode.ThemeIcon("copilot"),
-          description: selected === model.family ? "Selected" : "",
-        })
-      ),
-    ],
-    {
-      title: "Select the AI model",
-    }
-  );
-
-  if (provider && "provider" in provider && "family" in provider) {
-    AiConfig.setProvider(provider.provider);
-    AiConfig.setModel(provider.family);
-  }
 }

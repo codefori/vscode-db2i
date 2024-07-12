@@ -1,4 +1,4 @@
-import path from "path";
+import * as path from "path";
 
 import fetch from "node-fetch";
 import { Octokit } from "octokit";

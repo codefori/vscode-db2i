@@ -1,4 +1,4 @@
-import vscode from 'vscode';
+import * as vscode from 'vscode';
 
 const QUERIES_KEY = `queries`;
 const SERVERCOMPONENT_KEY = `serverVersion`

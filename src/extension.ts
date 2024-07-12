@@ -1,6 +1,6 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import vscode from "vscode"
+import * as vscode from "vscode"
 import schemaBrowser from "./views/schemaBrowser/schemaBrowser";
 
 import * as JSONServices from "./language/json";
@@ -25,15 +25,6 @@ import { activateChat } from "./chat/chat";
 export interface Db2i {
   sqlJobManager: SQLJobManager,
   sqlJob: (options?: JDBCOptions) => SQLJob
-}
-
-const CHAT_ID = `vscode-db2i.chat`;
-const LANGUAGE_MODEL_ID = `copilot-gpt-3.5-turbo`;
-
-interface IDB2ChatResult extends vscode.ChatResult {
-  metadata: {
-    command: string;
-  };
 }
 
 // this method is called when your extension is activated
@@ -83,6 +74,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   resultsProvider.initialise(context);
 
   initConfig(context);
+  Configuration.setContext(context);
 
   console.log(`Developer environment: ${process.env.DEV}`);
   if (process.env.DEV) {

@@ -1,12 +1,12 @@
+import { ExtensionContext } from "vscode";
 import Configuration from "../configuration";
 
 /**
  * Matches config vscode-db2i.ai.provider
  */
-export type AiProvider = "none"|"Ollama"|"GitHub Copilot";
+export type AiProvider = "none"|"Ollama"|"GitHub Copilot"|"WatsonX";
 
 export class AiConfig {
-
   static getProvider(): AiProvider {
     return Configuration.get<AiProvider>(`ai.provider`);
   }
