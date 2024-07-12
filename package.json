@@ -160,11 +160,13 @@
             "enum": [
               "none",
               "Ollama",
-              "GitHub Copilot"
+              "GitHub Copilot",
+              "WatsonX"
             ],
             "enumDescriptions": [
               "Ollama instance, with specific model",
-              "GitHub Copilot. Requires the GitHub Copilot extension to be installed"
+              "GitHub Copilot. Requires the GitHub Copilot extension to be installed",
+              "watsonx.ai. Requires an API key from WatsonX."
             ]
           },
           "vscode-db2i.ai.model": {
