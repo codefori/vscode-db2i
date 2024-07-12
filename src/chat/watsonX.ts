@@ -2,6 +2,7 @@
 // https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-credentials.html?context=wx&audience=wdp
 // https://cloud.ibm.com/iam/apikeys
 // https://cloud.ibm.com/docs/account?topic=account-iamtoken_from_apikey#response-curl
+// https://dataplatform.cloud.ibm.com/wx/prompts?context=wx&project_id=790743a6-e2cc-40ee-b587-03fe9c87358c
 
 import fetch from "node-fetch";
 import * as vscode from "vscode";

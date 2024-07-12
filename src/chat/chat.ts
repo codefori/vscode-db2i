@@ -84,9 +84,7 @@ export function activateChat(context: vscode.ExtensionContext) {
                 `Provide the developer with SQL statements or relevant information based on the user's prompt and referenced table structures. Always include practical code examples where applicable. Ensure all suggestions are directly applicable to the structures and data provided and avoid making suggestions outside the scope of the available information.`
               ),
               vscode.LanguageModelChatMessage.User(
-                `Here are the table references ${refsToMarkdown(
-                  refs
-                )}`
+                `Here are the table references\n\n${JSON.stringify(refs)}`
               ),
               vscode.LanguageModelChatMessage.User(request.prompt)
             );
