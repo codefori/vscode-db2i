@@ -42,8 +42,8 @@
         "isSticky": true,
         "commands": [
           {
-            "name": "build",
-            "description": "Build an SQL statement"
+            "name": "sql",
+            "description": "build a SQL statement"
           },
           {
             "name": "activity",

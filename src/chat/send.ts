@@ -72,7 +72,6 @@ async function ollamaRequest(
   }
 }
 
-
 export async function watsonXRequest(
   model: string,
   messages: LanguageModelChatMessage[],

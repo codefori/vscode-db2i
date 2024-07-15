@@ -153,6 +153,17 @@ export function refsToMarkdown(refs: TableRefs) {
   return markdown.join(`\n`);
 }
 
+export function refsToJson(refs: TableRefs) {
+  let data: string[] = [];
+  for (const tableName in refs) {
+    for (const column of refs[tableName]) {
+      data.push(JSON.stringify(column));
+    }
+  }
+
+  return data.join(`\n`);
+}
+
 export async function getSystemStatus(): Promise<string> {
   const sqlStatment = `SELECT * FROM TABLE(QSYS2.SYSTEM_STATUS(RESET_STATISTICS=>'YES',DETAILED_INFO=>'ALL')) X`;
   const result = await JobManager.runSQL(sqlStatment, undefined);
