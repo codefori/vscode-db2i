@@ -103,7 +103,7 @@ export function activateChat(context: vscode.ExtensionContext) {
         default:
           messages = [
             vscode.LanguageModelChatMessage.User(
-              `You are a an IBM i savant speciallizing in database features in Db2 for i. Please provider the user with a helpful response based on the user input. If the user input is not clear, ask for more information. Offer suggestions on using SQL to solve the user's problem.`
+              `You are a an IBM i savant speciallizing in database features in Db2 for i. Please provider the user with a helpful response based on the user input. Do not offer any suggestions on SQL, but provide general information or guidance.`
             ),
             vscode.LanguageModelChatMessage.User(request.prompt),
           ];
