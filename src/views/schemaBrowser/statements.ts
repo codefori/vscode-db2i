@@ -1,3 +1,4 @@
+
 export function getAdvisedIndexesStatement(schema: string, name?: string) {
   return [
     `select KEY_COLUMNS_ADVISED, Times_Advised, Most_Expensive_Query, Average_Query_Estimate,`,
@@ -9,5 +10,15 @@ export function getAdvisedIndexesStatement(schema: string, name?: string) {
     ...(name ? [`TABLE_NAME = '${name}' and`] : []),
     `    Table_Schema = '${schema}'`,
     `    order by Times_Advised desc`,
+  ].join(` `);
+}
+
+export function getMTIStatement(schema: string, table: string = `*ALL`) {
+  return [
+    `select * `,
+    `from table (`,
+    `  qsys2.mti_info(TABLE_SCHEMA => '${schema}', TABLE_NAME => '${table}')`,
+    `)`,
+    `order by key_definition`,
   ].join(` `);
 }

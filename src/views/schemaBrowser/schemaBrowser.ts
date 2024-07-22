@@ -1,5 +1,6 @@
 
-import vscode, { ThemeIcon, TreeItem } from "vscode"
+import { ThemeIcon, TreeItem } from "vscode"
+import * as vscode from "vscode"
 import Schemas, { AllSQLTypes, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import { getInstance, loadBase } from "../../base";
@@ -9,7 +10,7 @@ import Configuration from "../../configuration";
 import Types from "../types";
 import Statement from "../../database/statement";
 import { copyUI } from "./copyUI";
-import { getAdvisedIndexesStatement } from "./statements";
+import { getAdvisedIndexesStatement, getMTIStatement } from "./statements";
 
 const viewItem = {
   "tables": `table`,
@@ -156,6 +157,20 @@ export default class schemaBrowser {
             qualifier: `statement`,
             open: false,
           });
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.getMTIs`, async (object: SQLObject|SchemaItem) => {
+        if (object) {
+          const content = getMTIStatement(object.schema, (`name` in object ? object.name : undefined));
+          
+          if (content) {
+            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+              content,
+              qualifier: `statement`,
+              open: false,
+            });
+          }
         }
       }),
 
