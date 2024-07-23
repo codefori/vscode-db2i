@@ -1,6 +1,7 @@
 
-import vscode, { ThemeIcon, TreeItem } from "vscode"
-import Schemas, { AllSQLTypes, SQLType } from "../../database/schemas";
+import { ThemeIcon, TreeItem } from "vscode"
+import * as vscode from "vscode"
+import Schemas, { AllSQLTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import { getInstance, loadBase } from "../../base";
 
@@ -345,7 +346,8 @@ export default class schemaBrowser {
           const value = await vscode.window.showInputBox({
             title: `Set filter for ${node.schema}`,
             value: this.filters[node.schema],
-            prompt: `Show objects that start with this value. Blank to reset.`
+            placeHolder: `COOL_IEW, COOL*, COOL\\_, etc`,
+            prompt: `Show objects that contain this value (case-insensitive). Blank to reset. When using '_', escape it with '${SQL_ESCAPE_CHAR}'. Use '*' for wildcard at end.`,
           });
 
           if (value !== undefined) {
