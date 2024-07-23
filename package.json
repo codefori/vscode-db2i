@@ -418,6 +418,11 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.getMTIs",
+        "title": "Get MTIs",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.getIndexes",
         "title": "Get Indexes",
         "category": "Db2 for i"
@@ -973,6 +978,11 @@
           "command": "vscode-db2i.getIndexes",
           "when": "viewItem == table",
           "group": "db2workWith@2"
+        },
+        {
+          "command": "vscode-db2i.getMTIs",
+          "when": "viewItem == table || viewItem == schema",
+          "group": "db2workWith@3"
         },
         {
           "command": "vscode-db2i.clearData",
