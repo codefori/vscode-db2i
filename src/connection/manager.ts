@@ -24,7 +24,6 @@ export class SQLJobManager {
 
   async newJob(predefinedJob?: SQLJob, name?: string) {
     if (ServerComponent.isInstalled()) {
-      const features = osDetail.getFeatures();
 
       const instance = getInstance();
       const config = instance.getConfig();
@@ -42,9 +41,12 @@ export class SQLJobManager {
       try {
         await newJob.connect();
 
-        const selfDefault = SQLJobManager.getSelfDefault();
-        if (features.SELF && selfDefault !== `*NONE`) {
-          await newJob.setSelfState(selfDefault);
+        if (osDetail) {
+          const features = osDetail.getFeatures();
+          const selfDefault = SQLJobManager.getSelfDefault();
+          if (features.SELF && selfDefault !== `*NONE`) {
+            await newJob.setSelfState(selfDefault);
+          }
         }
 
         this.totalJobs += 1;
