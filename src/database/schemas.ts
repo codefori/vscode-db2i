@@ -26,6 +26,12 @@ function getFilterClause(againstColumn: string, filter: string, noAnd?: boolean)
 
   let clause = `${noAnd ? '' : 'AND'} UPPER(${againstColumn})`;
   let parameters: BasicColumnType[] = [];
+  let hasEscapeChar = false;
+
+  if (filter.indexOf('\\\\') >= 0) {
+    hasEscapeChar = true;
+    filter = filter.replace(/\\\\/g, '@');
+  }
 
   if (filter.endsWith(`*`)) {
     clause += ` LIKE ? CONCAT '%'`;
@@ -35,7 +41,9 @@ function getFilterClause(againstColumn: string, filter: string, noAnd?: boolean)
     parameters.push(filter.toUpperCase());
   }
 
-  // clause += ` ESCAPE '${SQL_ESCAPE_CHAR}'`;
+  if (hasEscapeChar) {
+    clause += ` ESCAPE '@'`;
+  }
 
   return {
     clause,
