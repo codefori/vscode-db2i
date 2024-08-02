@@ -360,8 +360,8 @@ export default class schemaBrowser {
           const value = await vscode.window.showInputBox({
             title: `Set filter for ${node.schema}`,
             value: this.filters[node.schema],
-            placeHolder: `COOL_IEW, COOL*, COOL\\_, etc`,
-            prompt: `Show objects that contain this value (case-insensitive). Blank to reset. When using '_', escape it with '${SQL_ESCAPE_CHAR}'. Use '*' for wildcard at end.`,
+            placeHolder: `COOL, COOL*`,
+            prompt: `Show objects that contain this value (case-insensitive). Blank to reset. Use '*' for wildcard at end.`,
           });
 
           if (value !== undefined) {
