@@ -1,5 +1,5 @@
 
-import vscode from "vscode";
+import * as vscode from "vscode";
 
 import Statement from "../database/statement";
 
@@ -11,11 +11,11 @@ export async function initialise(context: vscode.ExtensionContext) {
         const parsedData = JSON.parse(clipboard_content);
 
         const sql = generateSQL(parsedData);
-        const formatted = Statement.format(sql);
+        // const formatted = Statement.format(sql);
 
         if (vscode.window.activeTextEditor) {
           vscode.window.activeTextEditor.edit((edit) => {
-            edit.insert(vscode.window.activeTextEditor.selection.active, formatted);
+            edit.insert(vscode.window.activeTextEditor.selection.active, sql);
           });
         }
       } catch (e) {

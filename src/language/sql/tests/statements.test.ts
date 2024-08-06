@@ -1264,6 +1264,17 @@ describe(`Parameter statement tests`, () => {
     expect(markerRanges.length).toBe(2);
   });
 
+  test('JSON_OBJECT parameters should not mark as embedded', () => {
+    const document = new Document(`values json_object('model_id': 'meta-llama/llama-2-13b-chat', 'input': 'TEXT', 'parameters': json_object('max_new_tokens': 100, 'time_limit': 1000), 'space_id': 'SPACEID')`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(0);
+  });
+
   test(`Single questionmark parameter content test`, () => {
     const sql = `select * from sample where x = ?`;
     const document = new Document(sql);
