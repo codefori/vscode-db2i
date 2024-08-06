@@ -66,7 +66,9 @@ export default class Schemas {
             details.filter ? `where UPPER(SCHEMA_NAME) = ? or UPPER(SYSTEM_SCHEMA_NAME) = ?` : ``,
           ].join(` `));
 
-          parameters.push(details.filter, details.filter);
+          if (details.filter) {
+            parameters.push(details.filter, details.filter);
+          }
           break;
 
         case `tables`:
