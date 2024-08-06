@@ -546,6 +546,7 @@ export default class Statement {
 		let declareStmt: Token|undefined;
 
 		for (let i = 0; i < this.tokens.length; i++) {
+			const prevToken = this.tokens[i-1];
 			const currentToken = this.tokens[i];
 
 			switch (currentToken.type) {
@@ -593,6 +594,7 @@ export default class Statement {
 				case `colon`:
 					if (intoClause) continue;
 					if (declareStmt) continue;
+					if (prevToken && prevToken.type === `string`) continue;
 
 					let nextMustBe: "word"|"dot" = `word`;
 					let followingTokenI = i+1;
