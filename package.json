@@ -28,7 +28,9 @@
     "onLanguage:sql"
   ],
   "extensionDependencies": [
-    "halcyontechltd.code-for-ibmi"
+    "halcyontechltd.code-for-ibmi",
+    "RandomFractalsInc.vscode-data-table"
+
   ],
   "main": "./dist/extension.js",
   "contributes": {
