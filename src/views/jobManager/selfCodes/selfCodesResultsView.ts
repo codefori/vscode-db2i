@@ -65,7 +65,13 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
       }),
       vscode.commands.registerCommand(`vscode-db2i.self.help`, async () => {
         await vscode.commands.executeCommand(`vscode.open`, `https://www.ibm.com/docs/en/i/7.5?topic=tools-sql-error-logging-facility-self`)
-      })
+      }),
+      vscode.commands.registerCommand(`vscode-db2i.self.enableSelectedJobOnly`, async () => {
+        this.setJobOnly(true);
+      }),
+      vscode.commands.registerCommand(`vscode-db2i.self.disableSelectedJobOnly`, async () => {
+        this.setJobOnly(false);
+      }),
     );
     setInterval(async () => {
       if (this.autoRefresh) {
@@ -86,6 +92,12 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
     if (withMessage) {
       vscode.window.showInformationMessage(`SELF Code Auto Refresh ${enabled ? 'Enabled' : 'Disabled'}`);
     }
+  }
+
+  setJobOnly(enabled: boolean): void {
+    this.selectedJobOnly = enabled;
+    vscode.commands.executeCommand(`setContext`, `vscode-db2i.self.specificJob`, enabled);
+    this.refresh();
   }
 
   async getSelfCodes(selected: JobInfo, onlySelected?: boolean): Promise<SelfCodeNode[]|undefined> {
