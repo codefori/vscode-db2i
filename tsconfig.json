@@ -1,11 +1,12 @@
 {
 	"compilerOptions": {
 		"module": "commonjs",
-		"target": "es6",
+		"target": "ES2019",
 		"checkJs": true,  /* Typecheck .js files. */
 		"lib": [
-			"es6"
-		]
+			"ES2019"
+		],
+		"outDir": "./dist",
 	},
 	"exclude": [
 		"node_modules"
