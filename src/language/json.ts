@@ -153,25 +153,21 @@ export function getParsingOptions(objIn: any): SqlJsonParsingOptions[] {
 export function generateParsingOption(opt: SqlJsonParsingOptions): string {
   if (opt.isArray && opt.arrayPropertyName) {
     return [
-      `FOR queryRow AS`,
-      `  select * from JSON_TABLE(`,
-      `    JSONIN, `, 
-      `    '$.${opt.arrayPropertyName}[*]' COLUMNS(`,
-      ...opt.fields.map((field, i) => `      "${field.name}" ${getSqlColumn(field)}${i < opt.fields.length - 1 ? `,` : ``}`),
+      `select * from JSON_TABLE(`,
+      `  JSONIN, `, 
+      `  '$.${opt.arrayPropertyName}[*]' COLUMNS(`,
+      ...opt.fields.map((field, i) => `    ${field.name} ${getSqlColumn(field)} path '$.${field.name}'${i < opt.fields.length - 1 ? `,` : ``}`),
       `  )`,
-      `)`,
-      `DO`,
-      ` -- Logic here`,
-      `END FOR;`
+      `) x`,
     ].join(`\n`);
   } else {
     return [
       `select ${opt.fields.map((field) => `"${field.name}"`).join(`, `)}`,
-      `into ${opt.fields.map((field) => field.name).join(`, `)}`,
+      `--into ${opt.fields.map((field) => field.name).join(`, `)}`,
       `from json_table(`,
       `  JSONIN,`,
       `  'lax $' columns (`,
-      ...opt.fields.map((field, i) => `    "${field.name}" ${getSqlColumn(field)}${i < opt.fields.length - 1 ? `,` : ``}`),
+      ...opt.fields.map((field, i) => `    ${field.name} ${getSqlColumn(field)} path '$.${field.name}'${i < opt.fields.length - 1 ? `,` : ``}`),
       `  )`,
       `)`,
     ].join(`\n`);
