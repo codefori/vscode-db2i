@@ -20,6 +20,7 @@ import { SQLJob } from "./connection/sqlJob";
 import { notebookInit } from "./notebooks/IBMiSerializer";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import Configuration from "./configuration";
+import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -90,6 +91,9 @@ export function activate(context: vscode.ExtensionContext): Db2i {
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false)
     });
   });
+
+  // register continue provider
+  registerContinueProvider();
 
   return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new SQLJob(options) };
 }
