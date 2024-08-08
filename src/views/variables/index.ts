@@ -19,10 +19,19 @@ export class Variables implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
   readonly onDidChangeTreeData: Event<TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
+  private currentSuggestion: Variable|undefined
   private variables: Variable[] = [];
 
   constructor(context: ExtensionContext) {
     context.subscriptions.push(
+      commands.registerCommand(`vscode-db2i.variables.addSuggestion`, () => {
+        if (this.currentSuggestion) {
+          this.variables.push(this.currentSuggestion);
+          this.currentSuggestion = undefined;
+          this.refresh();
+        }
+      }),
+
       commands.registerCommand(`vscode-db2i.variables.add`, async (object?: SQLObject) => {
         let fetchStatement;
         
@@ -31,7 +40,6 @@ export class Variables implements TreeDataProvider<any> {
         }
 
         if (!fetchStatement) {
-          // TODO: support chosen parameter
           fetchStatement = await window.showInputBox({
             placeHolder: `schema.variableName`,
             title: `Enter an existing variable name`
@@ -68,8 +76,34 @@ export class Variables implements TreeDataProvider<any> {
     );
   }
 
+  clear() {
+    this.variables = [];
+    this.refresh();
+  }
+
   refresh() {
     this._onDidChangeTreeData.fire();
+  }
+
+  setSuggestion(sqlStatement: string) {
+    let possibleName = sqlStatement;
+    const upperStatement = sqlStatement.toUpperCase();
+    const fromIndex = upperStatement.indexOf(`FROM`);
+    if (fromIndex >= 0) {
+      possibleName = sqlStatement.substring(fromIndex + 4).trim();
+    }
+
+    if (upperStatement.includes(`COUNT(`)) {
+      possibleName = `Count ${possibleName}`;
+    }
+
+    this.currentSuggestion = {
+      type: `sql`,
+      label: possibleName,
+      statement: sqlStatement
+    };
+
+    this.refresh();
   }
 
   getTreeItem(element: any): TreeItem | Thenable<TreeItem> {
@@ -77,28 +111,29 @@ export class Variables implements TreeDataProvider<any> {
   }
 
   async getChildren(element?: VariableTreeItem): Promise<TreeItem[]> {
-    if (this.variables.length === 0) return [];
-
-    const sql = this.buildStatement();
-
-    let variableResults: TreeItem[];
+    let variableResults: TreeItem[] = [];
     try {
-      const results = await JobManager.runSQL(sql);
+      if (this.variables.length > 0) {
+        const sql = this.buildStatement();
+        const results = await JobManager.runSQL(sql);
 
-      if (results.length === 1) {
-        const firstRow = results[0];
-        const labels = Object.keys(firstRow);
+        if (results.length === 1) {
+          const firstRow = results[0];
+          const labels = Object.keys(firstRow);
 
-        variableResults = labels.map((label, index) => {
-          return new VariableTreeItem(label, {
-            value: String(firstRow[label])
-          });
-        });
-      } else {
-        // TODO: welcome page 
+          variableResults.push(...labels.map((label, index) => {
+            return new VariableTreeItem(label, {
+              value: String(firstRow[label])
+            });
+          }));
+        }
+      }
+
+      if (this.currentSuggestion) {
+        variableResults.push(new VariableSuggestion(this.currentSuggestion));
       }
     } catch (e) {
-      variableResults = [new VariableTreeItemError(e.message)];
+      variableResults.push(new VariableTreeItemError(e.message));
       variableResults.push(...this.variables.map(variable => 
         new VariableTreeItem(variable.label, {
           error: true
@@ -113,7 +148,7 @@ export class Variables implements TreeDataProvider<any> {
     return `select ${this.variables.map(variable => {
       switch (variable.type) {
         case `sql`:
-          return `${variable.statement} as "${variable.label}"`;
+          return `(${variable.statement}) as "${variable.label}"`;
         case `dataarea`:
           const parts = variable.statement.split(`/`);
           if (parts.length !== 2) {
@@ -158,5 +193,21 @@ class VariableTreeItemError extends TreeItem {
     super(label, TreeItemCollapsibleState.None);
     this.contextValue = `sqlVarValueError`;
     this.iconPath = new ThemeIcon(`warning`);
+  }
+}
+
+class VariableSuggestion extends TreeItem {
+  constructor(variable: Variable) {
+    super(variable.label, TreeItemCollapsibleState.None);
+    this.contextValue = `sqlVarSuggestion`;
+    this.description = `Suggested based on executed statements`;
+    this.tooltip = new MarkdownString();
+    this.tooltip.appendCodeblock(variable.statement, `sql`);
+    this.iconPath = new ThemeIcon(`add`);
+
+    this.command = {
+      command: `vscode-db2i.variables.addSuggestion`,
+      title: `Add suggestion`,
+    }
   }
 }
