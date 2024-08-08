@@ -538,7 +538,7 @@ class SchemaItem extends vscode.TreeItem {
   }
 }
 
-class SQLObject extends vscode.TreeItem {
+export class SQLObject extends vscode.TreeItem {
   path: string;
   schema: string;
   name: string;

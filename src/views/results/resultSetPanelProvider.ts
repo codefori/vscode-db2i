@@ -7,6 +7,7 @@ import { updateStatusBar } from "../jobManager/statusBar";
 import Configuration from "../../configuration";
 import * as html from "./html";
 import { JobStatus } from "../../connection/sqlJob";
+import { variablesView } from "../../extension";
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel;
@@ -70,10 +71,20 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
               if (this.currentQuery.getState() !== QueryState.RUN_DONE) {
                 setCancelButtonVisibility(true);
+
+                const firstRun = this.currentQuery.getState() === QueryState.NOT_YET_RUN;
                 
                 let queryResults = this.currentQuery.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await this.currentQuery.fetchMore() : await this.currentQuery.run();
 
                 const jobId = this.currentQuery.getHostJob().id;
+
+                if (firstRun) {
+                  if (queryResults.data && queryResults.metadata && queryResults.data.length === 1 && queryResults.metadata.column_count === 1) {
+                    variablesView.setSuggestion(message.query);
+                  } else {
+                    variablesView.refresh();
+                  }
+                }
 
                 this._view.webview.postMessage({
                   command: `rows`,

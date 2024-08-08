@@ -9,6 +9,7 @@ import { ChartJsType, chartJsTypes, generateChartHTMLCell } from './logic/chartJ
 import { JobStatus } from '../connection/sqlJob';
 import { ChartDetail, generateChart } from './logic/chart';
 import { getStatementDetail } from './logic/statement';
+import { variablesView } from '../extension';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -50,6 +51,8 @@ export class IBMiController {
         await this._doExecution(cell);
       }
     }
+
+    variablesView.refresh();
   }
 
   private async _doExecution(cell: vscode.NotebookCell): Promise<void> {
