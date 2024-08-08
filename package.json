@@ -35,6 +35,10 @@
     "snippets": [
       {
         "language": "sql",
+        "path": "snippets/http.code-snippets"
+      },
+      {
+        "language": "sql",
         "path": "snippets/scalars.code-snippets"
       },
       {
