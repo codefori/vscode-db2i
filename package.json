@@ -264,6 +264,13 @@
           "name": "SQL Error Logging Facility (SELF)",
           "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported && vscode-db2i:jobManager == true",
           "visibility": "collapsed"
+        },
+        {
+          "type": "tree",
+          "id": "vscode-db2i.variables",
+          "name": "SQL Variables",
+          "when": "code-for-ibmi:connected && vscode-db2i:jobManager.hasJob",
+          "visibility": "collapsed"
         }
       ],
       "db2-explorer": [
@@ -309,6 +316,10 @@
       {
         "view": "vscode-db2i.self.nodes",
         "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSelfSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
+      },
+      {
+        "view": "vscode-db2i.variables",
+        "contents": "Use this view to quickly see the contents of variables and more.\n\n[Add variable](command:vscode-db2i.variables.add)"
       }
     ],
     "keybindings": [
@@ -398,6 +409,24 @@
         "title": "Reset SELF Codes View",
         "category": "Db2 for i",
         "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.variables.add",
+        "title": "Add Variable",
+        "category": "Db2 for i",
+        "icon": "$(symbol-variable)"
+      },
+      {
+        "command": "vscode-db2i.variables.refresh",
+        "title": "Refresh",
+        "category": "Db2 for i",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-db2i.variables.remove",
+        "title": "Remove",
+        "category": "Db2 for i",
+        "icon": "$(remove)"
       },
       {
         "command": "vscode-db2i.manageSchemaBrowserList",
@@ -872,6 +901,16 @@
           "when": "view == vscode-db2i.self.nodes"
         },
         {
+          "command": "vscode-db2i.variables.add",
+          "group": "navigation",
+          "when": "view == vscode-db2i.variables"
+        },
+        {
+          "command": "vscode-db2i.variables.refresh",
+          "group": "navigation",
+          "when": "view == vscode-db2i.variables"
+        },
+        {
           "command": "vscode-db2i.queryHistory.clear",
           "group": "navigation",
           "when": "view == queryHistory"
@@ -974,8 +1013,13 @@
           "group": "inline"
         },
         {
+          "command": "vscode-db2i.variables.remove",
+          "when": "view == vscode-db2i.variables && viewItem == sqlVarValue",
+          "group": "inline"
+        },
+        {
           "command": "vscode-db2i.generateSQL",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "view == schemaBrowser && (viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type)",
           "group": "db2@2"
         },
         {

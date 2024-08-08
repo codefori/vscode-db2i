@@ -20,6 +20,7 @@ import { SQLJob } from "./connection/sqlJob";
 import { notebookInit } from "./notebooks/IBMiSerializer";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import Configuration from "./configuration";
+import { Variables } from "./views/variables";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -38,6 +39,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   loadBase();
 
   const exampleBrowser = new ExampleBrowser(context);
+  const variablesView = new Variables(context);
   const selfCodesView = new selfCodesResultsView(context);
 
   context.subscriptions.push(
@@ -63,6 +65,10 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     vscode.window.registerTreeDataProvider(
       'vscode-db2i.self.nodes',
       selfCodesView
+    ),
+    vscode.window.registerTreeDataProvider(
+      'vscode-db2i.variables',
+      variablesView
     ),
     vscode.window.registerFileDecorationProvider(
       new SelfTreeDecorationProvider()
