@@ -1023,6 +1023,11 @@
           "group": "db2@2"
         },
         {
+          "command": "vscode-db2i.variables.add",
+          "group": "navigation",
+          "when": "view == schemaBrowser && viewItem == variable"
+        },
+        {
           "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
           "when": "view == schemaBrowser && viewItem == schema",
           "group": "db2@3"
