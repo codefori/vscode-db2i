@@ -1,5 +1,5 @@
 {
-  "http_get_verbose": {
+  "template: http_get_verbose": {
     "prefix": "http_get_verbose",
     "body": [
       "select RESPONSE_MESSAGE, RESPONSE_HTTP_HEADER",
@@ -10,8 +10,8 @@
     ],
     "description": "Simple HTTP GET request with verbose output"
   },
-  "http_post_verbose": {
-    "prefix": "http_get_verbose",
+  "template: http_post_verbose": {
+    "prefix": "http_post_verbose",
     "body": [
       "select RESPONSE_MESSAGE, RESPONSE_HTTP_HEADER",
       "into :response_message, :response_header",
@@ -25,4 +25,21 @@
     ],
     "description": "Simple HTTP POST request with verbose output"
   },
+  "template: parse RESPONSE_HTTP_HEADER": {
+    "prefix": "response_http_header",
+    "body": [
+      "select HTTP_STATUS_CODE, Content_Type, Content_Length, Set_Cookie",
+      "into :http_status_code, :content_type, :content_length, :set_cookie",
+      "from json_table(",
+      "  liama.header,",
+      "  'lax $' columns (",
+      "    HTTP_STATUS_CODE float(8) path '$.HTTP_STATUS_CODE',",
+      "    Content_Type varchar(1000) ccsid 1208 path '$.Content-Type',",
+      "    Content_Length float(8) path '$.Content-Length',",
+      "    Set_Cookie varchar(1000) ccsid 1208 path '$.Set-Cookie'",
+      "  )",
+      ")",
+    ],
+    "description": "Parse HTTP response header"
+  }
 }

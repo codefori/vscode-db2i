@@ -162,22 +162,26 @@ export function generateParsingOption(opt: SqlJsonParsingOptions): string {
     ].join(`\n`);
   } else {
     return [
-      `select ${opt.fields.map((field) => `"${field.name}"`).join(`, `)}`,
-      `--into ${opt.fields.map((field) => field.name).join(`, `)}`,
+      `select ${opt.fields.map((field) => jsonToSqlName(field.name)).join(`, `)}`,
+      `--into ${opt.fields.map((field) => jsonToSqlName(field.name)).join(`, `)}`,
       `from json_table(`,
       `  JSONIN,`,
       `  'lax $' columns (`,
-      ...opt.fields.map((field, i) => `    ${field.name} ${getSqlColumn(field)} path '$.${field.name}'${i < opt.fields.length - 1 ? `,` : ``}`),
+      ...opt.fields.map((field, i) => `    ${jsonToSqlName(field.name)} ${getSqlColumn(field)} path '$.${field.name}'${i < opt.fields.length - 1 ? `,` : ``}`),
       `  )`,
       `)`,
     ].join(`\n`);
   }
 }
 
-export function getSqlColumn(type: JsonPropDetail): string {
+function jsonToSqlName(propName: string) {
+  return propName.replace(/[^a-zA-Z0-9]/g, `_`);
+}
+
+function getSqlColumn(type: JsonPropDetail): string {
   switch (type.type) {
   case `string`:
-    return `varchar(1000) ccsid(1208)`;
+    return `varchar(1000) ccsid 1208`;
   case `number`:
     return `float(8)`;
   case `boolean`:
