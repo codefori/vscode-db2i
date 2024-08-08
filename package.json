@@ -35,6 +35,10 @@
     "snippets": [
       {
         "language": "sql",
+        "path": "snippets/http.code-snippets"
+      },
+      {
+        "language": "sql",
         "path": "snippets/scalars.code-snippets"
       },
       {
@@ -475,8 +479,13 @@
         "icon": "$(search)"
       },
       {
-        "command": "vscode-db2i.pasteGenerator",
+        "command": "vscode-db2i.json.pasteGenerator",
         "title": "Paste JSON as SQL",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.json.pasteParser",
+        "title": "Generate JSON SQL parser",
         "category": "Db2 for i"
       },
       {
@@ -777,8 +786,13 @@
       ],
       "editor/context": [
         {
-          "command": "vscode-db2i.pasteGenerator",
-          "group": "1_sql",
+          "command": "vscode-db2i.json.pasteGenerator",
+          "group": "sql@1",
+          "when": "editorLangId == sql"
+        },
+        {
+          "command": "vscode-db2i.json.pasteParser",
+          "group": "sql@2",
           "when": "editorLangId == sql"
         }
       ],
