@@ -1,0 +1,22 @@
+{
+  "contributes": {
+    "snippets": [
+      {
+        "language": "sql",
+        "path": "snippets/http.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "snippets/scalars.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "snippets/variables.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "snippets/aggregates.code-snippets"
+      }
+    ]
+  }
+}

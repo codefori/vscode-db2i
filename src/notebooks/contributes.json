@@ -1,0 +1,53 @@
+{
+  "contributes": {
+    "notebooks": [
+      {
+        "id": "db2i-notebook",
+        "type": "db2i-notebook",
+        "displayName": "IBM i Notebook",
+        "selector": [
+          {
+            "filenamePattern": "*.inb"
+          }
+        ]
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "notebook.cell.execute",
+        "key": "ctrl+r",
+        "mac": "cmd+r",
+        "when": "editorLangId == sql && resourceExtname == .inb"
+      }
+    ],
+    "commands": [
+      {
+        "command": "vscode-db2i.notebook.fromSqlUri",
+        "title": "Open as Notebook",
+        "category": "IBM i Notebooks",
+        "icon": "$(notebook)"
+      },
+      {
+        "command": "vscode-db2i.notebook.exportAsHtml",
+        "title": "Export",
+        "category": "IBM i Notebooks",
+        "icon": "$(save)"
+      }
+    ],
+    "menus": {
+      "notebook/toolbar": [
+        {
+          "command": "vscode-db2i.notebook.exportAsHtml",
+          "when": "code-for-ibmi:connected == true && resourceExtname == .inb",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.notebook.fromSqlUri",
+          "when": "never"
+        }
+      ]
+    }
+  }
+}

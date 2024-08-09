@@ -1,0 +1,56 @@
+{
+  "contributes": {
+    "views": {
+      "db2-explorer": [
+        {
+          "id": "queryHistory",
+          "name": "Statement History",
+          "visibility": "visible",
+          "when": "code-for-ibmi:connected == true"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "queryHistory",
+        "contents": "Statement history will appear here."
+      }
+    ],
+    "commands": [
+      {
+        "command": "vscode-db2i.queryHistory.remove",
+        "title": "Remove statement from history",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.queryHistory.clear",
+        "title": "Clear statement history",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.queryHistory.remove",
+          "when": "never"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "vscode-db2i.queryHistory.clear",
+          "group": "navigation",
+          "when": "view == queryHistory"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vscode-db2i.queryHistory.remove",
+          "when": "view == queryHistory && viewItem == query",
+          "group": "inline"
+        }
+      ]
+    }
+  }
+}
