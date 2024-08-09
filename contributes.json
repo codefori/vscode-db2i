@@ -57,31 +57,6 @@
             ]
           }
         }
-      },
-      {
-        "id": "vscode-db2i.resultsets",
-        "title": "Viewing Data",
-        "properties": {
-          "vscode-db2i.resultsets.columnHeadings": {
-            "type": "string",
-            "order": 0,
-            "description": "Descriptor to use for column headings when viewing data",
-            "default": "Name",
-            "enum": [
-              "Name",
-              "Label"
-            ],
-            "enumDescriptions": [
-              "Show the column name",
-              "Show the column label\n'Extended metadata' must be set to true in the JDBC configuration"
-            ]
-          },
-          "vscode-db2i.collapsedResultSet": {
-            "type": "boolean",
-            "description": "Make larger cells collapsed by default",
-            "default": false
-          }
-        }
       }
     ],
     "viewsContainers": {
