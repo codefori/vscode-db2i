@@ -155,13 +155,9 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
             new JobLogEntiresItem(selected.job)
           ];
         } else {
-          const selfCodes = await this.getSelfCodes(selected, this.selectedJobOnly);
-          if (selfCodes) {
-            return selfCodes.map((error) => {
-              const treeItem = new SelfCodeTreeItem(error);
-              return treeItem;
-            });
-          }
+          const selfCodeItems = new SelfCodeItems(this, selected);
+          const jobLogItems = await selfCodeItems.getChildren();
+          return jobLogItems;
         }
       }
 
