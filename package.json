@@ -37,9 +37,9 @@
     "language:test": "vitest",
     "dsc": "mkdir -p dist && npx tsx src/dsc",
     "package": "vsce package",
-    "vscode:prepublish": "rm -rf dist && webpack --mode production && npm run dsc",
-    "webpack": "webpack --mode development",
-    "webpack-dev": "webpack --mode development --watch",
+    "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
+    "webpack": "vscd --clean && webpack --mode development",
+    "webpack-dev": "vscd --clean && webpack --mode development --watch",
     "typings": "npx -p typescript tsc ./src/extension.ts --declaration --allowJs --emitDeclarationOnly --outDir types --esModuleInterop -t es2019 --moduleResolution node"
   },
   "devDependencies": {
@@ -55,6 +55,7 @@
     "ts-loader": "^9.3.1",
     "typescript": "^4.3.2",
     "vitest": "^0.33.0",
+    "vscd": "^1.0.0",
     "vscode-test": "^1.5.2",
     "webpack": "^5.91.0",
     "webpack-cli": "^4.5.0"
