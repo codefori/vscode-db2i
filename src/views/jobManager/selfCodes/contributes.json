@@ -1,0 +1,132 @@
+{
+  "contributes": {
+    "configuration": [
+      {
+        "id": "vscode-db2i.self",
+        "title": "SQL Error Logging Facility (SELF)",
+        "properties": {
+          "vscode-db2i.jobSelfDefault": {
+            "type": "string",
+            "order": 0,
+            "description": "Default SELF setting for new jobs",
+            "default": "*NONE",
+            "enum": [
+              "*NONE",
+              "*ALL",
+              "*ERROR",
+              "*WARNING"
+            ]
+          },
+          "vscode-db2i.jobSelfViewAutoRefresh": {
+            "type": "boolean",
+            "title": "Auto-refresh SELF Codes view",
+            "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
+            "default": false
+          }
+        }
+      }
+    ],
+    "views": {
+      "ibmi-panel": [
+        {
+          "type": "tree",
+          "id": "vscode-db2i.self.nodes",
+          "name": "SQL Error Logging Facility (SELF)",
+          "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported && vscode-db2i:jobManager == true",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "vscode-db2i.self.nodes",
+        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSelfSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "vscode-db2i.self.refresh",
+        "title": "Refresh SELF Codes View",
+        "category": "Db2 for i",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-db2i.self.enableAutoRefresh",
+        "title": "Enable Auto Refresh",
+        "category": "Db2 for i",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "vscode-db2i.self.disableAutoRefresh",
+        "title": "Disable Auto Refresh",
+        "category": "Db2 for i",
+        "icon": "$(sync-ignored)"
+      },
+      {
+        "command": "vscode-db2i.self.reset",
+        "title": "Reset SELF Codes View",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.self.copySqlStatement",
+        "title": "Copy SQL statement",
+        "category": "Db2 for i",
+        "icon": "$(pencil)"
+      },
+      {
+        "command": "vscode-db2i.self.displayDetails",
+        "title": "Display SELF Code Details",
+        "category": "Db2 for i",
+        "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.self.help",
+        "title": "Open SELF Documentation",
+        "category": "Db2 for i",
+        "icon": "$(question)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "vscode-db2i.self.refresh",
+          "group": "navigation@1",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
+        },
+        {
+          "command": "vscode-db2i.self.enableAutoRefresh",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == false"
+        },
+        {
+          "command": "vscode-db2i.self.disableAutoRefresh",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == true"
+        },
+        {
+          "command": "vscode-db2i.self.reset",
+          "group": "navigation@3",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
+        },
+        {
+          "command": "vscode-db2i.self.help",
+          "group": "navigation@4",
+          "when": "view == vscode-db2i.self.nodes"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vscode-db2i.self.copySqlStatement",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.self.displayDetails",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        }
+      ]
+    }
+  }
+}

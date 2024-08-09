@@ -1,0 +1,139 @@
+{
+  "contributes": {
+    "configuration": [
+      {
+        "id": "vscode-db2i",
+        "title": "General",
+        "order": 0,
+        "properties": {
+          "vscode-db2i.pageSize": {
+            "type": "number",
+            "description": "Page size for Schema browser",
+            "default": 500
+          },
+          "vscode-db2i.alwaysStartSQLJob": {
+            "type": "string",
+            "description": "Name of configuration to use when auto starting a job. 'new' for brand new default job, 'ask' to be asked, 'never' to never start, or a name of a stored configuration",
+            "default": "ask"
+          },
+          "vscode-db2i.jobConfigs": {
+            "type": "object",
+            "description": "Saved configs for",
+            "default": {},
+            "additionalProperties": true
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.sqlFormat",
+        "title": "SQL Formatting",
+        "properties": {
+          "vscode-db2i.sqlFormat.identifierCase": {
+            "type": "string",
+            "description": "SQL identifiers",
+            "default": "preserve",
+            "enum": [
+              "lower",
+              "upper",
+              "preserve"
+            ],
+            "enumDescriptions": [
+              "Format SQL identifiers in lowercase",
+              "Format SQL identifiers in uppercase",
+              "Preserve the current formatting of SQL identifiers"
+            ]
+          },
+          "vscode-db2i.sqlFormat.keywordCase": {
+            "type": "string",
+            "description": "SQL keywords",
+            "default": "lower",
+            "enum": [
+              "lower",
+              "upper"
+            ],
+            "enumDescriptions": [
+              "Format reserved SQL keywords in lowercase",
+              "Format reserved SQL keywords in uppercase"
+            ]
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.resultsets",
+        "title": "Viewing Data",
+        "properties": {
+          "vscode-db2i.resultsets.columnHeadings": {
+            "type": "string",
+            "order": 0,
+            "description": "Descriptor to use for column headings when viewing data",
+            "default": "Name",
+            "enum": [
+              "Name",
+              "Label"
+            ],
+            "enumDescriptions": [
+              "Show the column name",
+              "Show the column label\n'Extended metadata' must be set to true in the JDBC configuration"
+            ]
+          },
+          "vscode-db2i.collapsedResultSet": {
+            "type": "boolean",
+            "description": "Make larger cells collapsed by default",
+            "default": false
+          }
+        }
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "db2-explorer",
+          "title": "Db2 for i",
+          "icon": "$(database)"
+        }
+      ],
+      "panel": [
+        {
+          "id": "ibmi-panel",
+          "title": "IBM i",
+          "icon": "$(search)"
+        }
+      ]
+    },
+    "views": {
+      "db2-explorer": [
+        {
+          "id": "testingView-db2i",
+          "name": "Test cases",
+          "when": "code-for-ibmi:connected && vscode-db2i:testing"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "vscode-db2i.json.pasteGenerator",
+        "title": "Paste JSON as SQL",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.json.pasteParser",
+        "title": "Generate JSON SQL parser",
+        "category": "Db2 for i"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "vscode-db2i.json.pasteGenerator",
+          "group": "sql@1",
+          "when": "editorLangId == sql"
+        },
+        {
+          "command": "vscode-db2i.json.pasteParser",
+          "group": "sql@2",
+          "when": "editorLangId == sql"
+        }
+      ]
+    }
+  }
+}
