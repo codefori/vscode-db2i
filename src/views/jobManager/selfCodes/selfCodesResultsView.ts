@@ -14,7 +14,8 @@ import { SelfCodeNode, SelfIleStackFrame } from "./nodes";
 import { openExampleCommand } from "../../examples/exampleBrowser";
 import { SQLExample } from "../../examples";
 import { JobInfo } from "../../../connection/manager";
-import { JobStatus } from "../../../connection/sqlJob";
+import { JobStatus, SQLJob } from "../../../connection/sqlJob";
+import { JobLogEntry } from "../../../connection/types";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -23,19 +24,26 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
     new EventEmitter<ChangeTreeDataEventType>();
   readonly onDidChangeTreeData: vscode.Event<ChangeTreeDataEventType> = this._onDidChangeTreeData.event;
   private autoRefresh: boolean = false;
+  private selectedJobOnly: boolean = true;
   constructor(context: vscode.ExtensionContext) {
     context.subscriptions.push(
       vscode.commands.registerCommand(`vscode-db2i.self.refresh`, async () => this.refresh()),
       vscode.commands.registerCommand(`vscode-db2i.self.reset`, async () => {
         const selected = JobManager.getRunningJobs();
         if (selected) {
+          const resetCmd = this.selectedJobOnly
+            ? `DELETE FROM qsys2.SQL_ERRORT where job_name = '${selected[0].job.id}'`
+            : `DELETE FROM qsys2.SQL_ERRORT where user_name = current_user`;
+
           try {
-            const resetSelfCmd = `DELETE FROM qsys2.SQL_ERRORT where user_name = current_user`
-            await JobManager.runSQL(resetSelfCmd, undefined);
+            await JobManager.runSQL(resetCmd, undefined);
             this.refresh();
-            vscode.window.showInformationMessage(`Reset SELF code error log.`)
+            const message = this.selectedJobOnly
+              ? `Reset SELF code error log for job ${selected[0].name}.`
+              : `Reset SELF code error log for all jobs.`;
+            vscode.window.showInformationMessage(message);
           } catch (e) {
-            vscode.window.showErrorMessage(`An Error occured reseting SELF code error log: ${e}`)
+            vscode.window.showErrorMessage(`An Error occurred resetting SELF code error log: ${e}`);
           }
         }
       }),
@@ -63,7 +71,13 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
       }),
       vscode.commands.registerCommand(`vscode-db2i.self.help`, async () => {
         await vscode.commands.executeCommand(`vscode.open`, `https://www.ibm.com/docs/en/i/7.5?topic=tools-sql-error-logging-facility-self`)
-      })
+      }),
+      vscode.commands.registerCommand(`vscode-db2i.self.enableSelectedJobOnly`, async () => {
+        this.setJobOnly(true);
+      }),
+      vscode.commands.registerCommand(`vscode-db2i.self.disableSelectedJobOnly`, async () => {
+        this.setJobOnly(false);
+      }),
     );
     setInterval(async () => {
       if (this.autoRefresh) {
@@ -86,12 +100,18 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
     }
   }
 
-  async getSelfCodes(selected: JobInfo): Promise<SelfCodeNode[]|undefined> {
+  setJobOnly(enabled: boolean): void {
+    this.selectedJobOnly = enabled;
+    vscode.commands.executeCommand(`setContext`, `vscode-db2i.self.specificJob`, enabled);
+    this.refresh();
+  }
+
+  async getSelfCodes(selected: JobInfo, onlySelected?: boolean): Promise<SelfCodeNode[]|undefined> {
     const content = `SELECT 
                       job_name, user_name, reason_code, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, message_text, message_second_level_text,
                       program_library, program_name, program_type, module_name, client_applname, client_programid, initial_stack
                     FROM qsys2.sql_error_log, lateral (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
-                    where user_name = current_user
+                    where user_name = current_user ${onlySelected ? `and job_name = '${selected.job.id}'` : ``}
                     order by logged_time desc`;
 
     try {
@@ -121,23 +141,23 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
   }
 
   async getChildren(element?: SelfCodeTreeItem|SelfErrorStackItem): Promise<any[]> {
-    if (element) {
-      if (element instanceof SelfCodeTreeItem) {
-        return element.getChilden();
-      } else if (element instanceof SelfErrorStackItem) {
-        return element.getChildren();
-      }
+    if (element && 'getChildren' in element) {
+      const children = await element.getChildren();
+      return children;
     } else {
       const selected = JobManager.getSelection();
 
       if (selected) {
-        const selfCodes = await this.getSelfCodes(selected);
 
-        if (selfCodes) {
-          return selfCodes.map((error) => {
-            const treeItem = new SelfCodeTreeItem(error);
-            return treeItem;
-          });
+        if (this.selectedJobOnly) {
+          return [
+            new SelfCodeItems(this, selected),
+            new JobLogEntiresItem(selected.job)
+          ];
+        } else {
+          const selfCodeItems = new SelfCodeItems(this, selected);
+          const jobLogItems = await selfCodeItems.getChildren();
+          return jobLogItems;
         }
       }
 
@@ -164,7 +184,29 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
     return item;
   }
 }
-export class SelfCodeTreeItem extends TreeItem {
+
+abstract class ExtendedTreeItem extends TreeItem {
+  constructor(label: string, collapseState?: vscode.TreeItemCollapsibleState) {
+    super(label, collapseState);
+  }
+
+  abstract getChildren(): Promise<ExtendedTreeItem[]>;
+}
+
+class SelfCodeItems extends ExtendedTreeItem {
+  constructor(private selfView: selfCodesResultsView, private selected: JobInfo) {
+    super(`SELF`, vscode.TreeItemCollapsibleState.Collapsed);
+
+    this.iconPath = new vscode.ThemeIcon(`warning`);
+  }
+
+  async getChildren(): Promise<ExtendedTreeItem[]> {
+    const selfCodes = await this.selfView.getSelfCodes(this.selected, true);
+    return selfCodes.map((error) => new SelfCodeTreeItem(error));
+  }
+}
+
+export class SelfCodeTreeItem extends ExtendedTreeItem {
   constructor(
     public error: SelfCodeNode
   ) {
@@ -202,12 +244,12 @@ export class SelfCodeTreeItem extends TreeItem {
     this.contextValue = `selfCodeNode`;
   }
 
-  getChilden(): TreeItem[] {
+  async getChildren(): Promise<ExtendedTreeItem[]> {
     const validStack = this.error.INITIAL_STACK.initial_stack
       .sort((a, b) => a.ORD - b.ORD) // Ord, low to high
       .filter((stack) => stack.LIB !== `QSYS`);
 
-    const items = [
+    const items: ExtendedTreeItem[] = [
       new SelfErrorStatementItem(this.error.STMTTEXT),
       new SelfErrorNodeItem(`Job`, this.error.JOB_NAME),
       new SelfErrorNodeItem(`Client Name`, this.error.CLIENT_APPLNAME),
@@ -223,7 +265,48 @@ export class SelfCodeTreeItem extends TreeItem {
   }
 }
 
-class SelfErrorStatementItem extends TreeItem {
+class JobLogEntiresItem extends ExtendedTreeItem {
+  constructor(private selected: SQLJob) {
+    super(`Job Log`, vscode.TreeItemCollapsibleState.Collapsed);
+
+    this.iconPath = new vscode.ThemeIcon(`info`);
+  }
+
+  async getChildren(): Promise<ExtendedTreeItem[]> {
+    const log = await this.selected.getJobLog();
+    if (log.has_results) {
+      return log.data.reverse().map((entry) => new JobLogEntryItem(entry));
+    }
+  }
+}
+
+const JOB_LOG_ENTRY_ICONS = {
+  '0': new vscode.ThemeIcon(`info`),
+  '10': new vscode.ThemeIcon(`info`),
+  '20': new vscode.ThemeIcon(`warning`),
+  '30': new vscode.ThemeIcon(`error`),
+}
+
+class JobLogEntryItem extends ExtendedTreeItem {
+  constructor(private entry: JobLogEntry) {
+    super(`${entry.MESSAGE_ID} (${entry.FROM_LIBRARY}/${entry.FROM_PROGRAM})`, vscode.TreeItemCollapsibleState.None);
+
+    this.description = entry.MESSAGE_TEXT;
+
+    const hoverable = new vscode.MarkdownString();
+    let items = [entry.MESSAGE_TEXT, entry.MESSAGE_SECOND_LEVEL_TEXT];
+    hoverable.appendText(items.filter(i => i).join(`\n\n`));
+    this.tooltip = hoverable;
+
+    this.iconPath = JOB_LOG_ENTRY_ICONS[entry.SEVERITY];
+  }
+
+  async getChildren(): Promise<ExtendedTreeItem[]> {
+    return [];
+  }
+}
+
+class SelfErrorStatementItem extends ExtendedTreeItem {
   constructor(statement: string) {
     super(`Statement`, vscode.TreeItemCollapsibleState.None);
     this.iconPath = new vscode.ThemeIcon(`database`);
@@ -244,17 +327,25 @@ class SelfErrorStatementItem extends TreeItem {
       arguments: [example]
     };
   }
+
+  async getChildren(): Promise<ExtendedTreeItem[]> {
+    return [];
+  }
 }
 
-class SelfErrorNodeItem extends TreeItem {
+class SelfErrorNodeItem extends ExtendedTreeItem {
   constructor(label: string, description: string) {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.iconPath = new vscode.ThemeIcon(`info`);
     this.description = description;
   }
+
+  async getChildren(): Promise<ExtendedTreeItem[]> {
+    return [];
+  }
 }
 
-class SelfErrorStackItem extends TreeItem {
+class SelfErrorStackItem extends ExtendedTreeItem {
   constructor(private stack: SelfIleStackFrame[]) {
     super(`Stack`, vscode.TreeItemCollapsibleState.Collapsed);
     this.iconPath = new vscode.ThemeIcon(`debug`);
@@ -266,16 +357,20 @@ class SelfErrorStackItem extends TreeItem {
     })
   }
 
-  getChildren(): SelfErrorStackFrameItem[] {
+  async getChildren(): Promise<SelfErrorStackFrameItem[]> {
     return this.stack.map((stackCall) => new SelfErrorStackFrameItem(stackCall));
   }
 }
 
-class SelfErrorStackFrameItem extends TreeItem {
+class SelfErrorStackFrameItem extends ExtendedTreeItem {
   constructor(stackCall: SelfIleStackFrame) {
     super(`${stackCall.PROC}:${stackCall.STMT}`, vscode.TreeItemCollapsibleState.None);
     this.description = `${stackCall.LIB}/${stackCall.PGM} (${stackCall.TYPE}, ${stackCall.MODULE})`;
     this.contextValue = `selfCodeStackCall`;
+  }
+
+  async getChildren(): Promise<ExtendedTreeItem[]> {
+    return [];
   }
 }
 

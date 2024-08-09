@@ -63,6 +63,18 @@
         "icon": "$(sync-ignored)"
       },
       {
+        "command": "vscode-db2i.self.enableSelectedJobOnly",
+        "title": "Show Selected Job Only",
+        "category": "Db2 for i",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "vscode-db2i.self.disableSelectedJobOnly",
+        "title": "Show errors for user (all jobs)",
+        "category": "Db2 for i",
+        "icon": "$(account)"
+      },
+      {
         "command": "vscode-db2i.self.reset",
         "title": "Reset SELF Codes View",
         "category": "Db2 for i",
@@ -103,6 +115,16 @@
           "command": "vscode-db2i.self.disableAutoRefresh",
           "group": "navigation@2",
           "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == true"
+        },
+        {
+          "command": "vscode-db2i.self.enableSelectedJobOnly",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.specificJob == false"
+        },
+        {
+          "command": "vscode-db2i.self.disableSelectedJobOnly",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.specificJob == true"
         },
         {
           "command": "vscode-db2i.self.reset",
