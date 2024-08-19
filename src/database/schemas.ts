@@ -7,7 +7,7 @@ export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints"
 type PageData = { filter?: string, offset?: number, limit?: number };
 
 const typeMap = {
-  'tables': [`T`, `P`],
+  'tables': [`T`, `P`, `M`],
   'views': [`V`],
   'aliases': [`A`]
 };
