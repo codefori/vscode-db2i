@@ -87,6 +87,10 @@ export class IBMiController {
               const results = await query.run();
 
               const table = results.data;
+              if (table === undefined && results.success && !results.has_results) {
+                items.push(vscode.NotebookCellOutputItem.text(`Statement executed successfully. ${results.update_count ? `${results.update_count} rows affected.` : ``}`, `text/markdown`));
+                break;
+              }
 
               if (table.length > 0) {
 
