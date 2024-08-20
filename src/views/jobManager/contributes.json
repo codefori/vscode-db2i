@@ -1,0 +1,233 @@
+{
+  "contributes": {
+    "views": {
+      "db2-explorer": [
+        {
+          "id": "jobManager",
+          "name": "SQL Job Manager",
+          "when": "code-for-ibmi:connected && vscode-db2i:jobManager"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "jobManager",
+        "contents": "The SQL Job Manager allows you to provision one or more jobs for running SQL statements, each with its own connection settings.\n\nUsing managed jobs reduces the use of system resources, improves performance, and maintains  state across subsequent SQL statements.\n\nYou can run SQL statements without starting a job, just be aware that every statement you run requires a temporary, single-use job to be started on your behalf. \n[New SQL job](command:vscode-db2i.jobManager.newJob)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "vscode-db2i.openSqlDocument",
+        "title": "Open SQL Document",
+        "category": "Db2 for i",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "vscode-db2i.notebook.open",
+        "title": "New Notebook",
+        "category": "IBM i Notebooks",
+        "enablement": "code-for-ibmi:connected == true",
+        "icon": "$(notebook)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.newJob",
+        "title": "New SQL Job",
+        "category": "Db2 for i",
+        "icon": "$(database)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.closeJob",
+        "title": "Close SQL Job",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.endAll",
+        "title": "Close All SQL Jobs",
+        "category": "Db2 for i",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editJobProps",
+        "title": "Edit Connection Properties",
+        "category": "Db2 for i",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.defaultSelfSettings",
+        "title": "SQL Error Logging Facility (SELF) - Default Setting",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editSelfCodes",
+        "title": "Set logging level for SELF",
+        "category": "Db2 for i",
+        "icon": "$(bracket-error)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.copyJobId",
+        "title": "Copy Job Name",
+        "category": "Db2 for i",
+        "icon": "$(keyboard)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.viewJobLog",
+        "title": "View Job Log",
+        "category": "Db2 for i",
+        "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.enableTracing",
+        "title": "Enable Tracing",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.jobManager.getTrace",
+        "title": "Get Trace Data",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.jobManager.newConfig",
+        "title": "Save settings to config",
+        "category": "Db2 for i",
+        "icon": "$(save)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editConfig",
+        "title": "Edit configuration",
+        "category": "Db2 for i",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.deleteConfig",
+        "title": "Delete configuration",
+        "category": "Db2 for i",
+        "icon": "$(trash)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.jobManager.closeJob",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editJobProps",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editSelfCodes",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.copyJobId",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.viewJobLog",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.enableTracing",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getTrace",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.deleteConfig",
+          "when": "never"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "vscode-db2i.jobManager.newJob",
+          "group": "navigation@1",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.defaultSelfSettings",
+          "group": "navigation",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.endAll",
+          "group": "navigation@2",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.openSqlDocument",
+          "group": "navigation@3",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.notebook.open",
+          "group": "navigation@4",
+          "when": "view == jobManager"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vscode-db2i.jobManager.closeJob",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editJobProps",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editSelfCodes",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "self@2"
+        },
+        {
+          "command": "vscode-db2i.jobManager.copyJobId",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.viewJobLog",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.enableTracing",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "trace@1"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getTrace",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "trace@2"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newConfig",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "config@1"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "view == jobManager && viewItem == savedConfig",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.deleteConfig",
+          "when": "view == jobManager && viewItem == savedConfig",
+          "group": "inline"
+        }
+      ]
+    }
+  }
+}

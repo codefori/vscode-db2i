@@ -1,0 +1,264 @@
+{
+  "contributes": {
+    "configuration": [
+      {
+        "id": "vscode-db2i.visualExplain",
+        "title": "Visual Explain",
+        "properties": {
+          "vscode-db2i.visualExplain.highlighting": {
+            "type": "object",
+            "properties": {
+              "Index Advised": {
+                "type": "boolean",
+                "default": true
+              },
+              "Actual Number of Rows": {
+                "type": "boolean",
+                "default": true
+              },
+              "Actual Processing Time": {
+                "type": "boolean",
+                "default": true
+              },
+              "Estimated Number of Rows": {
+                "type": "boolean",
+                "default": true
+              },
+              "Estimated Processing Time": {
+                "type": "boolean",
+                "default": true
+              },
+              "Lookahead Predicate Generation (LPG)": {
+                "type": "boolean",
+                "default": true
+              },
+              "Materialized Query Table (MQT)": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "default": {
+              "Index Advised": true,
+              "Actual Number of Rows": true,
+              "Actual Processing Time": true,
+              "Estimated Number of Rows": true,
+              "Estimated Processing Time": true,
+              "Lookahead Predicate Generation (LPG)": true,
+              "Materialized Query Table (MQT)": true
+            },
+            "additionalProperties": false,
+            "description": "Highlight expensive operations in the graph to aid in identifying potential problems with the query."
+          }
+        }
+      }
+    ],
+    "views": {
+      "ibmi-panel": [
+        {
+          "type": "tree",
+          "id": "vscode-db2i.dove.nodes",
+          "name": "Visual Explain",
+          "when": "code-for-ibmi:connected && vscode-db2i:explaining == true",
+          "contextualTitle": "DB2 for i"
+        },
+        {
+          "type": "tree",
+          "id": "vscode-db2i.dove.node",
+          "name": "Visual Explain Details",
+          "when": "code-for-ibmi:connected && vscode-db2i:explainingNode == true"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "vscode-db2i.dove.close",
+        "title": "Close",
+        "category": "Db2 for i",
+        "icon": "$(close)"
+      },
+      {
+        "command": "vscode-db2i.dove.displayDetails",
+        "title": "Display details",
+        "category": "Db2 for i",
+        "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.dove.generateSqlForAdvisedIndexes",
+        "title": "Generate SQL for Advised Indexes",
+        "category": "Db2 for i",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "vscode-db2i.dove.closeDetails",
+        "title": "Close",
+        "category": "Db2 for i",
+        "icon": "$(close)"
+      },
+      {
+        "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
+        "title": "Advised Indexes and Statistics",
+        "category": "Db2 for i",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "vscode-db2i.dove.editSettings",
+        "title": "Settings",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "vscode-db2i.dove.export",
+        "title": "Export current VE data",
+        "category": "Db2 for i",
+        "icon": "$(file)"
+      },
+      {
+        "command": "vscode-db2i.dove.node.copy",
+        "title": "Copy value",
+        "category": "Db2 for i",
+        "icon": "$(pencil)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.dove.displayDetails",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.editSettings",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.export",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.node.copy",
+          "when": "never"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
+          "group": "navigation@0",
+          "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.editSettings",
+          "group": "navigation@1",
+          "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.export",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.close",
+          "group": "navigation@3",
+          "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.generateSqlForAdvisedIndexes",
+          "group": "navigation@0",
+          "when": "view == vscode-db2i.dove.node && vscode-db2i:viewingAdvisedIndexes"
+        },
+        {
+          "command": "vscode-db2i.dove.closeDetails",
+          "group": "navigation@1",
+          "when": "view == vscode-db2i.dove.node"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vscode-db2i.dove.displayDetails",
+          "when": "view == vscode-db2i.dove.nodes && viewItem == explainTreeItem",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.dove.node.copy",
+          "when": "view == vscode-db2i.dove.node && viewItem == propertyNode"
+        }
+      ]
+    },
+    "colors": [
+      {
+        "id": "db2i.dove.resultsView.HighlightIndexAdvised",
+        "description": "Highlight color for index advised",
+        "defaults": {
+          "dark": "#8c8cbd",
+          "light": "#8c8cbd"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightActualExpensiveRows",
+        "description": "Highlight color for actual expensive rows",
+        "defaults": {
+          "dark": "#cc9933",
+          "light": "#cc9933"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightEstimatedExpensiveRows",
+        "description": "Highlight color for estimated expensive rows",
+        "defaults": {
+          "dark": "#dbdb01",
+          "light": "#a0a001"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightActualExpensiveTime",
+        "description": "Highlight color for actual expensive time",
+        "defaults": {
+          "dark": "#bc0f0f",
+          "light": "#bc0f0f"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightEstimatedExpensiveTime",
+        "description": "Highlight color for estimated expensive time",
+        "defaults": {
+          "dark": "#f2bdbd",
+          "light": "#f2bdbd"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightLookaheadPredicateGeneration",
+        "description": "Highlight color for Lookahead Predicate Generation",
+        "defaults": {
+          "dark": "#00ff00",
+          "light": "#00ff00"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightMaterializedQueryTable",
+        "description": "Highlight color for Materialized Query Table",
+        "defaults": {
+          "dark": "#ff8400",
+          "light": "#ff8400"
+        }
+      },
+      {
+        "id": "db2i.dove.resultsView.HighlightRefreshedNode",
+        "description": "Highlight color for refreshed node",
+        "defaults": {
+          "dark": "#00ffff",
+          "light": "#00ffff"
+        }
+      },
+      {
+        "id": "db2i.dove.nodeView.AttributeSectionHeading",
+        "description": "Color for attributes section heading",
+        "defaults": {
+          "dark": "#bd8c8c",
+          "light": "#5976df"
+        }
+      }
+    ]
+  }
+}
