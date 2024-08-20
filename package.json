@@ -277,6 +277,13 @@
       ],
       "ibmi-panel": [
         {
+          "type": "tree",
+          "id": "vscode-db2i.variables",
+          "name": "SQL Variables",
+          "when": "code-for-ibmi:connected && vscode-db2i:jobManager.hasJob",
+          "visibility": "collapsed"
+        },
+        {
           "type": "webview",
           "id": "vscode-db2i.resultset",
           "name": "Results",
@@ -828,85 +835,17 @@
           "when": "view == exampleBrowser"
         }
       ],
-      "commandPalette": [
-        {
-          "command": "vscode-db2i.setSchemaFilter",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.settings",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.dove.displayDetails",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
-          "when": "vscode-db2i:explaining == true"
-        },
-        {
-          "command": "vscode-db2i.dove.editSettings",
-          "when": "vscode-db2i:explaining == true"
-        },
-        {
-          "command": "vscode-db2i.dove.export",
-          "when": "vscode-db2i:explaining == true"
-        },
-        {
-          "command": "vscode-db2i.dove.node.copy",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.queryHistory.remove",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.closeJob",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.editJobProps",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.editSelfCodes",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.copyJobId",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.viewJobLog",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.enableTracing",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.getTrace",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.newConfig",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.editConfig",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.jobManager.deleteConfig",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.notebook.fromSqlUri",
-          "when": "never"
-        }
-      ],
       "view/item/context": [
+        {
+          "command": "vscode-db2i.variables.remove",
+          "when": "view == vscode-db2i.variables && viewItem == sqlVarValue",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.variables.add",
+          "group": "navigation",
+          "when": "view == schemaBrowser && viewItem == variable"
+        },
         {
           "command": "vscode-db2i.setCurrentSchema",
           "when": "viewItem == schema",
@@ -924,7 +863,7 @@
         },
         {
           "command": "vscode-db2i.generateSQL",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "view == schemaBrowser && (viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type)",
           "group": "db2@2"
         },
         {
@@ -1052,6 +991,84 @@
           "group": "navigation"
         }
       ],
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.setSchemaFilter",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.settings",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.displayDetails",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.editSettings",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.export",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.node.copy",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.remove",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.closeJob",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editJobProps",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editSelfCodes",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.copyJobId",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.viewJobLog",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.enableTracing",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.getTrace",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.deleteConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.notebook.fromSqlUri",
+          "when": "never"
+        }
+      ],
       "editor/title": [
         {
           "when": "editorLangId == sql && code-for-ibmi:connected == true && vscode-db2i:statementCanCancel != true",
@@ -1099,6 +1116,24 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "vscode-db2i.variables",
+        "contents": "Use this view to quickly see the contents of variables and more.\n\n[Add variable](command:vscode-db2i.variables.add)"
+      },
+      {
+        "view": "queryHistory",
+        "contents": "Statement history will appear here."
+      },
+      {
+        "view": "jobManager",
+        "contents": "The SQL Job Manager allows you to provision one or more jobs for running SQL statements, each with its own connection settings.\n\nUsing managed jobs reduces the use of system resources, improves performance, and maintains  state across subsequent SQL statements.\n\nYou can run SQL statements without starting a job, just be aware that every statement you run requires a temporary, single-use job to be started on your behalf. \n[New SQL job](command:vscode-db2i.jobManager.newJob)"
+      },
+      {
+        "view": "vscode-db2i.self.nodes",
+        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSelfSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
+      }
+    ],
     "submenus": [
       {
         "icon": "$(notebook-execute)",
@@ -1210,20 +1245,6 @@
           "dark": "#bd8c8c",
           "light": "#5976df"
         }
-      }
-    ],
-    "viewsWelcome": [
-      {
-        "view": "queryHistory",
-        "contents": "Statement history will appear here."
-      },
-      {
-        "view": "jobManager",
-        "contents": "The SQL Job Manager allows you to provision one or more jobs for running SQL statements, each with its own connection settings.\n\nUsing managed jobs reduces the use of system resources, improves performance, and maintains  state across subsequent SQL statements.\n\nYou can run SQL statements without starting a job, just be aware that every statement you run requires a temporary, single-use job to be started on your behalf. \n[New SQL job](command:vscode-db2i.jobManager.newJob)"
-      },
-      {
-        "view": "vscode-db2i.self.nodes",
-        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSelfSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
       }
     ],
     "notebooks": [
