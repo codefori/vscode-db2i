@@ -508,11 +508,100 @@ async function getCompletionItems(
   return getCompletionItemsForRefs(currentStatement, offset, insideCte ? insideCte.columns : undefined);
 }
 
+const VALID_CREATE_TYPES = [`procedure`, `function`]
+
+function getCompletionItemKindFromSqlType(sqlType: string = `any`) {
+  switch (sqlType.toLowerCase()) {
+    case `schema`:
+      return CompletionItemKind.Folder;
+    case `table`:
+      return CompletionItemKind.File;
+    case `view`:
+      return CompletionItemKind.Interface;
+    case `alias`:
+      return CompletionItemKind.Reference;
+    case `procedure`:
+      return CompletionItemKind.Method;
+    case `function`:
+      return CompletionItemKind.Function;
+    case `cursor`:
+      return CompletionItemKind.File;
+    default:
+      return CompletionItemKind.Variable;
+  }
+}
+
+/**
+ * Returns completion items based solely on an SQL document
+ * @param sqlDoc
+ */
+function getLocalDefs(sqlDoc: Document, offset: number) {
+  const groups = sqlDoc.getStatementGroups();
+
+  let items: CompletionItem[] = [];
+
+
+  groups.forEach((group) => {
+    const groupStatements = group.statements;
+    const statement = group.statements[0];
+    const inGroupRange = offset >= group.range.start && offset <= group.range.end;
+
+    if (groupStatements.length === 1) {
+      switch (statement.type) {
+        case StatementType.With:
+          if (inGroupRange) {
+            const ctes = statement.getCTEReferences();
+            items.push(...ctes.map(cte => createCompletionItem(cte.name, CompletionItemKind.Interface)));
+          }
+          break;
+
+        case StatementType.Create:
+          const [currentCreate] = statement.getObjectReferences();
+          if (currentCreate) {
+            items.push(createCompletionItem(currentCreate.object.schema ? `${currentCreate.object.schema}.${currentCreate.object.name}` : currentCreate.object.name, getCompletionItemKindFromSqlType(currentCreate.createType), `Local ${currentCreate.createType || `creation`}`));
+          }
+          break;
+      }
+
+    } else if (groupStatements.length > 1) {
+      // Usually means statements that have a body
+
+      // We only care about create statements when there is a body
+      if (statement.type === StatementType.Create) {
+        const [groupDef] = statement.getObjectReferences();
+        
+        // We only care about certain create types
+        if (groupDef) {
+          const currentType = groupDef.createType.toLowerCase();
+          if (groupDef.createType && VALID_CREATE_TYPES.includes(currentType) && groupDef.object.name) {
+            items.push(createCompletionItem(groupDef.object.schema ? `${groupDef.object.schema}.${groupDef.object.name}` : groupDef.object.name, getCompletionItemKindFromSqlType(groupDef.createType), `Local ${currentType}`));
+          }
+        }
+
+        // We only want to add local variables if we're inside the current group
+        if (inGroupRange) {
+          for (let i = 1; i < groupStatements.length; i++) {
+            const subStatement = groupStatements[i];
+            if (subStatement.type === StatementType.Declare) {
+              const [def] = subStatement.getObjectReferences();
+              if (def) {
+                items.push(createCompletionItem(def.object.name, CompletionItemKind.Variable, def.createType));
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  return items;
+}
+
 export const completionProvider = languages.registerCompletionItemProvider(
   `sql`,
   {
     async provideCompletionItems(document, position, token, context) {
-      if (ServerComponent.isInstalled() && isEnabled()) {
+      if (isEnabled()) {
         const trigger = context.triggerCharacter;
         const content = document.getText();
         const offset = document.offsetAt(position);
@@ -520,9 +609,17 @@ export const completionProvider = languages.registerCompletionItemProvider(
         const sqlDoc = new Document(content);
         const currentStatement = sqlDoc.getStatementByOffset(offset);
 
-        if (currentStatement) {
-          return getCompletionItems(trigger, currentStatement, offset);
+        const allItems: CompletionItem[] = [];
+
+        if (trigger !== `.`) {
+          allItems.push(...getLocalDefs(sqlDoc, offset))
         }
+
+        if (ServerComponent.isInstalled() && currentStatement) {
+          allItems.push(...await getCompletionItems(trigger, currentStatement, offset))
+        }
+
+        return allItems;
       }
     },
   },
