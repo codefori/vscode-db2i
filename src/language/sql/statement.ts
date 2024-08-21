@@ -424,12 +424,13 @@ export default class Statement {
 					} else {
 						let defaultIndex = this.tokens.findIndex(t => tokenIs(t, `keyword`, `DEFAULT`));
 
-						def.createType = this.tokens
+						const valueTokens = this.tokens
 							.slice(
 								2, 
 								defaultIndex >= 0 ? defaultIndex : undefined
-							)
-							.map(t => t.value).join(``);
+							);
+
+						def.createType = Statement.formatSimpleTokens(valueTokens);
 					}
 
 					doAdd(def);
@@ -682,4 +683,34 @@ export default class Statement {
     }
     return tokens;
   }
+
+	private static formatSimpleTokens(tokens: Token[]) {
+		let outString = ``;
+		for (let i = 0; i < tokens.length; i++) {
+			const cT = tokens[i];
+			const nT = tokens[i+1];
+			const pT = tokens[i-1];
+	
+			switch (cT.type) {
+				case `openbracket`:
+					outString += cT.value;
+					break;
+				case `closebracket`:
+					if (nT && nT.type === cT.type) {
+						outString += cT.value
+					} else {
+						outString += `${cT.value} `;
+					}
+					break;
+				default:
+					if (nT && (![`closebracket`, `openbracket`, `comma`].includes(nT.type))) {
+						outString += `${cT.value} `;
+					} else {
+						outString += cT.value;
+					}
+					break;
+			}
+		}
+		return outString.trimEnd();
+	}
 }

@@ -818,7 +818,7 @@ describe(`Object references`, () => {
     expect(declareStatement.type).toBe(StatementType.Declare);
     const refsB = declareStatement.getObjectReferences();
     expect(refsB.length).toBe(1);
-    expect(refsB[0].createType).toBe(`decimal(9,2)`);
+    expect(refsB[0].createType).toBe(`decimal(9, 2)`);
     expect(refsB[0].object.name).toBe(`total`);
 
     // Let's check we get the table back for this select
@@ -855,7 +855,22 @@ describe(`Object references`, () => {
     expect(refs[1].createType).toBe(`external`);
     expect(refs[1].object.system).toBe(`PROGRAM`);
     expect(refs[1].object.schema).toBe(`LIB`);
-  })
+  });
+
+  test(`DECLARE VARIABLE`, () => {
+    const document = new Document(`declare watsonx_response   Varchar(10000) CCSID 1208;`);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Declare);
+    const refs = createStatement.getObjectReferences();
+    expect(refs.length).toBe(1);
+
+    expect(refs[0].object.name).toBe(`watsonx_response`);
+    expect(refs[0].createType).toBe(`Varchar(10000) CCSID 1208`);
+  });
 });
 
 describe(`Offset reference tests`, () => {
