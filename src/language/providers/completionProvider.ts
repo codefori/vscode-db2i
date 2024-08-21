@@ -16,6 +16,7 @@ import { ServerComponent } from "../../connection/serverComponent";
 import { env } from "process";
 import { prepareParamType, createCompletionItem, getParmAttributes, completionItemCache } from "./completion";
 import { isCallableType, getCallableParameters } from "./callable";
+import { variable } from "sql-formatter/lib/src/lexer/regexFactory";
 
 export interface CompletionType {
   order: string;
@@ -48,6 +49,12 @@ const completionTypes: { [index: string]: CompletionType } = {
     label: `function`,
     type: `functions`, 
     icon: CompletionItemKind.Method
+  },
+  variables: {
+    order: `f`,
+    label: `variable`,
+    type: `variables`,
+    icon: CompletionItemKind.Variable,
   }
 };
 
@@ -157,7 +164,7 @@ async function getObjectCompletions(
         createCompletionItem(
           Statement.prettyName(table.name),
           value.icon,
-          `Type: ${value.label}`,
+          value.label,
           `Schema: ${table.schema}`,
           value.order
         )
@@ -185,7 +192,7 @@ async function getCompletionItemsForSchema(
       createCompletionItem(
         Statement.prettyName(item.name),
         CompletionItemKind.Method,
-        `Type: Procedure`,
+        `Procedure`,
         `Schema: ${item.schema}`
       )
     );
@@ -319,7 +326,7 @@ async function getCachedSchemas() {
     createCompletionItem(
       Statement.prettyName(schema.name),
       CompletionItemKind.Module,
-      `Type: Schema`,
+      `Schema`,
       `Text: ${schema.text}`
     )
   );
