@@ -377,6 +377,12 @@ export default class Statement {
 							}
 							break;
 
+						case `VARIABLE`:
+							if (postName) {
+								object.createType = Statement.formatSimpleTokens(this.tokens.slice(postName));
+							}
+							break;
+
 						case `VIEW`:
 						case `TABLE`:
 							const asKeyword = this.tokens.findIndex(token => tokenIs(token, `keyword`, `AS`));

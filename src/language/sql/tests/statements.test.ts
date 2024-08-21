@@ -871,6 +871,23 @@ describe(`Object references`, () => {
     expect(refs[0].object.name).toBe(`watsonx_response`);
     expect(refs[0].createType).toBe(`Varchar(10000) CCSID 1208`);
   });
+
+  test(`CREATE OR REPLACE VARIABLE`, () => {
+    const document = new Document(`create or replace variable watsonx.apiVersion varchar(10) ccsid 1208 default '2023-07-07';`);
+
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+    const refs = createStatement.getObjectReferences();
+    expect(refs.length).toBe(1);
+
+    expect(refs[0].object.schema).toBe(`watsonx`);
+    expect(refs[0].object.name).toBe(`apiVersion`);
+    expect(refs[0].createType).toBe(`varchar(10) ccsid 1208 default '2023-07-07'`);
+  });
 });
 
 describe(`Offset reference tests`, () => {
