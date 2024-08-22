@@ -249,6 +249,64 @@ export default class Statement {
 		return cteList;
 	}
 
+	getRoutineParameters(): ObjectRef[] {
+		const list: ObjectRef[] = [];
+
+		if (this.type !== StatementType.Create) {
+			return [];
+		}
+
+		function splitTokens(inTokens: Token[], type: string) {
+			const chunks: Token[][] = [];
+
+			let currentChunk: Token[] = [];
+
+			for (const token of inTokens) {
+				if (tokenIs(token, type)) {
+					if (currentChunk.length > 0) {
+						chunks.push(currentChunk);
+						currentChunk = [];
+					}
+				} else {
+					currentChunk.push(token);
+				}
+			}
+
+			if (currentChunk.length > 0) {
+				chunks.push(currentChunk);
+			}
+
+			return chunks;
+		}
+
+		const withBlocks = SQLTokeniser.createBlocks(this.tokens.slice(0));
+		const firstBlock = withBlocks.find(token => token.type === `block`);
+
+		if (firstBlock && firstBlock.block) {
+			const parameters = splitTokens(firstBlock.block!, `comma`);
+
+			for (const parameter of parameters) {
+				// If the first token is the parm type, then the name follows
+				let nameIndex = tokenIs(parameter[0], `parmType`) ? 1 : 0;
+				const name = parameter[nameIndex].value!;
+				// Include parmType if it is provided
+				const definitionTokens = (nameIndex === 1 ? [parameter[0]] : []).concat(parameter.slice(nameIndex+1));
+
+				list.push({
+					tokens: parameter,
+					createType: Statement.formatSimpleTokens(definitionTokens),
+					alias: name,
+					object: {
+						name,
+					}
+				});
+			}
+		}
+
+		return list;
+
+	}
+
 	getObjectReferences(): ObjectRef[] {
 		let list: ObjectRef[] = [];
 
@@ -377,6 +435,12 @@ export default class Statement {
 							}
 							break;
 
+						case `VARIABLE`:
+							if (postName) {
+								object.createType = Statement.formatSimpleTokens(this.tokens.slice(postName));
+							}
+							break;
+
 						case `VIEW`:
 						case `TABLE`:
 							const asKeyword = this.tokens.findIndex(token => tokenIs(token, `keyword`, `AS`));
@@ -424,12 +488,13 @@ export default class Statement {
 					} else {
 						let defaultIndex = this.tokens.findIndex(t => tokenIs(t, `keyword`, `DEFAULT`));
 
-						def.createType = this.tokens
+						const valueTokens = this.tokens
 							.slice(
 								2, 
 								defaultIndex >= 0 ? defaultIndex : undefined
-							)
-							.map(t => t.value).join(``);
+							);
+
+						def.createType = Statement.formatSimpleTokens(valueTokens);
 					}
 
 					doAdd(def);
@@ -682,4 +747,41 @@ export default class Statement {
     }
     return tokens;
   }
+
+	private static formatSimpleTokens(tokens: Token[]) {
+		let outString = ``;
+		for (let i = 0; i < tokens.length; i++) {
+			const cT = tokens[i];
+			const nT = tokens[i+1];
+			const pT = tokens[i-1];
+	
+			switch (cT.type) {
+				case `block`:
+					outString += `(${Statement.formatSimpleTokens(cT.block!)})`;
+
+					if (nT && nT.type !== `closebracket`) {
+						outString += ` `;
+					}
+					break;
+				case `openbracket`:
+					outString += cT.value;
+					break;
+				case `closebracket`:
+					outString += cT.value
+					
+					if (nT && nT.type !== cT.type) {
+						outString += ` `
+					}
+					break;
+				default:
+					if (nT && (![`closebracket`, `openbracket`, `comma`, `block`].includes(nT.type))) {
+						outString += `${cT.value} `;
+					} else {
+						outString += cT.value;
+					}
+					break;
+			}
+		}
+		return outString.trimEnd();
+	}
 }

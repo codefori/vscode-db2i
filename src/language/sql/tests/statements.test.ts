@@ -805,6 +805,10 @@ describe(`Object references`, () => {
     const [group] = groups;
 
     const createStatement = group.statements[0];
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(0);
+
     const refsA = createStatement.getObjectReferences();
     expect(createStatement.type).toBe(StatementType.Create);
     expect(refsA.length).toBe(1);
@@ -818,7 +822,7 @@ describe(`Object references`, () => {
     expect(declareStatement.type).toBe(StatementType.Declare);
     const refsB = declareStatement.getObjectReferences();
     expect(refsB.length).toBe(1);
-    expect(refsB[0].createType).toBe(`decimal(9,2)`);
+    expect(refsB[0].createType).toBe(`decimal(9, 2)`);
     expect(refsB[0].object.name).toBe(`total`);
 
     // Let's check we get the table back for this select
@@ -828,6 +832,51 @@ describe(`Object references`, () => {
     expect(refsC.length).toBe(1);
     expect(refsC[0].createType).toBeUndefined();
     expect(refsC[0].object.name).toBe(`employee`);
+  });
+  
+  test(`CREATE FUNCTION: with multiple parameters`, () => {
+    const lines = [
+      `create or replace function watsonx.generate(`,
+      `  text varchar(1000) ccsid 1208,`,
+      `  model_id varchar(128) ccsid 1208 default 'meta-llama/llama-2-13b-chat',`,
+      `  parameters varchar(1000) ccsid 1208 default null`,
+      `)`,
+      `  returns varchar(10000) ccsid 1208`,
+      `  not deterministic`,
+      `  no external action`,
+      `  set option usrprf = *user, dynusrprf = *user, commit = *none`,
+      `begin`,
+      `  declare watsonx_response Varchar(10000) CCSID 1208;`,
+      `  declare needsNewToken char(1) default 'Y';`,
+      ``,
+      `  set needsNewToken = watsonx.ShouldGetNewToken();`,
+      `  if (needsNewToken = 'Y') then`,
+      `    return '*PLSAUTH';`,
+      `  end if;`,
+      ``,
+      `  return '';`,
+      `end;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const group = groups[0];
+
+    const createStatement = group.statements[0];
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(3);
+
+    expect(parms[0].alias).toBe(`text`);
+    expect(parms[0].createType).toBe(`varchar(1000) ccsid 1208`);
+
+    expect(parms[1].alias).toBe(`model_id`);
+    expect(parms[1].createType).toBe(`varchar(128) ccsid 1208 default 'meta-llama/llama-2-13b-chat'`);
+
+    expect(parms[2].alias).toBe(`parameters`);
+    expect(parms[2].createType).toBe(`varchar(1000) ccsid 1208 default null`);
   });
 
   test(`CREATE PROCEDURE: with EXTERNAL NAME`, () => {
@@ -844,6 +893,12 @@ describe(`Object references`, () => {
     const createStatement = groups[0].statements[0];
 
     expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(1);
+    expect(parms[0].alias).toBe(`base`);
+    expect(parms[0].createType).toBe(`IN CHAR(100)`);
+
     const refs = createStatement.getObjectReferences();
     expect(refs.length).toBe(2);
 
@@ -855,7 +910,39 @@ describe(`Object references`, () => {
     expect(refs[1].createType).toBe(`external`);
     expect(refs[1].object.system).toBe(`PROGRAM`);
     expect(refs[1].object.schema).toBe(`LIB`);
-  })
+  });
+
+  test(`DECLARE VARIABLE`, () => {
+    const document = new Document(`declare watsonx_response   Varchar(10000) CCSID 1208;`);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Declare);
+    const refs = createStatement.getObjectReferences();
+    expect(refs.length).toBe(1);
+
+    expect(refs[0].object.name).toBe(`watsonx_response`);
+    expect(refs[0].createType).toBe(`Varchar(10000) CCSID 1208`);
+  });
+
+  test(`CREATE OR REPLACE VARIABLE`, () => {
+    const document = new Document(`create or replace variable watsonx.apiVersion varchar(10) ccsid 1208 default '2023-07-07';`);
+
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+    const refs = createStatement.getObjectReferences();
+    expect(refs.length).toBe(1);
+
+    expect(refs[0].object.schema).toBe(`watsonx`);
+    expect(refs[0].object.name).toBe(`apiVersion`);
+    expect(refs[0].createType).toBe(`varchar(10) ccsid 1208 default '2023-07-07'`);
+  });
 });
 
 describe(`Offset reference tests`, () => {
@@ -931,6 +1018,11 @@ describe(`PL body tests`, () => {
     expect(medianResultSetProc.type).toBe(StatementType.Create);
     expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
+    const parms = medianResultSetProc.getRoutineParameters();
+    expect(parms.length).toBe(1);
+    expect(parms[0].alias).toBe(`medianSalary`);
+    expect(parms[0].createType).toBe(`OUT DECIMAL(7, 2)`);
+
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
 
@@ -987,10 +1079,14 @@ describe(`PL body tests`, () => {
     expect(medianResultSetProc.type).toBe(StatementType.Create);
     expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
+    const parms = medianResultSetProc.getRoutineParameters();
+    expect(parms.length).toBe(1);
+    expect(parms[0].alias).toBe(`medianSalary`);
+    expect(parms[0].createType).toBe(`OUT DECIMAL(7, 2)`);
 
     const parameterTokens = medianResultSetProc.getBlockAt(46);
     expect(parameterTokens.length).toBeGreaterThan(0);
-    expect(parameterTokens.map(t => t.type).join()).toBe([`word`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join());
+    expect(parameterTokens.map(t => t.type).join()).toBe([`parmType`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join());
 
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);

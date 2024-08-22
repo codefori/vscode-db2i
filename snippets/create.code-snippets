@@ -1,0 +1,34 @@
+{
+  "create procedure": {
+    "prefix": "create procedure",
+    "body": [
+      "create or replace procedure ${1:procedure_name}($2)",
+      "  set option usrprf = *user, dynusrprf = *user, commit = *none",
+      "  program type sub",
+      "  modifies sql data",
+      "begin",
+      "  $0",
+      "end;"
+    ],
+    "description": "Simple procedure"
+  },
+  "create function": {
+    "prefix": "create function",
+    "body": [
+      "create or replace function ${1:function_name}($2)",
+      "  returns $3",
+      "begin",
+      "  $0",
+      "  --return value;",
+      "end;"
+    ],
+    "description": "Simple function"
+  },
+  "declare": {
+    "prefix": "declare",
+    "body": [
+      "declare ${1:name} ${2|SMALLINT,INTEGER,INT,BIGINT,DECIMAL,DEC,NUMERIC,FLOAT,REAL,DOUBLE,DECFLOAT,CHAR,CHARACTER,VARCHAR,CLOB,GRAPHIC,VARGRAPHIC,NCHAR,VARYING,NVARCHAR,NCLOB,BLOB,DATE,TIME,TIMESTAMP,XML|}${3} default ${4}${0};",
+    ],
+    "description": "Declare variable"
+  }
+}
