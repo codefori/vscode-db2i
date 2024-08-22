@@ -833,6 +833,51 @@ describe(`Object references`, () => {
     expect(refsC[0].createType).toBeUndefined();
     expect(refsC[0].object.name).toBe(`employee`);
   });
+  
+  test(`CREATE FUNCTION: with multiple parameters`, () => {
+    const lines = [
+      `create or replace function watsonx.generate(`,
+      `  text varchar(1000) ccsid 1208,`,
+      `  model_id varchar(128) ccsid 1208 default 'meta-llama/llama-2-13b-chat',`,
+      `  parameters varchar(1000) ccsid 1208 default null`,
+      `)`,
+      `  returns varchar(10000) ccsid 1208`,
+      `  not deterministic`,
+      `  no external action`,
+      `  set option usrprf = *user, dynusrprf = *user, commit = *none`,
+      `begin`,
+      `  declare watsonx_response Varchar(10000) CCSID 1208;`,
+      `  declare needsNewToken char(1) default 'Y';`,
+      ``,
+      `  set needsNewToken = watsonx.ShouldGetNewToken();`,
+      `  if (needsNewToken = 'Y') then`,
+      `    return '*PLSAUTH';`,
+      `  end if;`,
+      ``,
+      `  return '';`,
+      `end;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const group = groups[0];
+
+    const createStatement = group.statements[0];
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(3);
+
+    expect(parms[0].alias).toBe(`text`);
+    expect(parms[0].createType).toBe(`varchar(1000) ccsid 1208`);
+
+    expect(parms[1].alias).toBe(`model_id`);
+    expect(parms[1].createType).toBe(`varchar(128) ccsid 1208 default 'meta-llama/llama-2-13b-chat'`);
+
+    expect(parms[2].alias).toBe(`parameters`);
+    expect(parms[2].createType).toBe(`varchar(1000) ccsid 1208 default null`);
+  });
 
   test(`CREATE PROCEDURE: with EXTERNAL NAME`, () => {
     const lines = [

@@ -262,7 +262,7 @@ export default class Statement {
 			let currentChunk: Token[] = [];
 
 			for (const token of inTokens) {
-				if (tokenIs(token, `keyword`, type)) {
+				if (tokenIs(token, type)) {
 					if (currentChunk.length > 0) {
 						chunks.push(currentChunk);
 						currentChunk = [];
@@ -758,15 +758,19 @@ export default class Statement {
 			switch (cT.type) {
 				case `block`:
 					outString += `(${Statement.formatSimpleTokens(cT.block!)})`;
+
+					if (nT && nT.type !== `closebracket`) {
+						outString += ` `;
+					}
 					break;
 				case `openbracket`:
 					outString += cT.value;
 					break;
 				case `closebracket`:
-					if (nT && nT.type === cT.type) {
-						outString += cT.value
-					} else {
-						outString += `${cT.value} `;
+					outString += cT.value
+					
+					if (nT && nT.type !== cT.type) {
+						outString += ` `
 					}
 					break;
 				default:
