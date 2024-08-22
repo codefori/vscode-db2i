@@ -1217,6 +1217,10 @@
       },
       {
         "language": "sql",
+        "path": "snippets/create.code-snippets"
+      },
+      {
+        "language": "sql",
         "path": "snippets/scalars.code-snippets"
       },
       {
