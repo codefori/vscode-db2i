@@ -249,6 +249,64 @@ export default class Statement {
 		return cteList;
 	}
 
+	getRoutineParameters(): ObjectRef[] {
+		const list: ObjectRef[] = [];
+
+		if (this.type !== StatementType.Create) {
+			return [];
+		}
+
+		function splitTokens(inTokens: Token[], type: string) {
+			const chunks: Token[][] = [];
+
+			let currentChunk: Token[] = [];
+
+			for (const token of inTokens) {
+				if (tokenIs(token, `keyword`, type)) {
+					if (currentChunk.length > 0) {
+						chunks.push(currentChunk);
+						currentChunk = [];
+					}
+				} else {
+					currentChunk.push(token);
+				}
+			}
+
+			if (currentChunk.length > 0) {
+				chunks.push(currentChunk);
+			}
+
+			return chunks;
+		}
+
+		const withBlocks = SQLTokeniser.createBlocks(this.tokens.slice(0));
+		const firstBlock = withBlocks.find(token => token.type === `block`);
+
+		if (firstBlock && firstBlock.block) {
+			const parameters = splitTokens(firstBlock.block!, `comma`);
+
+			for (const parameter of parameters) {
+				// If the first token is the parm type, then the name follows
+				let nameIndex = tokenIs(parameter[0], `parmType`) ? 1 : 0;
+				const name = parameter[nameIndex].value!;
+				// Include parmType if it is provided
+				const definitionTokens = (nameIndex === 1 ? [parameter[0]] : []).concat(parameter.slice(nameIndex+1));
+
+				list.push({
+					tokens: parameter,
+					createType: Statement.formatSimpleTokens(definitionTokens),
+					alias: name,
+					object: {
+						name,
+					}
+				});
+			}
+		}
+
+		return list;
+
+	}
+
 	getObjectReferences(): ObjectRef[] {
 		let list: ObjectRef[] = [];
 
@@ -698,6 +756,9 @@ export default class Statement {
 			const pT = tokens[i-1];
 	
 			switch (cT.type) {
+				case `block`:
+					outString += `(${Statement.formatSimpleTokens(cT.block!)})`;
+					break;
 				case `openbracket`:
 					outString += cT.value;
 					break;
@@ -709,7 +770,7 @@ export default class Statement {
 					}
 					break;
 				default:
-					if (nT && (![`closebracket`, `openbracket`, `comma`].includes(nT.type))) {
+					if (nT && (![`closebracket`, `openbracket`, `comma`, `block`].includes(nT.type))) {
 						outString += `${cT.value} `;
 					} else {
 						outString += cT.value;

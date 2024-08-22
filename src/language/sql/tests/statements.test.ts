@@ -805,6 +805,10 @@ describe(`Object references`, () => {
     const [group] = groups;
 
     const createStatement = group.statements[0];
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(0);
+
     const refsA = createStatement.getObjectReferences();
     expect(createStatement.type).toBe(StatementType.Create);
     expect(refsA.length).toBe(1);
@@ -844,6 +848,12 @@ describe(`Object references`, () => {
     const createStatement = groups[0].statements[0];
 
     expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(1);
+    expect(parms[0].alias).toBe(`base`);
+    expect(parms[0].createType).toBe(`IN CHAR(100)`);
+
     const refs = createStatement.getObjectReferences();
     expect(refs.length).toBe(2);
 
@@ -963,6 +973,11 @@ describe(`PL body tests`, () => {
     expect(medianResultSetProc.type).toBe(StatementType.Create);
     expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
+    const parms = medianResultSetProc.getRoutineParameters();
+    expect(parms.length).toBe(1);
+    expect(parms[0].alias).toBe(`medianSalary`);
+    expect(parms[0].createType).toBe(`OUT DECIMAL(7, 2)`);
+
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
 
@@ -1019,10 +1034,14 @@ describe(`PL body tests`, () => {
     expect(medianResultSetProc.type).toBe(StatementType.Create);
     expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
+    const parms = medianResultSetProc.getRoutineParameters();
+    expect(parms.length).toBe(1);
+    expect(parms[0].alias).toBe(`medianSalary`);
+    expect(parms[0].createType).toBe(`OUT DECIMAL(7, 2)`);
 
     const parameterTokens = medianResultSetProc.getBlockAt(46);
     expect(parameterTokens.length).toBeGreaterThan(0);
-    expect(parameterTokens.map(t => t.type).join()).toBe([`word`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join());
+    expect(parameterTokens.map(t => t.type).join()).toBe([`parmType`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join());
 
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
