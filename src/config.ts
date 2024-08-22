@@ -8,20 +8,23 @@ import Configuration from "./configuration";
 import { ConfigManager } from "./views/jobManager/ConfigManager";
 import { Examples, ServiceInfoLabel } from "./views/examples";
 import { updateStatusBar } from "./views/jobManager/statusBar";
-
-interface IBMiLevels {
-  version: number;
-  db2Level: number;
-}
+import { IBMiDetail } from "./IBMiDetail";
 
 export let Config: ConnectionStorage;
-export let OSData: IBMiLevels|undefined;
+export let osDetail: IBMiDetail;
 export let JobManager: SQLJobManager = new SQLJobManager();
+
 
 export async function onConnectOrServerInstall(): Promise<boolean> {
   const instance = getInstance();
 
   Config.setConnectionName(instance.getConnection().currentConnectionName);
+
+  await Config.fixPastQueries();
+
+  osDetail = new IBMiDetail();
+
+  await osDetail.fetchSystemInfo();
 
   await ServerComponent.initialise().then(installed => {
     if (installed) {
@@ -63,10 +66,8 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
   return false;
 }
 
-export function setupConfig(context: ExtensionContext) {
+export function initConfig(context: ExtensionContext) {
   Config = new ConnectionStorage(context);
-
-  getInstance().onEvent(`connected`, onConnectOrServerInstall);
 
   getInstance().onEvent(`disconnected`, async () => {
     JobManagerView.setVisible(false);
@@ -79,31 +80,6 @@ export function setupConfig(context: ExtensionContext) {
     // Close out the Visual Explain panels
     commands.executeCommand('vscode-db2i.dove.close');
   });
-}
-
-export async function fetchSystemInfo() {
-  const instance = getInstance();
-  const content = instance.getContent();
-
-  const [versionResults, db2LevelResults] = await Promise.all([
-    content.runSQL(`select OS_VERSION concat '.' concat OS_RELEASE as VERSION from sysibmadm.env_sys_info`),
-    content.runSQL([
-      `select max(ptf_group_level) as HIGHEST_DB2_PTF_GROUP_LEVEL`,
-      `from qsys2.group_ptf_info`,
-      `where PTF_GROUP_DESCRIPTION like 'DB2 FOR IBM I%' and`,
-      `ptf_group_status = 'INSTALLED';`
-    ].join(` `))
-  ]);
-
-  const version = Number(versionResults[0].VERSION);
-  const db2Level = Number(db2LevelResults[0].HIGHEST_DB2_PTF_GROUP_LEVEL);
-
-  if (version && db2Level) {
-    OSData = {
-      version,
-      db2Level
-    }
-  }
 }
 
 export async function askAboutNewJob(startup?: boolean): Promise<boolean> {

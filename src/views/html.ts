@@ -20,6 +20,13 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       top: 0;           /* Don't forget this, required for the stickiness */
     }
 
+    tfoot tr {
+      background-color: var(--vscode-multiDiffEditor-headerBackground);
+      text-align: left;
+      position: sticky; /* Lock the footer row to the bottom so it's always visible as rows are scrolled */
+      bottom: 0;        /* Don't forget this, required for the stickiness */
+    }
+
     #resultset th,
     #resultset td {
       padding: 5px 15px;
@@ -58,6 +65,15 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       align-items: center;
       text-align: center;
       min-height: 100vh;
+    }
+
+    .primaryButton {
+      background-color: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
     }
 
     /* https://cssloaders.github.io */

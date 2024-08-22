@@ -3,6 +3,7 @@ import { ServerComponent } from "./serverComponent";
 import { JDBCOptions, ConnectionResult, Rows, QueryResult, JobLogEntry, CLCommandResult, VersionCheckResult, GetTraceDataResult, ServerTraceDest, ServerTraceLevel, SetConfigResult, QueryOptions, ExplainResults } from "./types";
 import { Query } from "./query";
 import { EventEmitter } from "stream";
+import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 
 export enum JobStatus {
   NotStarted = "notStarted",
@@ -181,19 +182,15 @@ export class SQLJob {
 
     const connectResult: ConnectionResult = JSON.parse(result);
 
-    if (connectResult.success !== true) {
+    if (connectResult.success === true) {
+      this.status = JobStatus.Ready;
+    } else {
       this.dispose();
       this.status = JobStatus.NotStarted;
       throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 
-    if (this.status === JobStatus.Ended) {
-      throw new Error(`Failed to connect properly.`);
-    }
-
     this.id = connectResult.job;
-    this.status = JobStatus.Ready;
-
     this.isTracingChannelData = false;
 
     return connectResult;
@@ -274,12 +271,11 @@ export class SQLJob {
     return rpy;
   }
 
-  async setSelfCodes(codes: string[]) {
-    const signedCodes: String[] = codes.map(code => [code, `-${code}`]).flat();
+  async setSelfState(code: SelfValue) {
     try {
-      const query: string = `SET SYSIBMADM.SELFCODES = SYSIBMADM.VALIDATE_SELF('${signedCodes.join(', ')}')`
+      const query: string = `SET SYSIBMADM.SELFCODES = '${code}'`
       await this.query<any>(query).run();
-      this.options.selfcodes = codes;
+      this.options.selfcodes = code;
     } catch (e) {
       throw e;
     }
@@ -349,6 +345,14 @@ export class SQLJob {
     };
 
     this.send(JSON.stringify(exitObject));
+
+    this.responseEmitter.eventNames().forEach(event => {
+      this.responseEmitter.emit(event, JSON.stringify({
+        id: event,
+        success: false,
+        error: `Job ended before response returned.`
+      }));
+    });
 
     this.dispose();
   }

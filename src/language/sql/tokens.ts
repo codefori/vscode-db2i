@@ -19,6 +19,11 @@ enum ReadState {
   IN_NAME
 }
 
+interface TokenState {
+  tokens: Token[];
+  content: string;
+}
+
 export default class SQLTokeniser {
   matchers: Matcher[] = [
     {
@@ -55,6 +60,13 @@ export default class SQLTokeniser {
       becomes: `join`,
     },
     {
+      name: `JOIN`,
+      match: [
+        {type: `word`, match: (value: string) => {return value.toUpperCase() === `JOIN`}}
+      ],
+      becomes: `join`,
+    },
+    {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
         return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
@@ -76,9 +88,14 @@ export default class SQLTokeniser {
       match: [{ type: `newliner` }, { type: `newline` }],
       becomes: `newline`,
     },
+    {
+      name: `PIPE`,
+      match: [{ type: `equals` }, { type: `morethan` }],
+      becomes: `rightpipe`,
+    },
   ];
   readonly spaces = [`\t`, ` `];
-  readonly splitParts: string[] = [`(`, `)`, `/`, `.`, `*`, `-`, `+`, `;`, `"`, `&`, `%`, `,`, `|`, `?`, `:`, `\n`, `\r`, ...this.spaces];
+  readonly splitParts: string[] = [`(`, `)`, `/`, `.`, `*`, `-`, `+`, `;`, `"`, `&`, `%`, `,`, `|`, `?`, `:`, `=`, `<`, `>`, `\n`, `\r`, ...this.spaces];
   readonly types: { [part: string]: string } = {
     '(': `openbracket`,
     ')': `closebracket`,
@@ -95,6 +112,9 @@ export default class SQLTokeniser {
     '|': `pipe`,
     '?': `questionmark`,
     ':': `colon`,
+    '=': `equals`,
+    '<': `lessthan`,
+    '>': `morethan`,
     '\n': `newline`,
     '\r': `newliner`,
   };
@@ -214,14 +234,21 @@ export default class SQLTokeniser {
       currentText = ``;
     }
 
-    result = this.fixStatement(result);
+    const tokenState: TokenState = {
+      tokens: result,
+      content,
+    };
+
+    result = this.fixStatement(tokenState);
     // result = SQLTokeniser.createBlocks(result);
     // result = SQLTokeniser.findScalars(result);
 
     return result;
   }
 
-  private fixStatement(tokens: Token[]) {
+  private fixStatement(state: TokenState) {
+    let tokens = state.tokens;
+
     for (let i = 0; i < tokens.length; i++) {
       for (let y = 0; y < this.matchers.length; y++) {
         const type = this.matchers[y];
@@ -253,7 +280,7 @@ export default class SQLTokeniser {
 
         if (goodMatch) {
           const matchedTokens = tokens.slice(i, i + type.match.length);
-          const value = matchedTokens.map(x => x.value).join(``);
+          const value = state.content.substring(matchedTokens[0].range.start, matchedTokens[matchedTokens.length - 1].range.end);
           tokens.splice(i, type.match.length, {
             type: type.becomes,
             value,

@@ -1,6 +1,7 @@
 
-import vscode, { ThemeIcon, TreeItem } from "vscode"
-import Schemas, { AllSQLTypes, SQLType } from "../../database/schemas";
+import { ThemeIcon, TreeItem } from "vscode"
+import * as vscode from "vscode"
+import Schemas, { AllSQLTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import { getInstance, loadBase } from "../../base";
 
@@ -9,7 +10,7 @@ import Configuration from "../../configuration";
 import Types from "../types";
 import Statement from "../../database/statement";
 import { copyUI } from "./copyUI";
-import { getAdvisedIndexesStatement } from "./statements";
+import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement } from "./statements";
 
 const viewItem = {
   "tables": `table`,
@@ -159,9 +160,23 @@ export default class schemaBrowser {
         }
       }),
 
+      vscode.commands.registerCommand(`vscode-db2i.getMTIs`, async (object: SQLObject|SchemaItem) => {
+        if (object) {
+          const content = getMTIStatement(object.schema, (`name` in object ? object.name : undefined));
+          
+          if (content) {
+            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+              content,
+              qualifier: `statement`,
+              open: false,
+            });
+          }
+        }
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.getIndexes`, async (object: SQLObject) => {
         if (object) {
-          const content = `SELECT * FROM QSYS2.SYSINDEXSTAT WHERE TABLE_SCHEMA = '${object.schema}' and TABLE_NAME = '${object.name}'`;
+          const content = getIndexesStatement(object.schema, object.name);
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             qualifier: `statement`,
@@ -345,7 +360,8 @@ export default class schemaBrowser {
           const value = await vscode.window.showInputBox({
             title: `Set filter for ${node.schema}`,
             value: this.filters[node.schema],
-            prompt: `Show objects that start with this value. Blank to reset.`
+            placeHolder: `COOL, COOL*`,
+            prompt: `Show objects that contain this value (case-insensitive). Blank to reset. Use '*' for wildcard at end.`,
           });
 
           if (value !== undefined) {

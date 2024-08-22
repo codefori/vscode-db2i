@@ -152,6 +152,10 @@ export class Query<T> {
     }
   }
 
+  public getHostJob(): SQLJob {
+    return this.job;
+  }
+
   public getId(): string {
     return this.correlationId;
   }

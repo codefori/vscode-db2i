@@ -67,13 +67,30 @@ export class ServerComponent {
     const instance = getInstance();
     const connection = instance.getConnection();
 
+    if (!connection) {
+      return false;
+    }
+
+    if (!Config.ready) {
+      Config.setConnectionName(connection.currentConnectionName);
+    }
+
+    if (!this.installed) {
+      this.installed = await this.isAlreadyInstalled();
+    }
+
+    return this.installed;
+  }
+
+  static async isAlreadyInstalled() {
+    const instance = getInstance();
+    const connection = instance.getConnection();
+
     const exists = await connection.sendCommand({
       command: `ls ${this.getComponentPath()}`
     });
 
-    this.installed = (exists.code === 0);
-
-    return this.installed;
+    return (exists.code === 0);
   }
 
   /**
@@ -88,15 +105,17 @@ export class ServerComponent {
 
     try {
       const assetPath = path.join(extensionPath, `dist`, SERVER_VERSION_FILE);
-      const assetExists = await exists(assetPath);
+      const assetExistsLocally = await exists(assetPath);
 
-      ServerComponent.writeOutput(JSON.stringify({assetPath, assetExists}));
+      ServerComponent.writeOutput(JSON.stringify({assetPath, assetExists: assetExistsLocally}));
 
-      if (assetExists) {
+      if (assetExistsLocally) {
         const basename = SERVER_VERSION_FILE;
         const lastInstalledName = Config.getServerComponentName();
 
         ServerComponent.writeOutput(JSON.stringify({basename, lastInstalledName}));
+
+        await this.initialise();
 
         if (lastInstalledName !== basename || this.installed === false) {
           // This means we're currently running a different version, 
@@ -107,14 +126,27 @@ export class ServerComponent {
             command: `echo ${ExecutablePathDir}`
           });
 
-          if (commandResult.code === 0 && commandResult.stderr === ``) {
+          this.writeOutput(JSON.stringify(commandResult));
+
+          if (commandResult.code === 0) {
+            const stuffInStderr = commandResult.stderr.length > 0;
             const remotePath = path.posix.join(commandResult.stdout, basename);
 
             ServerComponent.writeOutput(JSON.stringify({remotePath, ExecutablePathDir}));
 
             await connection.uploadFiles([{local: assetPath, remote: remotePath}]);
 
+            const scAuth = await connection.sendCommand({
+              command: `chmod 400 ${remotePath}`
+            });
+
+            this.writeOutput(JSON.stringify(scAuth));
+
             await Config.setServerComponentName(basename);
+
+            if (stuffInStderr) {
+              ServerComponent.writeOutput(`Server component was uploaded to ${remotePath} but there was something in stderr, which is not right. It might be worth seeing your user profile startup scripts.`);
+            }
 
             window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
             this.installed = true;
@@ -123,7 +155,6 @@ export class ServerComponent {
           } else {
             updateResult = UpdateStatus.FAILED;
 
-            this.writeOutput(JSON.stringify(commandResult));
             window.showErrorMessage(`Something went really wrong when trying to fetch your home directory.`).then(chosen => {
               if (chosen === `Show`) {
                 this.outputChannel.show();

@@ -83,9 +83,9 @@ export const ManagerSuite: TestSuite = {
       assert.strictEqual(runningJobs.length, 2);
 
       // Returns false due to bad name
-      assert.strictEqual(JobManager.setSelection(`badName`), false);
+      assert.strictEqual(JobManager.setSelection(`badName`), undefined);
 
-      assert.strictEqual(JobManager.setSelection(runningJobs[0].name), true);
+      assert.notStrictEqual(JobManager.setSelection(runningJobs[0].name), undefined);
 
       assert.strictEqual(JobManager.getSelection().name, runningJobs[0].name);
 

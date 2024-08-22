@@ -1,21 +1,40 @@
-import { WebviewView, WebviewViewResolveContext, CancellationToken, commands } from "vscode";
+import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
 
-import { Query, QueryState } from "../../connection/query";
-import * as html from "./html";
-import { updateStatusBar } from "../jobManager/statusBar";
-import { JobManager } from "../../config";
 import { setCancelButtonVisibility } from ".";
+import { JobManager } from "../../config";
+import { Query, QueryState } from "../../connection/query";
+import { updateStatusBar } from "../jobManager/statusBar";
+import Configuration from "../../configuration";
+import * as html from "./html";
+import { JobStatus } from "../../connection/sqlJob";
 
-export class ResultSetPanelProvider {
-  _view: WebviewView;
+export class ResultSetPanelProvider implements WebviewViewProvider {
+  _view: WebviewView | WebviewPanel;
   loadingState: boolean;
+  currentQuery: Query<any>;
   constructor() {
     this._view = undefined;
     this.loadingState = false;
   }
 
-  resolveWebviewView(webviewView: WebviewView, context: WebviewViewResolveContext, _token: CancellationToken) {
+  endQuery() {
+    if (this.currentQuery) {
+      const hostJob = this.currentQuery.getHostJob();
+      if (hostJob && hostJob.getStatus() === JobStatus.Busy) {
+        // We are assuming the job is the same here.
+        commands.executeCommand(`vscode-db2i.statement.cancel`, hostJob.id);
+      }
+      this.currentQuery.close();
+    }
+  }
+
+  resolveWebviewView(webviewView: WebviewView | WebviewPanel, context?: WebviewViewResolveContext, _token?: CancellationToken) {
     this._view = webviewView;
+
+    this._view.onDidDispose(() => {
+      this._view = undefined;
+      this.endQuery();
+    });
 
     webviewView.webview.options = {
       // Allow scripts in the webview
@@ -24,45 +43,64 @@ export class ResultSetPanelProvider {
 
     webviewView.webview.html = html.getLoadingHTML();
     this._view.webview.onDidReceiveMessage(async (message) => {
-      if (message.query) {
-        let data = [];
+      switch (message.command) {
+        case `cancel`:
+          this.endQuery();
+          break;
 
-        let queryObject = Query.byId(message.queryId);
-        try {
-          setCancelButtonVisibility(true);
-          if (queryObject === undefined) {
-            // We will need to revisit this if we ever allow multiple result tabs like ACS does
-            Query.cleanup();
+        default:
+          if (message.query) {
 
-            let query = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
-            queryObject = query;
+            if (this.currentQuery) {
+              // If we get a request for a new query, then we need to close the old one
+              if (this.currentQuery.getId() !== message.queryId) {
+                // This is a new query, so we need to clean up the old one
+                await this.currentQuery.close();
+                this.currentQuery = undefined;
+              }
+            }
+
+            try {
+              if (this.currentQuery === undefined) {
+                // We will need to revisit this if we ever allow multiple result tabs like ACS does
+                // Query.cleanup();
+
+                this.currentQuery = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
+              }
+
+              if (this.currentQuery.getState() !== QueryState.RUN_DONE) {
+                setCancelButtonVisibility(true);
+                
+                let queryResults = this.currentQuery.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await this.currentQuery.fetchMore() : await this.currentQuery.run();
+
+                const jobId = this.currentQuery.getHostJob().id;
+
+                this._view.webview.postMessage({
+                  command: `rows`,
+                  jobId,
+                  rows: queryResults.data,
+                  columnMetaData: queryResults.metadata ? queryResults.metadata.columns : undefined, // Query.fetchMore() doesn't return the metadata
+                  columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
+                  queryId: this.currentQuery.getId(),
+                  update_count: queryResults.update_count,
+                  isDone: queryResults.is_done
+                });
+              }
+
+            } catch (e) {
+              this.setError(e.message);
+              this._view.webview.postMessage({
+                command: `rows`,
+                rows: [],
+                queryId: ``,
+                isDone: true
+              });
+            }
+
+            setCancelButtonVisibility(false);
+            updateStatusBar();
           }
-
-          let queryResults = queryObject.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await queryObject.fetchMore() : await queryObject.run();
-
-          setCancelButtonVisibility(false);
-
-          data = queryResults.data;
-          this._view.webview.postMessage({
-            command: `rows`,
-            rows: queryResults.data,
-            columnList: queryResults.metadata ? queryResults.metadata.columns.map(x => x.name) : undefined, // Query.fetchMore() doesn't return the metadata
-            queryId: queryObject.getId(),
-            update_count: queryResults.update_count,
-            isDone: queryResults.is_done
-          });
-
-        } catch (e) {
-          this.setError(e.message);
-          this._view.webview.postMessage({
-            command: `rows`,
-            rows: [],
-            queryId: ``,
-            isDone: true
-          });
-        }
-
-        updateStatusBar();
+          break;
       }
     });
   }
@@ -74,6 +112,11 @@ export class ResultSetPanelProvider {
       await delay(100);
       currentLoop += 1;
     }
+
+    if (this._view && 'show' in this._view) {
+      this._view.show(true);
+    }
+
   }
 
   async focus() {
@@ -83,8 +126,6 @@ export class ResultSetPanelProvider {
       // 1. calls resolveWebviewView
       // 2. sets this._view
       await commands.executeCommand(`vscode-db2i.resultset.focus`);
-    } else {
-      this._view.show(true);
     }
   }
 
@@ -101,11 +142,21 @@ export class ResultSetPanelProvider {
     html.setLoadingText(this._view.webview, content);
   }
 
-  async setScrolling(basicSelect, isCL = false, queryId: string = ``) {
+  /** Update the result table column headings based on the configuration setting */
+  async updateHeader() {
+    if (this._view) {
+      this._view.webview.postMessage({
+        command: `header`,
+        columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
+      });
+    }
+  }
+
+  async setScrolling(basicSelect, isCL = false, queryId: string = ``, withCancel = false) {
     this.loadingState = false;
     await this.focus();
 
-    this._view.webview.html = html.generateScroller(basicSelect, isCL);
+    this._view.webview.html = html.generateScroller(basicSelect, isCL, withCancel);
 
     this._view.webview.postMessage({
       command: `fetch`,

@@ -1,0 +1,45 @@
+{
+  "template: http_get_verbose": {
+    "prefix": "http_get_verbose",
+    "body": [
+      "select RESPONSE_MESSAGE, RESPONSE_HTTP_HEADER",
+      "into :response_message, :response_header",
+      "-- Options: https://www.ibm.com/docs/en/i/7.5?topic=functions-http-get-http-get-blob#rbafzscahttpget__HTTP_options",
+      "from table(HTTP_GET_VERBOSE('${1:url}'${2:, options})) x;",
+      "$0"
+    ],
+    "description": "Simple HTTP GET request with verbose output"
+  },
+  "template: http_post_verbose": {
+    "prefix": "http_post_verbose",
+    "body": [
+      "select RESPONSE_MESSAGE, RESPONSE_HTTP_HEADER",
+      "into :response_message, :response_header",
+      "from table(HTTP_POST_VERBOSE(",
+      "  '${1:url}',",
+      "  '${2:body}',", 
+      "  -- Options: https://www.ibm.com/docs/en/i/7.5?topic=functions-http-get-http-get-blob#rbafzscahttpget__HTTP_options",
+      "  json_object('headers': json_object('Authorization': 'Bearer BEARER', 'Content-Type': 'application/json', 'Accept': 'application/json')) ",
+      ")) x;",
+      "$0"
+    ],
+    "description": "Simple HTTP POST request with verbose output"
+  },
+  "template: parse RESPONSE_HTTP_HEADER": {
+    "prefix": "response_http_header",
+    "body": [
+      "select HTTP_STATUS_CODE, Content_Type, Content_Length, Set_Cookie",
+      "into :http_status_code, :content_type, :content_length, :set_cookie",
+      "from json_table(",
+      "  liama.header,",
+      "  'lax $' columns (",
+      "    HTTP_STATUS_CODE float(8) path '$.HTTP_STATUS_CODE',",
+      "    Content_Type varchar(1000) ccsid 1208 path '$.Content-Type',",
+      "    Content_Length float(8) path '$.Content-Length',",
+      "    Set_Cookie varchar(1000) ccsid 1208 path '$.Set-Cookie'",
+      "  )",
+      ")",
+    ],
+    "description": "Parse HTTP response header"
+  }
+}

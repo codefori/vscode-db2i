@@ -1,13 +1,13 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import vscode from "vscode"
-import schemaBrowser from "./views/schemaBrowser/schemaBrowser";
+import schemaBrowser from "./views/schemaBrowser";
 
 import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
-import { loadBase } from "./base";
-import { JobManager, setupConfig } from "./config";
+import { getInstance, loadBase } from "./base";
+import { JobManager, onConnectOrServerInstall, initConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { languageInit } from "./language";
@@ -17,6 +17,9 @@ import { ServerComponent } from "./connection/serverComponent";
 import { SQLJobManager } from "./connection/manager";
 import { JDBCOptions } from "./connection/types";
 import { SQLJob } from "./connection/sqlJob";
+import { notebookInit } from "./notebooks/IBMiSerializer";
+import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
+import Configuration from "./configuration";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -34,8 +37,12 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   loadBase();
 
+  const exampleBrowser = new ExampleBrowser(context);
+  const selfCodesView = new selfCodesResultsView(context);
+
   context.subscriptions.push(
     ...languageInit(),
+    ...notebookInit(),
     ServerComponent.initOutputChannel(),
     vscode.window.registerTreeDataProvider(
       `jobManager`,
@@ -51,20 +58,39 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     ),
     vscode.window.registerTreeDataProvider(
       `exampleBrowser`,
-      new ExampleBrowser(context)
+      exampleBrowser
     ),
+    vscode.window.registerTreeDataProvider(
+      'vscode-db2i.self.nodes',
+      selfCodesView
+    ),
+    vscode.window.registerFileDecorationProvider(
+      new SelfTreeDecorationProvider()
+    ) 
   );
 
   JSONServices.initialise(context);
   resultsProvider.initialise(context);
 
-  setupConfig(context);
+  initConfig(context);
 
   console.log(`Developer environment: ${process.env.DEV}`);
   if (process.env.DEV) {
     // Run tests if not in production build
     initialise(context);
   }
+
+  const instance = getInstance();
+
+  instance.onEvent(`connected`, () => {
+    selfCodesView.setRefreshEnabled(false);
+    selfCodesView.setJobOnly(false);
+    // Refresh the examples when we have it, so we only display certain examples
+    onConnectOrServerInstall().then(() => {
+      exampleBrowser.refresh();
+      selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false)
+    });
+  });
 
   return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new SQLJob(options) };
 }

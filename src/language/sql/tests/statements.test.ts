@@ -252,6 +252,9 @@ describe(`Object references`, () => {
 
     const statement = document.statements[0];
 
+    expect(statement.tokens[10].type).toBe(`join`);
+    expect(statement.tokens[10].value).toBe(`LEFT OUTER JOIN`);
+
     const refs = statement.getObjectReferences();
     expect(refs.length).toBe(2);
 
@@ -984,9 +987,10 @@ describe(`PL body tests`, () => {
     expect(medianResultSetProc.type).toBe(StatementType.Create);
     expect(medianResultSetProc.isBlockOpener()).toBe(true);
 
+
     const parameterTokens = medianResultSetProc.getBlockAt(46);
     expect(parameterTokens.length).toBeGreaterThan(0);
-    expect(parameterTokens.map(t => t.type).join()).toBe([`word`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join())
+    expect(parameterTokens.map(t => t.type).join()).toBe([`word`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join());
 
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);
@@ -997,6 +1001,11 @@ describe(`PL body tests`, () => {
     const callStatement = statements[statements.length - 1];
     expect(callStatement.type).toBe(StatementType.Call);
     expect(callStatement.isBlockOpener()).toBe(false);
+
+    const blockParent = callStatement.getCallableDetail(callStatement.tokens[3].range.start);
+    expect(blockParent).toBeDefined();
+    expect(blockParent.tokens.length).toBe(3);
+    expect(blockParent.parentRef.object.name).toBe(`MEDIAN_RESULT_SET`);
   });
 
   test(`WITH: no explicit columns`, () => {
@@ -1046,9 +1055,10 @@ describe(`PL body tests`, () => {
     expect(ctes[2].name).toBe(`Temp03`);
     expect(ctes[2].columns.length).toBe(0);
     const temp03Stmt = ctes[2].statement.getObjectReferences();
-    expect(temp03Stmt.length).toBe(2);
+    expect(temp03Stmt.length).toBe(3);
     expect(temp03Stmt[0].object.name).toBe(`Temp01`);
     expect(temp03Stmt[1].object.name).toBe(`Temp02`);
+    expect(temp03Stmt[2].object.name).toBe(`customers`);
   })
 
   test(`WITH: explicit columns`, () => {
@@ -1254,6 +1264,17 @@ describe(`Parameter statement tests`, () => {
     expect(markerRanges.length).toBe(2);
   });
 
+  test('JSON_OBJECT parameters should not mark as embedded', () => {
+    const document = new Document(`values json_object('model_id': 'meta-llama/llama-2-13b-chat', 'input': 'TEXT', 'parameters': json_object('max_new_tokens': 100, 'time_limit': 1000), 'space_id': 'SPACEID')`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(0);
+  });
+
   test(`Single questionmark parameter content test`, () => {
     const sql = `select * from sample where x = ?`;
     const document = new Document(sql);
@@ -1425,4 +1446,69 @@ describe(`Parameter statement tests`, () => {
     expect(result.parameterCount).toBe(0);
     expect(result.content).toBe(content);
   });
+});
+
+describe(`Prefix tests`, () => {
+  test('CL prefix', () => {
+    const content = [
+      `-- example`,
+      `bar: SELECT A.AUTHORIZATION_NAME as label, SUM(A.STORAGE_USED) AS TOTAL_STORAGE_USED`,
+      `  FROM QSYS2.USER_STORAGE A `,
+      `  INNER JOIN QSYS2.USER_INFO B ON B.USER_NAME = A.AUTHORIZATION_NAME WHERE B.USER_NAME NOT LIKE 'Q%' `,
+      `  GROUP BY A.AUTHORIZATION_NAME, B.TEXT_DESCRIPTION, B.ACCOUNTING_CODE, B.MAXIMUM_ALLOWED_STORAGE`,
+      `  ORDER BY TOTAL_STORAGE_USED DESC FETCH FIRST 10 ROWS ONLY`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    expect(statement.type).toBe(StatementType.Select);
+  });
+});
+
+test(`Callable blocks`, () => {
+  const lines = [
+      `call qsys2.create_abcd();`,
+      `call qsys2.create_abcd(a, cool(a + b));`,
+  ].join(` `);
+
+  const document = new Document(lines);
+  const statements = document.statements;
+
+  expect(statements.length).toBe(2);
+
+  const a = statements[0];
+  expect(a.type).toBe(StatementType.Call);
+
+  const b = statements[1];
+  expect(b.type).toBe(StatementType.Call);
+
+  const blockA = a.getBlockRangeAt(23);
+  expect(blockA).toMatchObject({ start: 5, end: 5 });
+
+  const callableA = a.getCallableDetail(23);
+  expect(callableA).toBeDefined();
+  expect(callableA.parentRef.object.schema).toBe(`qsys2`);
+  expect(callableA.parentRef.object.name).toBe(`create_abcd`);
+
+  const blockB = a.getBlockRangeAt(24);
+  expect(blockB).toMatchObject({ start: 5, end: 5 });
+
+  const callableB = a.getCallableDetail(24);
+  expect(callableB).toBeDefined();
+  expect(callableB.parentRef.object.schema).toBe(`qsys2`);
+  expect(callableB.parentRef.object.name).toBe(`create_abcd`);
+
+  const blockC = b.getBlockRangeAt(49);
+  expect(blockC).toMatchObject({ start: 5, end: 13 });
+
+  const callableC = b.getCallableDetail(49, true);
+  expect(callableC).toBeDefined();
+  expect(callableC.tokens.length).toBe(4);
+  expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
+  expect(callableC.parentRef.object.schema).toBe(`qsys2`);
+  expect(callableC.parentRef.object.name).toBe(`create_abcd`);
 });
