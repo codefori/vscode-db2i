@@ -585,8 +585,13 @@ function getLocalDefs(sqlDoc: Document, offset: number) {
           }
         }
 
-        // We only want to add local variables if we're inside the current group
+        // When our cursor is in the current statement..
         if (inGroupRange) {
+          // Show parameters to the routine
+          const localParams = statement.getRoutineParameters();
+          items.push(...localParams.map(param => createCompletionItem(param.alias, CompletionItemKind.Property, param.createType)));
+
+          // Show all the local definitions
           for (let i = 1; i < groupStatements.length; i++) {
             const subStatement = groupStatements[i];
             if (subStatement.type === StatementType.Declare) {
