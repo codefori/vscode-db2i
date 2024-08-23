@@ -79,7 +79,12 @@ export class Variables implements TreeDataProvider<any> {
         if (!fetchStatement) {
           fetchStatement = await window.showInputBox({
             placeHolder: `schema.variableName`,
-            title: `Enter an existing variable name`
+            title: `Enter an existing variable name`,
+            validateInput: (value) => {
+              if (value.includes(` `)) {
+                return `Variable or data structure path cannot contain spaces.`;
+              }
+            }
           });
         }
 
