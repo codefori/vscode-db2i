@@ -1,4 +1,4 @@
-import { TreeDataProvider, TreeItem, ExtensionContext, commands, workspace, window, TreeItemCollapsibleState, EventEmitter, Event, MarkdownString, ThemeIcon } from "vscode";
+import { TreeDataProvider, TreeItem, ExtensionContext, commands, workspace, window, TreeItemCollapsibleState, EventEmitter, Event, MarkdownString, ThemeIcon, FileDecoration, ThemeColor, Uri } from "vscode";
 import { getServiceInfo } from "../../database/serviceInfo";
 import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
 import { SQLExample, Examples, ServiceInfoLabel } from "../examples";
@@ -19,8 +19,17 @@ export class Variables implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
   readonly onDidChangeTreeData: Event<TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
-  private currentSuggestion: Variable|undefined
+  private currentSuggestion: Variable|undefined;
+  private previousValues: {[key: string]: string} = {};
   private variables: Variable[] = [];
+
+  private cacheNewValue(name: string, value: string) {
+    this.previousValues[name] = value;
+  }
+
+  private valueHasChanged(name: string, newValue: string): boolean {
+    return this.previousValues[name] !== newValue;
+  }
 
   constructor(context: ExtensionContext) {
     context.subscriptions.push(
@@ -72,7 +81,8 @@ export class Variables implements TreeDataProvider<any> {
           }
         }
       }),
-      commands.registerCommand(`vscode-db2i.variables.refresh`, () => this.refresh())
+      commands.registerCommand(`vscode-db2i.variables.refresh`, () => this.refresh()),
+      window.registerFileDecorationProvider(new VariableDecorationProvider())
     );
   }
 
@@ -122,8 +132,14 @@ export class Variables implements TreeDataProvider<any> {
           const labels = Object.keys(firstRow);
 
           variableResults.push(...labels.map((label, index) => {
+            const value = String(firstRow[label]);
+            const justChanged = this.valueHasChanged(label, value);
+            
+            this.cacheNewValue(label, value);
+
             return new VariableTreeItem(label, {
-              value: String(firstRow[label])
+              value,
+              justChanged
             });
           }));
         }
@@ -160,8 +176,10 @@ export class Variables implements TreeDataProvider<any> {
   }
 }
 
+const VARIABLE_CHANGED_SCHEMA = `variableValueChanged`;
+
 class VariableTreeItem extends TreeItem {
-  constructor(variable: string, detail: {error?: boolean, value?: string}) {
+  constructor(variable: string, detail: {error?: boolean, value?: string, justChanged?: boolean}) {
     super(variable, TreeItemCollapsibleState.None);
     this.contextValue = `sqlVarValue`;
 
@@ -170,12 +188,23 @@ class VariableTreeItem extends TreeItem {
     }
 
     if (detail.value) {
+      this.label += `:`;
       this.description = detail.value;
 
       const hover = new MarkdownString();
       hover.appendCodeblock(detail.value);
-      this.tooltip = hover;
       this.iconPath = new ThemeIcon(`symbol-variable`);
+
+      if (detail.justChanged) {
+        this.resourceUri = Uri.from({
+          scheme: VARIABLE_CHANGED_SCHEMA,
+          path: `/.`,
+        });
+        
+        hover.appendMarkdown(`\n\n---\n\nValue changed`);
+      }
+
+      this.tooltip = hover;
     }
 
     if (detail.error) {
@@ -210,5 +239,19 @@ class VariableSuggestion extends TreeItem {
       title: `Add suggestion`,
       arguments: [variable]
     }
+  }
+}
+
+class VariableDecorationProvider implements VariableDecorationProvider {
+  provideFileDecoration(uri: Uri): FileDecoration | undefined {
+    switch (uri.scheme) {
+      case VARIABLE_CHANGED_SCHEMA:
+        return {
+          // color: new ThemeColor(`debugView.valueChangedHighlight`),
+          badge: `☀️`,
+        }
+    }
+
+    return;
   }
 }
