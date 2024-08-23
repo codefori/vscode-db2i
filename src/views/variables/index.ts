@@ -24,8 +24,8 @@ export class Variables implements TreeDataProvider<any> {
 
   constructor(context: ExtensionContext) {
     context.subscriptions.push(
-      commands.registerCommand(`vscode-db2i.variables.addSuggestion`, () => {
-        if (this.currentSuggestion) {
+      commands.registerCommand(`vscode-db2i.variables.addSuggestion`, (suggestion: Variable) => {
+        if (suggestion) {
           this.variables.push(this.currentSuggestion);
           this.currentSuggestion = undefined;
           this.refresh();
@@ -200,14 +200,15 @@ class VariableSuggestion extends TreeItem {
   constructor(variable: Variable) {
     super(variable.label, TreeItemCollapsibleState.None);
     this.contextValue = `sqlVarSuggestion`;
-    this.description = `Suggested based on executed statements`;
+    this.description = `(click to add)`;
     this.tooltip = new MarkdownString();
     this.tooltip.appendCodeblock(variable.statement, `sql`);
-    this.iconPath = new ThemeIcon(`add`);
+    this.iconPath = new ThemeIcon(`lightbulb`);
 
     this.command = {
       command: `vscode-db2i.variables.addSuggestion`,
       title: `Add suggestion`,
+      arguments: [variable]
     }
   }
 }
