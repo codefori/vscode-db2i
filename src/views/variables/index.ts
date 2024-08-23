@@ -4,7 +4,7 @@ import { JobManager } from "../../config";
 import Statement from "../../database/statement";
 import { Config } from "../../config";
 
-type VariableType = "sqlVariable"|"sqlStatement"|"dataarea";
+type VariableType = "sqlVariable" | "sqlStatement" | "dataarea";
 
 interface Variable {
   type: VariableType,
@@ -12,14 +12,16 @@ interface Variable {
   statement: string;
 }
 
+type VariableValues = { [key: string]: string };
+
 const NEW_VARIABLE_VALUE = `*new`;
 
 export class Variables implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
   readonly onDidChangeTreeData: Event<TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
-  private currentSuggestion: Variable|undefined;
-  private previousValues: {[key: string]: string} = {};
+  private currentSuggestion: Variable | undefined;
+  private previousValues: VariableValues = {};
   private variables: Variable[] = [];
 
   private cacheNewValue(name: string, value: string) {
@@ -71,7 +73,7 @@ export class Variables implements TreeDataProvider<any> {
       commands.registerCommand(`vscode-db2i.variables.add`, async (object?: SQLObject) => {
         let fetchStatement;
         let type: VariableType = `sqlVariable`;
-        
+
         if (object && object.type === `variable`) {
           fetchStatement = Statement.delimName(object.schema) + `.` + Statement.delimName(object.name);
         }
@@ -155,65 +157,62 @@ export class Variables implements TreeDataProvider<any> {
 
   async getChildren(element?: VariableTreeItem): Promise<TreeItem[]> {
     let variableResults: TreeItem[] = [];
-    try {
-      if (this.variables.length > 0) {
-        const sql = this.buildStatement();
-        const results = await JobManager.runSQL(sql);
+    if (this.variables.length > 0) {
+      const results = await Promise.all(this.variables.map(async variable => {
+        const statement = this.buildVariableStatement(variable);
+        try {
+          const result = await JobManager.runSQL(statement);
 
-        if (results.length === 1) {
-          const firstRow = results[0];
-          const labels = Object.keys(firstRow);
+          if (result.length === 1) {
+            const keys = Object.keys(result[0]);
+            if (keys.length === 1) {
+              const value = String(result[0][keys[0]]);
+              const justChanged = this.valueHasChanged(variable.label, value);
+              this.cacheNewValue(variable.label, value);
 
-          variableResults.push(...labels.map((label, index) => {
-            const value = String(firstRow[label]);
-            const justChanged = this.valueHasChanged(label, value);
-            
-            this.cacheNewValue(label, value);
+              return new VariableTreeItem(variable.label, {
+                value,
+                justChanged
+              });
 
-            return new VariableTreeItem(label, {
-              value,
-              justChanged
-            });
-          }));
+            } else {
+              return new VariableTreeItem(variable.label, {error: `Too many columns returned`});
+            }
+
+          } else {
+            return new VariableTreeItem(variable.label, {error: `Too many rows returned`});
+          }
+        } catch (e) {
+          return new VariableTreeItem(variable.label, {error: e.message});
         }
-      }
+      }));
 
-      if (this.currentSuggestion) {
-        variableResults.push(new VariableSuggestion(this.currentSuggestion));
-      }
-    } catch (e) {
-      variableResults.push(new VariableTreeItemError(e.message));
-      variableResults.push(...this.variables.map(variable => 
-        new VariableTreeItem(variable.label, {
-          error: true
-        })
-      ));
+      variableResults = results;
+    }
+
+    if (this.currentSuggestion) {
+      variableResults.push(new VariableSuggestion(this.currentSuggestion));
     }
 
     return variableResults;
   }
 
-  private buildStatement(): string {
-    return `select ${this.variables.map(variable => {
-      switch (variable.type) {
-        case `sqlVariable`:
-        case `sqlStatement`:
-          return `(${variable.statement}) as "${variable.label}"`;
-        case `dataarea`:
-          const parts = variable.statement.split(`/`);
-          if (parts.length !== 2) {
-            return `'invalid name' as "${variable.label}"`;
-          }
-          return `(select DATA_AREA_VALUE from table(qsys2.data_area_info(data_area_library => '${parts[0].toUpperCase()}', data_area_name => '${parts[1].toUpperCase()}'))) as "${variable.label}"`
-      }
-    }).join(`, `)} from sysibm.sysdummy1`;
+  private buildVariableStatement(variable: Variable): string {
+    switch (variable.type) {
+      case `sqlVariable`:
+      case `sqlStatement`:
+        return `values (${variable.statement})`;
+      case `dataarea`:
+        const parts = variable.statement.split(`/`);
+        return `select DATA_AREA_VALUE from table(qsys2.data_area_info(data_area_library => '${parts[0].toUpperCase()}', data_area_name => '${parts[1].toUpperCase()}'))`;
+    }
   }
 }
 
 const VARIABLE_CHANGED_SCHEMA = `variableValueChanged`;
 
 class VariableTreeItem extends TreeItem {
-  constructor(public readonly variableName: string, detail: {error?: boolean, value?: string, justChanged?: boolean}) {
+  constructor(public readonly variableName: string, detail: { error?: string, value?: string, justChanged?: boolean }) {
     super(variableName, TreeItemCollapsibleState.None);
     this.contextValue = `sqlVarValue`;
 
@@ -243,19 +242,12 @@ class VariableTreeItem extends TreeItem {
 
     if (detail.error) {
       this.iconPath = new ThemeIcon(`error`);
+      this.description = detail.error;
     }
 
     if (!detail.value && !detail.error) {
       this.iconPath = new ThemeIcon(`question`);
     }
-  }
-}
-
-class VariableTreeItemError extends TreeItem {
-  constructor(label: string) {
-    super(label, TreeItemCollapsibleState.None);
-    this.contextValue = `sqlVarValueError`;
-    this.iconPath = new ThemeIcon(`warning`);
   }
 }
 
