@@ -90,8 +90,11 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   const instance = getInstance();
 
-  instance.onEvent(`connected`, () => {
+  instance.onEvent(`disconnected`, () => {
     variablesView.clear();
+  })
+
+  instance.onEvent(`connected`, () => {
     selfCodesView.setRefreshEnabled(false);
     selfCodesView.setJobOnly(false);
     // Refresh the examples when we have it, so we only display certain examples
