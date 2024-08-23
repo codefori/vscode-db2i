@@ -49,6 +49,9 @@ export class Variables implements TreeDataProvider<any> {
   }
 
   private addVariable(variable: Variable) {
+    const alreadyExists = this.variables.some(v => v.statement === variable.statement || v.label === variable.label);
+    if (alreadyExists) return;
+
     this.variables.push(variable);
     this.cacheNewValue(variable.label, NEW_VARIABLE_VALUE);
     this.saveVariables();
@@ -131,6 +134,9 @@ export class Variables implements TreeDataProvider<any> {
   }
 
   setSuggestion(sqlStatement: string) {
+    const alreadyExists = this.variables.some(v => v.statement === sqlStatement);
+    if (alreadyExists) return;
+    
     let possibleName = sqlStatement;
     const upperStatement = sqlStatement.toUpperCase();
     const fromIndex = upperStatement.indexOf(`FROM`);
