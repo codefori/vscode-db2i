@@ -1,7 +1,6 @@
 import vscode, { MarkdownString, ThemeIcon, TreeItem, window, workspace } from "vscode";
 import { TreeDataProvider } from "vscode";
 import { Config } from "../../config";
-import { QueryHistoryItem } from "../../Storage";
 
 const openSqlDocumentCommand = `vscode-db2i.openSqlDocument`;
 

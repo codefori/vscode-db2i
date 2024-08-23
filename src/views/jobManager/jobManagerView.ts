@@ -304,6 +304,11 @@ export class JobManagerView implements TreeDataProvider<any> {
     commands.executeCommand(`setContext`, `vscode-db2i:jobManager.hasJob`, selectedJob !== undefined);
   }
 
+  async endSession() {
+    await JobManager.endAll();
+    this.refresh();
+  }
+
   getTreeItem(element: vscode.TreeItem) {
     return element;
   }

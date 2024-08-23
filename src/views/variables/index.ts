@@ -1,19 +1,18 @@
 import { TreeDataProvider, TreeItem, ExtensionContext, commands, workspace, window, TreeItemCollapsibleState, EventEmitter, Event, MarkdownString, ThemeIcon, FileDecoration, ThemeColor, Uri } from "vscode";
-import { getServiceInfo } from "../../database/serviceInfo";
-import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
-import { SQLExample, Examples, ServiceInfoLabel } from "../examples";
 import { SQLObject } from "../schemaBrowser";
-import ColumnTreeItem from "../types/ColumnTreeItem";
 import { JobManager } from "../../config";
 import Statement from "../../database/statement";
+import { Config } from "../../config";
 
-type VariableType = "sql"|"dataarea";
+type VariableType = "sqlVariable"|"sqlStatement"|"dataarea";
 
 interface Variable {
   type: VariableType,
   label: string;
   statement: string;
 }
+
+const NEW_VARIABLE_VALUE = `*new`;
 
 export class Variables implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
@@ -28,21 +27,50 @@ export class Variables implements TreeDataProvider<any> {
   }
 
   private valueHasChanged(name: string, newValue: string): boolean {
-    return this.previousValues[name] !== newValue;
+    return this.previousValues[name] !== newValue && newValue !== NEW_VARIABLE_VALUE;
+  }
+
+  public loadVariables() {
+    this.variables = Config.getVariables();
+    this.previousValues = {};
+  }
+
+  private removeVariable(variableName: string) {
+    const index = this.variables.findIndex(v => v.label === variableName);
+
+    if (index !== -1) {
+      this.variables.splice(index, 1);
+      this.previousValues[variableName] = undefined;
+      this.refresh();
+      this.saveVariables();
+    }
+  }
+
+  private addVariable(variable: Variable) {
+    this.variables.push(variable);
+    this.cacheNewValue(variable.label, NEW_VARIABLE_VALUE);
+    this.saveVariables();
+    this.refresh();
+  };
+
+  private saveVariables() {
+    const savableVariables = this.variables.filter(v => [`sqlVariable`, `dataarea`].includes(v.type));
+    return Config.setVariables(savableVariables);
   }
 
   constructor(context: ExtensionContext) {
     context.subscriptions.push(
       commands.registerCommand(`vscode-db2i.variables.addSuggestion`, (suggestion: Variable) => {
         if (suggestion) {
-          this.variables.push(this.currentSuggestion);
+          const newVar = this.currentSuggestion;
           this.currentSuggestion = undefined;
-          this.refresh();
+          this.addVariable(newVar);
         }
       }),
 
       commands.registerCommand(`vscode-db2i.variables.add`, async (object?: SQLObject) => {
         let fetchStatement;
+        let type: VariableType = `sqlVariable`;
         
         if (object && object.type === `variable`) {
           fetchStatement = Statement.delimName(object.schema) + `.` + Statement.delimName(object.name);
@@ -56,32 +84,26 @@ export class Variables implements TreeDataProvider<any> {
         }
 
         if (fetchStatement) {
-          let type: VariableType = `sql`;
-
           if (fetchStatement.length < 21 && fetchStatement.includes(`/`)) {
             type = `dataarea`;
           }
 
-          this.variables.push({
+          this.addVariable({
             type,
             label: fetchStatement,
             statement: fetchStatement
           });
 
           this.focus();
-          this.refresh();
         }
       }),
-      commands.registerCommand(`vscode-db2i.variables.remove`, async (variable?: Variable) => {
-        if (variable) {
-          const index = this.variables.findIndex(v => v.label === variable.label);
 
-          if (index !== -1) {
-            this.variables.splice(index, 1);
-            this.refresh();
-          }
+      commands.registerCommand(`vscode-db2i.variables.remove`, async (variable?: VariableTreeItem) => {
+        if (variable) {
+          this.removeVariable(variable.variableName);
         }
       }),
+
       commands.registerCommand(`vscode-db2i.variables.refresh`, () => this.refresh()),
       window.registerFileDecorationProvider(new VariableDecorationProvider())
     );
@@ -114,7 +136,7 @@ export class Variables implements TreeDataProvider<any> {
     }
 
     this.currentSuggestion = {
-      type: `sql`,
+      type: `sqlStatement`,
       label: possibleName,
       statement: sqlStatement
     };
@@ -169,7 +191,8 @@ export class Variables implements TreeDataProvider<any> {
   private buildStatement(): string {
     return `select ${this.variables.map(variable => {
       switch (variable.type) {
-        case `sql`:
+        case `sqlVariable`:
+        case `sqlStatement`:
           return `(${variable.statement}) as "${variable.label}"`;
         case `dataarea`:
           const parts = variable.statement.split(`/`);
@@ -185,8 +208,8 @@ export class Variables implements TreeDataProvider<any> {
 const VARIABLE_CHANGED_SCHEMA = `variableValueChanged`;
 
 class VariableTreeItem extends TreeItem {
-  constructor(variable: string, detail: {error?: boolean, value?: string, justChanged?: boolean}) {
-    super(variable, TreeItemCollapsibleState.None);
+  constructor(public readonly variableName: string, detail: {error?: boolean, value?: string, justChanged?: boolean}) {
+    super(variableName, TreeItemCollapsibleState.None);
     this.contextValue = `sqlVarValue`;
 
     if (detail.value !== undefined && detail.value === ``) {

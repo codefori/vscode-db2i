@@ -1,7 +1,8 @@
 import vscode from 'vscode';
 
 const QUERIES_KEY = `queries`;
-const SERVERCOMPONENT_KEY = `serverVersion`
+const SERVERCOMPONENT_KEY = `serverVersion`;
+const VARIABLES_KEY = `variables`;
 
 export interface QueryHistoryItem {
   query: string;
@@ -29,7 +30,7 @@ abstract class Storage {
 }
 
 export class ConnectionStorage extends Storage {
-  private connectionName: string = "";
+  private connectionName: string|undefined;
   constructor(context: vscode.ExtensionContext) {
     super(context);
   }
@@ -43,11 +44,12 @@ export class ConnectionStorage extends Storage {
     }
   }
 
-  setConnectionName(connectionName: string) {
+  setConnectionName(connectionName?: string) {
     this.connectionName = connectionName;
   }
 
   protected getStorageKey(key: string): string {
+    if (!this.connectionName) throw new Error(`Connection name not set. Accessing config too early.`);
     return `${this.connectionName}.${key}`;
   }
 
@@ -85,4 +87,11 @@ export class ConnectionStorage extends Storage {
     await this.set(QUERIES_KEY, sourceList);
   }
 
+  async setVariables<T>(variables: T[]) {
+    await this.set(VARIABLES_KEY, variables);
+  }
+
+  getVariables<T>(): T[] | undefined {
+    return this.get<T[]>(VARIABLES_KEY) || [];
+  }
 }
