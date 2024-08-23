@@ -68,6 +68,7 @@ export class Variables implements TreeDataProvider<any> {
             statement: fetchStatement
           });
 
+          this.focus();
           this.refresh();
         }
       }),
@@ -88,7 +89,12 @@ export class Variables implements TreeDataProvider<any> {
 
   clear() {
     this.variables = [];
+    this.previousValues = {};
     this.refresh();
+  }
+
+  focus() {
+    return commands.executeCommand(`vscode-db2i.variables.focus`);
   }
 
   refresh() {
@@ -200,7 +206,7 @@ class VariableTreeItem extends TreeItem {
           scheme: VARIABLE_CHANGED_SCHEMA,
           path: `/.`,
         });
-        
+
         hover.appendMarkdown(`\n\n---\n\nValue changed`);
       }
 
