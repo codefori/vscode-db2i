@@ -1,10 +1,49 @@
 
 import { getInstance } from "../base";
 import Configuration from "../configuration";
+import { JobManager } from "../config";
 
 import {format, FormatOptionsWithLanguage, IdentifierCase, KeywordCase} from "sql-formatter"
 
+interface SqlError {
+  CURSTMTLENGTH: number;
+  ERRORFIRSTCOLUMNNUMBER: number;
+  ERRORFIRSTRECORDNUMBER: number;
+  ERRORLASTCOLUMNNUMBER: number;
+  ERRORLASTRECORDNUMBER: number;
+  ERRORREPLACEMENTTEXT: string;
+  ERRORSQLMESSAGEID: string;
+  ERRORSQLSTATE: string;
+  ERRORSYNTAXCOLUMNNUMBER: number;
+  ERRORSYNTAXRECORDNUMBER: number;
+  MESSAGEFILELIBRARY: string;
+  MESSAGEFILENAME: string;
+  MESSAGETEXT: string;
+  NUMBEROFSTATEMENTSBACK: number;
+}
+
 export default class Statement {
+  static async validateSQL(sql: string) {
+    const [result] = await JobManager.runSQL<SqlError>(`select * from table(liama.validate_statement(?)) x`, {parameters: [sql]});
+    if (!result) return;
+    if (result.ERRORSQLSTATE === `00000`) return;
+
+    // const possibleSeperator = result.ERRORREPLACEMENTTEXT.split('').find(c => c.charCodeAt(0) >= 128 && c.charCodeAt(0) <= 159);
+    // const replaceTokens = result.ERRORREPLACEMENTTEXT.split(String.fromCharCode(3));
+
+    // let text = result.MESSAGETEXT;
+    // replaceTokens.forEach((token, index) => {
+    //   text = text.replace(`&${index+1}`, token);
+    // });
+
+    return {
+      sqlid: result.ERRORSQLMESSAGEID,
+      sqlstate: result.ERRORSQLSTATE,
+      text: result.MESSAGETEXT,
+      offset: result.ERRORSYNTAXCOLUMNNUMBER,
+    };
+  }
+
   static format(sql: string, options: FormatOptionsWithLanguage = {}) {
     const identifierCase: IdentifierCase = <IdentifierCase>(Configuration.get(`sqlFormat.identifierCase`) || `preserve`);
     const keywordCase: KeywordCase = <KeywordCase>(Configuration.get(`sqlFormat.keywordCase`) || `lower`);

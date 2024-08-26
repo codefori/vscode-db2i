@@ -1,6 +1,7 @@
 import { completionProvider } from "./providers/completionProvider";
 import { formatProvider } from "./providers/formatProvider";
 import { signatureProvider } from "./providers/parameterProvider";
+import { problemProvider } from "./providers/problemProvider";
 
 export function languageInit() {
   let functionality = [];
@@ -8,7 +9,8 @@ export function languageInit() {
   functionality.push(
     completionProvider,
     formatProvider,
-    signatureProvider
+    signatureProvider,
+    problemProvider
   );
   
   return functionality;
