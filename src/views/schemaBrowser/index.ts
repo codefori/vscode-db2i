@@ -374,7 +374,7 @@ export default class schemaBrowser {
       })
     )
 
-    getInstance().onEvent(`connected`, () => this.clearCacheAndRefresh());
+    getInstance().subscribe(context, `connected`, `db2i-clearCacheAndRefresh`, () => this.clearCacheAndRefresh());
   }
 
   clearCacheAndRefresh() {
