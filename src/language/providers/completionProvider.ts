@@ -13,10 +13,10 @@ import { CTEReference, CallableReference, ClauseType, ObjectRef, StatementType }
 import CompletionItemCache, { changedCache } from "./completionItemCache";
 import Callable, { CallableType } from "../../database/callable";
 import { ServerComponent } from "../../connection/serverComponent";
-import { env } from "process";
 import { prepareParamType, createCompletionItem, getParmAttributes, completionItemCache } from "./completion";
 import { isCallableType, getCallableParameters } from "./callable";
 import { variable } from "sql-formatter/lib/src/lexer/regexFactory";
+import { localAssistIsEnabled, remoteAssistIsEnabled } from "./available";
 
 export interface CompletionType {
   order: string;
@@ -58,10 +58,6 @@ const completionTypes: { [index: string]: CompletionType } = {
   }
 };
 
-
-function isEnabled() {
-  return (env.DB2I_DISABLE_CA !== `true`);
-}
 
 
 function getColumnAttributes(column: TableColumn): string {
@@ -613,7 +609,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
   `sql`,
   {
     async provideCompletionItems(document, position, token, context) {
-      if (isEnabled()) {
+      if (localAssistIsEnabled()) {
         const trigger = context.triggerCharacter;
         const content = document.getText();
         const offset = document.offsetAt(position);
@@ -627,7 +623,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
           allItems.push(...getLocalDefs(sqlDoc, offset))
         }
 
-        if (ServerComponent.isInstalled() && currentStatement) {
+        if (remoteAssistIsEnabled() && currentStatement) {
           allItems.push(...await getCompletionItems(trigger, currentStatement, offset))
         }
 
