@@ -111,7 +111,8 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
                       job_name, user_name, reason_code, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, message_text, message_second_level_text,
                       program_library, program_name, program_type, module_name, client_applname, client_programid, initial_stack
                     FROM qsys2.sql_error_log, lateral (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
-                    where user_name = current_user ${onlySelected ? `and job_name = '${selected.job.id}'` : ``}
+                    where user_name = current_user 
+                    and ${onlySelected ? `job_name = '${selected.job.id}'` : `LOGGED_TIME >= (select JOB_ENTERED_SYSTEM_TIME from table(qsys2.active_job_info('NO', job_name_filter => '*', detailed_info => 'WORK')) x) `}
                     order by logged_time desc`;
 
     try {
