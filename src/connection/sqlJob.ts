@@ -104,15 +104,19 @@ export class SQLJob {
         stream.stdout.on(`data`, (data: Buffer) => {
           outString += String(data);
           if (outString.endsWith(`\n`)) {
-            let thisMsg = outString;
-            outString = ``;
-            if (this.isTracingChannelData) ServerComponent.writeOutput(thisMsg);
-            try {
-              let response: ReqRespFmt = JSON.parse(thisMsg);
-              this.responseEmitter.emit(response.id, thisMsg);
-            } catch (e: any) {
-              console.log(`Error: ` + e);
+            for (const thisMsg of outString.split(`\n`)) {
+              if (thisMsg === ``) continue;
+              
               outString = ``;
+              if (this.isTracingChannelData) ServerComponent.writeOutput(thisMsg);
+              try {
+                let response: ReqRespFmt = JSON.parse(thisMsg);
+                this.responseEmitter.emit(response.id, thisMsg);
+              } catch (e: any) {
+                console.log(`Error: ` + e);
+                console.log(`Data: ` + thisMsg);
+                outString = ``;
+              }
             }
           }
         });
