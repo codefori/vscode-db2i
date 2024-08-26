@@ -135,24 +135,24 @@ export class Variables implements TreeDataProvider<any> {
 
   setSuggestion(sqlStatement: string) {
     const alreadyExists = this.variables.some(v => v.statement === sqlStatement);
-    if (alreadyExists) return;
-    
-    let possibleName = sqlStatement;
-    const upperStatement = sqlStatement.toUpperCase();
-    const fromIndex = upperStatement.indexOf(`FROM`);
-    if (fromIndex >= 0) {
-      possibleName = sqlStatement.substring(fromIndex + 4).trim();
-    }
+    if (!alreadyExists) {
+      let possibleName = sqlStatement;
+      const upperStatement = sqlStatement.toUpperCase();
+      const fromIndex = upperStatement.indexOf(`FROM`);
+      if (fromIndex >= 0) {
+        possibleName = sqlStatement.substring(fromIndex + 4).trim();
+      }
 
-    if (upperStatement.includes(`COUNT(`)) {
-      possibleName = `Count ${possibleName}`;
-    }
+      if (upperStatement.includes(`COUNT(`)) {
+        possibleName = `Count ${possibleName}`;
+      }
 
-    this.currentSuggestion = {
-      type: `sqlStatement`,
-      label: possibleName,
-      statement: sqlStatement
-    };
+      this.currentSuggestion = {
+        type: `sqlStatement`,
+        label: possibleName,
+        statement: sqlStatement
+      };
+    }
 
     this.refresh();
   }
