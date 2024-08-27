@@ -3,16 +3,17 @@ import { getInstance } from "../base";
 
 import { JobManager } from "../config";
 
-export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types";
+export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types" | "logicals";
 type PageData = { filter?: string, offset?: number, limit?: number };
 
 const typeMap = {
   'tables': [`T`, `P`, `M`],
   'views': [`V`],
-  'aliases': [`A`]
+  'aliases': [`A`],
+  'logicals': [`L`],
 };
 
-export const AllSQLTypes: SQLType[] = ["tables", "views", "aliases", "constraints", "functions", "variables", "indexes", "procedures", "sequences", "packages", "triggers", "types"];
+export const AllSQLTypes: SQLType[] = ["tables", "views", "aliases", "constraints", "functions", "variables", "indexes", "procedures", "sequences", "packages", "triggers", "types", "logicals"];
 
 export const SQL_ESCAPE_CHAR = `\\`;
 
@@ -74,6 +75,7 @@ export default class Schemas {
         case `tables`:
         case `views`:
         case `aliases`:
+        case `logicals`:
           filter = getFilterClause(`TABLE_NAME`, details.filter);
           selects.push([
             `select '${type}' as OBJ_TYPE, TABLE_NAME as NAME, TABLE_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, BASE_TABLE_SCHEMA as BASE_SCHEMA, BASE_TABLE_NAME as BASE_OBJ`,

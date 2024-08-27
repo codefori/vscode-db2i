@@ -24,7 +24,8 @@ const viewItem = {
   "sequences": `sequence`,
   "packages": `package`,
   "triggers": `trigger`,
-  "types": `type`
+  "types": `type`,
+  "logicals": `logical`
 }
 
 const itemIcons = {
@@ -36,7 +37,8 @@ const itemIcons = {
   "type": `symbol-parameter`,
   "trigger": `play`,
   "variable": `symbol-value`,
-  "index": `list-tree`
+  "index": `list-tree`,
+  "logical": `symbol-interface`
 }
 
 export default class schemaBrowser {
@@ -606,6 +608,7 @@ const getSchemaItems = (schema) => {
     new SchemaItem(`Aliases`, `aliases`, schema, `symbol-reference`),
     //new SchemaItem(`Column Masks`, `masks`, schema),
     //new SchemaItem(`Constraints`, `constraints`, schema),
+    new SchemaItem(`Logicals`, `logicals`, schema, `telescope`),
     new SchemaItem(`Functions`, `functions`, schema, `symbol-function`),
     new SchemaItem(`Global Variables`, `variables`, schema, `symbol-variable`),
     new SchemaItem(`Indexes`, `indexes`, schema, `tag`),
