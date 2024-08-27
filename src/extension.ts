@@ -11,7 +11,7 @@ import { JobManager, onConnectOrServerInstall, initConfig, Config } from "./conf
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { languageInit } from "./language";
-import { initialise } from "./testing";
+import { initialiseTestSuite } from "./testing";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { ServerComponent } from "./connection/serverComponent";
 import { SQLJobManager } from "./connection/manager";
@@ -86,9 +86,11 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   initConfig(context);
 
   console.log(`Developer environment: ${process.env.DEV}`);
-  if (process.env.DEV) {
+  const devMode = process.env.DEV !== undefined;
+  let runTests: Function|undefined;
+  if (devMode) {
     // Run tests if not in production build
-    initialise(context);
+    runTests = initialiseTestSuite(context);
   }
 
   instance.onEvent(`disconnected`, () => {
@@ -97,9 +99,8 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     Config.setConnectionName(undefined);
   });
 
-  instance.onEvent(`connected`, () => {
+  instance.subscribe(context, `connected`, `db2i-connected`, () => {
     Config.setConnectionName(instance.getConnection().currentConnectionName);
-
     selfCodesView.setRefreshEnabled(false);
     selfCodesView.setJobOnly(false);
     // Refresh the examples when we have it, so we only display certain examples
@@ -107,6 +108,10 @@ export function activate(context: vscode.ExtensionContext): Db2i {
       exampleBrowser.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
       variablesView.loadVariables();
+
+      if (devMode && runTests) {
+        runTests();
+      }
     });
   });
 

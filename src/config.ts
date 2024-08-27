@@ -67,7 +67,7 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
 export function initConfig(context: ExtensionContext) {
   Config = new ConnectionStorage(context);
 
-  getInstance().onEvent(`disconnected`, async () => {
+  getInstance().subscribe(context, `disconnected`, `db2i-disconnect`, async () => {
     JobManagerView.setVisible(false);
     JobManager.endAll();
     updateStatusBar();
