@@ -10,7 +10,7 @@ import Table from "../../database/table";
 import Document from "../sql/document";
 import * as LanguageStatement from "../sql/statement";
 import { CTEReference, CallableReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
-import CompletionItemCache, { changedCache } from "./completionItemCache";
+import CompletionItemCache, { changedCache, toKey } from "./completionItemCache";
 import Callable, { CallableType } from "../../database/callable";
 import { ServerComponent } from "../../connection/serverComponent";
 import { prepareParamType, createCompletionItem, getParmAttributes, completionItemCache } from "./completion";
@@ -91,10 +91,11 @@ async function getObjectColumns(
   isUDTF = false
 ): Promise<CompletionItem[]> {
 
-  const databaseObj = (schema + name).toUpperCase();
-  const tableUpdate: boolean = changedCache.delete(databaseObj);
+  const cacheKey = toKey(`columns`, schema + name)
+  const tableUpdate: boolean = changedCache.delete(cacheKey);
+  const isCached = completionItemCache.has(cacheKey);
 
-  if (!completionItemCache.has(databaseObj) || tableUpdate) {
+  if (!isCached || tableUpdate) {
     schema = Statement.noQuotes(Statement.delimName(schema, true));
     name = Statement.noQuotes(Statement.delimName(name, true));
 
@@ -104,7 +105,7 @@ async function getObjectColumns(
       const resultSet = await Callable.getResultColumns(schema, name, true);
       
       if (!resultSet?.length ? true : false) {
-        completionItemCache.set(databaseObj, []);
+        completionItemCache.set(cacheKey, []);
         return [];
       }
       
@@ -122,7 +123,7 @@ async function getObjectColumns(
       const columns = await Table.getItems(schema, name);
 
       if (!columns?.length ? true : false) {
-        completionItemCache.set(databaseObj, []);
+        completionItemCache.set(cacheKey, []);
         return [];
       }
 
@@ -139,9 +140,10 @@ async function getObjectColumns(
     
     const allCols = getAllColumns(name, schema, completionItems);
     completionItems.push(allCols);
-    completionItemCache.set(databaseObj, completionItems);
+    completionItemCache.set(cacheKey, completionItems);
   }
-  return completionItemCache.get(databaseObj);
+
+  return completionItemCache.get(cacheKey);
 }
 
 /**
@@ -172,6 +174,7 @@ async function getObjectCompletions(
       .filter((result) => result.status == "fulfilled")
       .map((result) => (result as PromiseFulfilledResult<any>).value)
       .flat();
+
     completionItemCache.set(forSchema, list);
   }
   return completionItemCache.get(forSchema);
