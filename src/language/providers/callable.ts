@@ -26,12 +26,10 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
 
     if (callableRoutine) {
       const parms = await Callable.getSignaturesFor(ref.object.schema, callableRoutine.specificNames);
-      console.log(`Set: ${cacheKey}, length: ${parms.length}`);
       completionItemCache.set(cacheKey, parms);
       return true;
     } else {
       // Not callable, let's just cache it as empty to stop spamming the db
-      console.log(`Set: ${cacheKey}, length: 0`);
       completionItemCache.set(cacheKey, []);
     }
   }

@@ -93,10 +93,9 @@ async function getObjectColumns(
 
   const cacheKey = toKey(`columns`, schema + name)
   const tableUpdate: boolean = changedCache.delete(cacheKey);
-  const cached = completionItemCache.get(cacheKey);
   const isCached = completionItemCache.has(cacheKey);
 
-  if (cached === undefined || tableUpdate) {
+  if (!isCached || tableUpdate) {
     schema = Statement.noQuotes(Statement.delimName(schema, true));
     name = Statement.noQuotes(Statement.delimName(name, true));
 
@@ -106,7 +105,6 @@ async function getObjectColumns(
       const resultSet = await Callable.getResultColumns(schema, name, true);
       
       if (!resultSet?.length ? true : false) {
-        console.log(`Set: ${cacheKey}, length: ${resultSet.length}`);
         completionItemCache.set(cacheKey, []);
         return [];
       }
@@ -125,7 +123,6 @@ async function getObjectColumns(
       const columns = await Table.getItems(schema, name);
 
       if (!columns?.length ? true : false) {
-        console.log(`Set: ${cacheKey}, length: ${columns.length}`);
         completionItemCache.set(cacheKey, []);
         return [];
       }
@@ -143,9 +140,9 @@ async function getObjectColumns(
     
     const allCols = getAllColumns(name, schema, completionItems);
     completionItems.push(allCols);
-    console.log(`Set: ${cacheKey}, length: ${completionItems.length}`);
     completionItemCache.set(cacheKey, completionItems);
   }
+
   return completionItemCache.get(cacheKey);
 }
 
@@ -178,7 +175,6 @@ async function getObjectCompletions(
       .map((result) => (result as PromiseFulfilledResult<any>).value)
       .flat();
 
-    console.log(`Set: ${forSchema}, length: ${list.length}`);
     completionItemCache.set(forSchema, list);
   }
   return completionItemCache.get(forSchema);
