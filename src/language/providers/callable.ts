@@ -3,6 +3,9 @@ import Callable, { CallableSignature, CallableType } from "../../database/callab
 import { ObjectRef, QualifiedObject, CallableReference } from "../sql/types";
 import Statement from "../../database/statement";
 import { completionItemCache, createCompletionItem, getParmAttributes } from "./completion";
+import { toKey } from "./completionItemCache";
+
+const SIGNATURE_CONTEXT_KEY = `sigs`;
 
 /**
  * Checks if the ref exists as a procedure or function. Then,
@@ -13,7 +16,7 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
     ref.object.schema = Statement.noQuotes(Statement.delimName(ref.object.schema, true));
     ref.object.name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
 
-    const cacheKey = toCacheKey(ref.object);
+    const cacheKey = toKey(SIGNATURE_CONTEXT_KEY, ref.object);
 
     if (completionItemCache.has(cacheKey)) {
       return true;
@@ -23,10 +26,12 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
 
     if (callableRoutine) {
       const parms = await Callable.getSignaturesFor(ref.object.schema, callableRoutine.specificNames);
+      console.log(`Set: ${cacheKey}, length: ${parms.length}`);
       completionItemCache.set(cacheKey, parms);
       return true;
     } else {
       // Not callable, let's just cache it as empty to stop spamming the db
+      console.log(`Set: ${cacheKey}, length: 0`);
       completionItemCache.set(cacheKey, []);
     }
   }
@@ -149,12 +154,8 @@ export function getPositionData(ref: CallableReference, offset: number) {
 }
 
 export function getCachedSignatures(ref: CallableReference): CallableSignature[] | undefined {
-  const key = toCacheKey(ref.parentRef.object);
+  const key = toKey(SIGNATURE_CONTEXT_KEY, ref.parentRef.object);
   if (completionItemCache.has(key)) {
     return completionItemCache.get(key);
   }
-}
-
-function toCacheKey(sqlObj: QualifiedObject): string {
-  return sqlObj.schema + sqlObj.name;
 }
