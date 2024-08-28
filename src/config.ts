@@ -14,7 +14,6 @@ export let Config: ConnectionStorage;
 export let osDetail: IBMiDetail;
 export let JobManager: SQLJobManager = new SQLJobManager();
 
-
 export async function onConnectOrServerInstall(): Promise<boolean> {
   const instance = getInstance();
 
@@ -87,6 +86,17 @@ export async function askAboutNewJob(startup?: boolean): Promise<boolean> {
   const connection = instance.getConnection();
 
   if (connection) {
+
+    // Wait for the job manager to finish creating jobs if one is not selected
+    while (JobManager.getSelection() === undefined && JobManager.isCreatingJob()) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // If a job is created or already selected, don't ask
+    if (JobManager.getSelection()) {
+      return true;
+    }
+
     const options = startup ? [`Yes`, `Always`, `No`, `Never`] : [`Yes`, `No`];
 
     const chosen = await window.showInformationMessage(`Would you like to start an SQL Job?`, ...options);

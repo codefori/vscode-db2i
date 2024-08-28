@@ -19,6 +19,7 @@ export class SQLJobManager {
   private totalJobs = 0;
   private jobs: JobInfo[] = [];
   selectedJob: number = NO_SELECTED_JOB;
+  private creatingJobs: number = 0;
 
   constructor() { }
 
@@ -39,6 +40,7 @@ export class SQLJobManager {
       }));
 
       try {
+        this.creatingJobs += 1;
         await newJob.connect();
 
         if (osDetail) {
@@ -59,8 +61,14 @@ export class SQLJobManager {
         this.selectedJob = this.jobs.length - 1;
       } catch (e: any) {
         throw e;
+      } finally {
+        this.creatingJobs -= 1;
       }
     }
+  }
+
+  isCreatingJob() {
+    return this.creatingJobs > 0;
   }
 
   getRunningJobs() {
