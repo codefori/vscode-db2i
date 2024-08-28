@@ -5,6 +5,7 @@ import {
 import Statement from "../../database/statement";
 import Document from "../sql/document";
 import { env } from "process";
+import { remoteAssistIsEnabled } from "./available";
 
 export interface CompletionType {
   order: string;
@@ -13,16 +14,12 @@ export interface CompletionType {
   icon: CompletionItemKind;
 }
 
-function isEnabled() {
-  return (env.DB2I_DISABLE_CA !== `true`);
-}
-
 let currentTimeout: NodeJS.Timeout;
 let sqlDiagnosticCollection = languages.createDiagnosticCollection(`db2i-sql`);
 
 export const problemProvider = workspace.onDidChangeTextDocument(e => {
   const isSql = e.document.languageId === `sql`;
-  if (isEnabled() && isSql) {
+  if (isSql && remoteAssistIsEnabled()) {
     if (currentTimeout) {
       clearTimeout(currentTimeout);
     }
@@ -36,7 +33,7 @@ export const problemProvider = workspace.onDidChangeTextDocument(e => {
         const offset = document.offsetAt(position);
 
         const sqlDoc = new Document(content);
-        const currentStatement = sqlDoc.getStatementByOffset(offset);
+        const currentStatement = sqlDoc.getGroupByOffset(offset);
 
         if (currentStatement) {
           const statementContents = document.getText(new Range(
@@ -46,13 +43,18 @@ export const problemProvider = workspace.onDidChangeTextDocument(e => {
 
           const result = await Statement.validateSQL(statementContents);
           if (result) {
+
+            const selectedWord 
+              = document.getWordRangeAtPosition(document.positionAt(currentStatement.range.start+result.offset)) 
+              || new Range(
+                document.positionAt(currentStatement.range.start+result.offset-1),
+                document.positionAt(currentStatement.range.start+result.offset)
+              );
+
             sqlDiagnosticCollection.set(document.uri, [{
               message: `${result.text} - ${result.sqlstate}`,
               code: result.sqlid,
-              range: new Range(
-                document.positionAt(currentStatement.range.start+result.offset-1),
-                document.positionAt(currentStatement.range.start+result.offset)
-              ),
+              range: selectedWord,
               severity: DiagnosticSeverity.Error,
             }]);
           } else {
