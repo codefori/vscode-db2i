@@ -7,7 +7,7 @@ import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
 import { getInstance, loadBase } from "./base";
-import { JobManager, onConnectOrServerInstall, initConfig } from "./config";
+import { JobManager, onConnectOrServerInstall, initConfig, Config } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { languageInit } from "./language";
@@ -20,6 +20,7 @@ import { SQLJob } from "./connection/sqlJob";
 import { notebookInit } from "./notebooks/IBMiSerializer";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import Configuration from "./configuration";
+import { Variables } from "./views/variables";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -28,6 +29,7 @@ export interface Db2i {
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
+export let variablesView: Variables;
 
 export function activate(context: vscode.ExtensionContext): Db2i {
   
@@ -37,8 +39,13 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   loadBase();
 
+  const instance = getInstance();
+
   const exampleBrowser = new ExampleBrowser(context);
   const selfCodesView = new selfCodesResultsView(context);
+  const jobManagerView =  new JobManagerView(context);
+
+  variablesView = new Variables(context);
 
   context.subscriptions.push(
     ...languageInit(),
@@ -46,7 +53,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     ServerComponent.initOutputChannel(),
     vscode.window.registerTreeDataProvider(
       `jobManager`,
-      new JobManagerView(context)
+      jobManagerView
     ),
     vscode.window.registerTreeDataProvider(
       `schemaBrowser`,
@@ -63,6 +70,10 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     vscode.window.registerTreeDataProvider(
       'vscode-db2i.self.nodes',
       selfCodesView
+    ),
+    vscode.window.registerTreeDataProvider(
+      'vscode-db2i.variables',
+      variablesView
     ),
     vscode.window.registerFileDecorationProvider(
       new SelfTreeDecorationProvider()
@@ -82,15 +93,21 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     runTests = initialiseTestSuite(context);
   }
 
-  const instance = getInstance();
+  instance.onEvent(`disconnected`, () => {
+    jobManagerView.endSession();
+    variablesView.clear();
+    Config.setConnectionName(undefined);
+  });
 
   instance.subscribe(context, `connected`, `db2i-connected`, () => {
+    Config.setConnectionName(instance.getConnection().currentConnectionName);
     selfCodesView.setRefreshEnabled(false);
     selfCodesView.setJobOnly(false);
     // Refresh the examples when we have it, so we only display certain examples
     onConnectOrServerInstall().then(() => {
       exampleBrowser.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
+      variablesView.loadVariables();
 
       if (devMode && runTests) {
         runTests();

@@ -18,8 +18,6 @@ export let JobManager: SQLJobManager = new SQLJobManager();
 export async function onConnectOrServerInstall(): Promise<boolean> {
   const instance = getInstance();
 
-  Config.setConnectionName(instance.getConnection().currentConnectionName);
-
   await Config.fixPastQueries();
 
   osDetail = new IBMiDetail();

@@ -71,10 +71,6 @@ export class ServerComponent {
       return false;
     }
 
-    if (!Config.ready) {
-      Config.setConnectionName(connection.currentConnectionName);
-    }
-
     if (!this.installed) {
       this.installed = await this.isAlreadyInstalled();
     }
