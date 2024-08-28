@@ -28,20 +28,52 @@ export default class Statement {
     if (!result) return;
     if (result.ERRORSQLSTATE === `00000`) return;
 
-    // const possibleSeperator = result.ERRORREPLACEMENTTEXT.split('').find(c => c.charCodeAt(0) >= 128 && c.charCodeAt(0) <= 159);
-    // const replaceTokens = result.ERRORREPLACEMENTTEXT.split(String.fromCharCode(3));
+    const replaceTokens = this.splitReplaceText(result.ERRORREPLACEMENTTEXT)
 
-    // let text = result.MESSAGETEXT;
-    // replaceTokens.forEach((token, index) => {
-    //   text = text.replace(`&${index+1}`, token);
-    // });
+    let text = result.MESSAGETEXT;
+    replaceTokens.forEach((token, index) => {
+      text = text.replace(`&${index+1}`, token);
+    });
 
     return {
       sqlid: result.ERRORSQLMESSAGEID,
       sqlstate: result.ERRORSQLSTATE,
-      text: result.MESSAGETEXT,
+      text,
       offset: result.ERRORSYNTAXCOLUMNNUMBER,
     };
+  }
+
+  private static splitReplaceText(input: string) {
+    const firstGoodChar = input.split('').findIndex(c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126);
+
+    let replacements: string[] = [];    
+    let inReplacement = false;
+    let currentReplacement = ``;
+
+    for (let i = firstGoodChar; i < input.length; i++) {
+      const isGoodChar = input.charCodeAt(i) >= 32 && input.charCodeAt(i) <= 126;
+
+      if (isGoodChar) {
+        inReplacement = true;
+
+        if (inReplacement) {
+          currentReplacement += input[i];
+        }
+      } else {
+        if (inReplacement) {
+          replacements.push(currentReplacement);
+          currentReplacement = ``;
+        }
+        
+        inReplacement = false;
+      }
+    }
+
+    if (currentReplacement) {
+      replacements.push(currentReplacement);
+    }
+
+    return replacements;
   }
 
   static format(sql: string, options: FormatOptionsWithLanguage = {}) {
