@@ -5,14 +5,14 @@ import { getCachedSignatures, getCallableParameters, getPositionData, isCallable
 import { getParmAttributes, prepareParamType } from "./completion";
 import { CallableType } from "../../database/callable";
 import { StatementType } from "../sql/types";
-import { ServerComponent } from "../../connection/serverComponent";
+import { remoteAssistIsEnabled } from "./available";
 
 export const signatureProvider = languages.registerSignatureHelpProvider({ language: `sql` }, {
   async provideSignatureHelp(document, position, token, context) {
     const content = document.getText();
     const offset = document.offsetAt(position);
 
-    if (ServerComponent.isInstalled()) {
+    if (remoteAssistIsEnabled()) {
 
       const sqlDoc = new Document(content);
       const currentStatement = sqlDoc.getStatementByOffset(offset);
