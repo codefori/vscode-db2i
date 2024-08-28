@@ -21,6 +21,11 @@
             "description": "Saved configs for",
             "default": {},
             "additionalProperties": true
+          },
+          "vscode-db2i.syntaxCheckInterval": {
+            "type": "number",
+            "description": "Time between editing (ms) and sending a request to syntax check on the server",
+            "default": 1500
           }
         }
       },
