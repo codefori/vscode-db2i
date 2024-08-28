@@ -6,6 +6,7 @@ import Statement from "../../database/statement";
 import Document from "../sql/document";
 import { env } from "process";
 import { remoteAssistIsEnabled } from "./available";
+import Configuration from "../../configuration";
 
 export interface CompletionType {
   order: string;
@@ -16,6 +17,10 @@ export interface CompletionType {
 
 let currentTimeout: NodeJS.Timeout;
 let sqlDiagnosticCollection = languages.createDiagnosticCollection(`db2i-sql`);
+
+function getTimeout() {
+  return (Configuration.get<number>(`syntaxCheckInterval`) || 1500);
+}
 
 export const problemProvider = workspace.onDidChangeTextDocument(e => {
   const isSql = e.document.languageId === `sql`;
@@ -62,6 +67,6 @@ export const problemProvider = workspace.onDidChangeTextDocument(e => {
           }
         }
       }
-    }, 1500);
+    }, getTimeout());
   }
 });
