@@ -39,6 +39,14 @@ export default class SQLTokeniser {
       becomes: `statementType`,
     },
     {
+      name: `CLAUSE-ORDER`,
+      match: [
+        {type: `word`, match: (value: string) => {return value.toUpperCase() === `ORDER`}},
+        {type: `word`, match: (value: string) => {return value.toUpperCase() === `BY`}}
+      ],
+      becomes: `clause`,
+    },
+    {
       name: `CLAUSE`,
       match: [{ type: `word`, match: (value: string) => {
         return [`FROM`, `INTO`, `WHERE`, `HAVING`, `GROUP`, `LIMIT`, `OFFSET`, `ORDER`].includes(value.toUpperCase());

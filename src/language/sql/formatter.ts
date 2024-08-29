@@ -34,10 +34,12 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
     }
   }
 
-  return result.join(`\n`).trim();
+  return result
+    .map((line) => (line[0] === `\n` ? line.substring(1) : line))
+    .join(`\n`)
 }
 
-function formatTokens(tokensWithBlocks: Token[], options: FormatOptions, baseIndent: number = 0): string {  
+function formatTokens(tokensWithBlocks: Token[], options: FormatOptions, baseIndent: number = 0): string {
   const indent = options.tabWidth || 4;
   let newLine = `\n` + ``.padEnd(baseIndent);
   let res: string = newLine;
