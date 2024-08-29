@@ -70,13 +70,13 @@ test('Brackets', () => {
   expect(formatted).toBe(`SELECT
     *
 FROM
-    SAMPLE (
+    SAMPLE(
         RESET_STATISTICS => 'NO',
         JOB_NAME_FILTER => '*ALL',
         DETAILED_INFO => 'NONE'
-    ) 
+    )
 WHERE
-    UPPER (JOB_NAME) LIKE '%QNAVMNSRV%'
+    UPPER(JOB_NAME) LIKE '%QNAVMNSRV%'
 ORDER BY
     JOB_NAME_SHORT,
     JOB_NUMBER;`);
@@ -106,9 +106,9 @@ FROM
             THREE
         FROM
             SAMPLE2
-    ) 
+    )
 WHERE
-    UPPER (JOB_NAME) LIKE '%QNAVMNSRV%'
+    UPPER(JOB_NAME) LIKE '%QNAVMNSRV%'
 ORDER BY
     JOB_NAME_SHORT,
     JOB_NUMBER;`);
