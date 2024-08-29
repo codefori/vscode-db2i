@@ -2,17 +2,23 @@ import { assert, describe, expect, test } from 'vitest'
 import SQLTokeniser from '../tokens'
 import Document from '../document';
 import { ClauseType, StatementType } from '../types';
+import { formatSql } from '../formatter';
 
-describe(`Basic statements`, () => {
+const parserScenarios = describe.each([
+  {newDoc: (content: string) => new Document(content)},
+  {newDoc: (content: string) => new Document(formatSql(content))}
+]);
+
+parserScenarios(`Basic statements`, ({newDoc}) => {
   test('One statement, no end', () => {
-    const document = new Document(`select * from sample`);
+    const document = newDoc(`select * from sample`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(4);
   });
 
   test('One statement, with end', () => {
-    const document = new Document(`select * from sample;`);
+    const document = newDoc(`select * from sample;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].type).toBe(StatementType.Select);
@@ -20,7 +26,7 @@ describe(`Basic statements`, () => {
   });
 
   test('Two statements, one end', () => {
-    const document = new Document([
+    const document = newDoc([
       `select * from sample;`,
       `select a from b.b`
     ].join(`\n`));
@@ -34,7 +40,7 @@ describe(`Basic statements`, () => {
   });
 
   test('Two statements, both end', () => {
-    const document = new Document([
+    const document = newDoc([
       `select * from sample;`,
       `select a from b.b;`
     ].join(`\n`));
@@ -45,7 +51,7 @@ describe(`Basic statements`, () => {
   });
 
   test('Two statements, both end, with comments', () => {
-    const document = new Document([
+    const document = newDoc([
       `select * from sample; --Yep`,
       `select a from b.b; -- Nope`
     ].join(`\n`));
@@ -56,7 +62,7 @@ describe(`Basic statements`, () => {
   });
 
   test('Two statements, both end, with comments, trimmed', () => {
-    const document = new Document([
+    const document = newDoc([
       ``,
       `select * from sample; --Yep`,
       ``,
@@ -72,9 +78,9 @@ describe(`Basic statements`, () => {
   });
 });
 
-describe(`Object references`, () => {
+parserScenarios(`Object references`, ({newDoc}) => {
   test('SELECT: Simple unqualified object', () => {
-    const document = new Document(`select * from sample;`);
+    const document = newDoc(`select * from sample;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(4);
@@ -92,7 +98,7 @@ describe(`Object references`, () => {
   });
 
   test('SELECT: Simple qualified object', () => {
-    const document = new Document(`select * from myschema.sample;`);
+    const document = newDoc(`select * from myschema.sample;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(6);
@@ -110,7 +116,7 @@ describe(`Object references`, () => {
   });
 
   test('SELECT: Simple qualified object with alias', () => {
-    const document = new Document(`select * from myschema.sample as a;`);
+    const document = newDoc(`select * from myschema.sample as a;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(8);
@@ -128,7 +134,7 @@ describe(`Object references`, () => {
   });
 
   test('SELECT: Simple unqualified object with alias (no AS)', () => {
-    const document = new Document(`select * from sample a;`);
+    const document = newDoc(`select * from sample a;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(5);
@@ -146,7 +152,7 @@ describe(`Object references`, () => {
   });
 
   test('SELECT: Simple qualified object with alias (no AS)', () => {
-    const document = new Document(`select * from myschema.sample a;`);
+    const document = newDoc(`select * from myschema.sample a;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(7);
@@ -164,7 +170,7 @@ describe(`Object references`, () => {
   });
 
   test('SELECT: Simple qualified object with alias (system naming)', () => {
-    const document = new Document(`select * from myschema/sample as a;`);
+    const document = newDoc(`select * from myschema/sample as a;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(8);
@@ -192,7 +198,7 @@ describe(`Object references`, () => {
       `WHERE ORCUID = CUID`,
     ].join(`\r\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -216,7 +222,7 @@ describe(`Object references`, () => {
       `WHERE LASTNAME > 'S';`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -246,7 +252,7 @@ describe(`Object references`, () => {
       `WHERE LASTNAME > 'S'`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -279,7 +285,7 @@ describe(`Object references`, () => {
       `WHERE LASTNAME > 'S';`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -309,7 +315,7 @@ describe(`Object references`, () => {
       `WHERE LASTNAME > 'S'`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -336,7 +342,7 @@ describe(`Object references`, () => {
       `SELECT * FROM A CROSS JOIN B`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -366,7 +372,7 @@ describe(`Object references`, () => {
       `WHERE LASTNAME > 'S'`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -398,7 +404,7 @@ describe(`Object references`, () => {
       `insert into "myschema".hashtags (tag, base_talk) values('#hi', 2);`,
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(2);
 
@@ -423,7 +429,7 @@ describe(`Object references`, () => {
       `delete from talks where id > 2;`
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -441,7 +447,7 @@ describe(`Object references`, () => {
       `call create_Sql_sample('MYNEWSCHEMA');`
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -459,7 +465,7 @@ describe(`Object references`, () => {
       `call "QSYS".create_Sql_sample('MYNEWSCHEMA');`
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -480,7 +486,7 @@ describe(`Object references`, () => {
       `          ON DELETE SET NULL;`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -509,7 +515,7 @@ describe(`Object references`, () => {
       `          ON DELETE SET NULL;`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -539,7 +545,7 @@ describe(`Object references`, () => {
       `       ON DEPARTMENT (MGRNO);`,
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(2);
 
@@ -588,7 +594,7 @@ describe(`Object references`, () => {
       `       ON other.DEPARTMENT (MGRNO);`,
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(2);
 
@@ -635,7 +641,7 @@ describe(`Object references`, () => {
       `  PRIMARY KEY( COL_B ) );`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -658,7 +664,7 @@ describe(`Object references`, () => {
       `);`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -701,7 +707,7 @@ describe(`Object references`, () => {
       `  ;`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -747,7 +753,7 @@ describe(`Object references`, () => {
       `  ;`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -797,7 +803,7 @@ describe(`Object references`, () => {
       `end;`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const groups = document.getStatementGroups();
 
     expect(groups.length).toBe(1);
@@ -858,7 +864,7 @@ describe(`Object references`, () => {
       `end;`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const groups = document.getStatementGroups();
 
     expect(groups.length).toBe(1);
@@ -886,7 +892,7 @@ describe(`Object references`, () => {
       `EXTERNAL NAME LIB.PROGRAM GENERAL;`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const groups = document.getStatementGroups();
 
     expect(groups.length).toBe(1);
@@ -913,7 +919,7 @@ describe(`Object references`, () => {
   });
 
   test(`DECLARE VARIABLE`, () => {
-    const document = new Document(`declare watsonx_response   Varchar(10000) CCSID 1208;`);
+    const document = newDoc(`declare watsonx_response   Varchar(10000) CCSID 1208;`);
     const groups = document.getStatementGroups();
 
     expect(groups.length).toBe(1);
@@ -928,7 +934,7 @@ describe(`Object references`, () => {
   });
 
   test(`CREATE OR REPLACE VARIABLE`, () => {
-    const document = new Document(`create or replace variable watsonx.apiVersion varchar(10) ccsid 1208 default '2023-07-07';`);
+    const document = newDoc(`create or replace variable watsonx.apiVersion varchar(10) ccsid 1208 default '2023-07-07';`);
 
     const groups = document.getStatementGroups();
 
@@ -945,9 +951,9 @@ describe(`Object references`, () => {
   });
 });
 
-describe(`Offset reference tests`, () => {
+parserScenarios(`Offset reference tests`, ({newDoc}) => {
   test(`Writing select`, () => {
-    const document = new Document(`select * from sample.;`);
+    const document = newDoc(`select * from sample.;`);
 
     expect(document.statements.length).toBe(1);
 
@@ -960,7 +966,7 @@ describe(`Offset reference tests`, () => {
   });
 
   test(`Writing select, invalid middle`, () => {
-    const document = new Document(`select b. from department b;`);
+    const document = newDoc(`select b. from department b;`);
 
     expect(document.statements.length).toBe(1);
 
@@ -979,7 +985,7 @@ describe(`Offset reference tests`, () => {
   });
 });
 
-describe(`PL body tests`, () => {
+parserScenarios(`PL body tests`, ({newDoc}) => {
   test(`CREATE PROCEDURE: with body`, () => {
     const lines = [
       `CREATE PROCEDURE MEDIAN_RESULT_SET (OUT medianSalary DECIMAL(7,2))`,
@@ -1011,7 +1017,7 @@ describe(`PL body tests`, () => {
       `END`,
     ].join(`\r\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
 
     const medianResultSetProc = statements[0];
@@ -1072,7 +1078,7 @@ describe(`PL body tests`, () => {
       `CALL MEDIAN_RESULT_SET(12345.55);`,
     ].join(`\r\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
 
     const medianResultSetProc = statements[0];
@@ -1127,7 +1133,7 @@ describe(`PL body tests`, () => {
       `select * from Temp02`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
 
     expect(statements.length).toBe(1);
@@ -1166,7 +1172,7 @@ describe(`PL body tests`, () => {
       `select * from cteme`
     ].join(`\r\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1193,7 +1199,7 @@ describe(`PL body tests`, () => {
   test(`SELECT: table function`, () => {
     const lines = `select * from table(qsys2.mti_info());`;
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1211,7 +1217,7 @@ describe(`PL body tests`, () => {
   test(`SELECT: table function with name (no AS)`, () => {
     const lines = `select * from table(qsys2.mti_info()) x;`;
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1229,7 +1235,7 @@ describe(`PL body tests`, () => {
   test(`SELECT: table function with name (with AS)`, () => {
     const lines = `select * from table(qsys2.mti_info()) as x;`;
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1257,7 +1263,7 @@ describe(`PL body tests`, () => {
       `stop;`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(2);
 
@@ -1271,9 +1277,9 @@ describe(`PL body tests`, () => {
   })
 });
 
-describe(`Parameter statement tests`, () => {
+parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   test(`Single questionmark parameter test`, () => {
-    const document = new Document(`select * from sample where x = ?`);
+    const document = newDoc(`select * from sample where x = ?`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1284,7 +1290,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Single host parameter test`, () => {
-    const document = new Document(`select * from sample where x = :value`);
+    const document = newDoc(`select * from sample where x = :value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1295,7 +1301,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Single host qualified parameter test`, () => {
-    const document = new Document(`select * from sample where x = :struct.value`);
+    const document = newDoc(`select * from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1306,7 +1312,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Single INTO clause test`, () => {
-    const document = new Document(`select abcd into :myvar from sample where x = 1`);
+    const document = newDoc(`select abcd into :myvar from sample where x = 1`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1317,7 +1323,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Single INTO clause and host qualified parameter test`, () => {
-    const document = new Document(`select * into :myds from sample where x = :struct.value`);
+    const document = newDoc(`select * into :myds from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1328,7 +1334,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Double questionmark parameter test`, () => {
-    const document = new Document(`select * from sample where x = ? and y=?`);
+    const document = newDoc(`select * from sample where x = ? and y=?`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1339,7 +1345,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Double host parameter test`, () => {
-    const document = new Document(`select * from sample where x = :value and y=:whoop`);
+    const document = newDoc(`select * from sample where x = :value and y=:whoop`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1350,7 +1356,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Double host qualified parameter test`, () => {
-    const document = new Document(`select * from sample where x = :struct.value or y=:struct.val`);
+    const document = newDoc(`select * from sample where x = :struct.value or y=:struct.val`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1361,7 +1367,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test('JSON_OBJECT parameters should not mark as embedded', () => {
-    const document = new Document(`values json_object('model_id': 'meta-llama/llama-2-13b-chat', 'input': 'TEXT', 'parameters': json_object('max_new_tokens': 100, 'time_limit': 1000), 'space_id': 'SPACEID')`);
+    const document = newDoc(`values json_object('model_id': 'meta-llama/llama-2-13b-chat', 'input': 'TEXT', 'parameters': json_object('max_new_tokens': 100, 'time_limit': 1000), 'space_id': 'SPACEID')`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1373,7 +1379,7 @@ describe(`Parameter statement tests`, () => {
 
   test(`Single questionmark parameter content test`, () => {
     const sql = `select * from sample where x = ?`;
-    const document = new Document(sql);
+    const document = newDoc(sql);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1384,7 +1390,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Single host parameter content test`, () => {
-    const document = new Document(`select * from sample where x = :value`);
+    const document = newDoc(`select * from sample where x = :value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1395,7 +1401,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Single host qualified parameter content test`, () => {
-    const document = new Document(`select * from sample where x = :struct.value`);
+    const document = newDoc(`select * from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1406,7 +1412,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Double questionmark parameter content test`, () => {
-    const document = new Document(`select * from sample where x = ? and y=?`);
+    const document = newDoc(`select * from sample where x = ? and y=?`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1417,7 +1423,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Double host parameter content test`, () => {
-    const document = new Document(`select * from sample where x = :value and y=:whoop`);
+    const document = newDoc(`select * from sample where x = :value and y=:whoop`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1428,7 +1434,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Double host qualified parameter content test`, () => {
-    const document = new Document(`select * from sample where x = :struct.value or y=:struct.val`);
+    const document = newDoc(`select * from sample where x = :struct.value or y=:struct.val`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1439,7 +1445,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Single INTO clause content test`, () => {
-    const document = new Document(`select abcd into :myvar from sample where x = 1`);
+    const document = newDoc(`select abcd into :myvar from sample where x = 1`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1450,7 +1456,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Single INTO clause and host qualified parameter content test`, () => {
-    const document = new Document(`select * into :myds from sample where x = :struct.value`);
+    const document = newDoc(`select * into :myds from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1461,7 +1467,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Double INTO clause and single host qualified parameter content test`, () => {
-    const document = new Document(`select x,y into :myds.x,:myds.y from sample where x = :struct.value`);
+    const document = newDoc(`select x,y into :myds.x,:myds.y from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1472,7 +1478,7 @@ describe(`Parameter statement tests`, () => {
   });
 
   test(`Double INTO clause and single host qualified parameter content test`, () => {
-    const document = new Document(`Exec Sql select x,y into :myds.x,:myds.y from sample where x = :struct.value`);
+    const document = newDoc(`Exec Sql select x,y into :myds.x,:myds.y from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1490,7 +1496,7 @@ describe(`Parameter statement tests`, () => {
       `  WHERE WORKDEPT = :DEPTNO`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1508,13 +1514,13 @@ describe(`Parameter statement tests`, () => {
   test(`Exec with basic DECLARE`, () => {
     const lines = [
       `EXEC SQL`,
-      `DECLARE cursor-name SCROLL CURSOR FOR`,
-      `SELECT column-1, column-2`,
-      `  FROM table-name`,
-      `  WHERE column-1 = expression`,
+      `DECLARE cursor_name SCROLL CURSOR FOR`,
+      `SELECT column_1, column_2`,
+      `FROM table_name`,
+      `WHERE column_1 = expression`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1523,16 +1529,16 @@ describe(`Parameter statement tests`, () => {
     const result = document.removeEmbeddedAreas(statement);
     expect(result.parameterCount).toBe(0);
     expect(result.content).toBe([
-      `SELECT column-1, column-2`,
-      `  FROM table-name`,
-      `  WHERE column-1 = expression`,
+      `SELECT column_1, column_2`,
+      `FROM table_name`,
+      `WHERE column_1 = expression`,
     ].join(`\n`));
   });
 
   test(`Insert with INTO clause`, () => {
     const content = `INSERT INTO  COOLSTUFF.DLRGPSNEW (DLRID, LOCATION) SELECT ID, QSYS2.ST_POINT(GPSLON, GPSLAT) FROM COOLSTUFF.DLRGPS2`;
 
-    const document = new Document(content);
+    const document = newDoc(content);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1542,9 +1548,53 @@ describe(`Parameter statement tests`, () => {
     expect(result.parameterCount).toBe(0);
     expect(result.content).toBe(content);
   });
+
+  test(`Callable blocks`, () => {
+    const lines = [
+        `call qsys2.create_abcd();`,
+        `call qsys2.create_abcd(a, cool(a + b));`,
+    ].join(` `);
+  
+    const document = newDoc(lines);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(2);
+  
+    const a = statements[0];
+    expect(a.type).toBe(StatementType.Call);
+  
+    const b = statements[1];
+    expect(b.type).toBe(StatementType.Call);
+  
+    const blockA = a.getBlockRangeAt(23);
+    expect(blockA).toMatchObject({ start: 5, end: 5 });
+  
+    const callableA = a.getCallableDetail(23);
+    expect(callableA).toBeDefined();
+    expect(callableA.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableA.parentRef.object.name).toBe(`create_abcd`);
+  
+    const blockB = a.getBlockRangeAt(24);
+    expect(blockB).toMatchObject({ start: 5, end: 5 });
+  
+    const callableB = a.getCallableDetail(24);
+    expect(callableB).toBeDefined();
+    expect(callableB.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableB.parentRef.object.name).toBe(`create_abcd`);
+  
+    const blockC = b.getBlockRangeAt(49);
+    expect(blockC).toMatchObject({ start: 5, end: 13 });
+  
+    const callableC = b.getCallableDetail(49, true);
+    expect(callableC).toBeDefined();
+    expect(callableC.tokens.length).toBe(4);
+    expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
+    expect(callableC.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableC.parentRef.object.name).toBe(`create_abcd`);
+  });
 });
 
-describe(`Prefix tests`, () => {
+parserScenarios(`Prefix tests`, ({newDoc}) => {
   test('CL prefix', () => {
     const content = [
       `-- example`,
@@ -1555,7 +1605,7 @@ describe(`Prefix tests`, () => {
       `  ORDER BY TOTAL_STORAGE_USED DESC FETCH FIRST 10 ROWS ONLY`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1563,48 +1613,4 @@ describe(`Prefix tests`, () => {
 
     expect(statement.type).toBe(StatementType.Select);
   });
-});
-
-test(`Callable blocks`, () => {
-  const lines = [
-      `call qsys2.create_abcd();`,
-      `call qsys2.create_abcd(a, cool(a + b));`,
-  ].join(` `);
-
-  const document = new Document(lines);
-  const statements = document.statements;
-
-  expect(statements.length).toBe(2);
-
-  const a = statements[0];
-  expect(a.type).toBe(StatementType.Call);
-
-  const b = statements[1];
-  expect(b.type).toBe(StatementType.Call);
-
-  const blockA = a.getBlockRangeAt(23);
-  expect(blockA).toMatchObject({ start: 5, end: 5 });
-
-  const callableA = a.getCallableDetail(23);
-  expect(callableA).toBeDefined();
-  expect(callableA.parentRef.object.schema).toBe(`qsys2`);
-  expect(callableA.parentRef.object.name).toBe(`create_abcd`);
-
-  const blockB = a.getBlockRangeAt(24);
-  expect(blockB).toMatchObject({ start: 5, end: 5 });
-
-  const callableB = a.getCallableDetail(24);
-  expect(callableB).toBeDefined();
-  expect(callableB.parentRef.object.schema).toBe(`qsys2`);
-  expect(callableB.parentRef.object.name).toBe(`create_abcd`);
-
-  const blockC = b.getBlockRangeAt(49);
-  expect(blockC).toMatchObject({ start: 5, end: 13 });
-
-  const callableC = b.getCallableDetail(49, true);
-  expect(callableC).toBeDefined();
-  expect(callableC.tokens.length).toBe(4);
-  expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
-  expect(callableC.parentRef.object.schema).toBe(`qsys2`);
-  expect(callableC.parentRef.object.name).toBe(`create_abcd`);
 });
