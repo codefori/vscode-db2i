@@ -2,7 +2,7 @@ import { TextDocument } from "vscode";
 import Document from "./document";
 import { StatementGroup, Token } from "./types";
 import { stat } from "fs";
-import { isToken } from "typescript";
+import { IndexKind, isToken } from "typescript";
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
 
@@ -57,10 +57,11 @@ function formatTokens(tokensWithBlocks: Token[], options: FormatOptions, baseInd
         if (cT.block) {
           const hasClauseOrStatement = tokenIs(cT.block[0], `statementType`);
           const commaCount = cT.block.filter(t => tokenIs(t, `comma`)).length;
+          const containsSubBlock = cT.block.some(t => t.type === `block`);
           if (cT.block.length === 1) {
             res += `(${cT.block![0].value})`;
 
-          } else if (hasClauseOrStatement) {
+          } else if (hasClauseOrStatement || containsSubBlock) {
             res += ` (`;
             res += formatTokens(cT.block!, {...options, newLineLists: options.newLineLists}, baseIndent + indent);
             res += `${newLine})`;
