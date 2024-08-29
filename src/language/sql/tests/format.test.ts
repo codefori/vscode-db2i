@@ -6,17 +6,15 @@ import { FormatOptions, formatSql } from '../formatter';
 const optionsUpper: FormatOptions = {
   useTabs: false,
   tabWidth: 4,
-  identifierCase: 'upper',
   keywordCase: 'upper',
-  addSemiColon:  true
+  newLineLists: true
 }
 
 const optionsLower: FormatOptions = {
   useTabs: false,
   tabWidth: 4,
-  identifierCase: 'lower',
   keywordCase: 'lower',
-  addSemiColon:  true
+  newLineLists: true
 }
 
 

@@ -3,128 +3,112 @@ import Document from "./document";
 import { StatementGroup, Token } from "./types";
 import { stat } from "fs";
 import { isToken } from "typescript";
+import Statement from "./statement";
+import SQLTokeniser from "./tokens";
 
 
 export declare type KeywordCase = `preserve` | `upper` | `lower`;
 export declare type IdentifierCase = `preserve` | `upper` | `lower`;
 export interface FormatOptions {
-  useTabs: boolean;
-  tabWidth: number; // Defaults to 4 
-  identifierCase: IdentifierCase;
-  keywordCase: KeywordCase;
-  addSemiColon: boolean;
+  useTabs?: boolean;
+  tabWidth?: number; // Defaults to 4
+  keywordCase?: KeywordCase;
+  newLineLists?: boolean;
 }
 
-export function formatSql(textDocument: string, options?: FormatOptions, indentCounter: number = 1, isSubGroup: boolean = false): string {
-  let result: string = ``;
+export function formatSql(textDocument: string, options: FormatOptions = {}): string {
+  let result: string[] = [];
   let document = new Document(textDocument);
-  let subGroup: string = ``;
-  let inSubGroup: boolean = false;
-  let subGroupOptions: FormatOptions = {...options};
-  subGroupOptions.addSemiColon = false;
-  let isSingleton = false;
-  let prevToken: Token|undefined = undefined;
-  let prefixSpaceAdded = true;
-  let numOpenBrackets = 0;
-  const originalIndent = indentCounter;
   const statementGroups: StatementGroup[] = document.getStatementGroups();
 
   for (const statementGroup of statementGroups) {
-    for (const statement of statementGroup.statements) {
-      if (statement.tokens.length == 1) {
-        result += statement.tokens[0].value;
-        isSingleton = true;
-        continue;
-      } else if (isSubGroup) {
-        result +=  `\n` + indent(options, indentCounter);
-      }
+    const hasBody = statementGroup.statements.length > 1;
+    for (let i = 0; i < statementGroup.statements.length; i++) {
+      const statement = statementGroup.statements[i];
+      const blockStartEnd = statement.isBlockOpener() || statement.isBlockEnder();
+      const withBlocks = SQLTokeniser.createBlocks(statement.tokens);
+      const startingIndent = hasBody ? (blockStartEnd ? 0 : 4) : 0;
 
-      for (const token of statement.tokens) {        
-        if (tokenIs(token, `closebracket`)) {
-          subGroup += `)`;
-          if (numOpenBrackets == 1) {
-            inSubGroup = false;
-            result += formatSql(subGroup, subGroupOptions, indentCounter, true);
-            indentCounter--;
-            result += `)`;
-          } 
-          numOpenBrackets--;
-          prevToken = token;
-          prefixSpaceAdded = true;
-          continue;
-        }
-
-        if (inSubGroup) {
-          subGroup += ` ` + token.value;
-          prevToken = token;
-          continue;
-        }
-
-        if (tokenIs(prevToken, `closebracket`)) {
-          result += ` `;
-        }
-
-        // If this is an ORDER BY, we need format differently
-        if (tokenIs(token, `clause`, `ORDER`)) {
-          result += `\n` + transformCase(token, options?.keywordCase) + ` `; 
-          prefixSpaceAdded = false;
-        } else if (tokenIs(token, `word`, `BY`) && tokenIs(prevToken, `clause`, `ORDER`)) {
-          result += transformCase(token, options?.keywordCase) + `\n` + indent(options, indentCounter);
-          prefixSpaceAdded = true;
-        } else if (tokenIs(token, `clause`)) {
-          result += `\n`  + indent(options, indentCounter - 1) + transformCase(token, options?.keywordCase) + `\n` + indent(options, indentCounter);
-          prefixSpaceAdded = true;
-        } else if (tokenIs(token, `openbracket`)) {
-          inSubGroup = true;
-          subGroup = ``;
-          indentCounter++;
-          result += ` (`;
-          prefixSpaceAdded = false;
-          numOpenBrackets++;
-        } else if(tokenIs(token, `comma`)) {
-          result += `,\n` + indent(options, indentCounter);
-          prefixSpaceAdded = true;
-        } else if (tokenIs(token, `statementType`)) {
-          if (isSubGroup) {
-            indentCounter++;
-          }
-          result += transformCase(token, options?.keywordCase) + `\n` + indent(options, indentCounter);
-          prefixSpaceAdded = true;
-        } else if(tokenIs(token, `word`)){
-          if (!prefixSpaceAdded) {
-            result += ` `;
-          }
-          result += transformCase(token, options?.identifierCase);
-          prefixSpaceAdded = false;
-        } else if (tokenIs(token, `dot`)) {
-          result += token.value;
-          prefixSpaceAdded = true;
-        } else if (prefixSpaceAdded) {
-          result += token.value;
-          prefixSpaceAdded = false;
-        } else {
-          result += ` ` + token.value;
-          prefixSpaceAdded = false;
-        }
-
-        // We need to treat ORDER BY as one clause
-        prevToken = token;
-      }
-      if (options.addSemiColon) {
-        result += `;`;
-      } 
-      result += `\n`;
-      indentCounter = originalIndent;
+      result.push(formatTokens(withBlocks, options, startingIndent) + `;`);
     }
   }
 
-  if (isSubGroup && !isSingleton) {
-    result += indent(options, indentCounter - 1);
-  } else {
-    result = result.trimEnd();
+  return result.join(`\n`);
+}
+
+function formatTokens(tokensWithBlocks: Token[], options: FormatOptions, baseIndent: number = 0): string {  
+  const indent = options.tabWidth || 4;
+  let newLine = `\n` + ``.padEnd(baseIndent);
+  let res: string = newLine;
+
+  const updateIndent = (newIndent: number) => {
+    baseIndent += newIndent;
+    newLine = `\n` + ``.padEnd(baseIndent);
   }
 
-  return result;
+  for (let i = 0; i < tokensWithBlocks.length; i++) {
+    const cT = tokensWithBlocks[i];
+    const nT = tokensWithBlocks[i + 1];
+    const pT = tokensWithBlocks[i - 1];
+
+    switch (cT.type) {
+      case `block`:
+        if (cT.block) {
+          const hasClauseOrStatement = tokenIs(cT.block[0], `statementType`);
+          const commaCount = cT.block.filter(t => tokenIs(t, `comma`)).length;
+          if (cT.block.length === 1) {
+            res += `(${cT.block![0].value})`;
+
+          } else if (hasClauseOrStatement) {
+            res += ` (`;
+            res += formatTokens(cT.block!, {...options, newLineLists: options.newLineLists}, baseIndent + indent);
+            res += `${newLine})`;
+          } else if (commaCount >= 2) {
+            res += `(`;
+            res += formatTokens(cT.block!, {...options, newLineLists: true}, baseIndent + indent);
+            res += `${newLine})`;
+          } else {
+            res += `(${formatTokens(cT.block!, options)})`;
+          }
+        } else {
+          throw new Error(`Block token without block`);
+        }
+        break;
+      case `dot`:
+        res += cT.value;
+        break;
+      case `comma`:
+        res += cT.value;
+
+        if (options.newLineLists) {
+          res += newLine;
+        }
+        break;
+
+      default:
+        const isKeyword = (tokenIs(cT, `statementType`) || tokenIs(cT, `clause`));
+        if (isKeyword && i > 0) {
+          if (options.newLineLists) {
+            updateIndent(-indent);
+          }
+          res += newLine;
+        }
+        
+        else if (!res.endsWith(` `) && i > 0) {
+          res += ` `;
+        }
+
+        res += transformCase(cT, cT.type === `word` ? undefined : options.keywordCase);
+
+        if (options.newLineLists && isKeyword) {
+          updateIndent(indent);
+          res += newLine;
+        }
+        break;
+    }
+  }
+
+  return res;
 }
 
 const tokenIs = (token: Token|undefined, type: string, value?: string) => {
@@ -140,14 +124,3 @@ const transformCase = (token: Token|undefined, stringCase: IdentifierCase|Keywor
     return token.value;
   }
 }
-
-const indent = (options: FormatOptions, indentCounter: number) => {
-  if (indentCounter < 0) {
-    return ``;
-  } else if (options.useTabs) {
-    return `\t`.repeat(indentCounter);
-  } else {
-    return ` `.repeat(options.tabWidth * indentCounter);
-  }
-}
-
