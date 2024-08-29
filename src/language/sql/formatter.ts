@@ -7,12 +7,13 @@ import Statement from "./statement";
 import SQLTokeniser from "./tokens";
 
 
-export declare type KeywordCase = `preserve` | `upper` | `lower`;
-export declare type IdentifierCase = `preserve` | `upper` | `lower`;
+export declare type CaseOptions = `preserve` | `upper` | `lower`;
+
 export interface FormatOptions {
   useTabs?: boolean;
   tabWidth?: number; // Defaults to 4
-  keywordCase?: KeywordCase;
+  keywordCase?: CaseOptions;
+  identifierCase?: CaseOptions;
   newLineLists?: boolean;
 }
 
@@ -33,7 +34,7 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
     }
   }
 
-  return result.join(`\n`);
+  return result.join(`\n`).trim();
 }
 
 function formatTokens(tokensWithBlocks: Token[], options: FormatOptions, baseIndent: number = 0): string {  
@@ -94,11 +95,11 @@ function formatTokens(tokensWithBlocks: Token[], options: FormatOptions, baseInd
           res += newLine;
         }
         
-        else if (!res.endsWith(` `) && i > 0) {
+        else if (!res.endsWith(` `) && pT?.type !== `dot` && i > 0) {
           res += ` `;
         }
 
-        res += transformCase(cT, cT.type === `word` ? undefined : options.keywordCase);
+        res += transformCase(cT, cT.type === `word` ? options.identifierCase : options.keywordCase);
 
         if (options.newLineLists && isKeyword) {
           updateIndent(indent);
@@ -115,7 +116,7 @@ const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 	return (token && token.type === type && (value ? token.value?.toUpperCase() === value : true));
 }
 
-const transformCase = (token: Token|undefined, stringCase: IdentifierCase|KeywordCase|undefined) => {
+const transformCase = (token: Token|undefined, stringCase: CaseOptions|undefined) => {
   if (stringCase == `upper`) {
     return token.value.toUpperCase();
   } else if (stringCase == `lower`) {

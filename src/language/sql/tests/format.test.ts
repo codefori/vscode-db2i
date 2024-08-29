@@ -7,6 +7,7 @@ const optionsUpper: FormatOptions = {
   useTabs: false,
   tabWidth: 4,
   keywordCase: 'upper',
+  identifierCase: 'upper',
   newLineLists: true
 }
 
@@ -14,6 +15,7 @@ const optionsLower: FormatOptions = {
   useTabs: false,
   tabWidth: 4,
   keywordCase: 'lower',
+  identifierCase: 'lower',
   newLineLists: true
 }
 
