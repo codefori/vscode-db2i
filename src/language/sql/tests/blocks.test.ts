@@ -1,9 +1,14 @@
 
-import { assert, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import Document from '../document';
-import { StatementType } from '../types';
+import { formatSql } from '../formatter';
 
-describe(`Block statement tests`, () => {
+const parserScenarios = describe.each([
+  {newDoc: (content: string) => new Document(content)},
+  {newDoc: (content: string) => new Document(formatSql(content, {newLineLists: true}))}
+]);
+
+parserScenarios(`Block statement tests`, ({newDoc}) => {
   test('Block start tests', () => {
     const lines = [
       `CREATE ALIAS "TestDelimiters"."Delimited Alias" FOR "TestDelimiters"."Delimited Table";`,
@@ -15,7 +20,7 @@ describe(`Block statement tests`, () => {
       `LANGUAGE SQL BEGIN SET "Delimited Parameter" = 13; END;`,
     ].join(`\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     // CREATE, CREATE, RETURN, END, CREATE, SET, END
     expect(doc.statements.length).toBe(7);
@@ -53,7 +58,7 @@ describe(`Block statement tests`, () => {
       `LANGUAGE SQL BEGIN SET "Delimited Parameter" = 13; END;`,
     ].join(`\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     const t = doc.statements.length;
 
@@ -96,7 +101,9 @@ describe(`Block statement tests`, () => {
       `LANGUAGE SQL BEGIN SET "Delimited Parameter" = 13; END;`,
     ].join(`\r\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
+
+    console.log(doc.content)
 
     const groups = doc.getStatementGroups();
 
@@ -108,11 +115,12 @@ describe(`Block statement tests`, () => {
 
     const beginStatement = groups[2];
     const compoundSubstring = lines.substring(beginStatement.range.start, beginStatement.range.end);
+    console.log({compoundSubstring, len: compoundSubstring.length});
     expect(compoundSubstring).toBe(compoundStatement);
   });
 });
 
-describe(`Definition tests`, () => {
+parserScenarios(`Definition tests`, ({newDoc}) => {
   test(`Alias, function, procedure`, () => {
     const lines = [
       `CREATE ALIAS "TestDelimiters"."Delimited Alias" FOR "TestDelimiters"."Delimited Table";`,
@@ -124,7 +132,7 @@ describe(`Definition tests`, () => {
       `LANGUAGE SQL BEGIN SET "Delimited Parameter" = 13; END;`,
     ].join(`\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     const defs = doc.getDefinitions();
 
@@ -161,7 +169,7 @@ describe(`Definition tests`, () => {
       `END;`,
     ].join(`\r\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     const defs = doc.getDefinitions();
 
@@ -245,7 +253,7 @@ describe(`Definition tests`, () => {
       `END  ; `,
     ].join(`\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     const groups = doc.getStatementGroups();
     expect(groups.length).toBe(1);

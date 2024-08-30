@@ -1277,9 +1277,9 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
   })
 });
 
-parserScenarios(`Parameter statement tests`, ({newDoc}) => {
+describe(`Parameter statement tests`, () => {
   test(`Single questionmark parameter test`, () => {
-    const document = newDoc(`select * from sample where x = ?`);
+    const document = new Document(`select * from sample where x = ?`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1290,7 +1290,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Single host parameter test`, () => {
-    const document = newDoc(`select * from sample where x = :value`);
+    const document = new Document(`select * from sample where x = :value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1301,7 +1301,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Single host qualified parameter test`, () => {
-    const document = newDoc(`select * from sample where x = :struct.value`);
+    const document = new Document(`select * from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1312,7 +1312,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Single INTO clause test`, () => {
-    const document = newDoc(`select abcd into :myvar from sample where x = 1`);
+    const document = new Document(`select abcd into :myvar from sample where x = 1`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1323,7 +1323,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Single INTO clause and host qualified parameter test`, () => {
-    const document = newDoc(`select * into :myds from sample where x = :struct.value`);
+    const document = new Document(`select * into :myds from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1334,7 +1334,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Double questionmark parameter test`, () => {
-    const document = newDoc(`select * from sample where x = ? and y=?`);
+    const document = new Document(`select * from sample where x = ? and y=?`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1345,7 +1345,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Double host parameter test`, () => {
-    const document = newDoc(`select * from sample where x = :value and y=:whoop`);
+    const document = new Document(`select * from sample where x = :value and y=:whoop`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1356,7 +1356,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Double host qualified parameter test`, () => {
-    const document = newDoc(`select * from sample where x = :struct.value or y=:struct.val`);
+    const document = new Document(`select * from sample where x = :struct.value or y=:struct.val`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1367,7 +1367,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test('JSON_OBJECT parameters should not mark as embedded', () => {
-    const document = newDoc(`values json_object('model_id': 'meta-llama/llama-2-13b-chat', 'input': 'TEXT', 'parameters': json_object('max_new_tokens': 100, 'time_limit': 1000), 'space_id': 'SPACEID')`);
+    const document = new Document(`values json_object('model_id': 'meta-llama/llama-2-13b-chat', 'input': 'TEXT', 'parameters': json_object('max_new_tokens': 100, 'time_limit': 1000), 'space_id': 'SPACEID')`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1379,7 +1379,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
 
   test(`Single questionmark parameter content test`, () => {
     const sql = `select * from sample where x = ?`;
-    const document = newDoc(sql);
+    const document = new Document(sql);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1390,7 +1390,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Single host parameter content test`, () => {
-    const document = newDoc(`select * from sample where x = :value`);
+    const document = new Document(`select * from sample where x = :value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1401,7 +1401,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Single host qualified parameter content test`, () => {
-    const document = newDoc(`select * from sample where x = :struct.value`);
+    const document = new Document(`select * from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1412,7 +1412,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Double questionmark parameter content test`, () => {
-    const document = newDoc(`select * from sample where x = ? and y=?`);
+    const document = new Document(`select * from sample where x = ? and y=?`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1423,7 +1423,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Double host parameter content test`, () => {
-    const document = newDoc(`select * from sample where x = :value and y=:whoop`);
+    const document = new Document(`select * from sample where x = :value and y=:whoop`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1434,7 +1434,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Double host qualified parameter content test`, () => {
-    const document = newDoc(`select * from sample where x = :struct.value or y=:struct.val`);
+    const document = new Document(`select * from sample where x = :struct.value or y=:struct.val`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1445,7 +1445,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Single INTO clause content test`, () => {
-    const document = newDoc(`select abcd into :myvar from sample where x = 1`);
+    const document = new Document(`select abcd into :myvar from sample where x = 1`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1456,7 +1456,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Single INTO clause and host qualified parameter content test`, () => {
-    const document = newDoc(`select * into :myds from sample where x = :struct.value`);
+    const document = new Document(`select * into :myds from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1467,7 +1467,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Double INTO clause and single host qualified parameter content test`, () => {
-    const document = newDoc(`select x,y into :myds.x,:myds.y from sample where x = :struct.value`);
+    const document = new Document(`select x,y into :myds.x,:myds.y from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1478,7 +1478,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 
   test(`Double INTO clause and single host qualified parameter content test`, () => {
-    const document = newDoc(`Exec Sql select x,y into :myds.x,:myds.y from sample where x = :struct.value`);
+    const document = new Document(`Exec Sql select x,y into :myds.x,:myds.y from sample where x = :struct.value`);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1496,7 +1496,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
       `  WHERE WORKDEPT = :DEPTNO`,
     ].join(`\n`);
 
-    const document = newDoc(lines);
+    const document = new Document(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1520,7 +1520,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
       `WHERE column_1 = expression`,
     ].join(`\n`);
 
-    const document = newDoc(lines);
+    const document = new Document(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1538,7 +1538,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   test(`Insert with INTO clause`, () => {
     const content = `INSERT INTO  COOLSTUFF.DLRGPSNEW (DLRID, LOCATION) SELECT ID, QSYS2.ST_POINT(GPSLON, GPSLAT) FROM COOLSTUFF.DLRGPS2`;
 
-    const document = newDoc(content);
+    const document = new Document(content);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1555,7 +1555,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
         `call qsys2.create_abcd(a, cool(a + b));`,
     ].join(` `);
   
-    const document = newDoc(lines);
+    const document = new Document(lines);
     const statements = document.statements;
   
     expect(statements.length).toBe(2);
@@ -1594,7 +1594,7 @@ parserScenarios(`Parameter statement tests`, ({newDoc}) => {
   });
 });
 
-parserScenarios(`Prefix tests`, ({newDoc}) => {
+describe(`Prefix tests`, () => {
   test('CL prefix', () => {
     const content = [
       `-- example`,
@@ -1605,7 +1605,7 @@ parserScenarios(`Prefix tests`, ({newDoc}) => {
       `  ORDER BY TOTAL_STORAGE_USED DESC FETCH FIRST 10 ROWS ONLY`,
     ].join(`\n`);
 
-    const document = newDoc(content);
+    const document = new Document(content);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 

@@ -9,6 +9,8 @@ import SQLTokeniser from "./tokens";
 
 export declare type CaseOptions = `preserve` | `upper` | `lower`;
 
+const SINGLE_LINE_STATEMENT_TYPES = [`CREATE`, `DECLARE`, `SET`, `DELETE`];
+
 export interface FormatOptions {
   useTabs?: boolean;
   tabWidth?: number; // Defaults to 4
@@ -23,14 +25,21 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
   const statementGroups: StatementGroup[] = document.getStatementGroups();
 
   for (const statementGroup of statementGroups) {
+    let currentIndent = 0;
     const hasBody = statementGroup.statements.length > 1;
     for (let i = 0; i < statementGroup.statements.length; i++) {
       const statement = statementGroup.statements[i];
-      const blockStartEnd = statement.isBlockOpener() || statement.isBlockEnder();
       const withBlocks = SQLTokeniser.createBlocks(statement.tokens);
-      const startingIndent = hasBody ? (blockStartEnd ? 0 : 4) : 0;
 
-      result.push(formatTokens(withBlocks, options, startingIndent) + `;`);
+      if (statement.isBlockEnder()) {
+        currentIndent -= 4;
+      }
+
+      result.push(formatTokens(withBlocks, options, currentIndent) + (statement.isBlockOpener() ? `` : `;`));
+
+      if (statement.isBlockOpener()) {
+        currentIndent += 4;
+      }
     }
   }
 
@@ -104,7 +113,9 @@ function formatTokens(tokensWithBlocks: Token[], options: FormatOptions, baseInd
 
         res += transformCase(cT, cT.type === `word` ? options.identifierCase : options.keywordCase);
 
-        if (options.newLineLists && isKeyword) {
+        const isSingleLineOnly = SINGLE_LINE_STATEMENT_TYPES.some((type) => tokenIs(cT, `statementType`, type));
+
+        if (options.newLineLists && isKeyword && !isSingleLineOnly) {
           updateIndent(indent);
           res += newLine;
         }
