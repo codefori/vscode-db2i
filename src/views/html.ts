@@ -31,6 +31,10 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
     #resultset td {
       padding: 5px 15px;
     }
+
+    #resultset tbody tr:hover {
+      background-color: var(--vscode-list-hoverBackground);
+    }
     
     #resultset tbody tr {
       border-bottom: 1px solid var(--vscode-activityBar-border);

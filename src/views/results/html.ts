@@ -204,9 +204,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                   // Append a text node to the cell
                   newDiv.appendChild(document.createTextNode(cell === undefined ? 'null' : cell));
                 }
-
-                console.log({isJson, contentMightBeJson})
-
+                
                 newCell.appendChild(newDiv);
               }
             }
