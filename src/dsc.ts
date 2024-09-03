@@ -3,13 +3,13 @@ import path from "path";
 import fetch from "node-fetch";
 import { Octokit } from "octokit";
 import { writeFile } from "fs/promises";
-import { SERVER_VERSION_TAG } from "./connection/SCVersion";
+import { SERVER_VERSION_FILE, SERVER_VERSION_TAG } from "./connection/SCVersion";
 
 async function work() {
   const octokit = new Octokit();
 
-  const owner = `ThePrez`;
-  const repo = `CodeForIBMiServer`;
+  const owner = `Mapepire-IBMi`;
+  const repo = `mapepire-server`;
 
   try {
     const result = await octokit.request(`GET /repos/{owner}/{repo}/releases/tags/${SERVER_VERSION_TAG}`, {
@@ -26,9 +26,8 @@ async function work() {
       console.log(`Asset found: ${newAsset.name}`);
 
       const url = newAsset.browser_download_url;
-      const basename = newAsset.name;
 
-      const dist = path.join(`.`, `dist`, basename);
+      const dist = path.join(`.`, `dist`, SERVER_VERSION_FILE);
 
       await downloadFile(url, dist);
 
