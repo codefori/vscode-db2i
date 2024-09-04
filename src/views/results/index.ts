@@ -13,9 +13,9 @@ import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider } from "./resultSetPanelProvider";
-import { ExplainType } from "../../connection/sqlJob";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
+import { ExplainType } from "@ibm/mapepire-js/dist/src/types";
 
 export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 

@@ -2,7 +2,7 @@ import { ExtensionContext, commands, window } from "vscode";
 import { ConnectionStorage } from "./Storage";
 import { getInstance } from "./base";
 import { SQLJobManager } from "./connection/manager";
-import { ServerComponent, UpdateStatus } from "./connection/serverComponent";
+import { ServerComponent } from "./connection/serverComponent";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import Configuration from "./configuration";
 import { ConfigManager } from "./views/jobManager/ConfigManager";

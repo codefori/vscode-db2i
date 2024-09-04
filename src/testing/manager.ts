@@ -2,7 +2,7 @@ import assert from "assert";
 import { TestSuite } from ".";
 import { JobManager } from "../config";
 import { ServerComponent } from "../connection/serverComponent";
-import { JobStatus } from "../connection/sqlJob";
+import { JobStatus } from "@ibm/mapepire-js/dist/src/types";
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,

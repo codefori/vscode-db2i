@@ -6,9 +6,9 @@ import { getStatementDetail } from './statement';
 import { getInstance } from '../../base';
 
 import chartjs from 'chart.js/dist/chart.umd.js';
-import { JobStatus } from '../../connection/sqlJob';
 
 import Showdown from 'showdown';
+import { JobStatus } from '@ibm/mapepire-js/dist/src/types';
 
 const converter = new Showdown.Converter();
 
@@ -81,7 +81,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
   
                         // Execute the query
                         const query = selected.job.query(content);
-                        const results = await query.run();
+                        const results = await query.execute();
   
                         const table = results.data;
   

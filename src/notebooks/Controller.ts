@@ -6,9 +6,9 @@ import * as mdTable from 'json-to-markdown-table';
 import { getInstance } from '../base';
 import { JobManager } from '../config';
 import { ChartJsType, chartJsTypes, generateChartHTMLCell } from './logic/chartJs';
-import { JobStatus } from '../connection/sqlJob';
 import { ChartDetail, generateChart } from './logic/chart';
 import { getStatementDetail } from './logic/statement';
+import { JobStatus } from '@ibm/mapepire-js/dist/src/types';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -84,7 +84,7 @@ export class IBMiController {
 
               // Execute the query
               const query = selected.job.query(content);
-              const results = await query.run();
+              const results = await query.execute();
 
               const table = results.data;
               if (table === undefined && results.success && !results.has_results) {

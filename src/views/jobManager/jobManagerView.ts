@@ -2,8 +2,7 @@ import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, U
 import { JobManager } from "../../config";
 import { JobInfo, SQLJobManager } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";
-import { JobStatus, SQLJob, TransactionEndType } from "../../connection/sqlJob";
-import { JDBCOptions, ServerTraceDest, ServerTraceLevel } from "../../connection/types";
+import { OldSQLJob } from "../../connection/sqlJob";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
@@ -12,6 +11,7 @@ import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
 import { selfCodesResultsView } from "./selfCodes/selfCodesResultsView";
 import { setCancelButtonVisibility } from "../results";
+import { JDBCOptions, TransactionEndType, ServerTraceDest, ServerTraceLevel, JobStatus } from "@ibm/mapepire-js/dist/src/types";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -36,7 +36,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         try {
           updateStatusBar({newJob: true});
           await JobManager.newJob(
-            (options ? new SQLJob(options) : undefined), 
+            (options ? new OldSQLJob(options) : undefined), 
             name
           );
         } catch (e) {
@@ -140,7 +140,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
           try {
-            const currentSelfCodes: SelfValue = selected.job.options.selfcodes;
+            const currentSelfCodes: SelfValue = selected.job.getSelfCode();
             const selfCodeItems: SelfCodesQuickPickItem[] = selfCodesMap.map(
               (code) => new SelfCodesQuickPickItem(code)
             );

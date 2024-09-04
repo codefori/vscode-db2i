@@ -15,15 +15,15 @@ import { initialiseTestSuite } from "./testing";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { ServerComponent } from "./connection/serverComponent";
 import { SQLJobManager } from "./connection/manager";
-import { JDBCOptions } from "./connection/types";
-import { SQLJob } from "./connection/sqlJob";
+import { OldSQLJob } from "./connection/sqlJob";
 import { notebookInit } from "./notebooks/IBMiSerializer";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import Configuration from "./configuration";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
-  sqlJob: (options?: JDBCOptions) => SQLJob
+  sqlJob: (options?: JDBCOptions) => OldSQLJob
 }
 
 // this method is called when your extension is activated
@@ -98,7 +98,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     });
   });
 
-  return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new SQLJob(options) };
+  return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new OldSQLJob(options) };
 }
 
 // this method is called when your extension is deactivated

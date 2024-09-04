@@ -1,4 +1,4 @@
-import { SQLJob } from "../../../connection/sqlJob";
+import { OldSQLJob } from "../../../connection/sqlJob";
 import { TestCase } from "../../../testing";
 import assert from "assert";
 import { SelfCodeNode, SelfValue } from "./nodes";
@@ -26,7 +26,7 @@ export function testSelfCodes(): TestCase[] {
     const testCase: TestCase = {
       name: `Self code Error for test ${test.name}`,
       test: async () => {
-        let newJob = new SQLJob();
+        let newJob = new OldSQLJob();
         await newJob.connect();
         await newJob.setSelfState(test.code as SelfValue);
         try {
