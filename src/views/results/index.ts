@@ -229,7 +229,7 @@ async function runHandler(options?: StatementInfo) {
             const onlyExplain = statementDetail.qualifier === `onlyexplain`;
 
             chosenView.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
-            const explainType: ExplainType = onlyExplain ? ExplainType.DoNotRun : ExplainType.Run;
+            const explainType: ExplainType = onlyExplain ? "doNotRun" : "run";
 
               setCancelButtonVisibility(true);
               const explained = await selectedJob.job.explain(statementDetail.content, explainType); // Can throw

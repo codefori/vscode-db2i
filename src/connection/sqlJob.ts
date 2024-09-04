@@ -102,10 +102,10 @@ export class OldSQLJob extends SQLJob {
     });
   }
 
-  getStatus() {
+  getStatus(): JobStatus {
     const currentListenerCount = this.responseEmitter.eventNames().length;
 
-    return currentListenerCount > 0 ? JobStatus.Busy : this.status;
+    return currentListenerCount > 0 ? "busy" : this.status;
   }
 
   async connect(): Promise<ConnectionResult> {
@@ -146,10 +146,10 @@ export class OldSQLJob extends SQLJob {
     const connectResult = await this.send<ConnectionResult>(connectionObject);
 
     if (connectResult.success === true) {
-      this.status = JobStatus.Ready;
+      this.status = "ready";
     } else {
       this.dispose();
-      this.status = JobStatus.NotStarted;
+      this.status = "notStarted";
       throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 
@@ -208,6 +208,6 @@ export class OldSQLJob extends SQLJob {
 
   dispose() {
     this.channel.close();
-    this.status = JobStatus.Ended;
+    this.status = "ended";
   }
 }

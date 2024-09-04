@@ -5,7 +5,7 @@ import { OldSQLJob } from "./sqlJob";
 import { askAboutNewJob, onConnectOrServerInstall, osDetail } from "../config";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import Configuration from "../configuration";
-import { JobStatus, QueryOptions } from "@ibm/mapepire-js/dist/src/types";
+import { QueryOptions } from "@ibm/mapepire-js/dist/src/types";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
 
 export interface JobInfo {
@@ -71,7 +71,7 @@ export class SQLJobManager {
   }
 
   getRunningJobs() {
-    return this.jobs.filter(info => [JobStatus.Ready, JobStatus.Busy].includes(info.job.getStatus()));
+    return this.jobs.filter(info => ["ready", "busy"].includes(info.job.getStatus()));
   }
 
   async endAll() {

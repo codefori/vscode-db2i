@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { JobManager } from '../../config';
-import { ChartDetail, generateChart } from './chart';
+import { generateChart } from './chart';
 import { chartJsTypes, ChartJsType, generateChartHTMLEmbedded } from './chartJs';
 import { getStatementDetail } from './statement';
 import { getInstance } from '../../base';
@@ -8,7 +8,6 @@ import { getInstance } from '../../base';
 import chartjs from 'chart.js/dist/chart.umd.js';
 
 import Showdown from 'showdown';
-import { JobStatus } from '@ibm/mapepire-js/dist/src/types';
 
 const converter = new Showdown.Converter();
 
@@ -40,7 +39,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
             }, async (progress, token) => {
 
               token.onCancellationRequested(() => {
-                if (selected && selected.job.getStatus() === JobStatus.Busy) {
+                if (selected && selected.job.getStatus() === "busy") {
                   selected.job.requestCancel();
                 }
               });

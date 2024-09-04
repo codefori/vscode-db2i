@@ -8,7 +8,6 @@ import { JobManager } from '../config';
 import { ChartJsType, chartJsTypes, generateChartHTMLCell } from './logic/chartJs';
 import { ChartDetail, generateChart } from './logic/chart';
 import { getStatementDetail } from './logic/statement';
-import { JobStatus } from '@ibm/mapepire-js/dist/src/types';
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
@@ -65,7 +64,7 @@ export class IBMiController {
 
     execution.token.onCancellationRequested(() => {
       this.globalCancel = true;
-      if (selected && selected.job.getStatus() === JobStatus.Busy) {
+      if (selected && selected.job.getStatus() === "busy") {
         selected.job.requestCancel();
       }
     });

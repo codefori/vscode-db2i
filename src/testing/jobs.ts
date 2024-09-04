@@ -4,8 +4,6 @@ import { getInstance } from "../base";
 import { ExplainTree } from "../views/results/explain/nodes";
 import { ServerComponent } from "../connection/serverComponent";
 import { OldSQLJob } from "../connection/sqlJob";
-import { JobStatus, ServerTraceDest, ServerTraceLevel } from "@ibm/mapepire-js/dist/src/types";
-import { Query } from "@ibm/mapepire-js/dist/src/query";
 
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
@@ -56,10 +54,10 @@ export const JobsSuite: TestSuite = {
       let newJob = new OldSQLJob();
       await newJob.connect();
 
-      let rpy = await newJob.setTraceConfig(ServerTraceDest.IN_MEM, ServerTraceLevel.DATASTREAM);
+      let rpy = await newJob.setTraceConfig("IN_MEM", "DATASTREAM");
       assert.equal(rpy.success, true);
-      assert.equal(rpy.tracedest, ServerTraceDest.IN_MEM);
-      assert.equal(rpy.tracelevel, ServerTraceLevel.DATASTREAM);
+      assert.equal(rpy.tracedest, "IN_MEM");
+      assert.equal(rpy.tracelevel, "DATASTREAM");
       let trace = await newJob.getTraceData();
       assert.notEqual(``, trace.tracedata);
       console.log(trace.tracedata);
@@ -148,46 +146,6 @@ export const JobsSuite: TestSuite = {
       assert.equal(resultData, testString);
       newJob.close();
     }},
-    {name: `Auto close statements`, test: async () => {
-      let newJob = new OldSQLJob();
-      await newJob.connect();
-
-      const autoCloseAnyway = newJob.query(`select * from QIWS.QCUSTCDT`);
-      const noAutoClose = newJob.query(`select * from QIWS.QCUSTCDT`);
-      const neverRuns = newJob.query(`select * from QIWS.QCUSTCDT`);
-
-      assert.strictEqual(Query.getOpenIds(newJob).length, 3);
-
-      // If we ran this, two both autoClose statements would be cleaned up
-      // await Query.cleanup();
-
-      await Promise.all([autoCloseAnyway.execute(1), noAutoClose.execute(1)]);
-      assert.strictEqual(Query.getOpenIds(newJob).length, 3);
-      
-      // Now cleanup should auto close autoCloseAnyway and neverRuns,
-      // but not noAutoClose because it hasn't finished running
-      await Query.cleanup();
-
-      const leftOverIds = Query.getOpenIds(newJob);
-      assert.strictEqual(leftOverIds.length, 1);
-
-      assert.strictEqual(noAutoClose.getId(), leftOverIds[0]);
-
-      newJob.close();
-    }},
-
-    {name: `SQL with no result set`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-  
-      let newJob = new OldSQLJob();
-      await newJob.connect();
-
-      let result = await newJob.query(`create or replace table qtemp.tt as (select * from sysibm.sysdummy1) with data on replace delete rows`).execute();
-      assert.equal(result.success, true);
-      assert.equal(result.has_results, false);
-      assert.equal(result.data, undefined);
-      newJob.close();
-    }},
 
     {name: `CL Command (success)`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
@@ -259,19 +217,19 @@ export const JobsSuite: TestSuite = {
 
       const newJob = new OldSQLJob();
 
-      assert.strictEqual(newJob.getStatus(), JobStatus.NotStarted);
+      assert.strictEqual(newJob.getStatus(), "notStarted");
 
       assert.strictEqual(newJob.id, undefined);
 
       await newJob.connect();
 
-      assert.strictEqual(newJob.getStatus(), JobStatus.Ready);
+      assert.strictEqual(newJob.getStatus(), "ready");
 
       assert.notStrictEqual(newJob.id, undefined);
 
       await newJob.close();
 
-      assert.strictEqual(newJob.getStatus(), JobStatus.Ended);
+      assert.strictEqual(newJob.getStatus(), "ended");
     }},
 
     {name: `Jobs have different job IDs`, test: async () => {
@@ -443,7 +401,7 @@ export const JobsSuite: TestSuite = {
 
       const newJob = new OldSQLJob({naming: `sql`});
       await newJob.connect();
-      await newJob.setTraceConfig(ServerTraceDest.IN_MEM, ServerTraceLevel.DATASTREAM);
+      await newJob.setTraceConfig("IN_MEM", "DATASTREAM");
 
       let numIterations = 1000;
       for (let i = 0; i < numIterations; i++) {

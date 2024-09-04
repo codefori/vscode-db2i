@@ -16,7 +16,6 @@ import { SQLExample } from "../../examples";
 import { JobInfo } from "../../../connection/manager";
 import { OldSQLJob } from "../../../connection/sqlJob";
 import { JobLogEntry } from "../../../connection/types";
-import { JobStatus } from "@ibm/mapepire-js/dist/src/types";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -84,7 +83,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
       if (this.autoRefresh) {
         const selected = JobManager.getSelection();
         // Don't refresh if the job is busy.
-        if ((selected && selected.job.getStatus() === JobStatus.Ready) || selected === undefined) {
+        if ((selected && selected.job.getStatus() === "ready") || selected === undefined) {
           this.refresh();
         }
       }

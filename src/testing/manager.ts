@@ -2,7 +2,6 @@ import assert from "assert";
 import { TestSuite } from ".";
 import { JobManager } from "../config";
 import { ServerComponent } from "../connection/serverComponent";
-import { JobStatus } from "@ibm/mapepire-js/dist/src/types";
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,
@@ -34,7 +33,7 @@ export const ManagerSuite: TestSuite = {
       const selected = JobManager.getSelection();
       assert.notStrictEqual(selected, undefined);
       assert.notStrictEqual(selected.job.id, undefined);
-      assert.strictEqual(selected.job.getStatus(), JobStatus.Ready);
+      assert.strictEqual(selected.job.getStatus(), "ready");
       
       // Close the job and see things go away
       JobManager.closeJob(JobManager.selectedJob);
