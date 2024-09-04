@@ -14,7 +14,7 @@ import { SelfCodeNode, SelfIleStackFrame } from "./nodes";
 import { openExampleCommand } from "../../examples/exampleBrowser";
 import { SQLExample } from "../../examples";
 import { JobInfo } from "../../../connection/manager";
-import { JobStatus, SQLJob } from "../../../connection/sqlJob";
+import { OldSQLJob } from "../../../connection/sqlJob";
 import { JobLogEntry } from "../../../connection/types";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
@@ -83,7 +83,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
       if (this.autoRefresh) {
         const selected = JobManager.getSelection();
         // Don't refresh if the job is busy.
-        if ((selected && selected.job.getStatus() === JobStatus.Ready) || selected === undefined) {
+        if ((selected && selected.job.getStatus() === "ready") || selected === undefined) {
           this.refresh();
         }
       }
@@ -116,7 +116,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
                     order by logged_time desc`;
 
     try {
-      const result = await selected.job.query<SelfCodeNode>(content).run(10000);
+      const result = await selected.job.query<SelfCodeNode>(content).execute(10000);
       if (result.success) {
         const data: SelfCodeNode[] = result.data.map((row) => ({
           ...row,
@@ -267,7 +267,7 @@ export class SelfCodeTreeItem extends ExtendedTreeItem {
 }
 
 class JobLogEntiresItem extends ExtendedTreeItem {
-  constructor(private selected: SQLJob) {
+  constructor(private selected: OldSQLJob) {
     super(`Job Log`, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.iconPath = new vscode.ThemeIcon(`info`);
