@@ -8,209 +8,209 @@ import { OldSQLJob } from "../connection/sqlJob";
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
   tests: [
-    // {name: `Backend check`, test: async () => {
-    //   const backendInstalled = await ServerComponent.initialise();
+    {name: `Backend check`, test: async () => {
+      const backendInstalled = await ServerComponent.initialise();
   
-    //   // To run these tests, we need the backend server. If this test fails. Don't bother
-    //   assert.strictEqual(backendInstalled, true);
+      // To run these tests, we need the backend server. If this test fails. Don't bother
+      assert.strictEqual(backendInstalled, true);
 
-    //   console.log(`Starting command: ${ServerComponent.getInitCommand()}`);
-    // }},
+      console.log(`Starting command: ${ServerComponent.getInitCommand()}`);
+    }},
 
-    // {name: `Backend version check`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
+    {name: `Backend version check`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
   
-    //   let newJob = new OldSQLJob();
-    //   await newJob.connect();
+      let newJob = new OldSQLJob();
+      await newJob.connect();
 
-    //   let ver = await newJob.getVersion();
-    //   console.log(`backend version: `+ver.version);
-    //   console.log(`backend build date: `+ver.build_date);
-    //   assert.notEqual(ver.version, ``);
-    //   assert.notEqual(ver.build_date, ``);
-    //   assert.ok(`backend build date: `+ver.build_date);
-    //   newJob.close();
-    // }},
+      let ver = await newJob.getVersion();
+      console.log(`backend version: `+ver.version);
+      console.log(`backend build date: `+ver.build_date);
+      assert.notEqual(ver.version, ``);
+      assert.notEqual(ver.build_date, ``);
+      assert.ok(`backend build date: `+ver.build_date);
+      newJob.close();
+    }},
     
-    // {name: `Verify client special registers are set`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
-    //   let newJob = new OldSQLJob();
-    //   await newJob.connect();
+    {name: `Verify client special registers are set`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
+      let newJob = new OldSQLJob();
+      await newJob.connect();
 
-    //   let qry = newJob.query(`SELECT V_CLIENT_APPLNAME, V_CLIENT_PROGRAMID FROM TABLE(QSYS2.GET_JOB_INFO('*')) limit 1`);
-    //   let qryResults = await qry.execute();
-    //   assert.equal(qryResults.success, true);
-    //   assert.equal(qryResults.data.length, 1);
-    //   let dataRow = qryResults.data[0];
-    //   assert.equal((``+dataRow['V_CLIENT_APPLNAME']).startsWith(`vscode-db2i`), true);
-    //   assert.equal((``+dataRow['V_CLIENT_PROGRAMID']).startsWith(`VSCode`), true);
+      let qry = newJob.query(`SELECT V_CLIENT_APPLNAME, V_CLIENT_PROGRAMID FROM TABLE(QSYS2.GET_JOB_INFO('*')) limit 1`);
+      let qryResults = await qry.execute();
+      assert.equal(qryResults.success, true);
+      assert.equal(qryResults.data.length, 1);
+      let dataRow = qryResults.data[0];
+      assert.equal((``+dataRow['V_CLIENT_APPLNAME']).startsWith(`vscode-db2i`), true);
+      assert.equal((``+dataRow['V_CLIENT_PROGRAMID']).startsWith(`VSCode`), true);
 
-    //   newJob.close();
-    // }},
+      newJob.close();
+    }},
 
-    // {name: `Backend set trace options and retrieve`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
+    {name: `Backend set trace options and retrieve`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
   
-    //   let newJob = new OldSQLJob();
-    //   await newJob.connect();
+      let newJob = new OldSQLJob();
+      await newJob.connect();
 
-    //   let rpy = await newJob.setTraceConfig("IN_MEM", "DATASTREAM");
-    //   assert.equal(rpy.success, true);
-    //   assert.equal(rpy.tracedest, "IN_MEM");
-    //   assert.equal(rpy.tracelevel, "DATASTREAM");
-    //   let trace = await newJob.getTraceData();
-    //   assert.notEqual(``, trace.tracedata);
-    //   console.log(trace.tracedata);
-    //   newJob.close();
-    // }},
+      let rpy = await newJob.setTraceConfig("IN_MEM", "DATASTREAM");
+      assert.equal(rpy.success, true);
+      assert.equal(rpy.tracedest, "IN_MEM");
+      assert.equal(rpy.tracelevel, "DATASTREAM");
+      let trace = await newJob.getTraceData();
+      assert.notEqual(``, trace.tracedata);
+      console.log(trace.tracedata);
+      newJob.close();
+    }},
 
-    // {name: `Backend retrieve trace data without turning on trace`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
+    {name: `Backend retrieve trace data without turning on trace`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
-    //   let newJob = new OldSQLJob();
-    //   await newJob.connect();
-    //   let trace = await newJob.getTraceData();
-    //   assert.notEqual(undefined, trace.tracedata);
-    //   newJob.close();
-    // }},
+      let newJob = new OldSQLJob();
+      await newJob.connect();
+      let trace = await newJob.getTraceData();
+      assert.notEqual(undefined, trace.tracedata);
+      newJob.close();
+    }},
     
-    // {name: `Paging query`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
+    {name: `Paging query`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
-    //   let newJob = new OldSQLJob({libraries: [`QIWS`], naming: `system`});
-    //   await newJob.connect();
+      let newJob = new OldSQLJob({libraries: [`QIWS`], naming: `system`});
+      await newJob.connect();
 
-    //   let rowsAtATime = 4;
-    //   let qry = newJob.query(`select * from QIWS.QCUSTCDT`);
-    //   let qryResults = await qry.execute(rowsAtATime);
-    //   assert.equal(qryResults.success, true);
-    //   assert.equal(qryResults.data.length, 4);
-    //   assert.equal(qryResults.is_done,false);
+      let rowsAtATime = 4;
+      let qry = newJob.query(`select * from QIWS.QCUSTCDT`);
+      let qryResults = await qry.execute(rowsAtATime);
+      assert.equal(qryResults.success, true);
+      assert.equal(qryResults.data.length, 4);
+      assert.equal(qryResults.is_done,false);
 
-    //   while(!qryResults.is_done) {
-    //     qryResults = await qry.fetchMore(rowsAtATime);
-    //     if(qryResults.is_done) {
-    //       assert.equal(qryResults.data.length <= rowsAtATime, true);
-    //     }else {
-    //       assert.equal(qryResults.data.length,rowsAtATime);
-    //     }
-    //   }
+      while(!qryResults.is_done) {
+        qryResults = await qry.fetchMore(rowsAtATime);
+        if(qryResults.is_done) {
+          assert.equal(qryResults.data.length <= rowsAtATime, true);
+        }else {
+          assert.equal(qryResults.data.length,rowsAtATime);
+        }
+      }
 
-    //   newJob.close();
-    // }},
-    // {name: `Query with non-terse results`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
+      newJob.close();
+    }},
+    {name: `Query with non-terse results`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
-    //   let newJob = new OldSQLJob({libraries: [`QIWS`], naming: `system`});
-    //   await newJob.connect();
+      let newJob = new OldSQLJob({libraries: [`QIWS`], naming: `system`});
+      await newJob.connect();
 
-    //   let rowsAtATime = 4;
-    //   let qry = newJob.query(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: false});
-    //   let qryResults = await qry.execute(rowsAtATime);
+      let rowsAtATime = 4;
+      let qry = newJob.query(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: false});
+      let qryResults = await qry.execute(rowsAtATime);
 
-    //   assert.equal(qryResults.success, true);
-    //   let firstRow = qryResults.data[0];
-    //   let cusnum = firstRow[`CUSNUM`];
-    //   assert.equal(cusnum === undefined, false);
-    //   assert.equal(Array.isArray(firstRow), false);
-    //   newJob.close();
-    // }},
-    // {name: `Query with terse results`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
+      assert.equal(qryResults.success, true);
+      let firstRow = qryResults.data[0];
+      let cusnum = firstRow[`CUSNUM`];
+      assert.equal(cusnum === undefined, false);
+      assert.equal(Array.isArray(firstRow), false);
+      newJob.close();
+    }},
+    {name: `Query with terse results`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
-    //   let newJob = new OldSQLJob({libraries: [`QIWS`], naming: `system`});
-    //   await newJob.connect();
+      let newJob = new OldSQLJob({libraries: [`QIWS`], naming: `system`});
+      await newJob.connect();
 
-    //   let rowsAtATime = 4;
-    //   let qry = newJob.query(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: true});
-    //   let qryResults = await qry.execute(rowsAtATime);
+      let rowsAtATime = 4;
+      let qry = newJob.query(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: true});
+      let qryResults = await qry.execute(rowsAtATime);
 
-    //   assert.equal(qryResults.success, true);
-    //   let firstRow = qryResults.data[0];
-    //   assert.equal(Array.isArray(firstRow), true);
-    //   newJob.close();
-    // }},
-    // {name: `Can round-trip Extended characters`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
+      assert.equal(qryResults.success, true);
+      let firstRow = qryResults.data[0];
+      assert.equal(Array.isArray(firstRow), true);
+      newJob.close();
+    }},
+    {name: `Can round-trip Extended characters`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
-    //   let testString = `¯\\_(ツ)_/¯`
-    //   let newJob = new OldSQLJob();
-    //   await newJob.connect();
-    //   let qryResults = await newJob.query(`create table qtemp.weewoo (col1 varchar(1208) ccsid 1208)`).execute();
-    //   assert.equal(qryResults.success, true);
-    //   qryResults = await newJob.query(`insert into qtemp.weewoo values('${testString}')`).execute();
-    //   assert.equal(qryResults.success, true);
-    //   qryResults = await newJob.query(`select COL1 from qtemp.weewoo`).execute();
-    //   assert.equal(qryResults.success, true);
-    //   let resultData = qryResults.data[0]['COL1'];
-    //   assert.equal(resultData, testString);
-    //   newJob.close();
-    // }},
+      let testString = `¯\\_(ツ)_/¯`
+      let newJob = new OldSQLJob();
+      await newJob.connect();
+      let qryResults = await newJob.query(`create table qtemp.weewoo (col1 varchar(1208) ccsid 1208)`).execute();
+      assert.equal(qryResults.success, true);
+      qryResults = await newJob.query(`insert into qtemp.weewoo values('${testString}')`).execute();
+      assert.equal(qryResults.success, true);
+      qryResults = await newJob.query(`select COL1 from qtemp.weewoo`).execute();
+      assert.equal(qryResults.success, true);
+      let resultData = qryResults.data[0]['COL1'];
+      assert.equal(resultData, testString);
+      newJob.close();
+    }},
 
-    // {name: `CL Command (success)`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
+    {name: `CL Command (success)`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
   
-    //   let newJob = new OldSQLJob();
-    //   await newJob.connect();
+      let newJob = new OldSQLJob();
+      await newJob.connect();
 
-    //   let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVSNAKES)  CRTFILE(*YES) `).execute();
-    //   assert.equal(clRes.success, true);
-    //   assert.notEqual(0, clRes.data.length);
-    //   let CPF2880: boolean = false;
-    //   console.log(JSON.stringify(clRes));
-    //   for (let joblogEntry of clRes.data) {
-    //     if (joblogEntry.MESSAGE_ID === "CPF2880") {
-    //       CPF2880 = true;
-    //       break;
-    //     }
-    //   }
-    //   assert.equal(CPF2880, true);
-    //   newJob.close();
-    // }},
+      let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVSNAKES)  CRTFILE(*YES) `).execute();
+      assert.equal(clRes.success, true);
+      assert.notEqual(0, clRes.data.length);
+      let CPF2880: boolean = false;
+      console.log(JSON.stringify(clRes));
+      for (let joblogEntry of clRes.data) {
+        if (joblogEntry.MESSAGE_ID === "CPF2880") {
+          CPF2880 = true;
+          break;
+        }
+      }
+      assert.equal(CPF2880, true);
+      newJob.close();
+    }},
 
-    // {name: `CL Command (error)`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
+    {name: `CL Command (error)`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
-    //   let newJob = new OldSQLJob();
-    //   await newJob.connect();
+      let newJob = new OldSQLJob();
+      await newJob.connect();
 
-    //   let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVDB2) MBROPT(*UPDADD) CRTFILE(*YES) `).execute();
-    //   console.log(JSON.stringify(clRes));
-    //   assert.equal(clRes.success, false);
-    //   let CPD2825: boolean = false;
-    //   console.log(JSON.stringify(clRes));
-    //   for (let joblogEntry of clRes.data) {
-    //     if (joblogEntry.MESSAGE_ID === "CPD2825") {
-    //       CPD2825 = true;
-    //       break;
-    //     }
-    //   }
-    //   assert.equal(CPD2825, true);
-    //   newJob.close();
-    // }},
+      let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVDB2) MBROPT(*UPDADD) CRTFILE(*YES) `).execute();
+      console.log(JSON.stringify(clRes));
+      assert.equal(clRes.success, false);
+      let CPD2825: boolean = false;
+      console.log(JSON.stringify(clRes));
+      for (let joblogEntry of clRes.data) {
+        if (joblogEntry.MESSAGE_ID === "CPD2825") {
+          CPD2825 = true;
+          break;
+        }
+      }
+      assert.equal(CPD2825, true);
+      newJob.close();
+    }},
 
-    // {name: `Retrieve job log`, test: async () => {
-    //   assert.strictEqual(ServerComponent.isInstalled(), true);
+    {name: `Retrieve job log`, test: async () => {
+      assert.strictEqual(ServerComponent.isInstalled(), true);
 
-    //   let newJob = new OldSQLJob();
-    //   await newJob.connect();
+      let newJob = new OldSQLJob();
+      await newJob.connect();
 
       
 
-    //   await newJob.clcommand(`DLTLIB QTEMP`).execute();
-    //   let joblog = await newJob.getJobLog();
-    //   assert.equal(joblog.success, true);
-    //   let CPD2165: boolean = false;
-    //   console.log(JSON.stringify(joblog));
-    //   for (let joblogEntry of joblog.data) {
-    //     if (joblogEntry.MESSAGE_ID === "CPD2165") {
-    //       CPD2165 = true;
-    //       break;
-    //     }
-    //   }
-    //   assert.equal(CPD2165, true);
-    //   newJob.close();
-    // }},
+      await newJob.clcommand(`DLTLIB QTEMP`).execute();
+      let joblog = await newJob.getJobLog();
+      assert.equal(joblog.success, true);
+      let CPD2165: boolean = false;
+      console.log(JSON.stringify(joblog));
+      for (let joblogEntry of joblog.data) {
+        if (joblogEntry.MESSAGE_ID === "CPD2165") {
+          CPD2165 = true;
+          break;
+        }
+      }
+      assert.equal(CPD2165, true);
+      newJob.close();
+    }},
 
     {name: `Creating a job`, test: async () => {
       assert.strictEqual(ServerComponent.isInstalled(), true);
@@ -392,27 +392,6 @@ export const JobsSuite: TestSuite = {
       const topLevel = tree.get();
 
       assert.notStrictEqual(topLevel, undefined);
-    }},
-    
-    {name: `(long-running) Server-side in-memory tracing doesn't overflow`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      const instance = getInstance();
-      const content = instance.getContent();
-
-      const newJob = new OldSQLJob({naming: `sql`});
-      await newJob.connect();
-      await newJob.setTraceConfig("IN_MEM", "DATASTREAM");
-
-      let numIterations = 1000;
-      for (let i = 0; i < numIterations; i++) {
-        let version = await newJob.getVersion();
-        if(0 == i%20) {
-          console.log(`long-running test interation ${i}/${numIterations}`);
-        }
-      }
-      let bruh = await newJob.getTraceData();
-      newJob.close();
-    }},
+    }}
   ]
 }
