@@ -105,7 +105,7 @@ export class OldSQLJob extends SQLJob {
   getStatus(): JobStatus {
     const currentListenerCount = this.responseEmitter.eventNames().length;
 
-    return currentListenerCount > 0 ? "busy" : this.status;
+    return this.channel && currentListenerCount > 0 ? "busy" : this.status;
   }
 
   async connect(): Promise<ConnectionResult> {
@@ -208,6 +208,7 @@ export class OldSQLJob extends SQLJob {
 
   dispose() {
     this.channel.close();
+    this.channel = undefined;
     this.status = "ended";
   }
 }
