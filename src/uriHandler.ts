@@ -1,4 +1,4 @@
-import { commands, env, Uri, UriHandler, window, workspace } from "vscode";
+import { commands, env, Selection, Uri, UriHandler, window, workspace } from "vscode";
 import querystring from "querystring";
 import Document from "./language/sql/document";
 import { ServerComponent } from "./connection/serverComponent";
@@ -57,7 +57,9 @@ export const getStatementUri = commands.registerCommand(`vscode-db2i.getStatemen
     const currentStmt = sqlDocument.getGroupByOffset(cursor);
 
     if (currentStmt) {
-      const uri = `vscode://halcyontechltd.vscode-db2i/sql?content=${encodeURIComponent(sqlDocument.content)}`;
+      const stmtContent = content.substring(currentStmt.range.start, currentStmt.range.end);
+      editor.selection = new Selection(editor.document.positionAt(currentStmt.range.start), editor.document.positionAt(currentStmt.range.end));
+      const uri = `vscode://halcyontechltd.vscode-db2i/sql?content=${encodeURIComponent(stmtContent)}`;
 
       env.clipboard.writeText(uri);
       window.showInformationMessage(`Statement URI copied to clipboard.`);
