@@ -94,9 +94,20 @@
         "command": "vscode-db2i.json.pasteParser",
         "title": "Generate JSON SQL parser",
         "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.getStatementUri",
+        "title": "Get shared statement URI",
+        "category": "Db2 for i"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.getStatementUri",
+          "when": "editorLangId == sql"
+        }
+      ],
       "editor/context": [
         {
           "command": "vscode-db2i.json.pasteGenerator",

@@ -318,6 +318,11 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.getStatementUri",
+        "title": "Get shared statement URI",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.refreshSchemaBrowser",
         "title": "Refresh Schema Browser",
         "category": "Db2 for i",
@@ -667,19 +672,11 @@
       }
     ],
     "menus": {
-      "editor/context": [
+      "commandPalette": [
         {
-          "command": "vscode-db2i.json.pasteGenerator",
-          "group": "sql@1",
+          "command": "vscode-db2i.getStatementUri",
           "when": "editorLangId == sql"
         },
-        {
-          "command": "vscode-db2i.json.pasteParser",
-          "group": "sql@2",
-          "when": "editorLangId == sql"
-        }
-      ],
-      "commandPalette": [
         {
           "command": "vscode-db2i.setSchemaFilter",
           "when": "never"
@@ -755,6 +752,18 @@
         {
           "command": "vscode-db2i.notebook.fromSqlUri",
           "when": "never"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "vscode-db2i.json.pasteGenerator",
+          "group": "sql@1",
+          "when": "editorLangId == sql"
+        },
+        {
+          "command": "vscode-db2i.json.pasteParser",
+          "group": "sql@2",
+          "when": "editorLangId == sql"
         }
       ],
       "view/title": [

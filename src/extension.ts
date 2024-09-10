@@ -20,6 +20,7 @@ import { notebookInit } from "./notebooks/IBMiSerializer";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import Configuration from "./configuration";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { Db2iUriHandler } from "./uriHandler";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -66,7 +67,8 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     ),
     vscode.window.registerFileDecorationProvider(
       new SelfTreeDecorationProvider()
-    ) 
+    ),
+    vscode.window.registerUriHandler(new Db2iUriHandler())
   );
 
   JSONServices.initialise(context);
