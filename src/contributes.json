@@ -97,7 +97,7 @@
       },
       {
         "command": "vscode-db2i.getStatementUri",
-        "title": "Get shared statement URI",
+        "title": "Copy sharable statement URI",
         "category": "Db2 for i"
       }
     ],
@@ -109,6 +109,11 @@
         }
       ],
       "editor/context": [
+        {
+          "command": "vscode-db2i.getStatementUri",
+          "group": "sql@0",
+          "when": "editorLangId == sql"
+        },
         {
           "command": "vscode-db2i.json.pasteGenerator",
           "group": "sql@1",
