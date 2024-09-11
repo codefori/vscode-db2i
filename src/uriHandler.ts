@@ -20,16 +20,12 @@ export class Db2iUriHandler implements UriHandler {
           if (isValid) {
             const run = queryData.run === `true`;
 
-            if (run) {
-              if (remoteAssistIsEnabled()) {
-                commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-                  content,
-                  qualifier: `statement`,
-                  open: true,
-                });
-              } else {
-                window.showErrorMessage(`You must be connected to a system to run a statement.`);
-              }
+            if (run && remoteAssistIsEnabled()) {
+              commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+                content,
+                qualifier: `statement`,
+                open: true,
+              });
             } else {
               workspace.openTextDocument({ language: `sql`, content }).then(textDoc => {
                 window.showTextDocument(textDoc);
