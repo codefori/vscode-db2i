@@ -7,6 +7,7 @@ import { CallableType } from "../../database/callable";
 import { StatementType } from "../sql/types";
 import { remoteAssistIsEnabled } from "./logic/available";
 import { DbCache } from "./logic/cache";
+import { getSqlDocument } from "./logic/parse";
 
 export const signatureProvider = languages.registerSignatureHelpProvider({ language: `sql` }, {
   async provideSignatureHelp(document, position, token, context) {
@@ -15,7 +16,7 @@ export const signatureProvider = languages.registerSignatureHelpProvider({ langu
 
     if (remoteAssistIsEnabled()) {
 
-      const sqlDoc = new Document(content);
+      const sqlDoc = getSqlDocument(document);
       const currentStatement = sqlDoc.getStatementByOffset(offset);
 
       if (currentStatement) {

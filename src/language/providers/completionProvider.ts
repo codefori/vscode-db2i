@@ -13,6 +13,7 @@ import { prepareParamType, createCompletionItem, getParmAttributes } from "./log
 import { isCallableType, getCallableParameters } from "./logic/callable";
 import { localAssistIsEnabled, remoteAssistIsEnabled } from "./logic/available";
 import { DbCache } from "./logic/cache";
+import { getSqlDocument } from "./logic/parse";
 
 export interface CompletionType {
   order: string;
@@ -596,7 +597,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
         const content = document.getText();
         const offset = document.offsetAt(position);
 
-        const sqlDoc = new Document(content);
+        const sqlDoc = getSqlDocument(document);
         const currentStatement = sqlDoc.getStatementByOffset(offset);
 
         const allItems: CompletionItem[] = [];

@@ -1,5 +1,6 @@
 import { completionProvider } from "./completionProvider";
 import { formatProvider } from "./formatProvider";
+import { hoverProvider } from "./hoverProvider";
 import { signatureProvider } from "./parameterProvider";
 
 export function languageInit() {
@@ -8,7 +9,8 @@ export function languageInit() {
   functionality.push(
     completionProvider,
     formatProvider,
-    signatureProvider
+    signatureProvider,
+    hoverProvider
   );
   
   return functionality;

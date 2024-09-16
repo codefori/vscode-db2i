@@ -2,18 +2,22 @@ import Callable, { CallableRoutine, CallableSignature, CallableType } from "../.
 import Schemas, { PageData, SQLType } from "../../../database/schemas";
 import Table from "../../../database/table";
 
+interface RoutineDetail {
+  routine: CallableRoutine;
+  signatures: CallableSignature[];
+}
+
 export class DbCache {
-  private static routineColumns: Map<string, SQLParm[]> = new Map();
-  private static objectColumns: Map<string, TableColumn[]> = new Map();
   private static schemaObjects: Map<string, BasicSQLObject[]> = new Map();
+  private static routineResultColumns: Map<string, SQLParm[]> = new Map();
+  private static objectColumns: Map<string, TableColumn[]> = new Map();
   private static routines: Map<string, CallableRoutine|false> = new Map();
   private static routineSignatures: Map<string, CallableSignature[]> = new Map();
 
   private static toReset: string[] = [];
 
-  // TODO: call on connect
   static async resetCache() {
-    this.routineColumns.clear();
+    this.routineResultColumns.clear();
     this.objectColumns.clear();
     this.schemaObjects.clear();
     this.toReset = [];
@@ -24,7 +28,7 @@ export class DbCache {
   }
 
   private static shouldReset(name: string) {
-    const inx = this.toReset.indexOf(name);
+    const inx = this.toReset.indexOf(name.toLowerCase());
 
     if (inx > -1) {
       this.toReset.splice(inx, 1);
@@ -34,23 +38,57 @@ export class DbCache {
     return false;
   }
 
-  static async getRoutineResultColumns(schema: string, name: string, resolveName?: boolean) {
-    const key = getKey(`routine`, schema, name);
-    
-    if (!this.routineColumns.has(key) || this.shouldReset(name)) {
-      const result = await Callable.getResultColumns(schema, name, resolveName);
-      if (result) {
-        this.routineColumns.set(key, result);
+  static lookupSymbol(name: string, schema: string) {
+    const routine = this.getCachedType(name, schema, `FUNCTION`) || this.getCachedType(name, schema, `PROCEDURE`);
+    if (routine) {
+      const signatures = this.getCachedSignatures(schema, name);
+      return { routine, signatures } as RoutineDetail;
+    }
+
+    // Search objects
+    for (const currentSchema of this.schemaObjects.values()) {
+      const chosenObject = currentSchema.find(column => column.name === name && column.schema === schema);
+      if (chosenObject) {
+        return chosenObject;
       }
     }
 
-    return this.routineColumns.get(key) || [];
+    // Lookup by column
+
+    // First object columns
+    for (const currentObject of this.objectColumns.values()) {
+      const chosenColumn = currentObject.find(column => column.COLUMN_NAME.toLowerCase() === name.toLowerCase());
+      if (chosenColumn) {
+        return chosenColumn;
+      }
+    }
+
+    // Then by routine result columns
+    for (const currentRoutine of this.routineResultColumns.values()) {
+      const chosenColumn = currentRoutine.find(column => column.PARAMETER_NAME.toLowerCase() === name.toLowerCase());
+      if (chosenColumn) {
+        return chosenColumn;
+      }
+    }
+  }
+
+  static async getRoutineResultColumns(schema: string, name: string, resolveName?: boolean) {
+    const key = getKey(`routine`, schema, name);
+    
+    if (!this.routineResultColumns.has(key) || this.shouldReset(name)) {
+      const result = await Callable.getResultColumns(schema, name, resolveName);
+      if (result) {
+        this.routineResultColumns.set(key, result);
+      }
+    }
+
+    return this.routineResultColumns.get(key) || [];
   }
 
   static async getColumns(schema: string, name: string) {
     const key = getKey(`columns`, schema, name);
     
-    if (!this.routineColumns.has(key) || this.shouldReset(name)) {
+    if (!this.routineResultColumns.has(key) || this.shouldReset(name)) {
       const result = await Table.getItems(schema, name);
       if (result) {
         this.objectColumns.set(key, result);
