@@ -1,16 +1,21 @@
 import { TextDocument } from "vscode";
 import Document from "../../sql/document";
 
-let cachedAst: Document | undefined;
-let cachedVersion: number = -1;
+let cached: Map<string, {ast, version}> = new Map();
 
 export function getSqlDocument(document: TextDocument) {
-  if (cachedAst && cachedVersion === document.version) {
-    return cachedAst;
+  const uri = document.uri.toString();
+
+  if (cached.has(uri)) {
+    const { ast, version } = cached.get(uri)!;
+
+    if (version === document.version) {
+      return ast;
+    }
   }
+  
+  const newAsp = new Document(document.getText());
+  cached.set(uri, { ast: newAsp, version: document.version });
 
-  cachedAst = new Document(document.getText());
-  cachedVersion = document.version;
-
-  return cachedAst;
+  return newAsp;
 }
