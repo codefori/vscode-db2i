@@ -314,6 +314,11 @@ async function runHandler(options?: StatementInfo) {
           }
         }
 
+        // If we the API is called with no open, then don't add it to history
+        if (statementDetail.open === false) {
+          statementDetail.history = false;
+        }
+
         if ((statementDetail.qualifier === `statement` || statementDetail.qualifier === `explain`) && statementDetail.history !== false) {
           vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
         }
