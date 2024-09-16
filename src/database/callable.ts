@@ -6,6 +6,8 @@ const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`
 
 export type CallableType = "PROCEDURE"|"FUNCTION";
 export interface CallableRoutine {
+  schema: string;
+  name: string;
   specificNames: string[];
   type: string;
 }
@@ -25,6 +27,8 @@ export default class Callable {
     );
 
     let routine: CallableRoutine = {
+      schema,
+      name,
       specificNames: [],
       type: forType
     }

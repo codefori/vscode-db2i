@@ -13,6 +13,8 @@ export default class Table {
   static async getItems(schema: string, name: string): Promise<TableColumn[]> {
     const sql = [
       `SELECT `,
+      `  column.TABLE_SCHEMA,`,
+      `  column.TABLE_NAME,`,
       `  column.COLUMN_NAME,`,
       `  key.CONSTRAINT_NAME,`,
       `  column.DATA_TYPE, `,

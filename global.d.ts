@@ -1,4 +1,6 @@
 interface TableColumn {
+  TABLE_SCHEMA?: string,
+  TABLE_NAME?: string,
   COLUMN_NAME: string,
   SYSTEM_COLUMN_NAME: string,
   CONSTRAINT_NAME?: string,
@@ -14,6 +16,7 @@ interface TableColumn {
 }
 
 interface SQLParm {
+  SPECIFIC_SCHEMA: string,
   SPECIFIC_NAME: string,
   PARAMETER_NAME: string,
   PARAMETER_MODE: "IN" | "OUT" | "INOUT",
