@@ -5,7 +5,10 @@ import Table from "../../../database/table";
 interface RoutineDetail {
   routine: CallableRoutine;
   signatures: CallableSignature[];
+  resultingColumns: SQLParm[];
 }
+
+export type LookupResult = RoutineDetail | SQLParm | BasicSQLObject | TableColumn;
 
 export class DbCache {
   private static schemaObjects: Map<string, BasicSQLObject[]> = new Map();
@@ -27,22 +30,25 @@ export class DbCache {
     this.toReset.push(name.toLowerCase());
   }
 
-  private static shouldReset(name: string) {
-    const inx = this.toReset.indexOf(name.toLowerCase());
+  private static shouldReset(name?: string) {
+    if (name) {
+      const inx = this.toReset.indexOf(name.toLowerCase());
 
-    if (inx > -1) {
-      this.toReset.splice(inx, 1);
-      return true;
+      if (inx > -1) {
+        this.toReset.splice(inx, 1);
+        return true;
+      }
     }
 
     return false;
   }
 
-  static lookupSymbol(name: string, schema: string) {
-    const routine = this.getCachedType(name, schema, `FUNCTION`) || this.getCachedType(name, schema, `PROCEDURE`);
+  static lookupSymbol(name: string, schema: string): LookupResult {
+    const routine = this.getCachedType(schema, name, `FUNCTION`) || this.getCachedType(schema, name, `PROCEDURE`);
     if (routine) {
       const signatures = this.getCachedSignatures(schema, name);
-      return { routine, signatures } as RoutineDetail;
+      const resultingColumns = this.getCachedRoutineResultColumns(schema, name);
+      return { routine, signatures, resultingColumns } as RoutineDetail;
     }
 
     // Search objects
@@ -82,6 +88,11 @@ export class DbCache {
       }
     }
 
+    return this.routineResultColumns.get(key) || [];
+  }
+
+  static getCachedRoutineResultColumns(schema: string, name: string) {
+    const key = getKey(`routine`, schema, name);
     return this.routineResultColumns.get(key) || [];
   }
 

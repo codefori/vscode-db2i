@@ -17,7 +17,7 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
     const callableRoutine = await DbCache.getType(ref.object.schema, ref.object.name, type);
 
     if (callableRoutine) {
-      DbCache.getSignaturesFor(ref.object.schema, ref.object.name, callableRoutine.specificNames);
+      await DbCache.getSignaturesFor(ref.object.schema, ref.object.name, callableRoutine.specificNames);
       return true;
     } else {
       // Not callable, let's just cache it as empty to stop spamming the db
