@@ -1,7 +1,4 @@
 import { CompletionItemKind, CompletionItem } from "vscode";
-import CompletionItemCache from "./completionItemCache";
-
-export const completionItemCache = new CompletionItemCache();
 
 export function createCompletionItem(
   name: string,

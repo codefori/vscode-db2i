@@ -10,7 +10,7 @@ import { getInstance, loadBase } from "./base";
 import { JobManager, onConnectOrServerInstall, initConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
-import { languageInit } from "./language";
+import { languageInit } from "./language/providers";
 import { initialiseTestSuite } from "./testing";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { ServerComponent } from "./connection/serverComponent";

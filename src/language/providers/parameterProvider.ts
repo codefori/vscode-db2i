@@ -1,11 +1,11 @@
 import { MarkdownString, ParameterInformation, Position, Range, SignatureHelp, SignatureInformation, TextEdit, languages } from "vscode";
 import Statement from "../../database/statement";
 import Document from "../sql/document";
-import { getCachedSignatures, getCallableParameters, getPositionData, isCallableType } from "./callable";
-import { getParmAttributes, prepareParamType } from "./completion";
+import { getCachedSignatures, getCallableParameters, getPositionData, isCallableType } from "./logic/callable";
+import { getParmAttributes, prepareParamType } from "./logic/completion";
 import { CallableType } from "../../database/callable";
 import { StatementType } from "../sql/types";
-import { remoteAssistIsEnabled } from "./available";
+import { remoteAssistIsEnabled } from "./logic/available";
 
 export const signatureProvider = languages.registerSignatureHelpProvider({ language: `sql` }, {
   async provideSignatureHelp(document, position, token, context) {

@@ -4,7 +4,7 @@ import { getInstance } from "../base";
 import { JobManager } from "../config";
 
 export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types" | "logicals";
-type PageData = { filter?: string, offset?: number, limit?: number };
+export type PageData = { filter?: string, offset?: number, limit?: number };
 
 const typeMap = {
   'tables': [`T`, `P`, `M`],

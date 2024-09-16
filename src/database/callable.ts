@@ -1,7 +1,7 @@
 
 import vscode from "vscode"
 import { JobManager } from "../config";
-import { QueryOptions } from "../connection/types";
+import { QueryOptions } from "@ibm/mapepire-js/dist/src/types";
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
 export type CallableType = "PROCEDURE"|"FUNCTION";
@@ -91,14 +91,13 @@ export default class Callable {
       parameters.push(name);
     }
 
-    const options : QueryOptions = { parameters };
     return JobManager.runSQL<SQLParm>(
       [
         `SELECT * FROM QSYS2.SYSPARMS`,
         `WHERE SPECIFIC_SCHEMA = ? AND ROW_TYPE = ? AND ${specificNameClause}`,
         `ORDER BY ORDINAL_POSITION`
       ].join(` `),
-      options
+      { parameters }
     );
   }
 }

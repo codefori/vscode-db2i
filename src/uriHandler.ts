@@ -2,7 +2,7 @@ import { commands, env, Selection, Uri, UriHandler, window, workspace } from "vs
 import querystring from "querystring";
 import Document from "./language/sql/document";
 import { ServerComponent } from "./connection/serverComponent";
-import { remoteAssistIsEnabled } from "./language/providers/available";
+import { remoteAssistIsEnabled } from "./language/providers/logic/available";
 
 export class Db2iUriHandler implements UriHandler {
   handleUri(uri: Uri) {
