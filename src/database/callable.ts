@@ -1,7 +1,8 @@
 
 import vscode from "vscode"
 import { JobManager } from "../config";
-import { QueryOptions } from "../connection/types";
+import { QueryOptions } from "@ibm/mapepire-js/dist/src/types";
+import { QueryResult } from "@ibm/mapepire-js/dist/src/types";
 const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
 export type CallableType = "PROCEDURE"|"FUNCTION";
@@ -29,8 +30,8 @@ export default class Callable {
       type: forType
     }
 
-    if (result.length > 0) {
-      routine.specificNames = result.map(row => row.SPECIFIC_NAME);
+    if (result.data.length > 0) {
+      routine.specificNames = result.data.map(row => row.SPECIFIC_NAME);
       return routine;
     }
 
@@ -50,13 +51,13 @@ export default class Callable {
     );
 
     // find unique specific names
-    const uniqueSpecificNames = Array.from(new Set(results.map(row => row.SPECIFIC_NAME)));
+    const uniqueSpecificNames = Array.from(new Set(results.data.map(row => row.SPECIFIC_NAME)));
 
     // group results by specific name
     const groupedResults: CallableSignature[] = uniqueSpecificNames.map(name => {
       return {
         specificName: name,
-        parms: results.filter(row => row.SPECIFIC_NAME === name)
+        parms: results.data.filter(row => row.SPECIFIC_NAME === name)
       }
     });
 
@@ -68,7 +69,7 @@ export default class Callable {
    * @param specificName Not user input
    * @returns 
    */
-  static getParms(schema: string, specificName: string, resolveName: boolean = false): Promise<SQLParm[]> {
+  static getParms(schema: string, specificName: string, resolveName: boolean = false): Promise<QueryResult<SQLParm>> {
     const rowType = `P`; // Parameter
     return Callable.getFromSysParms(schema, specificName, rowType, resolveName);
   }
@@ -78,7 +79,7 @@ export default class Callable {
     return Callable.getFromSysParms(schema, specificName, rowType, resolveName);
   }
 
-  static getFromSysParms(schema: string, name: string, rowType: "P"|"R", resolveName: boolean = false): Promise<SQLParm[]> {
+  static getFromSysParms(schema: string, name: string, rowType: "P"|"R", resolveName: boolean = false): Promise<QueryResult<SQLParm>> {
     let parameters = [schema, rowType];
 
     let specificNameClause = undefined;

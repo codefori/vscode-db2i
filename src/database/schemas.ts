@@ -187,7 +187,7 @@ export default class Schemas {
 
     const query = `with results as (${selects.join(" UNION ALL ")}) select * from results Order by QSYS2.DELIMIT_NAME(NAME) asc`;
 
-    const objects: any[] = await JobManager.runSQL(
+    const objects: any[] = (await JobManager.runSQL(
       [
       query,
       `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
@@ -195,7 +195,7 @@ export default class Schemas {
       {
         parameters
       }
-    );
+    )).data;
 
     return objects.map(object => ({
       type: object.OBJ_TYPE,
@@ -219,9 +219,9 @@ export default class Schemas {
    * @param object Not user input
    */
   static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
-    const lines = await JobManager.runSQL<{ SRCDTA: string }>([
+    const lines = (await JobManager.runSQL<{ SRCDTA: string }>([
       `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
-    ].join(` `), { parameters: [object, schema, internalType] });
+    ].join(` `), { parameters: [object, schema, internalType] })).data;
 
     const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
 

@@ -113,7 +113,7 @@ export const DatabaseSuite: TestSuite = {
       const objects = await Database.getObjects(systemLibrary, [`tables`]);
       assert.notStrictEqual(objects.length, 0);
 
-      const cols = await Table.getItems(systemLibrary, objects[0].name);
+      const cols = (await Table.getItems(systemLibrary, objects[0].name)).data;
       assert.notStrictEqual(cols.length, 0);
     }},
 
@@ -121,7 +121,7 @@ export const DatabaseSuite: TestSuite = {
       const objects = await Database.getObjects(Statement.noQuotes(sqlSchema), [`tables`]);
       assert.notStrictEqual(objects.length, 0);
 
-      const cols = await Table.getItems(Statement.noQuotes(sqlSchema), objects[0].name);
+      const cols = (await Table.getItems(Statement.noQuotes(sqlSchema), objects[0].name)).data;
       assert.notStrictEqual(cols.length, 0);
     }},
 
@@ -129,7 +129,7 @@ export const DatabaseSuite: TestSuite = {
       const objects = await Database.getObjects(systemLibrary, [`views`]);
       assert.notStrictEqual(objects.length, 0);
 
-      const cols = await View.getColumns(systemLibrary, objects[0].name);
+      const cols = (await View.getColumns(systemLibrary, objects[0].name)).data;
       assert.notStrictEqual(cols.length, 0);
     }},
 
@@ -137,7 +137,7 @@ export const DatabaseSuite: TestSuite = {
       const objects = await Database.getObjects(Statement.noQuotes(sqlSchema), [`views`]);
       assert.notStrictEqual(objects.length, 0);
 
-      const cols = await View.getColumns(Statement.noQuotes(sqlSchema), objects[0].name);
+      const cols = (await View.getColumns(Statement.noQuotes(sqlSchema), objects[0].name)).data;
       assert.notStrictEqual(cols.length, 0);
     }},
 
@@ -161,7 +161,7 @@ export const DatabaseSuite: TestSuite = {
       const qsys = Statement.delimName(`qsys`, true);
       const createSqlSample = Statement.delimName(`CREATE_SQL_SAMPLE`, true);
 
-      const parms = await Callable.getParms(qsys, createSqlSample);
+      const parms = (await Callable.getParms(qsys, createSqlSample)).data;
       assert.notStrictEqual(parms.length, 0);
     }},
 
@@ -207,11 +207,11 @@ export const DatabaseSuite: TestSuite = {
     }},
 
     {name: `Retrieve overloaded function parameters`, test: async () => {
-      const parms1 = await Callable.getParms(`OVERLOAD`, `MULTI_FUNC_SQUARED`);
+      const parms1 = (await Callable.getParms(`OVERLOAD`, `MULTI_FUNC_SQUARED`)).data;
       // Verify one parameter for this function
       assert.strictEqual(parms1.length, 1);
 
-      const parms2 = await Callable.getParms(`OVERLOAD`, `MULTI_FUNC_PRODUCT`);
+      const parms2 = (await Callable.getParms(`OVERLOAD`, `MULTI_FUNC_PRODUCT`)).data;
       // Verify two parameter for this function
       assert.strictEqual(parms2.length, 2);
     }},
@@ -239,11 +239,11 @@ export const DatabaseSuite: TestSuite = {
     }},
 
     {name: `Retrieve overloaded procedure parameters`, test: async () => {
-      const parms1 = await Callable.getParms(`OVERLOAD`, `MULTI_PROC_ALL_MONITORS`);
+      const parms1 = (await Callable.getParms(`OVERLOAD`, `MULTI_PROC_ALL_MONITORS`)).data;
       // Verify no parameters for this procedure
       assert.strictEqual(parms1.length, 0);
 
-      const parms2 = await Callable.getParms(`OVERLOAD`, `MULTI_PROC_MY_MONITORS`);
+      const parms2 = (await Callable.getParms(`OVERLOAD`, `MULTI_PROC_MY_MONITORS`)).data;
       // Verify one parameter for this procedure
       assert.strictEqual(parms2.length, 1);
     }},

@@ -5,7 +5,7 @@ import { OldSQLJob } from "./sqlJob";
 import { askAboutNewJob, onConnectOrServerInstall, osDetail } from "../config";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import Configuration from "../configuration";
-import { QueryOptions } from "@ibm/mapepire-js/dist/src/types";
+import { QueryOptions, QueryResult } from "@ibm/mapepire-js/dist/src/types";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
 
 export interface JobInfo {
@@ -123,7 +123,7 @@ export class SQLJobManager {
    * of arrays. When set to false, data is returned as an array of objects (compatible with legacy API).
    * @returns 
    */
-  async runSQL<T>(query: string, opts?: QueryOptions): Promise<T[]> {
+  async runSQL<T>(query: string, opts?: QueryOptions): Promise<QueryResult<T>> {
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
     const rowsToFetch = 2147483647;
@@ -131,7 +131,7 @@ export class SQLJobManager {
     const statement = await this.getPagingStatement<T>(query, opts);
     const results = await statement.execute(rowsToFetch);
     statement.close();
-    return results.data;
+    return results;
   }
 
   async getPagingStatement<T>(query: string, opts?: QueryOptions): Promise<Query<T>> {

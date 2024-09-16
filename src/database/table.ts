@@ -3,6 +3,7 @@ import vscode from "vscode"
 import { JobManager } from "../config";
 import { getInstance } from "../base";
 import Statement from "./statement";
+import { QueryResult } from "@ibm/mapepire-js/dist/src/types";
 
 export default class Table {
   /**
@@ -10,7 +11,7 @@ export default class Table {
    * @param {string} name Not user input
    * @returns {Promise<TableColumn[]>}
    */
-  static async getItems(schema: string, name: string): Promise<TableColumn[]> {
+  static async getItems(schema: string, name: string): Promise<QueryResult<TableColumn>> {
     const sql = [
       `SELECT `,
       `  column.COLUMN_NAME,`,

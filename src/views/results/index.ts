@@ -17,7 +17,7 @@ import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { ExplainType } from "@ibm/mapepire-js/dist/src/types";
 
-export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
+export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
 export interface StatementInfo {
   content: string,
@@ -255,31 +255,32 @@ async function runHandler(options?: StatementInfo) {
 
           setCancelButtonVisibility(true);
           updateStatusBar({executing: true});
-          const data = await JobManager.runSQL(statementDetail.content);
+          const result = await JobManager.runSQL(statementDetail.content);
           setCancelButtonVisibility(false);
 
-          if (data.length > 0) {
+          if (result.data.length > 0) {
             switch (statementDetail.qualifier) {
 
               case `csv`:
               case `json`:
               case `sql`:
+              case `rpg`:
                 let content = ``;
                 switch (statementDetail.qualifier) {
-                  case `csv`: content = csv.stringify(data, {
+                  case `csv`: content = csv.stringify(result.data, {
                     header: true,
                     quoted_string: true,
                   }); break;
-                  case `json`: content = JSON.stringify(data, null, 2); break;
+                  case `json`: content = JSON.stringify(result.data, null, 2); break;
 
                   case `sql`:
-                    const keys = Object.keys(data[0]);
+                    const keys = Object.keys(result.data[0]);
 
                     // split array into groups of 1k
                     const insertLimit = 1000;
                     const dataChunks = [];
-                    for (let i = 0; i < data.length; i += insertLimit) {
-                      dataChunks.push(data.slice(i, i + insertLimit));
+                    for (let i = 0; i < result.data.length; i += insertLimit) {
+                      dataChunks.push(result.data.slice(i, i + insertLimit));
                     }
 
                     content = `-- Generated ${dataChunks.length} insert statement${dataChunks.length === 1 ? `` : `s`}\n\n`;
@@ -300,11 +301,47 @@ async function runHandler(options?: StatementInfo) {
                       content += insertStatement.join(`\n`) + `;\n`;
                     }
                     break;
+
+                  case `rpg`:
+
+                    content = `**free\n\n-- Row data structure\n` 
+                            + `dcl-ds row_t qualified template;\n`;
+
+                    for (let i = 0; i < result.metadata.column_count; i++) {
+                      content += `  ${result.metadata.columns[i].label.toLowerCase()} `;
+                      switch (result.metadata.columns[i].type) {
+                        case `NUMERIC`:
+                          content += `zoned(${result.metadata.columns[i].precision}${result.metadata.columns[i].scale > 0 ? ' : ' + result.metadata.columns[i].scale : ''});\n`;
+                          break;
+                        case `DECIMAL`:
+                          content += `packed(${result.metadata.columns[i].precision}${result.metadata.columns[i].scale > 0 ? ' : ' + result.metadata.columns[i].scale : ''});\n`;
+                          break;
+                        case `CHAR`:
+                          content += `${result.metadata.columns[i].precision > 10 ? 'varchar' : 'char'}(${result.metadata.columns[i].precision});\n`;
+                          break;
+                        case `VARCHAR`:
+                          content += `varchar(${result.metadata.columns[i].precision});\n`;
+                          break;
+                        case `DATE`:
+                          content += `date;\n`;
+                          break;
+                        case `SMALLINT`:
+                          content += `int(5);\n`;
+                          break;
+                        default:
+                          content += `// type:${result.metadata.columns[i].type} precision:${result.metadata.columns[i].precision} scale:${result.metadata.columns[i].scale}\n`;
+                          break;
+                      }
+                    }
+                    content += `end-ds;\n`;
+
+                    break;
+
                 }
 
-                const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
+                const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier === 'rpg' ? 'rpgle' : statementDetail.qualifier, content });
                 await vscode.window.showTextDocument(textDoc);
-                chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
+                chosenView.setLoadingText(`Query executed with ${result.data.length} rows returned.`, false);
                 break;
             }
 
@@ -384,7 +421,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     }
 
     if (statementInfo.content) {
-      [`cl`, `json`, `csv`, `sql`, `explain`].forEach(mode => {
+      [`cl`, `json`, `csv`, `sql`, `explain`, `rpg`].forEach(mode => {
         if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
           statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 

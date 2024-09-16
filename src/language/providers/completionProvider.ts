@@ -102,7 +102,7 @@ async function getObjectColumns(
     let completionItems: CompletionItem[] = [];
     
     if (isUDTF) {
-      const resultSet = await Callable.getResultColumns(schema, name, true);
+      const resultSet = (await Callable.getResultColumns(schema, name, true)).data;
       
       if (!resultSet?.length ? true : false) {
         completionItemCache.set(cacheKey, []);
@@ -120,7 +120,7 @@ async function getObjectColumns(
       );
 
     } else {
-      const columns = await Table.getItems(schema, name);
+      const columns = (await Table.getItems(schema, name)).data;
 
       if (!columns?.length ? true : false) {
         completionItemCache.set(cacheKey, []);
