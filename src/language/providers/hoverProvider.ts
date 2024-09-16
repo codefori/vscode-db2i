@@ -1,9 +1,60 @@
-import { Hover, languages, MarkdownString } from "vscode";
+import { Hover, languages, MarkdownString, workspace } from "vscode";
 import { getSqlDocument } from "./logic/parse";
 import { DbCache, LookupResult } from "./logic/cache";
 import { JobManager } from "../../config";
 import Statement from "../../database/statement";
 import { getParmAttributes, prepareParamType } from "./logic/completion";
+import { StatementType } from "../sql/types";
+import { remoteAssistIsEnabled } from "./logic/available";
+
+// =================================
+// We need to open provider to exist so symbols can be cached for hover support when opening files
+// =================================
+
+export const openProvider = workspace.onDidOpenTextDocument(async (document) => {
+  if (remoteAssistIsEnabled()) {
+    if (document.languageId === `sql`) {
+      const sqlDoc = getSqlDocument(document);
+      const defaultSchema = getDefaultSchema();
+
+      for (const statement of sqlDoc.statements) {
+        const refs = statement.getObjectReferences();
+        if (refs.length) {
+          if (statement.type === StatementType.Call) {
+            const first = refs[0];
+            if (first.object.name) {
+              const name = Statement.noQuotes(Statement.delimName(first.object.name, true));
+              const schema = Statement.noQuotes(Statement.delimName(first.object.schema || defaultSchema, true));
+              const result = await DbCache.getType(schema, name, `PROCEDURE`);
+              if (result) {
+                await DbCache.getRoutineResultColumns(schema, name);
+                await DbCache.getSignaturesFor(schema, name, result.specificNames);
+              }
+            }
+
+          } else {
+            for (const ref of refs) {
+              if (ref.object.name) {
+                const name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
+                const schema = Statement.noQuotes(Statement.delimName(ref.object.schema || defaultSchema, true));
+                if (ref.isUDTF) {
+                  const result = await DbCache.getType(schema, name, `FUNCTION`);
+                  if (result) {
+                    await DbCache.getRoutineResultColumns(schema, name);
+                    await DbCache.getSignaturesFor(schema, name, result.specificNames);
+                  }
+                } else {
+                  await DbCache.getColumns(schema, name);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+  }
+});
 
 export const hoverProvider = languages.registerHoverProvider({ language: `sql` }, {
   async provideHover(document, position, token) {
@@ -22,31 +73,36 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
         const atRef = offset >= ref.tokens[0].range.start && offset <= ref.tokens[ref.tokens.length - 1].range.end;
 
         if (atRef) {
-          const result = lookupSymbol(ref.object.name, ref.object.schema || defaultSchema);
+          const schema = ref.object.schema || defaultSchema;
+          const result = lookupSymbol(ref.object.name, schema);
           if (result) {
             addSymbol(md, result);
-            return new Hover(md);
+          }
+
+          if (systemSchemas.includes(schema.toUpperCase())) {
+            addSearch(md, ref.object.name, result !== undefined);
+          }
+        } else if (tokAt && tokAt.value) {
+          const result = lookupSymbol(tokAt.value, defaultSchema);
+          if (result) {
+            addSymbol(md, result);
           }
         }
       }
     }
 
-    if (tokAt && tokAt.value) {
-      const result = lookupSymbol(tokAt.value, defaultSchema);
-      if (result) {
-        addSymbol(md, result);
-        return new Hover(md);
-      }
-    }
+    return md.value ? new Hover(md) : undefined;
   }
 });
 
 const systemSchemas = [`QSYS`, `QSYS2`, `SYSTOOLS`];
 
-function addSearch (base: MarkdownString, value: string) {
+function addSearch(base: MarkdownString, value: string, withGap = true) {
+  if (withGap) {
+    base.appendMarkdown([``, `---`, ``].join(`\n`));
+  }
+
   base.appendMarkdown([
-    ``,
-    `---`,
     `[Search on IBM Documentation](https://www.ibm.com/docs/en/search/${encodeURI(value)})`
   ].join(`\n\n`));
 }
@@ -65,10 +121,6 @@ function addSymbol(base: MarkdownString, symbol: LookupResult) {
     for (const signature of symbol.signatures) {
       base.appendCodeblock(`${routineName}(${signature.parms.map(p => `${Statement.prettyName(p.PARAMETER_NAME)}${p.DEFAULT !== undefined ? `?` : ``}`).join(', ')})`, `sql`);
     }
-
-    if (systemSchemas.includes(symbol.routine.schema)) {
-      addSearch(base, symbol.routine.name);
-    }
   }
   else if ('PARAMETER_NAME' in symbol) {
     base.appendCodeblock(prepareParamType(symbol) + `\n`, `sql`);
@@ -80,10 +132,6 @@ function addSymbol(base: MarkdownString, symbol: LookupResult) {
     addList(base, [
       `**Description:** ${symbol.text}`,
     ]);
-
-    if (systemSchemas.includes(symbol.schema)) {
-      addSearch(base, symbol.name);
-    }
   }
 }
 
