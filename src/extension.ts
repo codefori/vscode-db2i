@@ -21,6 +21,7 @@ import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobMan
 import Configuration from "./configuration";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import { Db2iUriHandler, getStatementUri } from "./uriHandler";
+import { DbCache } from "./language/providers/logic/cache";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -88,6 +89,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   const instance = getInstance();
 
   instance.subscribe(context, `connected`, `db2i-connected`, () => {
+    DbCache.resetCache();
     selfCodesView.setRefreshEnabled(false);
     selfCodesView.setJobOnly(false);
     // Refresh the examples when we have it, so we only display certain examples
