@@ -93,7 +93,7 @@ async function getObjectColumns(
     name = Statement.noQuotes(Statement.delimName(name, true));
     
   if (isUDTF) {
-    const resultSet = await DbCache.getResultColumns(schema, name, true);
+    const resultSet = await DbCache.getRoutineColumns(schema, name, true);
     
     if (!resultSet?.length ? true : false) {
       return [];
@@ -110,7 +110,7 @@ async function getObjectColumns(
     );
 
   } else {
-    const columns = await DbCache.getItems(schema, name);
+    const columns = await DbCache.getColumns(schema, name);
 
     if (!columns?.length ? true : false) {
       return [];

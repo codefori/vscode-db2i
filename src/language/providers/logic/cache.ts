@@ -3,18 +3,18 @@ import Schemas, { PageData, SQLType } from "../../../database/schemas";
 import Table from "../../../database/table";
 
 export class DbCache {
-  private static parmCache: Map<string, SQLParm[]> = new Map();
-  private static tableColumns: Map<string, TableColumn[]> = new Map();
+  private static routineColumns: Map<string, SQLParm[]> = new Map();
+  private static objectColumns: Map<string, TableColumn[]> = new Map();
   private static schemaObjects: Map<string, BasicSQLObject[]> = new Map();
-  private static callables: Map<string, CallableRoutine|false> = new Map();
-  private static callableSignatures: Map<string, CallableSignature[]> = new Map();
+  private static routines: Map<string, CallableRoutine|false> = new Map();
+  private static routineSignatures: Map<string, CallableSignature[]> = new Map();
 
   private static toReset: string[] = [];
 
   // TODO: call on connect
   static async resetCache() {
-    this.parmCache.clear();
-    this.tableColumns.clear();
+    this.routineColumns.clear();
+    this.objectColumns.clear();
     this.schemaObjects.clear();
     this.toReset = [];
   }
@@ -34,30 +34,30 @@ export class DbCache {
     return false;
   }
 
-  static async getResultColumns(schema: string, name: string, resolveName?: boolean) {
+  static async getRoutineColumns(schema: string, name: string, resolveName?: boolean) {
     const key = getKey(`routine`, schema, name);
     
-    if (!this.parmCache.has(key) || this.shouldReset(name)) {
+    if (!this.routineColumns.has(key) || this.shouldReset(name)) {
       const result = await Callable.getResultColumns(schema, name, resolveName);
       if (result) {
-        this.parmCache.set(key, result);
+        this.routineColumns.set(key, result);
       }
     }
 
-    return this.parmCache.get(key) || [];
+    return this.routineColumns.get(key) || [];
   }
 
-  static async getItems(schema: string, name: string) {
+  static async getColumns(schema: string, name: string) {
     const key = getKey(`columns`, schema, name);
     
-    if (!this.parmCache.has(key) || this.shouldReset(name)) {
+    if (!this.routineColumns.has(key) || this.shouldReset(name)) {
       const result = await Table.getItems(schema, name);
       if (result) {
-        this.tableColumns.set(key, result);
+        this.objectColumns.set(key, result);
       }
     }
 
-    return this.tableColumns.get(key) || [];
+    return this.objectColumns.get(key) || [];
   }
 
   static async getObjects(schema: string, types: SQLType[], details?: PageData) {
@@ -76,40 +76,40 @@ export class DbCache {
   static async getType(schema: string, name: string, type: CallableType) {
     const key = getKey(type, schema, name);
     
-    if (!this.callables.has(key) || this.shouldReset(name)) {
+    if (!this.routines.has(key) || this.shouldReset(name)) {
       const result = await Callable.getType(schema, name, type);
       if (result) {
-        this.callables.set(key, result);
+        this.routines.set(key, result);
       } else {
-        this.callables.set(key, false);
+        this.routines.set(key, false);
         return false;
       }
     }
 
-    return this.callables.get(key) || undefined;
+    return this.routines.get(key) || undefined;
   }
 
   static getCachedType(schema: string, name: string, type: CallableType) {
     const key = getKey(type, schema, name);
-    return this.callables.get(key) || undefined
+    return this.routines.get(key) || undefined
   }
 
   static async getSignaturesFor(schema: string, name: string, specificNames: string[]) {
     const key = getKey(`signatures`, schema, name);
     
-    if (!this.callableSignatures.has(key) || this.shouldReset(name)) {
+    if (!this.routineSignatures.has(key) || this.shouldReset(name)) {
       const result = await Callable.getSignaturesFor(schema, specificNames);
       if (result) {
-        this.callableSignatures.set(key, result);
+        this.routineSignatures.set(key, result);
       }
     }
 
-    return this.callableSignatures.get(key) || [];
+    return this.routineSignatures.get(key) || [];
   }
 
   static getCachedSignatures(schema: string, name: string) {
     const key = getKey(`signatures`, schema, name);
-    return this.callableSignatures.get(key) || [];
+    return this.routineSignatures.get(key) || [];
   }
 }
 
