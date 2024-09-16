@@ -34,7 +34,7 @@ export class DbCache {
     return false;
   }
 
-  static async getRoutineColumns(schema: string, name: string, resolveName?: boolean) {
+  static async getRoutineResultColumns(schema: string, name: string, resolveName?: boolean) {
     const key = getKey(`routine`, schema, name);
     
     if (!this.routineColumns.has(key) || this.shouldReset(name)) {

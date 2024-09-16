@@ -93,7 +93,7 @@ async function getObjectColumns(
     name = Statement.noQuotes(Statement.delimName(name, true));
     
   if (isUDTF) {
-    const resultSet = await DbCache.getRoutineColumns(schema, name, true);
+    const resultSet = await DbCache.getRoutineResultColumns(schema, name, true);
     
     if (!resultSet?.length ? true : false) {
       return [];
