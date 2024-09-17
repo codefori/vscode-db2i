@@ -14,7 +14,7 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
     ref.object.schema = Statement.noQuotes(Statement.delimName(ref.object.schema, true));
     ref.object.name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
 
-    const callableRoutine = await DbCache.getType(ref.object.schema, ref.object.name, type);
+    const callableRoutine = await DbCache.getRoutine(ref.object.schema, ref.object.name, type);
 
     if (callableRoutine) {
       await DbCache.getSignaturesFor(ref.object.schema, ref.object.name, callableRoutine.specificNames);

@@ -25,7 +25,7 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
             if (first.object.name) {
               const name = Statement.noQuotes(Statement.delimName(first.object.name, true));
               const schema = Statement.noQuotes(Statement.delimName(first.object.schema || defaultSchema, true));
-              const result = await DbCache.getType(schema, name, `PROCEDURE`);
+              const result = await DbCache.getRoutine(schema, name, `PROCEDURE`);
               if (result) {
                 await DbCache.getSignaturesFor(schema, name, result.specificNames);
               }
@@ -37,7 +37,7 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
                 const name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
                 const schema = Statement.noQuotes(Statement.delimName(ref.object.schema || defaultSchema, true));
                 if (ref.isUDTF) {
-                  const result = await DbCache.getType(schema, name, `FUNCTION`);
+                  const result = await DbCache.getRoutine(schema, name, `FUNCTION`);
                   if (result) {
                     await DbCache.getSignaturesFor(schema, name, result.specificNames);
                   }
@@ -74,9 +74,11 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
 
         if (atRef) {
           const schema = ref.object.schema || defaultSchema;
-          const result = lookupSymbol(ref.object.name, schema, possibleNames);
+          const result = await lookupSymbol(ref.object.name, schema, possibleNames);
           if (result) {
             addSymbol(md, result);
+          } else {
+            
           }
 
           if (systemSchemas.includes(schema.toUpperCase())) {
@@ -87,7 +89,7 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
 
       // If no symbol found, check if we can find a symbol by name
       if (md.value.length === 0 && tokAt && tokAt.type === `word` && tokAt.value) {
-        const result = lookupSymbol(tokAt.value, defaultSchema, possibleNames);
+        const result = await lookupSymbol(tokAt.value, undefined, possibleNames);
         if (result) {
           addSymbol(md, result);
         }
@@ -147,9 +149,9 @@ function addSymbol(base: MarkdownString, symbol: LookupResult) {
   }
 }
 
-function lookupSymbol(name: string, schema: string, possibleNames: string[]) {
+function lookupSymbol(name: string, schema: string|undefined, possibleNames: string[]) {
   name = Statement.noQuotes(Statement.delimName(name, true));
-  schema = Statement.noQuotes(Statement.delimName(schema, true));
+  schema = schema ? Statement.noQuotes(Statement.delimName(schema, true)) : undefined
 
   return DbCache.lookupSymbol(name, schema, possibleNames);
 }

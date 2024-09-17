@@ -40,27 +40,37 @@ export class DbCache {
     return false;
   }
 
-  static lookupSymbol(name: string, schema: string, objectFilter: string[]): LookupResult {
-    const routine = this.getCachedType(schema, name, `FUNCTION`) || this.getCachedType(schema, name, `PROCEDURE`);
-    if (routine) {
-      const signatures = this.getCachedSignatures(schema, name);
-      return { routine, signatures } as RoutineDetail;
-    }
-
-    objectFilter = objectFilter.map(o => o.toLowerCase());
-
-    const included = (name: string) => {
+  static async lookupSymbol(name: string, schema: string|undefined, objectFilter: string[]): Promise<LookupResult> {
+    const included = (lookupName: string) => {
       if (objectFilter) {
-        return objectFilter.includes(name.toLowerCase());
+        return objectFilter.includes(lookupName.toLowerCase());
       }
       return true;
     }
 
-    // Search objects
-    for (const currentSchema of this.schemaObjects.values()) {
-      const chosenObject = currentSchema.find(sqlObject => included(sqlObject.name) && sqlObject.name === name && sqlObject.schema === schema);
-      if (chosenObject) {
-        return chosenObject;
+    if (schema) {
+      // Looking routine
+      const routine = this.getCachedRoutine(schema, name, `FUNCTION`) || this.getCachedRoutine(schema, name, `PROCEDURE`);
+      if (routine) {
+        const signatures = this.getCachedSignatures(schema, name);
+        return { routine, signatures } as RoutineDetail;
+      }
+
+      objectFilter = objectFilter.map(o => o.toLowerCase());
+
+      // Search objects
+      for (const currentSchema of this.schemaObjects.values()) {
+        const chosenObject = currentSchema.find(sqlObject => included(sqlObject.name) && sqlObject.name === name && sqlObject.schema === schema);
+        if (chosenObject) {
+          return chosenObject;
+        }
+      }
+
+      // Finally, let's do a last lookup
+      const lookupRoutine = await this.getRoutine(schema, name, `FUNCTION`) || await this.getRoutine(schema, name, `PROCEDURE`);
+      if (lookupRoutine) {
+        const signatures = await this.getSignaturesFor(schema, name, lookupRoutine.specificNames);
+        return { routine: lookupRoutine, signatures } as RoutineDetail;
       }
     }
 
@@ -111,7 +121,7 @@ export class DbCache {
     return this.schemaObjects.get(key) || [];
   }
 
-  static async getType(schema: string, name: string, type: CallableType) {
+  static async getRoutine(schema: string, name: string, type: CallableType) {
     const key = getKey(type, schema, name);
     
     if (!this.routines.has(key) || this.shouldReset(name)) {
@@ -127,7 +137,7 @@ export class DbCache {
     return this.routines.get(key) || undefined;
   }
 
-  static getCachedType(schema: string, name: string, type: CallableType) {
+  static getCachedRoutine(schema: string, name: string, type: CallableType) {
     const key = getKey(type, schema, name);
     return this.routines.get(key) || undefined
   }
