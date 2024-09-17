@@ -27,7 +27,7 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
               const schema = Statement.noQuotes(Statement.delimName(first.object.schema || defaultSchema, true));
               const result = await DbCache.getType(schema, name, `PROCEDURE`);
               if (result) {
-                await DbCache.getRoutineResultColumns(schema, name);
+                await DbCache.getRoutineResultColumns(schema, name, true);
                 await DbCache.getSignaturesFor(schema, name, result.specificNames);
               }
             }
@@ -119,7 +119,7 @@ function addSymbol(base: MarkdownString, symbol: LookupResult) {
   if ('routine' in symbol) {
     const routineName = Statement.prettyName(symbol.routine.name);
     for (const signature of symbol.signatures) {
-      base.appendCodeblock(`${routineName}(${signature.parms.map(p => `${Statement.prettyName(p.PARAMETER_NAME)}${p.DEFAULT !== undefined ? `?` : ``}`).join(', ')})`, `sql`);
+      base.appendCodeblock(`${routineName}(\n${signature.parms.map(p => `  ${Statement.prettyName(p.PARAMETER_NAME)}${p.DEFAULT !== undefined ? `?` : ``}: ${prepareParamType(p)}`).join(',\n')}\n)`, `sql`);
     }
   }
   else if ('PARAMETER_NAME' in symbol) {
