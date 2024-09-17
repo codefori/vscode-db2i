@@ -512,8 +512,8 @@ export default class Statement {
 
 		let endIndex = i;
 
-		let isUDTF = tokenIs(nextToken, `function`, `TABLE`);
-
+		const isUDTF = tokenIs(nextToken, `function`, `TABLE`);
+		const isLateral = tokenIs(nextToken, `function`, `LATERAL`);
 
 		if (isUDTF) {
 			sqlObj = this.getRefAtToken(i+2);
@@ -528,7 +528,16 @@ export default class Statement {
 				nextIndex = -1;
 				nextToken = undefined;
 			}
-
+		} else if (isLateral) {
+			console.log(`HI`);
+			const blockTokens = this.getBlockAt(nextToken.range.end+1);
+			console.log(blockTokens);
+			const newStatement = new Statement(blockTokens, {start: nextToken.range.start, end: blockTokens[blockTokens.length-1].range.end});
+			[sqlObj] = newStatement.getObjectReferences();
+			
+			nextIndex = i + 2 + blockTokens.length;
+			nextToken = this.tokens[nextIndex];
+		
 		} else {
 			if (nextToken && NameTypes.includes(nextToken.type)) {
 				nextIndex = i;

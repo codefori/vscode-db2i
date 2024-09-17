@@ -971,7 +971,32 @@ describe(`Object references`, () => {
     expect(statement.type).toBe(StatementType.With);
 
     const refs = statement.getObjectReferences();
+    expect(refs.length).toBe(3);
+
+    expect(refs[0].object.name).toBe(`object_ownership`);
+    expect(refs[0].object.schema).toBe(`qsys2`);
+
+    expect(refs[1].object.name).toBe(`qsysobjs`);
+    expect(refs[1].object.schema).toBeUndefined();
+    expect(refs[1].alias).toBe(`q`);
+    
+    expect(refs[2].object.name).toBe(`object_statistics`);
+    expect(refs[2].object.schema).toBe(`qsys2`);
+    expect(refs[2].alias).toBe(`z`);
   });
+
+  test(`Multiple UDTFs`, () => {
+    const lines = [
+      `SELECT b.objlongschema, b.objname, b.objtype, b.objattribute, b.objcreated, b.objsize, b.objtext, b.days_used_count, b.last_used_timestamp,b.* FROM `,
+      `   TABLE (QSYS2.OBJECT_STATISTICS('*ALLUSRAVL ', '*LIB') ) as a, `,
+      `   TABLE (QSYS2.OBJECT_STATISTICS(a.objname, 'ALL')  ) AS b`,
+      `WHERE b.OBJOWNER = 'user-name'`,
+      `ORDER BY b.OBJSIZE DESC`,
+      `FETCH FIRST 100 ROWS ONLY;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+  })
 });
 
 describe(`Offset reference tests`, () => {
@@ -1167,7 +1192,6 @@ describe(`PL body tests`, () => {
     const refs = statement.getObjectReferences();
     const ctes = statement.getCTEReferences();
 
-    console.log(refs);
     expect(refs.length).toBe(7);
     expect(refs[0].object.name).toBe(`shipments`);
     expect(refs[0].alias).toBe(`s`);
