@@ -94,13 +94,15 @@ async function getObjectColumns(
     name = Statement.noQuotes(Statement.delimName(name, true));
     
   if (isUDTF) {
-    const resultSet = await DbCache.getRoutineResultColumns(schema, name, true);
+    const resultSet = await DbCache.getCachedSignatures(schema, name);
     
     if (!resultSet?.length ? true : false) {
       return [];
     }
+
+    const chosenSig = resultSet[resultSet.length-1];
     
-    completionItems = resultSet.map((i) =>
+    completionItems = chosenSig.returns.map((i) =>
       createCompletionItem(
         Statement.prettyName(i.PARAMETER_NAME),
         CompletionItemKind.Field,
@@ -111,7 +113,7 @@ async function getObjectColumns(
     );
 
   } else {
-    const columns = await DbCache.getColumns(schema, name);
+    const columns = await DbCache.getObjectColumns(schema, name);
 
     if (!columns?.length ? true : false) {
       return [];

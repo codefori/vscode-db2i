@@ -5,14 +5,12 @@ import Table from "../../../database/table";
 interface RoutineDetail {
   routine: CallableRoutine;
   signatures: CallableSignature[];
-  resultingColumns: SQLParm[];
 }
 
 export type LookupResult = RoutineDetail | SQLParm | BasicSQLObject | TableColumn;
 
 export class DbCache {
   private static schemaObjects: Map<string, BasicSQLObject[]> = new Map();
-  private static routineResultColumns: Map<string, SQLParm[]> = new Map();
   private static objectColumns: Map<string, TableColumn[]> = new Map();
   private static routines: Map<string, CallableRoutine|false> = new Map();
   private static routineSignatures: Map<string, CallableSignature[]> = new Map();
@@ -20,7 +18,6 @@ export class DbCache {
   private static toReset: string[] = [];
 
   static async resetCache() {
-    this.routineResultColumns.clear();
     this.objectColumns.clear();
     this.schemaObjects.clear();
     this.toReset = [];
@@ -43,17 +40,25 @@ export class DbCache {
     return false;
   }
 
-  static lookupSymbol(name: string, schema: string): LookupResult {
+  static lookupSymbol(name: string, schema: string, objectFilter: string[]): LookupResult {
     const routine = this.getCachedType(schema, name, `FUNCTION`) || this.getCachedType(schema, name, `PROCEDURE`);
     if (routine) {
       const signatures = this.getCachedSignatures(schema, name);
-      const resultingColumns = this.getCachedRoutineResultColumns(schema, name);
-      return { routine, signatures, resultingColumns } as RoutineDetail;
+      return { routine, signatures } as RoutineDetail;
+    }
+
+    objectFilter = objectFilter.map(o => o.toLowerCase());
+
+    const included = (name: string) => {
+      if (objectFilter) {
+        return objectFilter.includes(name.toLowerCase());
+      }
+      return true;
     }
 
     // Search objects
     for (const currentSchema of this.schemaObjects.values()) {
-      const chosenObject = currentSchema.find(column => column.name === name && column.schema === schema);
+      const chosenObject = currentSchema.find(sqlObject => included(sqlObject.name) && sqlObject.name === name && sqlObject.schema === schema);
       if (chosenObject) {
         return chosenObject;
       }
@@ -63,43 +68,27 @@ export class DbCache {
 
     // First object columns
     for (const currentObject of this.objectColumns.values()) {
-      const chosenColumn = currentObject.find(column => column.COLUMN_NAME.toLowerCase() === name.toLowerCase());
+      const chosenColumn = currentObject.find(column => included(column.TABLE_NAME) && column.COLUMN_NAME.toLowerCase() === name.toLowerCase());
       if (chosenColumn) {
         return chosenColumn;
       }
     }
 
     // Then by routine result columns
-    for (const currentRoutine of this.routineResultColumns.values()) {
-      const chosenColumn = currentRoutine.find(column => column.PARAMETER_NAME.toLowerCase() === name.toLowerCase());
-      if (chosenColumn) {
-        return chosenColumn;
+    for (const currentRoutineSig of this.routineSignatures.values()) {
+      for (const signature of currentRoutineSig) {
+        const chosenColumn = signature.returns.find(column => column.PARAMETER_NAME.toLowerCase() === name.toLowerCase());
+        if (chosenColumn) {
+          return chosenColumn;
+        }
       }
     }
   }
 
-  static async getRoutineResultColumns(schema: string, name: string, resolveName?: boolean) {
-    const key = getKey(`routine`, schema, name);
-    
-    if (!this.routineResultColumns.has(key) || this.shouldReset(name)) {
-      const result = await Callable.getResultColumns(schema, name, resolveName);
-      if (result) {
-        this.routineResultColumns.set(key, result);
-      }
-    }
-
-    return this.routineResultColumns.get(key) || [];
-  }
-
-  static getCachedRoutineResultColumns(schema: string, name: string) {
-    const key = getKey(`routine`, schema, name);
-    return this.routineResultColumns.get(key) || [];
-  }
-
-  static async getColumns(schema: string, name: string) {
+  static async getObjectColumns(schema: string, name: string) {
     const key = getKey(`columns`, schema, name);
     
-    if (!this.routineResultColumns.has(key) || this.shouldReset(name)) {
+    if (!this.objectColumns.has(key) || this.shouldReset(name)) {
       const result = await Table.getItems(schema, name);
       if (result) {
         this.objectColumns.set(key, result);

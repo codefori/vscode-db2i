@@ -27,7 +27,6 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
               const schema = Statement.noQuotes(Statement.delimName(first.object.schema || defaultSchema, true));
               const result = await DbCache.getType(schema, name, `PROCEDURE`);
               if (result) {
-                await DbCache.getRoutineResultColumns(schema, name, true);
                 await DbCache.getSignaturesFor(schema, name, result.specificNames);
               }
             }
@@ -40,11 +39,10 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
                 if (ref.isUDTF) {
                   const result = await DbCache.getType(schema, name, `FUNCTION`);
                   if (result) {
-                    await DbCache.getRoutineResultColumns(schema, name, true);
                     await DbCache.getSignaturesFor(schema, name, result.specificNames);
                   }
                 } else {
-                  await DbCache.getColumns(schema, name);
+                  await DbCache.getObjectColumns(schema, name);
                 }
               }
             }
@@ -69,12 +67,14 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
 
     if (statementAt) {
       const refs = statementAt.getObjectReferences();
+      const possibleNames = refs.map(ref => ref.object.name).filter(name => name);
+
       for (const ref of refs) {
         const atRef = offset >= ref.tokens[0].range.start && offset <= ref.tokens[ref.tokens.length - 1].range.end;
 
         if (atRef) {
           const schema = ref.object.schema || defaultSchema;
-          const result = lookupSymbol(ref.object.name, schema);
+          const result = lookupSymbol(ref.object.name, schema, possibleNames);
           if (result) {
             addSymbol(md, result);
           }
@@ -82,8 +82,8 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
           if (systemSchemas.includes(schema.toUpperCase())) {
             addSearch(md, ref.object.name, result !== undefined);
           }
-        } else if (tokAt && tokAt.value) {
-          const result = lookupSymbol(tokAt.value, defaultSchema);
+        } else if (tokAt && tokAt.type === `word` && tokAt.value) {
+          const result = lookupSymbol(tokAt.value, defaultSchema, possibleNames);
           if (result) {
             addSymbol(md, result);
           }
@@ -118,8 +118,17 @@ function addSymbol(base: MarkdownString, symbol: LookupResult) {
 
   if ('routine' in symbol) {
     const routineName = Statement.prettyName(symbol.routine.name);
-    for (const signature of symbol.signatures) {
-      base.appendCodeblock(`${routineName}(\n${signature.parms.map(p => `  ${Statement.prettyName(p.PARAMETER_NAME)} => ${prepareParamType(p)}`).join(',\n')}\n)`, `sql`);
+    for (let i = 0; i < symbol.signatures.length; i++) {
+      const signature = symbol.signatures[i];
+      const returns = signature.returns.length > 0 ? `: ${signature.returns.length} column${signature.returns.length === 1 ? `` : `s`}` : '';
+
+      base.appendCodeblock(`${routineName}(\n${signature.parms.map((p, pI) => {
+        return `  ${Statement.prettyName(p.PARAMETER_NAME || `parm${pI}`)} => ${prepareParamType(p)}`
+      }).join(',\n')}\n)${returns}`, `sql`);
+
+      if (i < symbol.signatures.length - 1) {
+        base.appendMarkdown(`\n---\n`);
+      }
     }
   }
   else if ('PARAMETER_NAME' in symbol) {
@@ -135,11 +144,11 @@ function addSymbol(base: MarkdownString, symbol: LookupResult) {
   }
 }
 
-function lookupSymbol(name: string, schema: string) {
+function lookupSymbol(name: string, schema: string, possibleNames: string[]) {
   name = Statement.noQuotes(Statement.delimName(name, true));
   schema = Statement.noQuotes(Statement.delimName(schema, true));
 
-  return DbCache.lookupSymbol(name, schema);
+  return DbCache.lookupSymbol(name, schema, possibleNames);
 }
 
 const getDefaultSchema = (): string => {

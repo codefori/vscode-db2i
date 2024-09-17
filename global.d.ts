@@ -28,6 +28,7 @@ interface SQLParm {
   DEFAULT?: string,
   LONG_COMMENT?: string,
   ORDINAL_POSITION: number,
+  ROW_TYPE: "P" | "R",
 }
 
 interface BasicSQLObject {
