@@ -330,6 +330,9 @@ export default class Statement {
 					if (sqlObj) {
 						doAdd(sqlObj);
 						i += sqlObj.tokens.length;
+						if (sqlObj.isUDTF || sqlObj.fromLateral) {
+							i += 3; //For the brackets
+						}
 					}
 				}
 			}
@@ -520,6 +523,7 @@ export default class Statement {
 			if (sqlObj) {
 				sqlObj.isUDTF = true;
 				const blockTokens = this.getBlockAt(sqlObj.tokens[0].range.end);
+				
 				sqlObj.tokens = blockTokens;
 				nextIndex = i + 2 + blockTokens.length;
 				nextToken = this.tokens[nextIndex];
@@ -529,12 +533,11 @@ export default class Statement {
 				nextToken = undefined;
 			}
 		} else if (isLateral) {
-			console.log(`HI`);
 			const blockTokens = this.getBlockAt(nextToken.range.end+1);
-			console.log(blockTokens);
 			const newStatement = new Statement(blockTokens, {start: nextToken.range.start, end: blockTokens[blockTokens.length-1].range.end});
 			[sqlObj] = newStatement.getObjectReferences();
-			
+
+			sqlObj.fromLateral = true;
 			nextIndex = i + 2 + blockTokens.length;
 			nextToken = this.tokens[nextIndex];
 		

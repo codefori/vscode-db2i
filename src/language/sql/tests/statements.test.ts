@@ -996,6 +996,24 @@ describe(`Object references`, () => {
     ].join(`\n`);
 
     const document = new Document(lines);
+
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.Select);
+
+    const refs = statement.getObjectReferences();
+
+    console.log(refs);
+    expect(refs.length).toBe(2);
+    expect(refs[0].object.name).toBe(`OBJECT_STATISTICS`);
+    expect(refs[0].object.schema).toBe(`QSYS2`);
+    expect(refs[0].alias).toBe(`a`);
+
+    expect(refs[1].object.name).toBe(`OBJECT_STATISTICS`);
+    expect(refs[1].object.schema).toBe(`QSYS2`);
+    expect(refs[1].alias).toBe(`b`);
   })
 });
 
