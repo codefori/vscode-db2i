@@ -1005,7 +1005,6 @@ describe(`Object references`, () => {
 
     const refs = statement.getObjectReferences();
 
-    console.log(refs);
     expect(refs.length).toBe(2);
     expect(refs[0].object.name).toBe(`OBJECT_STATISTICS`);
     expect(refs[0].object.schema).toBe(`QSYS2`);

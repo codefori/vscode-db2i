@@ -83,9 +83,10 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
 
           if (result) {
             if ('routine' in result) {
-              const callableRef = statementAt.getCallableDetail(offset, false);
+              const routineOffset = ref.tokens[ref.tokens.length-1].range.end+1;
+              const callableRef = statementAt.getCallableDetail(routineOffset, false);
               if (callableRef) {
-                const { currentCount } = getPositionData(callableRef, offset);
+                const { currentCount } = getPositionData(callableRef, routineOffset);
                 const signatures = await DbCache.getCachedSignatures(callableRef.parentRef.object.schema, callableRef.parentRef.object.name);
                 const possibleSignatures = signatures.filter((s) => s.parms.length >= currentCount).sort((a, b) => a.parms.length - b.parms.length);
                 const signature = possibleSignatures.find((signature) => currentCount <= signature.parms.length);
