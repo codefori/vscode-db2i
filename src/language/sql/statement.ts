@@ -26,9 +26,6 @@ export default class Statement {
 		}
 		
 		switch (this.type) {
-			case StatementType.With:
-				this.tokens = SQLTokeniser.createBlocks(this.tokens);
-				break;
 			case StatementType.Create:
 				// No scalar transformation here..
 				break;
@@ -213,23 +210,25 @@ export default class Statement {
 
 	getCTEReferences(): CTEReference[] {
 		if (this.type !== StatementType.With) return [];
+
+		const withBlocks = SQLTokeniser.createBlocks(this.tokens.slice(0));
 		
 		let cteList: CTEReference[] = [];
 
-		for (let i = 0; i < this.tokens.length; i++) {
-			if (tokenIs(this.tokens[i], `word`)) {
-				let cteName = this.tokens[i].value!;
+		for (let i = 0; i < withBlocks.length; i++) {
+			if (tokenIs(withBlocks[i], `word`) || tokenIs(withBlocks[i], `function`)) {
+				let cteName = withBlocks[i].value!;
 				let parameters: string[] = [];
 				let statementBlockI = i+1;
 
-				if (tokenIs(this.tokens[i+1], `block`) && tokenIs(this.tokens[i+2], `keyword`, `AS`)) {
-					parameters = this.tokens[i+1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
+				if (tokenIs(withBlocks[i+1], `block`) && tokenIs(withBlocks[i+2], `keyword`, `AS`)) {
+					parameters = withBlocks[i+1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
 					statementBlockI = i+3;
-				} else if (tokenIs(this.tokens[i+1], `keyword`, `AS`)) {
+				} else if (tokenIs(withBlocks[i+1], `keyword`, `AS`)) {
 					statementBlockI = i+2;
 				}
 
-				const statementBlock = this.tokens[statementBlockI];
+				const statementBlock = withBlocks[statementBlockI];
 				if (tokenIs(statementBlock, `block`)) {
 					cteList.push({
 						name: cteName,
@@ -241,7 +240,7 @@ export default class Statement {
 				i = statementBlockI;
 			}
 
-			if (tokenIs(this.tokens[i], `statementType`, `SELECT`)) {
+			if (tokenIs(withBlocks[i], `statementType`, `SELECT`)) {
 				break;
 			}
 		}
@@ -513,11 +512,8 @@ export default class Statement {
 
 		let endIndex = i;
 
-		let isUDTF = false;
+		let isUDTF = tokenIs(nextToken, `function`, `TABLE`);
 
-		if (tokenIs(nextToken, `function`, `TABLE`)) {
-			isUDTF = true;
-		}
 
 		if (isUDTF) {
 			sqlObj = this.getRefAtToken(i+2);

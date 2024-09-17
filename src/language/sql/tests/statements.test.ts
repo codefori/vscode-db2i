@@ -943,6 +943,35 @@ describe(`Object references`, () => {
     expect(refs[0].object.name).toBe(`apiVersion`);
     expect(refs[0].createType).toBe(`varchar(10) ccsid 1208 default '2023-07-07'`);
   });
+
+  test(`SELECT, WITH & LATERAL`, () => {
+    const lines = [
+      `with qsysobjs (lib, obj, type) as (`,
+      `  select object_library, object_name, object_type`,
+      `    from table (qsys2.object_ownership(current_user))`,
+      `    where path_name is null`,
+      `)`,
+      `select lib concat '/' concat obj concat ' (' concat type concat ')' as label,`,
+      `       objsize as "Size"`,
+      `  from qsysobjs q, lateral (`,
+      `         select objcreated, last_used_timestamp, objsize`,
+      `           from table (qsys2.object_statistics(lib, type, obj))`,
+      `       ) z`,
+      `where objsize is not null`,
+      `order by OBJSIZE DESC`,
+      `limit 10;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.With);
+
+    const refs = statement.getObjectReferences();
+  });
 });
 
 describe(`Offset reference tests`, () => {
@@ -1138,8 +1167,28 @@ describe(`PL body tests`, () => {
     const refs = statement.getObjectReferences();
     const ctes = statement.getCTEReferences();
 
-    expect(refs.length).toBe(1);
-    expect(refs[0].object.name).toBe(`Temp02`);
+    console.log(refs);
+    expect(refs.length).toBe(7);
+    expect(refs[0].object.name).toBe(`shipments`);
+    expect(refs[0].alias).toBe(`s`);
+
+    expect(refs[1].object.name).toBe(`BillingDate`);
+    expect(refs[1].alias).toBeUndefined();
+
+    expect(refs[2].object.name).toBe(`Temp01`);
+    expect(refs[2].alias).toBe(`t1`);
+
+    expect(refs[3].object.name).toBe(`Temp01`);
+    expect(refs[3].alias).toBe(`t1`);
+
+    expect(refs[4].object.name).toBe(`Temp02`);
+    expect(refs[4].alias).toBe(`t2`);
+
+    expect(refs[5].object.name).toBe(`customers`);
+    expect(refs[5].alias).toBe(`c`);
+
+    expect(refs[6].object.name).toBe(`Temp02`);
+    expect(refs[6].alias).toBeUndefined();
 
     expect(ctes.length).toBe(3);
     expect(ctes[0].name).toBe(`Temp01`);
@@ -1174,9 +1223,11 @@ describe(`PL body tests`, () => {
     expect(statement.type).toBe(StatementType.With);
 
     const objs = statement.getObjectReferences();
-    expect(objs.length).toBe(1);
-    expect(objs[0].object.schema).toBe(undefined);
-    expect(objs[0].object.name).toBe(`cteme`);
+    expect(objs.length).toBe(2);
+    expect(objs[0].object.schema).toBe(`qsys2`);
+    expect(objs[0].object.name).toBe(`sysixadv`);
+    expect(objs[1].object.schema).toBe(undefined);
+    expect(objs[1].object.name).toBe(`cteme`);
 
     const ctes = statement.getCTEReferences();
     expect(ctes.length).toBe(1);
