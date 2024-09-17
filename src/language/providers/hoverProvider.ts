@@ -12,8 +12,8 @@ import { remoteAssistIsEnabled } from "./logic/available";
 // =================================
 
 export const openProvider = workspace.onDidOpenTextDocument(async (document) => {
-  if (remoteAssistIsEnabled()) {
-    if (document.languageId === `sql`) {
+  if (document.languageId === `sql`) {
+    if (remoteAssistIsEnabled()) {
       const sqlDoc = getSqlDocument(document);
       const defaultSchema = getDefaultSchema();
 
