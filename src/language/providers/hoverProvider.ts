@@ -40,7 +40,7 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
                 if (ref.isUDTF) {
                   const result = await DbCache.getType(schema, name, `FUNCTION`);
                   if (result) {
-                    await DbCache.getRoutineResultColumns(schema, name);
+                    await DbCache.getRoutineResultColumns(schema, name, true);
                     await DbCache.getSignaturesFor(schema, name, result.specificNames);
                   }
                 } else {
