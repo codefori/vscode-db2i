@@ -1,6 +1,6 @@
 interface TableColumn {
-  TABLE_SCHEMA?: string,
-  TABLE_NAME?: string,
+  TABLE_SCHEMA: string,
+  TABLE_NAME: string,
   COLUMN_NAME: string,
   SYSTEM_COLUMN_NAME: string,
   CONSTRAINT_NAME?: string,
