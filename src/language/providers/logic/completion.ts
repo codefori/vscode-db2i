@@ -24,7 +24,7 @@ export function getParmAttributes(parm: SQLParm): string {
 }
 
 export function prepareParamType(param: TableColumn | SQLParm): string {
-  let baseType = param.DATA_TYPE;
+  let baseType = param.DATA_TYPE.toLowerCase();
 
   if (param.CHARACTER_MAXIMUM_LENGTH) {
     baseType += `(${param.CHARACTER_MAXIMUM_LENGTH})`;
@@ -34,8 +34,8 @@ export function prepareParamType(param: TableColumn | SQLParm): string {
     baseType += `(${param.NUMERIC_PRECISION}, ${param.NUMERIC_SCALE})`;
   }
 
-  if ([`Y`, `YES`].includes(param.IS_NULLABLE)) {
-    baseType += ` nullable`;
+  if ([`Y`, `YES`].includes(param.IS_NULLABLE) || ('DEFAULT' in param && param.DEFAULT !== null)) {
+    baseType += ` optional`;
   };
 
   return baseType;

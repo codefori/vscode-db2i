@@ -119,7 +119,7 @@ function addSymbol(base: MarkdownString, symbol: LookupResult) {
   if ('routine' in symbol) {
     const routineName = Statement.prettyName(symbol.routine.name);
     for (const signature of symbol.signatures) {
-      base.appendCodeblock(`${routineName}(\n${signature.parms.map(p => `  ${Statement.prettyName(p.PARAMETER_NAME)}${p.DEFAULT !== undefined ? `?` : ``}: ${prepareParamType(p)}`).join(',\n')}\n)`, `sql`);
+      base.appendCodeblock(`${routineName}(\n${signature.parms.map(p => `  ${Statement.prettyName(p.PARAMETER_NAME)} => ${prepareParamType(p)}`).join(',\n')}\n)`, `sql`);
     }
   }
   else if ('PARAMETER_NAME' in symbol) {
