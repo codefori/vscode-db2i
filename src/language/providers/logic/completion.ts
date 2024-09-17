@@ -34,8 +34,10 @@ export function prepareParamType(param: TableColumn | SQLParm): string {
     baseType += `(${param.NUMERIC_PRECISION}, ${param.NUMERIC_SCALE})`;
   }
 
-  if ([`Y`, `YES`].includes(param.IS_NULLABLE) || ('DEFAULT' in param && param.DEFAULT !== null)) {
-    baseType += ` optional`;
+  const usefulNull = 'COLUMN_NAME' in param || ('ROW_TYPE' in param && param.ROW_TYPE === 'R');
+
+  if (usefulNull && [`Y`, `YES`].includes(param.IS_NULLABLE)) {
+    baseType += ` nullable`;
   };
 
   return baseType;

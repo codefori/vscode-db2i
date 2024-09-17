@@ -1,3 +1,4 @@
+// https://www.ibm.com/docs/en/i/7.4?topic=views-syscolumns2
 interface TableColumn {
   TABLE_SCHEMA: string,
   TABLE_NAME: string,
@@ -15,6 +16,7 @@ interface TableColumn {
   IS_IDENTITY: "YES" | "NO",
 }
 
+// https://www.ibm.com/docs/en/i/7.4?topic=views-sysparms
 interface SQLParm {
   SPECIFIC_SCHEMA: string,
   SPECIFIC_NAME: string,

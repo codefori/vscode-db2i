@@ -2,7 +2,7 @@ import Callable, { CallableRoutine, CallableSignature, CallableType } from "../.
 import Schemas, { PageData, SQLType } from "../../../database/schemas";
 import Table from "../../../database/table";
 
-interface RoutineDetail {
+export interface RoutineDetail {
   routine: CallableRoutine;
   signatures: CallableSignature[];
 }
