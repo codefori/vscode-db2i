@@ -82,11 +82,14 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
           if (systemSchemas.includes(schema.toUpperCase())) {
             addSearch(md, ref.object.name, result !== undefined);
           }
-        } else if (tokAt && tokAt.type === `word` && tokAt.value) {
-          const result = lookupSymbol(tokAt.value, defaultSchema, possibleNames);
-          if (result) {
-            addSymbol(md, result);
-          }
+        }
+      }
+
+      // If no symbol found, check if we can find a symbol by name
+      if (md.value.length === 0 && tokAt && tokAt.type === `word` && tokAt.value) {
+        const result = lookupSymbol(tokAt.value, defaultSchema, possibleNames);
+        if (result) {
+          addSymbol(md, result);
         }
       }
     }
