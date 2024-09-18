@@ -50,7 +50,14 @@ export default class Document {
 
         case `keyword`:
           switch (tokens[i].value?.toUpperCase()) {
+            case `LOOP`:
+              // This handles the case that 'END LOOP' is supported.
+              if (currentStatementType === StatementType.End) {
+                break;
+              } 
             case `BEGIN`:
+            case `DO`:
+            case `THEN`:
               // We include BEGIN in the current statement
               // then the next statement beings
               const statementTokens = tokens.slice(statementStart, i+1);

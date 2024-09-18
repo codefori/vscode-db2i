@@ -2,11 +2,10 @@ import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, Webv
 
 import { setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
-import { Query, QueryState } from "../../connection/query";
 import { updateStatusBar } from "../jobManager/statusBar";
 import Configuration from "../../configuration";
 import * as html from "./html";
-import { JobStatus } from "../../connection/sqlJob";
+import { Query } from "@ibm/mapepire-js/dist/src/query";
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel;
@@ -20,7 +19,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   endQuery() {
     if (this.currentQuery) {
       const hostJob = this.currentQuery.getHostJob();
-      if (hostJob && hostJob.getStatus() === JobStatus.Busy) {
+      if (hostJob && hostJob.getStatus() === "busy") {
         // We are assuming the job is the same here.
         commands.executeCommand(`vscode-db2i.statement.cancel`, hostJob.id);
       }
@@ -65,13 +64,13 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 // We will need to revisit this if we ever allow multiple result tabs like ACS does
                 // Query.cleanup();
 
-                this.currentQuery = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, autoClose: true, isTerseResults: true });
+                this.currentQuery = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, isTerseResults: true });
               }
 
-              if (this.currentQuery.getState() !== QueryState.RUN_DONE) {
+              if (this.currentQuery.getState() !== "RUN_DONE") {
                 setCancelButtonVisibility(true);
                 
-                let queryResults = this.currentQuery.getState() == QueryState.RUN_MORE_DATA_AVAILABLE ? await this.currentQuery.fetchMore() : await this.currentQuery.run();
+                let queryResults = this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE" ? await this.currentQuery.fetchMore() : await this.currentQuery.execute();
 
                 const jobId = this.currentQuery.getHostJob().id;
 

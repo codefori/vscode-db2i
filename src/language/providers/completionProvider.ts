@@ -3,20 +3,17 @@ import { JobManager } from "../../config";
 import {
   default as Database,
   SQLType,
-  default as Schemas,
 } from "../../database/schemas";
 import Statement from "../../database/statement";
-import Table from "../../database/table";
 import Document from "../sql/document";
 import * as LanguageStatement from "../sql/statement";
-import { CTEReference, CallableReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
-import CompletionItemCache, { changedCache } from "./completionItemCache";
-import Callable, { CallableType } from "../../database/callable";
-import { ServerComponent } from "../../connection/serverComponent";
-import { env } from "process";
-import { prepareParamType, createCompletionItem, getParmAttributes, completionItemCache } from "./completion";
-import { isCallableType, getCallableParameters } from "./callable";
-import { variable } from "sql-formatter/lib/src/lexer/regexFactory";
+import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
+import { CallableType } from "../../database/callable";
+import { prepareParamType, createCompletionItem, getParmAttributes } from "./logic/completion";
+import { isCallableType, getCallableParameters } from "./logic/callable";
+import { localAssistIsEnabled, remoteAssistIsEnabled } from "./logic/available";
+import { DbCache } from "./logic/cache";
+import { getSqlDocument } from "./logic/parse";
 
 export interface CompletionType {
   order: string;
@@ -59,10 +56,6 @@ const completionTypes: { [index: string]: CompletionType } = {
 };
 
 
-function isEnabled() {
-  return (env.DB2I_DISABLE_CA !== `true`);
-}
-
 
 function getColumnAttributes(column: TableColumn): string {
   const lines: string[] = [
@@ -95,57 +88,52 @@ async function getObjectColumns(
   isUDTF = false
 ): Promise<CompletionItem[]> {
 
-  const databaseObj = (schema + name).toUpperCase();
-  const tableUpdate: boolean = changedCache.delete(databaseObj);
+  let completionItems: CompletionItem[];
 
-  if (!completionItemCache.has(databaseObj) || tableUpdate) {
     schema = Statement.noQuotes(Statement.delimName(schema, true));
     name = Statement.noQuotes(Statement.delimName(name, true));
-
-    let completionItems: CompletionItem[] = [];
     
-    if (isUDTF) {
-      const resultSet = await Callable.getResultColumns(schema, name, true);
-      
-      if (!resultSet?.length ? true : false) {
-        completionItemCache.set(databaseObj, []);
-        return [];
-      }
-      
-      completionItems = resultSet.map((i) =>
-        createCompletionItem(
-          Statement.prettyName(i.PARAMETER_NAME),
-          CompletionItemKind.Field,
-          getParmAttributes(i),
-          `Schema: ${schema}\nObject: ${name}\n`,
-          `a@objectcolumn`
-        )
-      );
-
-    } else {
-      const columns = await Table.getItems(schema, name);
-
-      if (!columns?.length ? true : false) {
-        completionItemCache.set(databaseObj, []);
-        return [];
-      }
-
-      completionItems = columns.map((i) =>
-        createCompletionItem(
-          Statement.prettyName(i.COLUMN_NAME),
-          CompletionItemKind.Field,
-          getColumnAttributes(i),
-          `Schema: ${schema}\nTable: ${name}\n`,
-          `a@objectcolumn`
-        )
-      );
+  if (isUDTF) {
+    const resultSet = await DbCache.getCachedSignatures(schema, name);
+    
+    if (!resultSet?.length ? true : false) {
+      return [];
     }
+
+    const chosenSig = resultSet[resultSet.length-1];
     
-    const allCols = getAllColumns(name, schema, completionItems);
-    completionItems.push(allCols);
-    completionItemCache.set(databaseObj, completionItems);
+    completionItems = chosenSig.returns.map((i) =>
+      createCompletionItem(
+        Statement.prettyName(i.PARAMETER_NAME),
+        CompletionItemKind.Field,
+        getParmAttributes(i),
+        `Schema: ${schema}\nObject: ${name}\n`,
+        `a@objectcolumn`
+      )
+    );
+
+  } else {
+    const columns = await DbCache.getObjectColumns(schema, name);
+
+    if (!columns?.length ? true : false) {
+      return [];
+    }
+
+    completionItems = columns.map((i) =>
+      createCompletionItem(
+        Statement.prettyName(i.COLUMN_NAME),
+        CompletionItemKind.Field,
+        getColumnAttributes(i),
+        `Schema: ${schema}\nTable: ${name}\n`,
+        `a@objectcolumn`
+      )
+    );
   }
-  return completionItemCache.get(databaseObj);
+  
+  const allCols = getAllColumns(name, schema, completionItems);
+  completionItems.push(allCols);
+
+  return completionItems;
 }
 
 /**
@@ -156,35 +144,33 @@ async function getObjectCompletions(
   sqlTypes: { [index: string]: CompletionType }
 ): Promise<CompletionItem[]> {
   forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
-  const schemaUpdate: boolean = changedCache.delete(forSchema);
-  if (!completionItemCache.has(forSchema) || schemaUpdate) {
-    const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
-      const data = await Database.getObjects(forSchema, [value.type]);
-      return data.map((table) =>
-        createCompletionItem(
-          Statement.prettyName(table.name),
-          value.icon,
-          value.label,
-          `Schema: ${table.schema}`,
-          value.order
-        )
-      );
-    });
+  
+  const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
+    const data = await DbCache.getObjects(forSchema, [value.type]);
+    return data.map((table) =>
+      createCompletionItem(
+        Statement.prettyName(table.name),
+        value.icon,
+        value.label,
+        `Schema: ${table.schema}`,
+        value.order
+      )
+    );
+  });
 
-    const results = await Promise.allSettled(promises);
-    const list = results
-      .filter((result) => result.status == "fulfilled")
-      .map((result) => (result as PromiseFulfilledResult<any>).value)
-      .flat();
-    completionItemCache.set(forSchema, list);
-  }
-  return completionItemCache.get(forSchema);
+  const results = await Promise.allSettled(promises);
+  const list = results
+    .filter((result) => result.status == "fulfilled")
+    .map((result) => (result as PromiseFulfilledResult<any>).value)
+    .flat();
+
+  return list;
 }
 
 async function getCompletionItemsForSchema(
   schema: string
 ): Promise<CompletionItem[]> {
-  const data = (await Database.getObjects(schema, ["procedures"]));
+  const data = await DbCache.getObjects(schema, ["procedures"]);
 
   return data
     .filter((v, i, a) => a.findIndex(t => (t.name === v.name)) === i) //Hide overloads here
@@ -314,11 +300,7 @@ async function getCompletionItemsForTriggerDot(
 }
 
 async function getCachedSchemas() {
-  if (completionItemCache.has(`SCHEMAS-FOR-SYSTEM`)) {
-    return completionItemCache.get(`SCHEMAS-FOR-SYSTEM`);
-  }
-
-  const allSchemas: BasicSQLObject[] = await Schemas.getObjects(
+  const allSchemas: BasicSQLObject[] = await DbCache.getObjects(
     undefined,
     [`schemas`]
   );
@@ -331,7 +313,6 @@ async function getCachedSchemas() {
     )
   );
 
-  completionItemCache.set(`SCHEMAS-FOR-SYSTEM`, completionItems);
   return completionItems;
 }
 
@@ -613,12 +594,12 @@ export const completionProvider = languages.registerCompletionItemProvider(
   `sql`,
   {
     async provideCompletionItems(document, position, token, context) {
-      if (isEnabled()) {
+      if (localAssistIsEnabled()) {
         const trigger = context.triggerCharacter;
         const content = document.getText();
         const offset = document.offsetAt(position);
 
-        const sqlDoc = new Document(content);
+        const sqlDoc = getSqlDocument(document);
         const currentStatement = sqlDoc.getStatementByOffset(offset);
 
         const allItems: CompletionItem[] = [];
@@ -627,7 +608,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
           allItems.push(...getLocalDefs(sqlDoc, offset))
         }
 
-        if (ServerComponent.isInstalled() && currentStatement) {
+        if (remoteAssistIsEnabled() && currentStatement) {
           allItems.push(...await getCompletionItems(trigger, currentStatement, offset))
         }
 

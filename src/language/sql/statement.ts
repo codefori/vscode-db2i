@@ -26,9 +26,6 @@ export default class Statement {
 		}
 		
 		switch (this.type) {
-			case StatementType.With:
-				this.tokens = SQLTokeniser.createBlocks(this.tokens);
-				break;
 			case StatementType.Create:
 				// No scalar transformation here..
 				break;
@@ -213,23 +210,25 @@ export default class Statement {
 
 	getCTEReferences(): CTEReference[] {
 		if (this.type !== StatementType.With) return [];
+
+		const withBlocks = SQLTokeniser.createBlocks(this.tokens.slice(0));
 		
 		let cteList: CTEReference[] = [];
 
-		for (let i = 0; i < this.tokens.length; i++) {
-			if (tokenIs(this.tokens[i], `word`)) {
-				let cteName = this.tokens[i].value!;
+		for (let i = 0; i < withBlocks.length; i++) {
+			if (tokenIs(withBlocks[i], `word`) || tokenIs(withBlocks[i], `function`)) {
+				let cteName = withBlocks[i].value!;
 				let parameters: string[] = [];
 				let statementBlockI = i+1;
 
-				if (tokenIs(this.tokens[i+1], `block`) && tokenIs(this.tokens[i+2], `keyword`, `AS`)) {
-					parameters = this.tokens[i+1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
+				if (tokenIs(withBlocks[i+1], `block`) && tokenIs(withBlocks[i+2], `keyword`, `AS`)) {
+					parameters = withBlocks[i+1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
 					statementBlockI = i+3;
-				} else if (tokenIs(this.tokens[i+1], `keyword`, `AS`)) {
+				} else if (tokenIs(withBlocks[i+1], `keyword`, `AS`)) {
 					statementBlockI = i+2;
 				}
 
-				const statementBlock = this.tokens[statementBlockI];
+				const statementBlock = withBlocks[statementBlockI];
 				if (tokenIs(statementBlock, `block`)) {
 					cteList.push({
 						name: cteName,
@@ -241,7 +240,7 @@ export default class Statement {
 				i = statementBlockI;
 			}
 
-			if (tokenIs(this.tokens[i], `statementType`, `SELECT`)) {
+			if (tokenIs(withBlocks[i], `statementType`, `SELECT`)) {
 				break;
 			}
 		}
@@ -331,6 +330,9 @@ export default class Statement {
 					if (sqlObj) {
 						doAdd(sqlObj);
 						i += sqlObj.tokens.length;
+						if (sqlObj.isUDTF || sqlObj.fromLateral) {
+							i += 3; //For the brackets
+						}
 					}
 				}
 			}
@@ -513,17 +515,15 @@ export default class Statement {
 
 		let endIndex = i;
 
-		let isUDTF = false;
-
-		if (tokenIs(nextToken, `function`, `TABLE`)) {
-			isUDTF = true;
-		}
+		const isUDTF = tokenIs(nextToken, `function`, `TABLE`);
+		const isLateral = tokenIs(nextToken, `function`, `LATERAL`);
 
 		if (isUDTF) {
 			sqlObj = this.getRefAtToken(i+2);
 			if (sqlObj) {
 				sqlObj.isUDTF = true;
 				const blockTokens = this.getBlockAt(sqlObj.tokens[0].range.end);
+				
 				sqlObj.tokens = blockTokens;
 				nextIndex = i + 2 + blockTokens.length;
 				nextToken = this.tokens[nextIndex];
@@ -532,7 +532,15 @@ export default class Statement {
 				nextIndex = -1;
 				nextToken = undefined;
 			}
+		} else if (isLateral) {
+			const blockTokens = this.getBlockAt(nextToken.range.end+1);
+			const newStatement = new Statement(blockTokens, {start: nextToken.range.start, end: blockTokens[blockTokens.length-1].range.end});
+			[sqlObj] = newStatement.getObjectReferences();
 
+			sqlObj.fromLateral = true;
+			nextIndex = i + 2 + blockTokens.length;
+			nextToken = this.tokens[nextIndex];
+		
 		} else {
 			if (nextToken && NameTypes.includes(nextToken.type)) {
 				nextIndex = i;

@@ -1,16 +1,16 @@
 
 import { getInstance } from "../base";
-import { Query } from "./query";
 import { ServerComponent, UpdateStatus } from "./serverComponent";
-import { JobStatus, SQLJob } from "./sqlJob";
-import { QueryOptions } from "./types";
+import { OldSQLJob } from "./sqlJob";
 import { askAboutNewJob, onConnectOrServerInstall, osDetail } from "../config";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import Configuration from "../configuration";
+import { QueryOptions } from "@ibm/mapepire-js/dist/src/types";
+import { Query } from "@ibm/mapepire-js/dist/src/query";
 
 export interface JobInfo {
   name: string;
-  job: SQLJob;
+  job: OldSQLJob;
 }
 
 const NO_SELECTED_JOB = -1;
@@ -19,26 +19,27 @@ export class SQLJobManager {
   private totalJobs = 0;
   private jobs: JobInfo[] = [];
   selectedJob: number = NO_SELECTED_JOB;
+  private creatingJobs: number = 0;
 
   constructor() { }
 
-  async newJob(predefinedJob?: SQLJob, name?: string) {
+  async newJob(predefinedJob?: OldSQLJob, name?: string) {
     if (ServerComponent.isInstalled()) {
 
       const instance = getInstance();
       const config = instance.getConfig();
 
-      const newJob = predefinedJob || (new SQLJob({
+      const newJob = predefinedJob || (new OldSQLJob({
         libraries: [config.currentLibrary, ...config.libraryList],
         naming: `system`,
         "full open": false,
         "transaction isolation": "none",
         "query optimize goal": "1",
-        "block size": "512",
-        selfcodes: SQLJobManager.getSelfDefault()
+        "block size": "512"
       }));
 
       try {
+        this.creatingJobs += 1;
         await newJob.connect();
 
         if (osDetail) {
@@ -59,12 +60,18 @@ export class SQLJobManager {
         this.selectedJob = this.jobs.length - 1;
       } catch (e: any) {
         throw e;
+      } finally {
+        this.creatingJobs -= 1;
       }
     }
   }
 
+  isCreatingJob() {
+    return this.creatingJobs > 0;
+  }
+
   getRunningJobs() {
-    return this.jobs.filter(info => [JobStatus.Ready, JobStatus.Busy].includes(info.job.getStatus()));
+    return this.jobs.filter(info => ["ready", "busy"].includes(info.job.getStatus()));
   }
 
   async endAll() {
@@ -122,7 +129,7 @@ export class SQLJobManager {
     const rowsToFetch = 2147483647;
 
     const statement = await this.getPagingStatement<T>(query, opts);
-    const results = await statement.run(rowsToFetch);
+    const results = await statement.execute(rowsToFetch);
     statement.close();
     return results.data;
   }

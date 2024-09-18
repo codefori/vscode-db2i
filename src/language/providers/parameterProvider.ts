@@ -1,20 +1,22 @@
 import { MarkdownString, ParameterInformation, Position, Range, SignatureHelp, SignatureInformation, TextEdit, languages } from "vscode";
 import Statement from "../../database/statement";
 import Document from "../sql/document";
-import { getCachedSignatures, getCallableParameters, getPositionData, isCallableType } from "./callable";
-import { getParmAttributes, prepareParamType } from "./completion";
+import { getCallableParameters, getPositionData, isCallableType } from "./logic/callable";
+import { getParmAttributes, prepareParamType } from "./logic/completion";
 import { CallableType } from "../../database/callable";
 import { StatementType } from "../sql/types";
-import { ServerComponent } from "../../connection/serverComponent";
+import { remoteAssistIsEnabled } from "./logic/available";
+import { DbCache } from "./logic/cache";
+import { getSqlDocument } from "./logic/parse";
 
 export const signatureProvider = languages.registerSignatureHelpProvider({ language: `sql` }, {
   async provideSignatureHelp(document, position, token, context) {
     const content = document.getText();
     const offset = document.offsetAt(position);
 
-    if (ServerComponent.isInstalled()) {
+    if (remoteAssistIsEnabled()) {
 
-      const sqlDoc = new Document(content);
+      const sqlDoc = getSqlDocument(document);
       const currentStatement = sqlDoc.getStatementByOffset(offset);
 
       if (currentStatement) {
@@ -24,7 +26,7 @@ export const signatureProvider = languages.registerSignatureHelpProvider({ langu
         if (callableRef) {
           const isValid = await isCallableType(callableRef.parentRef, routineType);
           if (isValid) {
-            let signatures = getCachedSignatures(callableRef);
+            let signatures = DbCache.getCachedSignatures(callableRef.parentRef.object.schema, callableRef.parentRef.object.name);
             if (signatures) {
               const help = new SignatureHelp();
 
