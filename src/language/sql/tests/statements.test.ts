@@ -1013,6 +1013,76 @@ describe(`Object references`, () => {
     expect(refs[1].object.name).toBe(`OBJECT_STATISTICS`);
     expect(refs[1].object.schema).toBe(`QSYS2`);
     expect(refs[1].alias).toBe(`b`);
+  });
+
+  test('LOOP statements', () => {
+    const lines = [
+      `CREATE OR REPLACE PROCEDURE KRAKEN917.Wait_For_Kraken(kraken_job_name varchar(10), delay_time bigint default 30)`,
+      `BEGIN`,
+      `    DECLARE v_sql_stmt CLOB(1M) CCSID 37;`,
+      ``,
+      `    DECLARE number_of_active_jobs INT;`,
+      ``,
+      `    CALL systools.lprintf('Waiting for job to finish...');`,
+      ``,
+      `    fetch_loop: LOOP`,
+      `        SET v_sql_stmt ='values(SELECT COUNT(*) FROM TABLE (qsys2.active_job_info(subsystem_list_filter => ''QBATCH'')) WHERE JOB_NAME_SHORT LIKE ''' CONCAT kraken_job_name CONCAT ''') into ?';`,
+      ``,
+      `        PREPARE values_st FROM v_sql_stmt;`,
+      ``,
+      `        EXECUTE values_st USING number_of_active_jobs;`,
+      ``,
+      `        IF number_of_active_jobs = 0 THEN`,
+      `            CALL SYSTOOLS.LPRINTF(kraken_job_name CONCAT ' JOB DONE');`,
+      ``,
+      `            LEAVE fetch_loop;`,
+      ``,
+      `        END IF;`,
+      ``,
+      `        CALL qsys2.qcmdexc('DLYJOB ' CONCAT delay_time);`,
+      ``,
+      `    END LOOP fetch_loop;`,
+      ``,
+      `END;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+
+    const groups = document.getStatementGroups();
+    expect(groups.length).toBe(1);
+
+    const group = groups[0];
+
+    // console.log(group.statements.map((s, so) => `${so}  ` + s.type.padEnd(10) + ` ` + s.tokens.map(t => t.value).join(' ')));
+
+    expect(group.statements.length).toBe(16);
+    expect(group.statements.map(s => s.type)).toEqual([
+      'Create',  'Declare',
+      'Declare', 'Call',
+      'Unknown', 'Unknown',
+      'Unknown', 'Unknown',
+      'Unknown', 'Call',
+      'Unknown', 'End',
+      'Call',    'End',
+      'Unknown', 'End'
+    ]);
+
+    let refs;
+
+    const firstCall = group.statements[3];
+    refs = firstCall.getObjectReferences();
+    expect(refs.length).toBe(1);
+    expect(refs[0].object.name).toBe(`lprintf`);
+
+    const secondCall = group.statements[9];
+    refs = secondCall.getObjectReferences();
+    expect(refs.length).toBe(1);
+    expect(refs[0].object.name).toBe(`LPRINTF`);
+
+    const thirdCall = group.statements[12];
+    refs = thirdCall.getObjectReferences();
+    expect(refs.length).toBe(1);
+    expect(refs[0].object.name).toBe(`qcmdexc`);
   })
 });
 
