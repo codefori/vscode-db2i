@@ -102,7 +102,6 @@ export default class Document {
     let depth = 0;
 
     for (const statement of this.statements) {
-      console.log(currentGroup);
         if (statement.isBlockEnder()) {
           if (depth > 0) {
             currentGroup.push(statement);
