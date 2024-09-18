@@ -1,7 +1,7 @@
 
 import { ThemeIcon, TreeItem } from "vscode"
 import * as vscode from "vscode"
-import Schemas, { AllSQLTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
+import Schemas, { AllSQLTypes, InternalTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import { getInstance, loadBase } from "../../base";
 
@@ -11,22 +11,6 @@ import Types from "../types";
 import Statement from "../../database/statement";
 import { copyUI } from "./copyUI";
 import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement } from "./statements";
-
-const viewItem = {
-  "tables": `table`,
-  "views": `view`,
-  "aliases": `alias`,
-  "constraints": `constraint`,
-  "functions": `function`,
-  "variables": `variable`,
-  "indexes": `index`,
-  "procedures": `procedure`,
-  "sequences": `sequence`,
-  "packages": `package`,
-  "triggers": `trigger`,
-  "types": `type`,
-  "logicals": `logical`
-}
 
 const itemIcons = {
   "table": `split-horizontal`,
@@ -552,7 +536,7 @@ class SQLObject extends vscode.TreeItem {
   }
 
   constructor(item: BasicSQLObject) {
-    const type = viewItem[item.type];
+    const type = InternalTypes[item.type];
     super(Statement.prettyName(item.name), Types[type] ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 
     this.contextValue = type;
