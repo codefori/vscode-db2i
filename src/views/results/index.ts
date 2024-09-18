@@ -5,7 +5,6 @@ import * as csv from "csv/sync";
 
 import { JobManager } from "../../config";
 import Document from "../../language/sql/document";
-import { changedCache } from "../../language/providers/completionItemCache";
 import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import Statement from "../../language/sql/statement";
 import { ExplainTree } from "./explain/nodes";
@@ -16,6 +15,7 @@ import { ResultSetPanelProvider } from "./resultSetPanelProvider";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { ExplainType } from "@ibm/mapepire-js/dist/src/types";
+import { DbCache } from "../../language/providers/logic/cache";
 
 export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 
@@ -202,7 +202,10 @@ async function runHandler(options?: StatementInfo) {
         statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
           ? ref.object.schema || ``
           : ref.object.schema + ref.object.name;
-      changedCache.add((databaseObj || ``).toUpperCase());
+
+      if (databaseObj) {
+        DbCache.resetObject(databaseObj);
+      }
     }
 
     if (statementDetail.content.trim().length > 0) {

@@ -943,6 +943,147 @@ describe(`Object references`, () => {
     expect(refs[0].object.name).toBe(`apiVersion`);
     expect(refs[0].createType).toBe(`varchar(10) ccsid 1208 default '2023-07-07'`);
   });
+
+  test(`SELECT, WITH & LATERAL`, () => {
+    const lines = [
+      `with qsysobjs (lib, obj, type) as (`,
+      `  select object_library, object_name, object_type`,
+      `    from table (qsys2.object_ownership(current_user))`,
+      `    where path_name is null`,
+      `)`,
+      `select lib concat '/' concat obj concat ' (' concat type concat ')' as label,`,
+      `       objsize as "Size"`,
+      `  from qsysobjs q, lateral (`,
+      `         select objcreated, last_used_timestamp, objsize`,
+      `           from table (qsys2.object_statistics(lib, type, obj))`,
+      `       ) z`,
+      `where objsize is not null`,
+      `order by OBJSIZE DESC`,
+      `limit 10;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.With);
+
+    const refs = statement.getObjectReferences();
+    expect(refs.length).toBe(3);
+
+    expect(refs[0].object.name).toBe(`object_ownership`);
+    expect(refs[0].object.schema).toBe(`qsys2`);
+
+    expect(refs[1].object.name).toBe(`qsysobjs`);
+    expect(refs[1].object.schema).toBeUndefined();
+    expect(refs[1].alias).toBe(`q`);
+    
+    expect(refs[2].object.name).toBe(`object_statistics`);
+    expect(refs[2].object.schema).toBe(`qsys2`);
+    expect(refs[2].alias).toBe(`z`);
+  });
+
+  test(`Multiple UDTFs`, () => {
+    const lines = [
+      `SELECT b.objlongschema, b.objname, b.objtype, b.objattribute, b.objcreated, b.objsize, b.objtext, b.days_used_count, b.last_used_timestamp,b.* FROM `,
+      `   TABLE (QSYS2.OBJECT_STATISTICS('*ALLUSRAVL ', '*LIB') ) as a, `,
+      `   TABLE (QSYS2.OBJECT_STATISTICS(a.objname, 'ALL')  ) AS b`,
+      `WHERE b.OBJOWNER = 'user-name'`,
+      `ORDER BY b.OBJSIZE DESC`,
+      `FETCH FIRST 100 ROWS ONLY;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.Select);
+
+    const refs = statement.getObjectReferences();
+
+    expect(refs.length).toBe(2);
+    expect(refs[0].object.name).toBe(`OBJECT_STATISTICS`);
+    expect(refs[0].object.schema).toBe(`QSYS2`);
+    expect(refs[0].alias).toBe(`a`);
+
+    expect(refs[1].object.name).toBe(`OBJECT_STATISTICS`);
+    expect(refs[1].object.schema).toBe(`QSYS2`);
+    expect(refs[1].alias).toBe(`b`);
+  });
+
+  test('LOOP statements', () => {
+    const lines = [
+      `CREATE OR REPLACE PROCEDURE KRAKEN917.Wait_For_Kraken(kraken_job_name varchar(10), delay_time bigint default 30)`,
+      `BEGIN`,
+      `    DECLARE v_sql_stmt CLOB(1M) CCSID 37;`,
+      ``,
+      `    DECLARE number_of_active_jobs INT;`,
+      ``,
+      `    CALL systools.lprintf('Waiting for job to finish...');`,
+      ``,
+      `    fetch_loop: LOOP`,
+      `        SET v_sql_stmt ='values(SELECT COUNT(*) FROM TABLE (qsys2.active_job_info(subsystem_list_filter => ''QBATCH'')) WHERE JOB_NAME_SHORT LIKE ''' CONCAT kraken_job_name CONCAT ''') into ?';`,
+      ``,
+      `        PREPARE values_st FROM v_sql_stmt;`,
+      ``,
+      `        EXECUTE values_st USING number_of_active_jobs;`,
+      ``,
+      `        IF number_of_active_jobs = 0 THEN`,
+      `            CALL SYSTOOLS.LPRINTF(kraken_job_name CONCAT ' JOB DONE');`,
+      ``,
+      `            LEAVE fetch_loop;`,
+      ``,
+      `        END IF;`,
+      ``,
+      `        CALL qsys2.qcmdexc('DLYJOB ' CONCAT delay_time);`,
+      ``,
+      `    END LOOP fetch_loop;`,
+      ``,
+      `END;`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+
+    const groups = document.getStatementGroups();
+    expect(groups.length).toBe(1);
+
+    const group = groups[0];
+
+    // console.log(group.statements.map((s, so) => `${so}  ` + s.type.padEnd(10) + ` ` + s.tokens.map(t => t.value).join(' ')));
+
+    expect(group.statements.length).toBe(16);
+    expect(group.statements.map(s => s.type)).toEqual([
+      'Create',  'Declare',
+      'Declare', 'Call',
+      'Unknown', 'Unknown',
+      'Unknown', 'Unknown',
+      'Unknown', 'Call',
+      'Unknown', 'End',
+      'Call',    'End',
+      'Unknown', 'End'
+    ]);
+
+    let refs;
+
+    const firstCall = group.statements[3];
+    refs = firstCall.getObjectReferences();
+    expect(refs.length).toBe(1);
+    expect(refs[0].object.name).toBe(`lprintf`);
+
+    const secondCall = group.statements[9];
+    refs = secondCall.getObjectReferences();
+    expect(refs.length).toBe(1);
+    expect(refs[0].object.name).toBe(`LPRINTF`);
+
+    const thirdCall = group.statements[12];
+    refs = thirdCall.getObjectReferences();
+    expect(refs.length).toBe(1);
+    expect(refs[0].object.name).toBe(`qcmdexc`);
+  })
 });
 
 describe(`Offset reference tests`, () => {
@@ -1138,8 +1279,27 @@ describe(`PL body tests`, () => {
     const refs = statement.getObjectReferences();
     const ctes = statement.getCTEReferences();
 
-    expect(refs.length).toBe(1);
-    expect(refs[0].object.name).toBe(`Temp02`);
+    expect(refs.length).toBe(7);
+    expect(refs[0].object.name).toBe(`shipments`);
+    expect(refs[0].alias).toBe(`s`);
+
+    expect(refs[1].object.name).toBe(`BillingDate`);
+    expect(refs[1].alias).toBeUndefined();
+
+    expect(refs[2].object.name).toBe(`Temp01`);
+    expect(refs[2].alias).toBe(`t1`);
+
+    expect(refs[3].object.name).toBe(`Temp01`);
+    expect(refs[3].alias).toBe(`t1`);
+
+    expect(refs[4].object.name).toBe(`Temp02`);
+    expect(refs[4].alias).toBe(`t2`);
+
+    expect(refs[5].object.name).toBe(`customers`);
+    expect(refs[5].alias).toBe(`c`);
+
+    expect(refs[6].object.name).toBe(`Temp02`);
+    expect(refs[6].alias).toBeUndefined();
 
     expect(ctes.length).toBe(3);
     expect(ctes[0].name).toBe(`Temp01`);
@@ -1174,9 +1334,11 @@ describe(`PL body tests`, () => {
     expect(statement.type).toBe(StatementType.With);
 
     const objs = statement.getObjectReferences();
-    expect(objs.length).toBe(1);
-    expect(objs[0].object.schema).toBe(undefined);
-    expect(objs[0].object.name).toBe(`cteme`);
+    expect(objs.length).toBe(2);
+    expect(objs[0].object.schema).toBe(`qsys2`);
+    expect(objs[0].object.name).toBe(`sysixadv`);
+    expect(objs[1].object.schema).toBe(undefined);
+    expect(objs[1].object.name).toBe(`cteme`);
 
     const ctes = statement.getCTEReferences();
     expect(ctes.length).toBe(1);

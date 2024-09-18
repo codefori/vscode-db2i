@@ -84,6 +84,7 @@ export interface ObjectRef {
   alias?: string;
 
 	isUDTF?: boolean;
+	fromLateral?: boolean;
 
 	/** only used within create statements */
 	createType?: string;
