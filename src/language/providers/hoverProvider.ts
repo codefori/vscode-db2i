@@ -100,7 +100,7 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
           }
 
           if (systemSchemas.includes(schema.toUpperCase())) {
-            addSearch(md, ref.object.name, result !== undefined);
+            addSearch(md, ref.object.name, md.value.length > 0);
           }
         }
       }
