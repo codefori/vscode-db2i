@@ -9,6 +9,10 @@ import { ChartJsType, chartJsTypes, generateChartHTMLCell } from './logic/chartJ
 import { ChartDetail, generateChart } from './logic/chart';
 import { getStatementDetail } from './logic/statement';
 
+async function dataTableExtentionActivation() {
+  await vscode.extensions.getExtension('RandomFractalsInc.vscode-data-table')?.activate();
+}
+
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
   readonly notebookType = `db2i-notebook`;
@@ -25,6 +29,9 @@ export class IBMiController {
       this.notebookType,
       this.label
     );
+
+    // activate vscode-data-table extention
+    dataTableExtentionActivation();
 
     this._controller.supportedLanguages = this.supportedLanguages;
     this._controller.supportsExecutionOrder = true;
@@ -59,7 +66,10 @@ export class IBMiController {
     const execution = this._controller.createNotebookCellExecution(cell);
     execution.executionOrder = ++this._executionOrder;
     execution.start(Date.now()); // Keep track of elapsed time to execute cell.
-
+    if (cell.outputs.length > 0) {
+      execution.clearOutput();
+    }
+    
     const selected = JobManager.getSelection();
 
     execution.token.onCancellationRequested(() => {
@@ -118,7 +128,7 @@ export class IBMiController {
                 }
 
                 if (fallbackToTable) {
-                  items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columns), `text/markdown`));
+                  items.push(vscode.NotebookCellOutputItem.text(JSON.stringify(table, null, 2), `application/json`));
                 }
               } else {
                 items.push(vscode.NotebookCellOutputItem.stderr(`No rows returned from statement.`));
