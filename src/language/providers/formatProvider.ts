@@ -14,7 +14,6 @@ export const formatProvider = languages.registerDocumentFormattingEditProvider({
         tabWidth: options.tabSize,
         identifierCase: identifierCase,
         keywordCase: keywordCase,
-        addSemiColon:  true
       }
     );
 

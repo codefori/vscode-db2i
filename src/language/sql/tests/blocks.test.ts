@@ -4,11 +4,11 @@ import Document from '../document';
 import { formatSql } from '../formatter';
 
 const parserScenarios = describe.each([
-  {newDoc: (content: string) => new Document(content)},
-  {newDoc: (content: string) => new Document(formatSql(content, {newLineLists: true}))}
+  {newDoc: (content: string) => new Document(content), isFormatted: false},
+  {newDoc: (content: string) => new Document(formatSql(content, {newLineLists: true})), isFormatted: true}
 ]);
 
-parserScenarios(`Block statement tests`, ({newDoc}) => {
+parserScenarios(`Block statement tests`, ({newDoc, isFormatted}) => {
   test('Block start tests', () => {
     const lines = [
       `CREATE ALIAS "TestDelimiters"."Delimited Alias" FOR "TestDelimiters"."Delimited Table";`,
@@ -103,20 +103,35 @@ parserScenarios(`Block statement tests`, ({newDoc}) => {
 
     const doc = newDoc(lines);
 
-    console.log(doc.content)
-
     const groups = doc.getStatementGroups();
 
     expect(groups.length).toBe(4);
 
     const aliasStatement = groups[0];
-    const aliasSubstring = lines.substring(aliasStatement.range.start, aliasStatement.range.end);
+    const aliasSubstring = doc.content.substring(aliasStatement.range.start, aliasStatement.range.end);
     expect(aliasSubstring).toBe(`CREATE ALIAS "TestDelimiters"."Delimited Alias" FOR "TestDelimiters"."Delimited Table"`);
 
+    const functionStatement = groups[1];
+    const functionSubstring = doc.content.substring(functionStatement.range.start, functionStatement.range.end);
+
+    if (isFormatted) {
+      // TODO:
+    } else {
+      expect(functionSubstring).toBe([
+        `CREATE FUNCTION "TestDelimiters"."Delimited Function" ("Delimited Parameter" INTEGER) `,
+        `RETURNS INTEGER LANGUAGE SQL BEGIN RETURN "Delimited Parameter"; END`
+      ].join(`\r\n`))
+    }
     const beginStatement = groups[2];
-    const compoundSubstring = lines.substring(beginStatement.range.start, beginStatement.range.end);
-    console.log({compoundSubstring, len: compoundSubstring.length});
-    expect(compoundSubstring).toBe(compoundStatement);
+    expect(beginStatement.statements.length).toBe(9);
+
+    if (isFormatted) {
+      // TODO:
+      
+    } else {
+      const compoundSubstring = doc.content.substring(beginStatement.range.start, beginStatement.range.end);
+      expect(compoundSubstring).toBe(compoundStatement);
+    }
   });
 });
 

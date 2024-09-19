@@ -130,8 +130,8 @@ test('Alter Table to Add Materialized Query (from ACS)', () => {
 test('Active jobs (from Nav)', () => {
   const sql = `SELECT * FROM TABLE ( QSYS2.ACTIVE_JOB_INFO( RESET_STATISTICS => 'NO', SUBSYSTEM_LIST_FILTER => '', JOB_NAME_FILTER => '*ALL', CURRENT_USER_LIST_FILTER => '', DETAILED_INFO => 'NONE' ) ) ORDER BY SUBSYSTEM,  RUN_PRIORITY,  JOB_NAME_SHORT,  JOB_NUMBER LIMIT 100 OFFSET 0`;
   const formatted = formatSql(sql, optionsUpper);
-  console.log('*************');
-  console.log(formatted);
-  console.log('*************');
+//   console.log('*************');
+//   console.log(formatted);
+//   console.log('*************');
   // expect(formatted).toBe(``);
 });

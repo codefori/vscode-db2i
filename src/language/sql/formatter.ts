@@ -17,12 +17,15 @@ export interface FormatOptions {
   keywordCase?: CaseOptions;
   identifierCase?: CaseOptions;
   newLineLists?: boolean;
+  _eol?: string;
 }
 
 export function formatSql(textDocument: string, options: FormatOptions = {}): string {
   let result: string[] = [];
   let document = new Document(textDocument);
   const statementGroups: StatementGroup[] = document.getStatementGroups();
+
+  options._eol = textDocument.includes(`\r\n`) ? `\r\n` : `\n`;
 
   for (const statementGroup of statementGroups) {
     let currentIndent = 0;
@@ -44,18 +47,18 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
   }
 
   return result
-    .map((line) => (line[0] === `\n` ? line.substring(1) : line))
-    .join(`\n`)
+    .map((line) => (line[0] === options._eol ? line.substring(1) : line))
+    .join(options._eol)
 }
 
 function formatTokens(tokensWithBlocks: Token[], options: FormatOptions, baseIndent: number = 0): string {
   const indent = options.tabWidth || 4;
-  let newLine = `\n` + ``.padEnd(baseIndent);
+  let newLine = options._eol + ``.padEnd(baseIndent);
   let res: string = newLine;
 
   const updateIndent = (newIndent: number) => {
     baseIndent += newIndent;
-    newLine = `\n` + ``.padEnd(baseIndent);
+    newLine = options._eol + ``.padEnd(baseIndent);
   }
 
   for (let i = 0; i < tokensWithBlocks.length; i++) {
