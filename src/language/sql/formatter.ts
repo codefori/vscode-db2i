@@ -17,7 +17,6 @@ export interface FormatOptions {
   keywordCase?: CaseOptions;
   identifierCase?: CaseOptions;
   newLineLists?: boolean;
-  _eol?: string;
 }
 
 export function formatSql(textDocument: string, options: FormatOptions = {}): string {
@@ -25,11 +24,10 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
   let document = new Document(textDocument);
   const statementGroups: StatementGroup[] = document.getStatementGroups();
 
-  options._eol = textDocument.includes(`\r\n`) ? `\r\n` : `\n`;
+  const eol = textDocument.includes(`\r\n`) ? `\r\n` : `\n`;
 
   for (const statementGroup of statementGroups) {
     let currentIndent = 0;
-    const hasBody = statementGroup.statements.length > 1;
     for (let i = 0; i < statementGroup.statements.length; i++) {
       const statement = statementGroup.statements[i];
       const withBlocks = SQLTokeniser.createBlocks(statement.tokens);
@@ -38,7 +36,10 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
         currentIndent -= 4;
       }
 
-      result.push(formatTokens(withBlocks, options, currentIndent) + (statement.isBlockOpener() ? `` : `;`));
+      result.push(...formatTokens(withBlocks, options).map(l => ``.padEnd(currentIndent) + l));
+      if (!statement.isBlockOpener()) {
+        result[result.length-1] += `;`
+      }
 
       if (statement.isBlockOpener()) {
         currentIndent += 4;
@@ -47,18 +48,35 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
   }
 
   return result
-    .map((line) => (line[0] === options._eol ? line.substring(1) : line))
-    .join(options._eol)
+    .map((line) => (line[0] === eol ? line.substring(1) : line))
+    .join(eol)
 }
 
-function formatTokens(tokensWithBlocks: Token[], options: FormatOptions, baseIndent: number = 0): string {
+function formatTokens(tokensWithBlocks: Token[], options: FormatOptions): string[] {
   const indent = options.tabWidth || 4;
-  let newLine = options._eol + ``.padEnd(baseIndent);
-  let res: string = newLine;
+  let currentIndent = 0;
+  let newLines: string[] = [``];
 
-  const updateIndent = (newIndent: number) => {
-    baseIndent += newIndent;
-    newLine = options._eol + ``.padEnd(baseIndent);
+  const getSpacing = () => {
+    return ``.padEnd(currentIndent);
+  }
+
+  const lastLine = () => {
+    return newLines[newLines.length-1];
+  }
+
+  const append = (newContent: string) => {
+    newLines[newLines.length-1] = newLines[newLines.length-1] + newContent;
+  }
+
+  const newLine = (indentLevelChange = 0) => {
+    currentIndent += (indentLevelChange * indent);
+    newLines.push(getSpacing());
+  }
+
+  const addSublines = (lines: string[]) => {
+    newLines.push(...lines.map(l => ``.padEnd(currentIndent + indent) + l));
+    newLine();
   }
 
   for (let i = 0; i < tokensWithBlocks.length; i++) {
@@ -66,67 +84,83 @@ function formatTokens(tokensWithBlocks: Token[], options: FormatOptions, baseInd
     const nT = tokensWithBlocks[i + 1];
     const pT = tokensWithBlocks[i - 1];
 
+    const needsSpace = !lastLine().endsWith(` `) && pT?.type !== `dot` && i > 0;
+
     switch (cT.type) {
       case `block`:
         if (cT.block) {
           const hasClauseOrStatement = tokenIs(cT.block[0], `statementType`);
           const commaCount = cT.block.filter(t => tokenIs(t, `comma`)).length;
           const containsSubBlock = cT.block.some(t => t.type === `block`);
+
+          console.log({hasClauseOrStatement, containsSubBlock, commaCount});
+
           if (cT.block.length === 1) {
-            res += `(${cT.block![0].value})`;
+            append(`(${cT.block![0].value})`);
 
           } else if (hasClauseOrStatement || containsSubBlock) {
-            res += ` (`;
-            res += formatTokens(cT.block!, {...options, newLineLists: options.newLineLists}, baseIndent + indent);
-            res += `${newLine})`;
+            append(` (`);
+            addSublines(formatTokens(cT.block!, options));
+            append(`)`);
           } else if (commaCount >= 2) {
-            res += `(`;
-            res += formatTokens(cT.block!, {...options, newLineLists: true}, baseIndent + indent);
-            res += `${newLine})`;
+            append(`(`)
+            addSublines(formatTokens(cT.block!, {...options, newLineLists: true}));
+            append(`)`);
           } else {
-            res += `(${formatTokens(cT.block!, options)})`;
+            const formattedSublines = formatTokens(cT.block!, options);
+            console.log({formattedSublines});
+            if (formattedSublines.length === 1) {
+              append(`(${formattedSublines[0]})`);
+            } else {
+              append(`(`)
+              addSublines(formattedSublines);
+              append(`)`);
+            }
           }
         } else {
           throw new Error(`Block token without block`);
         }
         break;
       case `dot`:
-        res += cT.value;
+        append(cT.value);
         break;
       case `comma`:
-        res += cT.value;
+        append(cT.value);
 
         if (options.newLineLists) {
-          res += newLine;
+          newLine();
         }
+        break;
+
+      case `sqlName`:
+        if (needsSpace) {
+          append(` `);
+        }
+
+        append(cT.value);
         break;
 
       default:
         const isKeyword = (tokenIs(cT, `statementType`) || tokenIs(cT, `clause`));
         if (isKeyword && i > 0) {
-          if (options.newLineLists) {
-            updateIndent(-indent);
-          }
-          res += newLine;
+          newLine(options.newLineLists ? -1 : 0);
         }
         
-        else if (!res.endsWith(` `) && pT?.type !== `dot` && i > 0) {
-          res += ` `;
+        else if (needsSpace) {
+          append(` `);
         }
-
-        res += transformCase(cT, cT.type === `word` ? options.identifierCase : options.keywordCase);
+        append(transformCase(cT, cT.type === `word` ? options.identifierCase : options.keywordCase));
 
         const isSingleLineOnly = SINGLE_LINE_STATEMENT_TYPES.some((type) => tokenIs(cT, `statementType`, type));
 
         if (options.newLineLists && isKeyword && !isSingleLineOnly) {
-          updateIndent(indent);
-          res += newLine;
+          newLine(1);
         }
         break;
     }
   }
 
-  return res;
+  return newLines;
 }
 
 const tokenIs = (token: Token|undefined, type: string, value?: string) => {
