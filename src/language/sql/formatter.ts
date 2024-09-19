@@ -84,7 +84,8 @@ function formatTokens(tokensWithBlocks: Token[], options: FormatOptions): string
     const nT = tokensWithBlocks[i + 1];
     const pT = tokensWithBlocks[i - 1];
 
-    const needsSpace = !lastLine().endsWith(` `) && pT?.type !== `dot` && i > 0;
+    const currentLine = lastLine();
+    const needsSpace = (currentLine.trim().length !== 0 && !currentLine.endsWith(` `)) && pT?.type !== `dot` && i > 0;
 
     switch (cT.type) {
       case `block`:
