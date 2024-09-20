@@ -102,7 +102,7 @@ export default class Document {
     let depth = 0;
 
     for (const statement of this.statements) {
-        if (statement.isBlockEnder()) {
+        if (statement.isCompoundEnd()) {
           if (depth > 0) {
             currentGroup.push(statement);
               
@@ -118,7 +118,7 @@ export default class Document {
             currentGroup = [];
           }
         } else
-        if (statement.isBlockOpener()) {
+        if (statement.isCompoundStart()) {
           if (depth > 0) {
             currentGroup.push(statement);
           } else {

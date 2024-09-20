@@ -1163,7 +1163,7 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const medianResultSetProc = statements[0];
     expect(medianResultSetProc.type).toBe(StatementType.Create);
-    expect(medianResultSetProc.isBlockOpener()).toBe(true);
+    expect(medianResultSetProc.isCompoundStart()).toBe(true);
 
     const parms = medianResultSetProc.getRoutineParameters();
     expect(parms.length).toBe(1);
@@ -1224,7 +1224,7 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const medianResultSetProc = statements[0];
     expect(medianResultSetProc.type).toBe(StatementType.Create);
-    expect(medianResultSetProc.isBlockOpener()).toBe(true);
+    expect(medianResultSetProc.isCompoundStart()).toBe(true);
 
     const parms = medianResultSetProc.getRoutineParameters();
     expect(parms.length).toBe(1);
@@ -1243,7 +1243,7 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const callStatement = statements[statements.length - 1];
     expect(callStatement.type).toBe(StatementType.Call);
-    expect(callStatement.isBlockOpener()).toBe(false);
+    expect(callStatement.isCompoundStart()).toBe(false);
 
     const blockParent = callStatement.getCallableDetail(callStatement.tokens[3].range.start);
     expect(blockParent).toBeDefined();

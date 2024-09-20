@@ -35,7 +35,7 @@ export default class Statement {
 		}
 	}
 
-	isBlockOpener() {
+	isCompoundStart() {
 		if (this.tokens.length === 1 && tokenIs(this.tokens[0], `keyword`, `BEGIN`)) {
 			return true;
 		}
@@ -51,7 +51,7 @@ export default class Statement {
 		return false;
 	}
 
-	isBlockEnder() {
+	isCompoundEnd() {
 		return this.type === StatementType.End && this.tokens.length === 1;
 	}
 

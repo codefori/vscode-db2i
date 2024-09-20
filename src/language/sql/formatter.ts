@@ -32,16 +32,16 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
       const statement = statementGroup.statements[i];
       const withBlocks = SQLTokeniser.createBlocks(statement.tokens);
 
-      if (statement.isBlockEnder()) {
+      if (statement.isCompoundEnd()) {
         currentIndent -= 4;
       }
 
       result.push(...formatTokens(withBlocks, options).map(l => ``.padEnd(currentIndent) + l));
-      if (!statement.isBlockOpener()) {
+      if (!statement.isCompoundStart()) {
         result[result.length-1] += `;`
       }
 
-      if (statement.isBlockOpener()) {
+      if (statement.isCompoundStart()) {
         currentIndent += 4;
       }
     }

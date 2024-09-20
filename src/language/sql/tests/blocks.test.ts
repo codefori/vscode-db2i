@@ -26,13 +26,13 @@ parserScenarios(`Block statement tests`, ({newDoc, isFormatted}) => {
     expect(doc.statements.length).toBe(7);
 
     const aliasDef = doc.statements[0];
-    expect(aliasDef.isBlockOpener()).toBeFalsy();
+    expect(aliasDef.isCompoundStart()).toBeFalsy();
 
     const functionDef = doc.statements[1];
-    expect(functionDef.isBlockOpener()).toBeTruthy();
+    expect(functionDef.isCompoundStart()).toBeTruthy();
 
     const procedureDef = doc.statements[4];
-    expect(procedureDef.isBlockOpener()).toBeTruthy();
+    expect(procedureDef.isCompoundStart()).toBeTruthy();
   });
 
   test('Compound statement test', () => {
@@ -63,16 +63,16 @@ parserScenarios(`Block statement tests`, ({newDoc, isFormatted}) => {
     const t = doc.statements.length;
 
     const aliasDef = doc.statements[0];
-    expect(aliasDef.isBlockOpener()).toBeFalsy();
+    expect(aliasDef.isCompoundStart()).toBeFalsy();
 
     const functionDef = doc.statements[1];
-    expect(functionDef.isBlockOpener()).toBeTruthy();
+    expect(functionDef.isCompoundStart()).toBeTruthy();
 
     const functionEnd = doc.statements[3];
-    expect(functionEnd.isBlockEnder()).toBeTruthy();
+    expect(functionEnd.isCompoundEnd()).toBeTruthy();
 
     const beginBlock = doc.statements[4];
-    expect(beginBlock.isBlockOpener()).toBeTruthy();
+    expect(beginBlock.isCompoundStart()).toBeTruthy();
   });
 
   test('Statement groups', () => {
