@@ -7,6 +7,7 @@ const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 
 export default class Statement {
 	public type: StatementType = StatementType.Unknown;
+	private label: string|undefined;
 
   constructor(public tokens: Token[], public range: IRange) {
 		this.tokens = this.tokens.filter(newToken => newToken.type !== `newline`);
@@ -16,6 +17,12 @@ export default class Statement {
 		if (tokenIs(first, `word`, `EXEC`) && tokenIs(this.tokens[1], `word`, `SQL`)) {
 			first = this.tokens[2];
 		} else if (tokenIs(first, `word`) && tokenIs(this.tokens[1], `colon`)) {
+			first = this.tokens[2];
+		}
+
+		if (tokenIs(first, `word`) && tokenIs(this.tokens[1], `colon`)) {
+			// Possible label?
+			this.label = first.value;
 			first = this.tokens[2];
 		}
 
