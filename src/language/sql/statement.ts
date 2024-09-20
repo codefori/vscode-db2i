@@ -56,6 +56,14 @@ export default class Statement {
 		return false;
 	}
 
+	isConditionStart() {
+		return [StatementType.If, StatementType.While, StatementType.Loop, StatementType.For, StatementType.Case, StatementType.When].includes(this.type);
+	}
+
+	isConditionEnd() {
+		return this.type === StatementType.End && this.tokens.length > 1;
+	}
+
 	isCompoundEnd() {
 		return this.type === StatementType.End && this.tokens.length === 1;
 	}

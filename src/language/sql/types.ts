@@ -13,6 +13,8 @@ export enum StatementType {
 	Begin = "Begin",
 	Drop = "Drop",
 	End = "End",
+	Else = "Else",
+	Elseif = "Elseif",
 	Call = "Call",
 	Alter = "Alter",
 	Case = "Case",
@@ -32,7 +34,8 @@ export enum StatementType {
 	Return = "Return",
 	Signal = "Signal",
 	Set = "Set",
-	While = "While"
+	While = "While",
+	When = "When"
 }
 
 export const StatementTypeWord = {
@@ -45,6 +48,8 @@ export const StatementTypeWord = {
 	'DECLARE': StatementType.Declare,
 	'DROP': StatementType.Drop,
 	'END': StatementType.End,
+	'ELSE': StatementType.Else,
+	'ELSEIF': StatementType.Elseif,
 	'CALL': StatementType.Call,
 	'BEGIN': StatementType.Begin,
 	'ALTER': StatementType.Alter,
@@ -65,6 +70,7 @@ export const StatementTypeWord = {
 	'SIGNAL': StatementType.Signal,
 	'SET': StatementType.Set,
 	'WHILE': StatementType.While,
+	'WHEN': StatementType.When,
 };
 
 export enum ClauseType {
