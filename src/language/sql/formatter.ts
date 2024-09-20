@@ -94,8 +94,6 @@ function formatTokens(tokensWithBlocks: Token[], options: FormatOptions): string
           const commaCount = cT.block.filter(t => tokenIs(t, `comma`)).length;
           const containsSubBlock = cT.block.some(t => t.type === `block`);
 
-          console.log({hasClauseOrStatement, containsSubBlock, commaCount});
-
           if (cT.block.length === 1) {
             append(`(${cT.block![0].value})`);
 
@@ -109,7 +107,6 @@ function formatTokens(tokensWithBlocks: Token[], options: FormatOptions): string
             append(`)`);
           } else {
             const formattedSublines = formatTokens(cT.block!, options);
-            console.log({formattedSublines});
             if (formattedSublines.length === 1) {
               append(`(${formattedSublines[0]})`);
             } else {

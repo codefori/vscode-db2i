@@ -26,11 +26,9 @@ export default class Statement {
 			first = this.tokens[2];
 		}
 
-		if (tokenIs(first, `statementType`) || tokenIs(first, `keyword`, `END`) || tokenIs(first, `keyword`, `BEGIN`)) {
-			const wordValue = first.value?.toUpperCase();
+		const wordValue = first.value?.toUpperCase();
 
-			this.type = StatementTypeWord[wordValue];
-		}
+		this.type = StatementTypeWord[wordValue] || StatementType.Unknown;
 		
 		switch (this.type) {
 			case StatementType.Create:

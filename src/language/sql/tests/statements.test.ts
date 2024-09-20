@@ -1065,10 +1065,10 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(group.statements.map(s => s.type)).toEqual([
       'Create',  'Declare',
       'Declare', 'Call',
+      'Loop', 'Set',
       'Unknown', 'Unknown',
-      'Unknown', 'Unknown',
-      'Unknown', 'Call',
-      'Unknown', 'End',
+      'If', 'Call',
+      'Leave', 'End',
       'Call',    'End',
       'Unknown', 'End'
     ]);
@@ -1184,6 +1184,12 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     // END
     expect(endStatements[1].tokens.length).toBe(1);
+
+    const whileStatement = statements.find(stmt => stmt.type === StatementType.While);
+    expect(whileStatement).toBeDefined();
+
+    const fetchStatement = statements.find(stmt => stmt.type === StatementType.Fetch);
+    expect(fetchStatement).toBeDefined();
   });
 
   test(`CREATE PROCEDURE followed by CALL statement`, () => {

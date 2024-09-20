@@ -3,6 +3,7 @@ import Statement from "./statement";
 export enum StatementType {
 	Unknown = "Unknown",
 	Create = "Create",
+	Close = "Close",
 	Insert = "Insert",
 	Select = "Select",
 	With = "With",
@@ -13,7 +14,25 @@ export enum StatementType {
 	Drop = "Drop",
 	End = "End",
 	Call = "Call",
-	Alter = "Alter"
+	Alter = "Alter",
+	Case = "Case",
+	Fetch = "Fetch",
+	For = "For",
+	Get = "Get",
+	Goto = "Goto",
+	If = "If",
+	Include = "Include",
+	Iterate = "Iterate",
+	Leave = "Leave",
+	Loop = "Loop",
+	Open = "Open",
+	Pipe = "Pipe",
+	Repeat = "Repeat",
+	Resignal = "Resignal",
+	Return = "Return",
+	Signal = "Signal",
+	Set = "Set",
+	While = "While"
 }
 
 export const StatementTypeWord = {
@@ -28,7 +47,24 @@ export const StatementTypeWord = {
 	'END': StatementType.End,
 	'CALL': StatementType.Call,
 	'BEGIN': StatementType.Begin,
-	'ALTER': StatementType.Alter
+	'ALTER': StatementType.Alter,
+	'CASE': StatementType.Case,
+	'FOR': StatementType.For,
+	'FETCH': StatementType.Fetch,
+	'GET': StatementType.Get,
+	'GOTO': StatementType.Goto,
+	'IF': StatementType.If,
+	'INCLUDE': StatementType.Include,
+	'ITERATE': StatementType.Iterate,
+	'LEAVE': StatementType.Leave,
+	'LOOP': StatementType.Loop,
+	'PIPE': StatementType.Pipe,
+	'REPEAT': StatementType.Repeat,
+	'RESIGNAL': StatementType.Resignal,
+	'RETURN': StatementType.Return,
+	'SIGNAL': StatementType.Signal,
+	'SET': StatementType.Set,
+	'WHILE': StatementType.While,
 };
 
 export enum ClauseType {
