@@ -4,14 +4,14 @@ import SQLTokeniser from "./tokens";
 
 export declare type CaseOptions = `preserve` | `upper` | `lower`;
 
-const SINGLE_LINE_STATEMENT_TYPES = [`CREATE`, `DECLARE`, `SET`, `DELETE`];
-
 export interface FormatOptions {
   indentWidth?: number; // Defaults to 4
   keywordCase?: CaseOptions;
   identifierCase?: CaseOptions;
   newLineLists?: boolean;
 }
+
+const SINGLE_LINE_STATEMENT_TYPES: StatementType[] = [StatementType.Create, StatementType.Declare, StatementType.Set, StatementType.Delete];
 
 export function formatSql(textDocument: string, options: FormatOptions = {}): string {
   let result: string[] = [];
@@ -26,7 +26,7 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
       const statement = statementGroup.statements[i];
       const withBlocks = SQLTokeniser.createBlocks(statement.tokens);
 
-      if (statement.isCompoundEnd()) {
+      if (statement.isCompoundEnd() || statement.isConditionEnd()) {
         currentIndent -= 4;
       }
 
@@ -35,7 +35,7 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
         result[result.length-1] += `;`
       }
 
-      if (statement.isCompoundStart()) {
+      if (statement.isCompoundStart() || statement.isConditionStart()) {
         currentIndent += 4;
       }
     }
@@ -62,6 +62,9 @@ function formatTokens(tokensWithBlocks: Token[], options: FormatOptions): string
   if (typeToken && typeToken.value) {
     possibleType = StatementTypeWord[typeToken.value.toUpperCase()] || StatementType.Unknown;
   }
+
+
+  const isSingleLineOnly = SINGLE_LINE_STATEMENT_TYPES.includes(possibleType);
 
   const getSpacing = () => {
     return ``.padEnd(currentIndent);
@@ -145,19 +148,18 @@ function formatTokens(tokensWithBlocks: Token[], options: FormatOptions): string
         break;
 
       default:
-        const isKeyword = (tokenIs(cT, `statementType`) || tokenIs(cT, `clause`));
-        if (isKeyword && i > 0) {
+        const isKeyword = ((tokenIs(cT, `statementType`) || tokenIs(cT, `clause`)));
+        if (isKeyword && i > 0 && isSingleLineOnly === false) {
           newLine(options.newLineLists ? -1 : 0);
         }
         
         else if (needsSpace) {
           append(` `);
         }
+        
         append(transformCase(cT, cT.type === `word` ? options.identifierCase : options.keywordCase));
 
-        const isSingleLineOnly = SINGLE_LINE_STATEMENT_TYPES.some((type) => tokenIs(cT, `statementType`, type));
-
-        if (options.newLineLists && isKeyword && !isSingleLineOnly) {
+        if (options.newLineLists && isKeyword && isSingleLineOnly === false) {
           newLine(1);
         }
         break;

@@ -115,7 +115,13 @@ parserScenarios(`Block statement tests`, ({newDoc, isFormatted}) => {
     const functionSubstring = doc.content.substring(functionStatement.range.start, functionStatement.range.end);
 
     if (isFormatted) {
-      // TODO:
+      expect(functionSubstring).toBe([
+        `CREATE FUNCTION "TestDelimiters"."Delimited Function"(`,
+        `    "Delimited Parameter" INTEGER`,
+        `) RETURNS INTEGER LANGUAGE SQL BEGIN`,
+        `    RETURN "Delimited Parameter";`,
+        `END`,
+      ].join(`\r\n`));
     } else {
       expect(functionSubstring).toBe([
         `CREATE FUNCTION "TestDelimiters"."Delimited Function" ("Delimited Parameter" INTEGER) `,
@@ -124,12 +130,23 @@ parserScenarios(`Block statement tests`, ({newDoc, isFormatted}) => {
     }
     const beginStatement = groups[2];
     expect(beginStatement.statements.length).toBe(9);
+    const compoundSubstring = doc.content.substring(beginStatement.range.start, beginStatement.range.end);
 
     if (isFormatted) {
-      // TODO:
-      
+      expect(compoundSubstring).toBe([
+        `BEGIN`,
+        `    DECLARE already_exists SMALLINT DEFAULT 0;`,
+        `    DECLARE dup_object_hdlr CONDITION FOR SQLSTATE '42710';`,
+        `    DECLARE CONTINUE HANDLER FOR dup_object_hdlr SET already_exists = 1;`,
+        `    CREATE TABLE table1(`,
+        `        col1 INT`,
+        `    );`,
+        `    IF already_exists > 0 THEN;`,
+        `        DELETE FROM table1;`,
+        `    END IF;`,
+        `END`,
+      ].join(`\r\n`));
     } else {
-      const compoundSubstring = doc.content.substring(beginStatement.range.start, beginStatement.range.end);
       expect(compoundSubstring).toBe(compoundStatement);
     }
   });
