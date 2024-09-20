@@ -137,7 +137,7 @@ test(`CREATE FUNCTION: with single parameter`, () => {
 
   expect(formatted).toBe([
     `create function "TestDelimiters"."Delimited Function"(`,
-    `  "Delimited Parameter" integer`,
+    `    "Delimited Parameter" integer`,
     `) returns integer language sql begin`,
     `    return "Delimited Parameter";`,
     `end;`

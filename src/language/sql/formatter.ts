@@ -1,6 +1,6 @@
 import { TextDocument } from "vscode";
 import Document from "./document";
-import { StatementGroup, Token } from "./types";
+import { StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
 import { stat } from "fs";
 import { IndexKind, isToken } from "typescript";
 import Statement from "./statement";
@@ -53,9 +53,21 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
 }
 
 function formatTokens(tokensWithBlocks: Token[], options: FormatOptions): string[] {
+  let possibleType = StatementType.Unknown;
   const indent = options.tabWidth || 4;
   let currentIndent = 0;
   let newLines: string[] = [``];
+  let typeToken: Token;
+
+  if (tokensWithBlocks.length > 2 && tokensWithBlocks[1].type === `colon`) {
+    typeToken = tokensWithBlocks[2];
+  } else {
+    typeToken = tokensWithBlocks[0];
+  }
+
+  if (typeToken && typeToken.value) {
+    possibleType = StatementTypeWord[typeToken.value.toUpperCase()] || StatementType.Unknown;
+  }
 
   const getSpacing = () => {
     return ``.padEnd(currentIndent);
@@ -107,7 +119,7 @@ function formatTokens(tokensWithBlocks: Token[], options: FormatOptions): string
             append(`)`);
           } else {
             const formattedSublines = formatTokens(cT.block!, options);
-            if (formattedSublines.length === 1) {
+            if (formattedSublines.length === 1 && possibleType !== StatementType.Create) {
               append(`(${formattedSublines[0]})`);
             } else {
               append(`(`)
