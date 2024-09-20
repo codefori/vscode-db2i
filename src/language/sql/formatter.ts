@@ -1,19 +1,13 @@
-import { TextDocument } from "vscode";
 import Document from "./document";
 import { StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
-import { stat } from "fs";
-import { IndexKind, isToken } from "typescript";
-import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-
 
 export declare type CaseOptions = `preserve` | `upper` | `lower`;
 
 const SINGLE_LINE_STATEMENT_TYPES = [`CREATE`, `DECLARE`, `SET`, `DELETE`];
 
 export interface FormatOptions {
-  useTabs?: boolean;
-  tabWidth?: number; // Defaults to 4
+  indentWidth?: number; // Defaults to 4
   keywordCase?: CaseOptions;
   identifierCase?: CaseOptions;
   newLineLists?: boolean;
@@ -54,7 +48,7 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
 
 function formatTokens(tokensWithBlocks: Token[], options: FormatOptions): string[] {
   let possibleType = StatementType.Unknown;
-  const indent = options.tabWidth || 4;
+  const indent = options.indentWidth || 4;
   let currentIndent = 0;
   let newLines: string[] = [``];
   let typeToken: Token;

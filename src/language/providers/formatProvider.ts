@@ -10,8 +10,7 @@ export const formatProvider = languages.registerDocumentFormattingEditProvider({
     const formatted = formatSql(
       document.getText(), 
       {
-        useTabs: !options.insertSpaces,
-        tabWidth: options.tabSize,
+        indentWidth: options.tabSize,
         identifierCase: identifierCase,
         keywordCase: keywordCase,
       }
