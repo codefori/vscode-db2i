@@ -9,9 +9,10 @@ export interface FormatOptions {
   keywordCase?: CaseOptions;
   identifierCase?: CaseOptions;
   newLineLists?: boolean;
+  spaceBetweenStatements?: boolean
 }
 
-const SINGLE_LINE_STATEMENT_TYPES: StatementType[] = [StatementType.Create, StatementType.Declare, StatementType.Set, StatementType.Delete];
+const SINGLE_LINE_STATEMENT_TYPES: StatementType[] = [StatementType.Create, StatementType.Declare, StatementType.Set, StatementType.Delete, StatementType.Call];
 
 export function formatSql(textDocument: string, options: FormatOptions = {}): string {
   let result: string[] = [];
@@ -22,12 +23,19 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
 
   for (const statementGroup of statementGroups) {
     let currentIndent = 0;
+    let prevType = statementGroup.statements[0].type;
     for (let i = 0; i < statementGroup.statements.length; i++) {
       const statement = statementGroup.statements[i];
       const withBlocks = SQLTokeniser.createBlocks(statement.tokens);
 
       if (statement.isCompoundEnd() || statement.isConditionEnd()) {
         currentIndent -= 4;
+      }
+
+      if (options.spaceBetweenStatements) {
+        if (prevType !== statement.type) {
+          result.push(``); 
+        }
       }
 
       result.push(...formatTokens(withBlocks, options).map(l => ``.padEnd(currentIndent) + l));
@@ -38,6 +46,8 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
       if (statement.isCompoundStart() || statement.isConditionStart()) {
         currentIndent += 4;
       }
+
+      prevType = statement.type;
     }
   }
 

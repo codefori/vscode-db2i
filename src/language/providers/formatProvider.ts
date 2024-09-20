@@ -13,6 +13,7 @@ export const formatProvider = languages.registerDocumentFormattingEditProvider({
         indentWidth: options.tabSize,
         identifierCase: identifierCase,
         keywordCase: keywordCase,
+        spaceBetweenStatements: true
       }
     );
 

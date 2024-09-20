@@ -106,6 +106,11 @@ export default class SQLTokeniser {
       match: [{ type: `equals` }, { type: `morethan` }],
       becomes: `rightpipe`,
     },
+    {
+      name: `NOT`,
+      match: [{type: `lessthan`}, {type: `morethan`}],
+      becomes: `not`
+    }
   ];
   readonly spaces = [`\t`, ` `];
   readonly splitParts: string[] = [`(`, `)`, `/`, `.`, `*`, `-`, `+`, `;`, `"`, `&`, `%`, `,`, `|`, `?`, `:`, `=`, `<`, `>`, `\n`, `\r`, ...this.spaces];

@@ -7,14 +7,16 @@ const optionsUpper: FormatOptions = {
   indentWidth: 4,
   keywordCase: 'upper',
   identifierCase: 'upper',
-  newLineLists: true
+  newLineLists: true,
+  spaceBetweenStatements: true
 }
 
 const optionsLower: FormatOptions = {
   indentWidth: 4,
   keywordCase: 'lower',
   identifierCase: 'lower',
-  newLineLists: true
+  newLineLists: true,
+  spaceBetweenStatements: true
 }
 
 
@@ -137,10 +139,57 @@ test(`CREATE FUNCTION: with single parameter`, () => {
     `create function "TestDelimiters"."Delimited Function"(`,
     `    "Delimited Parameter" integer`,
     `) returns integer language sql begin`,
+    ``,
     `    return "Delimited Parameter";`,
+    ``,
     `end;`
   ].join(`\n`));
-})
+});
+
+test(`CREATE PROCEDURE: with complex body`, () => {
+  const sql = [
+    `create or replace procedure liama.sql_system(IN command char(512), in curlib varchar(10) default '*SAME', IN libl varchar(512) default '*SAME')`,
+    `  program type sub`,
+    `  result sets 1`,
+    `begin`,
+    `  declare startTime timestamp;`,
+    `  declare endTime timestamp;`,
+    ``,
+    `  declare theJob varchar(28);`,
+    `  declare spool_name varchar(10);`,
+    `  declare spool_number int;`,
+    `  declare chgcurlib varchar(1024);`,
+    ``,
+    `  declare c_result CURSOR FOR`,
+    `    select SPOOLED_DATA from `,
+    `    table(systools.spooled_file_data(theJob, spooled_file_name => spool_name, spooled_file_number => spool_number));`,
+    ``,
+    `  set chgcurlib = 'chglibl curlib(' concat curlib concat ') libl(' concat libl concat ')';`,
+    ``,
+    `  if (curlib <> '*SAME' or libl <> '*SAME') then`,
+    `    call qsys2.qcmdexc(chgcurlib);`,
+    `  end if;`,
+    ``,
+    `  set startTime = current_timestamp;`,
+    ``,
+    `  call qsys2.qcmdexc(command);`,
+    ``,
+    `  set endTime = current_timestamp;`,
+    ``,
+    `  select `,
+    `    char(job_number) || '/' || job_user || '/' || job_name, `,
+    `    spooled_file_name, `,
+    `    spooled_file_number `,
+    `  into theJob, spool_name, spool_number`,
+    `  from table(qsys2.spooled_file_info(starting_timestamp => startTime, ending_timestamp => endTime)) x order by creation_timestamp desc limit 1;`,
+    ``,
+    `  open c_result;`,
+    `end;`,
+  ].join(`\n`);
+
+  const formatted = formatSql(sql, optionsUpper);
+  console.log(formatted);
+});
 
 test('Active jobs (from Nav)', () => {
   const sql = `SELECT * FROM TABLE ( QSYS2.ACTIVE_JOB_INFO( RESET_STATISTICS => 'NO', SUBSYSTEM_LIST_FILTER => '', JOB_NAME_FILTER => '*ALL', CURRENT_USER_LIST_FILTER => '', DETAILED_INFO => 'NONE' ) ) ORDER BY SUBSYSTEM,  RUN_PRIORITY,  JOB_NAME_SHORT,  JOB_NUMBER LIMIT 100 OFFSET 0`;
