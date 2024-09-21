@@ -7,13 +7,14 @@ export const formatProvider = languages.registerDocumentFormattingEditProvider({
   async provideDocumentFormattingEdits(document, options, token) {
     const identifierCase: CaseOptions = <CaseOptions>(Configuration.get(`sqlFormat.identifierCase`) || `preserve`);
     const keywordCase: CaseOptions = <CaseOptions>(Configuration.get(`sqlFormat.keywordCase`) || `lower`);
+    const spaceBetweenStatements: string = (Configuration.get(`sqlFormat.spaceBetweenStatements`) || `false`);
     const formatted = formatSql(
       document.getText(), 
       {
         indentWidth: options.tabSize,
-        identifierCase: identifierCase,
-        keywordCase: keywordCase,
-        spaceBetweenStatements: true
+        identifierCase,
+        keywordCase,
+        spaceBetweenStatements: spaceBetweenStatements === `true`
       }
     );
 
