@@ -1335,7 +1335,6 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
     expect(ctes[2].columns.length).toBe(0);
 
     const temp03Stmt = ctes[2].statement.getObjectReferences();
-    console.log(temp03Stmt);
 
     expect(temp03Stmt[0].object.name).toBe(`dec`);
     expect(temp03Stmt[1].object.name).toBe(`Temp01`);
@@ -1454,7 +1453,6 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const objs = statement.getObjectReferences();
 
-    console.log(objs);
     expect(objs.length).toBe(2);
     expect(objs[1].object.schema).toBe(`qsys2`);
     expect(objs[1].object.name).toBe(`ACTIVE_JOB_INFO`);
