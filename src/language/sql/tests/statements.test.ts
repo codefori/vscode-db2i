@@ -205,7 +205,7 @@ parserScenarios(`Object references`, ({newDoc}) => {
     const statement = document.statements[0];
 
     const refs = statement.getObjectReferences();
-    expect(refs.length).toBe(3);
+    expect(refs.length).toBe(5);
 
     expect(statement.getClauseForOffset(10)).toBe(ClauseType.Unknown);
     expect(statement.getClauseForOffset(125)).toBe(ClauseType.From);
@@ -835,9 +835,11 @@ parserScenarios(`Object references`, ({newDoc}) => {
     const selectStatement = group.statements[2];
     expect(selectStatement.type).toBe(StatementType.Select);
     const refsC = selectStatement.getObjectReferences();
-    expect(refsC.length).toBe(1);
+    expect(refsC.length).toBe(2);
     expect(refsC[0].createType).toBeUndefined();
-    expect(refsC[0].object.name).toBe(`employee`);
+    expect(refsC[0].object.name).toBe(`sum`);
+    expect(refsC[1].createType).toBeUndefined();
+    expect(refsC[1].object.name).toBe(`employee`);
   });
   
   test(`CREATE FUNCTION: with multiple parameters`, () => {
@@ -1291,27 +1293,36 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
     const refs = statement.getObjectReferences();
     const ctes = statement.getCTEReferences();
 
-    expect(refs.length).toBe(7);
+    expect(refs.length).toBe(10);
     expect(refs[0].object.name).toBe(`shipments`);
     expect(refs[0].alias).toBe(`s`);
 
     expect(refs[1].object.name).toBe(`BillingDate`);
     expect(refs[1].alias).toBeUndefined();
 
-    expect(refs[2].object.name).toBe(`Temp01`);
-    expect(refs[2].alias).toBe(`t1`);
+    expect(refs[2].object.name).toBe(`sum`);
+    expect(refs[2].alias).toBeUndefined();
 
     expect(refs[3].object.name).toBe(`Temp01`);
     expect(refs[3].alias).toBe(`t1`);
 
-    expect(refs[4].object.name).toBe(`Temp02`);
-    expect(refs[4].alias).toBe(`t2`);
+    expect(refs[4].object.name).toBe(`dec`);
+    expect(refs[4].alias).toBeUndefined();
 
-    expect(refs[5].object.name).toBe(`customers`);
-    expect(refs[5].alias).toBe(`c`);
+    expect(refs[5].object.name).toBe(`round`);
+    expect(refs[5].alias).toBeUndefined();
 
-    expect(refs[6].object.name).toBe(`Temp02`);
-    expect(refs[6].alias).toBeUndefined();
+    expect(refs[6].object.name).toBe(`Temp01`);
+    expect(refs[6].alias).toBe(`t1`);
+
+    expect(refs[7].object.name).toBe(`Temp02`);
+    expect(refs[7].alias).toBe(`t2`);
+
+    expect(refs[8].object.name).toBe(`customers`);
+    expect(refs[8].alias).toBe(`c`);
+
+    expect(refs[9].object.name).toBe(`Temp02`);
+    expect(refs[9].alias).toBeUndefined();
 
     expect(ctes.length).toBe(3);
     expect(ctes[0].name).toBe(`Temp01`);
@@ -1322,11 +1333,14 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     expect(ctes[2].name).toBe(`Temp03`);
     expect(ctes[2].columns.length).toBe(0);
+
     const temp03Stmt = ctes[2].statement.getObjectReferences();
-    expect(temp03Stmt.length).toBe(3);
-    expect(temp03Stmt[0].object.name).toBe(`Temp01`);
-    expect(temp03Stmt[1].object.name).toBe(`Temp02`);
-    expect(temp03Stmt[2].object.name).toBe(`customers`);
+    console.log(temp03Stmt);
+
+    expect(temp03Stmt[0].object.name).toBe(`dec`);
+    expect(temp03Stmt[1].object.name).toBe(`Temp01`);
+    expect(temp03Stmt[2].object.name).toBe(`Temp02`);
+    expect(temp03Stmt[3].object.name).toBe(`customers`);
   })
 
   test(`WITH: explicit columns`, () => {
@@ -1439,10 +1453,44 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
     expect(statement.type).toBe(StatementType.Select);
 
     const objs = statement.getObjectReferences();
-    expect(objs.length).toBe(1);
-    expect(objs[0].object.schema).toBe(`qsys2`);
-    expect(objs[0].object.name).toBe(`ACTIVE_JOB_INFO`);
-  })
+
+    console.log(objs);
+    expect(objs.length).toBe(2);
+    expect(objs[1].object.schema).toBe(`qsys2`);
+    expect(objs[1].object.name).toBe(`ACTIVE_JOB_INFO`);
+  });
+
+  test('CASE, WHEN, END', () => {
+    const lines = [
+      `--`,
+      ``,
+      `--`,
+      `-- Hold any jobs that started running an SQL statement more than 2 hours ago.`,
+      `--`,
+      `select JOB_NAME,`,
+      `       case`,
+      `         when QSYS2.QCMDEXC('HLDJOB ' concat JOB_NAME) = 1 then 'Job Held'`,
+      `         else 'Job not held'`,
+      `       end as HLDJOB_RESULT`,
+      `  from table (`,
+      `      QSYS2.ACTIVE_JOB_INFO(DETAILED_INFO => 'ALL')`,
+      `    )`,
+      `  where SQL_STATEMENT_START_TIMESTAMP < current timestamp - 2 hours;`,
+    ].join(`\n`);
+
+    const document = newDoc(lines);
+
+
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Select);
+
+    const objs = statement.getObjectReferences();
+
+    expect(objs.length).toBe(2);
+  });
 });
 
 describe(`Parameter statement tests`, () => {

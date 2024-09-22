@@ -188,7 +188,6 @@ test(`CREATE PROCEDURE: with complex body`, () => {
   ].join(`\n`);
 
   const formatted = formatSql(sql, optionsUpper);
-  console.log(formatted);
 });
 
 test('Active jobs (from Nav)', () => {

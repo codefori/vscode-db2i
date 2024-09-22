@@ -34,7 +34,7 @@ export default class SQLTokeniser {
     {
       name: `STATEMENTTYPE`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`].includes(value.toUpperCase());
+        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`, `IF`, `FOR`, `WHILE`].includes(value.toUpperCase());
       } }],
       becomes: `statementType`,
     },

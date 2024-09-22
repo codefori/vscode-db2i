@@ -12,7 +12,7 @@ export interface FormatOptions {
   spaceBetweenStatements?: boolean
 }
 
-const SINGLE_LINE_STATEMENT_TYPES: StatementType[] = [StatementType.Create, StatementType.Declare, StatementType.Set, StatementType.Delete, StatementType.Call];
+const SINGLE_LINE_STATEMENT_TYPES: StatementType[] = [StatementType.Create, StatementType.Declare, StatementType.Set, StatementType.Delete, StatementType.Call, StatementType.If, StatementType.End];
 
 export function formatSql(textDocument: string, options: FormatOptions = {}): string {
   let result: string[] = [];
