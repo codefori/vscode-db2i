@@ -174,6 +174,11 @@ export class ServerComponent {
               this.installed = true;
               updateResult = UpdateStatus.JUST_UPDATED;
             }
+            else{
+              await Config.setServerComponentName(basename);
+              this.installed = true;
+              updateResult = UpdateStatus.UP_TO_DATE;
+            }
           } else {
             updateResult = UpdateStatus.FAILED;
 
