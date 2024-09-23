@@ -32,15 +32,15 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
         currentIndent -= 4;
       }
 
-      if (options.spaceBetweenStatements) {
-        if (prevType !== statement.type) {
-          result.push(``); 
-        }
-      }
-
       result.push(...formatTokens(withBlocks, options).map(l => ``.padEnd(currentIndent) + l));
       if (!statement.isCompoundStart()) {
         result[result.length-1] += `;`
+      }
+
+      if (options.spaceBetweenStatements) {
+        if (prevType !== statement.type && i < statementGroup.statements.length - 1) {
+          result.push(``); 
+        }
       }
 
       if (statement.isCompoundStart() || statement.isConditionStart()) {
