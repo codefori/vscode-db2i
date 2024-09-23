@@ -20,10 +20,10 @@ export function formatSql(textDocument: string, options: FormatOptions = {}): st
   const statementGroups: StatementGroup[] = document.getStatementGroups();
 
   const eol = textDocument.includes(`\r\n`) ? `\r\n` : `\n`;
+  let prevType = StatementType.Unknown;
 
   for (const statementGroup of statementGroups) {
     let currentIndent = 0;
-    let prevType = statementGroup.statements[0].type;
     for (let i = 0; i < statementGroup.statements.length; i++) {
       const statement = statementGroup.statements[i];
       const withBlocks = SQLTokeniser.createBlocks(statement.tokens);
