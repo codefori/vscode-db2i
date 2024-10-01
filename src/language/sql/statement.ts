@@ -26,9 +26,6 @@ export default class Statement {
 		}
 		
 		switch (this.type) {
-			case StatementType.With:
-				this.tokens = SQLTokeniser.createBlocks(this.tokens);
-				break;
 			case StatementType.Create:
 				// No scalar transformation here..
 				break;
@@ -213,23 +210,25 @@ export default class Statement {
 
 	getCTEReferences(): CTEReference[] {
 		if (this.type !== StatementType.With) return [];
+
+		const withBlocks = SQLTokeniser.createBlocks(this.tokens.slice(0));
 		
 		let cteList: CTEReference[] = [];
 
-		for (let i = 0; i < this.tokens.length; i++) {
-			if (tokenIs(this.tokens[i], `word`)) {
-				let cteName = this.tokens[i].value!;
+		for (let i = 0; i < withBlocks.length; i++) {
+			if (tokenIs(withBlocks[i], `word`) || tokenIs(withBlocks[i], `function`)) {
+				let cteName = withBlocks[i].value!;
 				let parameters: string[] = [];
 				let statementBlockI = i+1;
 
-				if (tokenIs(this.tokens[i+1], `block`) && tokenIs(this.tokens[i+2], `keyword`, `AS`)) {
-					parameters = this.tokens[i+1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
+				if (tokenIs(withBlocks[i+1], `block`) && tokenIs(withBlocks[i+2], `keyword`, `AS`)) {
+					parameters = withBlocks[i+1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
 					statementBlockI = i+3;
-				} else if (tokenIs(this.tokens[i+1], `keyword`, `AS`)) {
+				} else if (tokenIs(withBlocks[i+1], `keyword`, `AS`)) {
 					statementBlockI = i+2;
 				}
 
-				const statementBlock = this.tokens[statementBlockI];
+				const statementBlock = withBlocks[statementBlockI];
 				if (tokenIs(statementBlock, `block`)) {
 					cteList.push({
 						name: cteName,
@@ -241,12 +240,70 @@ export default class Statement {
 				i = statementBlockI;
 			}
 
-			if (tokenIs(this.tokens[i], `statementType`, `SELECT`)) {
+			if (tokenIs(withBlocks[i], `statementType`, `SELECT`)) {
 				break;
 			}
 		}
 
 		return cteList;
+	}
+
+	getRoutineParameters(): ObjectRef[] {
+		const list: ObjectRef[] = [];
+
+		if (this.type !== StatementType.Create) {
+			return [];
+		}
+
+		function splitTokens(inTokens: Token[], type: string) {
+			const chunks: Token[][] = [];
+
+			let currentChunk: Token[] = [];
+
+			for (const token of inTokens) {
+				if (tokenIs(token, type)) {
+					if (currentChunk.length > 0) {
+						chunks.push(currentChunk);
+						currentChunk = [];
+					}
+				} else {
+					currentChunk.push(token);
+				}
+			}
+
+			if (currentChunk.length > 0) {
+				chunks.push(currentChunk);
+			}
+
+			return chunks;
+		}
+
+		const withBlocks = SQLTokeniser.createBlocks(this.tokens.slice(0));
+		const firstBlock = withBlocks.find(token => token.type === `block`);
+
+		if (firstBlock && firstBlock.block) {
+			const parameters = splitTokens(firstBlock.block!, `comma`);
+
+			for (const parameter of parameters) {
+				// If the first token is the parm type, then the name follows
+				let nameIndex = tokenIs(parameter[0], `parmType`) ? 1 : 0;
+				const name = parameter[nameIndex].value!;
+				// Include parmType if it is provided
+				const definitionTokens = (nameIndex === 1 ? [parameter[0]] : []).concat(parameter.slice(nameIndex+1));
+
+				list.push({
+					tokens: parameter,
+					createType: Statement.formatSimpleTokens(definitionTokens),
+					alias: name,
+					object: {
+						name,
+					}
+				});
+			}
+		}
+
+		return list;
+
 	}
 
 	getObjectReferences(): ObjectRef[] {
@@ -273,6 +330,9 @@ export default class Statement {
 					if (sqlObj) {
 						doAdd(sqlObj);
 						i += sqlObj.tokens.length;
+						if (sqlObj.isUDTF || sqlObj.fromLateral) {
+							i += 3; //For the brackets
+						}
 					}
 				}
 			}
@@ -377,6 +437,12 @@ export default class Statement {
 							}
 							break;
 
+						case `VARIABLE`:
+							if (postName) {
+								object.createType = Statement.formatSimpleTokens(this.tokens.slice(postName));
+							}
+							break;
+
 						case `VIEW`:
 						case `TABLE`:
 							const asKeyword = this.tokens.findIndex(token => tokenIs(token, `keyword`, `AS`));
@@ -424,12 +490,13 @@ export default class Statement {
 					} else {
 						let defaultIndex = this.tokens.findIndex(t => tokenIs(t, `keyword`, `DEFAULT`));
 
-						def.createType = this.tokens
+						const valueTokens = this.tokens
 							.slice(
 								2, 
 								defaultIndex >= 0 ? defaultIndex : undefined
-							)
-							.map(t => t.value).join(``);
+							);
+
+						def.createType = Statement.formatSimpleTokens(valueTokens);
 					}
 
 					doAdd(def);
@@ -448,17 +515,15 @@ export default class Statement {
 
 		let endIndex = i;
 
-		let isUDTF = false;
-
-		if (tokenIs(nextToken, `function`, `TABLE`)) {
-			isUDTF = true;
-		}
+		const isUDTF = tokenIs(nextToken, `function`, `TABLE`);
+		const isLateral = tokenIs(nextToken, `function`, `LATERAL`);
 
 		if (isUDTF) {
 			sqlObj = this.getRefAtToken(i+2);
 			if (sqlObj) {
 				sqlObj.isUDTF = true;
 				const blockTokens = this.getBlockAt(sqlObj.tokens[0].range.end);
+				
 				sqlObj.tokens = blockTokens;
 				nextIndex = i + 2 + blockTokens.length;
 				nextToken = this.tokens[nextIndex];
@@ -467,7 +532,15 @@ export default class Statement {
 				nextIndex = -1;
 				nextToken = undefined;
 			}
+		} else if (isLateral) {
+			const blockTokens = this.getBlockAt(nextToken.range.end+1);
+			const newStatement = new Statement(blockTokens, {start: nextToken.range.start, end: blockTokens[blockTokens.length-1].range.end});
+			[sqlObj] = newStatement.getObjectReferences();
 
+			sqlObj.fromLateral = true;
+			nextIndex = i + 2 + blockTokens.length;
+			nextToken = this.tokens[nextIndex];
+		
 		} else {
 			if (nextToken && NameTypes.includes(nextToken.type)) {
 				nextIndex = i;
@@ -546,6 +619,7 @@ export default class Statement {
 		let declareStmt: Token|undefined;
 
 		for (let i = 0; i < this.tokens.length; i++) {
+			const prevToken = this.tokens[i-1];
 			const currentToken = this.tokens[i];
 
 			switch (currentToken.type) {
@@ -593,6 +667,7 @@ export default class Statement {
 				case `colon`:
 					if (intoClause) continue;
 					if (declareStmt) continue;
+					if (prevToken && prevToken.type === `string`) continue;
 
 					let nextMustBe: "word"|"dot" = `word`;
 					let followingTokenI = i+1;
@@ -680,4 +755,41 @@ export default class Statement {
     }
     return tokens;
   }
+
+	private static formatSimpleTokens(tokens: Token[]) {
+		let outString = ``;
+		for (let i = 0; i < tokens.length; i++) {
+			const cT = tokens[i];
+			const nT = tokens[i+1];
+			const pT = tokens[i-1];
+	
+			switch (cT.type) {
+				case `block`:
+					outString += `(${Statement.formatSimpleTokens(cT.block!)})`;
+
+					if (nT && nT.type !== `closebracket`) {
+						outString += ` `;
+					}
+					break;
+				case `openbracket`:
+					outString += cT.value;
+					break;
+				case `closebracket`:
+					outString += cT.value
+					
+					if (nT && nT.type !== cT.type) {
+						outString += ` `
+					}
+					break;
+				default:
+					if (nT && (![`closebracket`, `openbracket`, `comma`, `block`].includes(nT.type))) {
+						outString += `${cT.value} `;
+					} else {
+						outString += cT.value;
+					}
+					break;
+			}
+		}
+		return outString.trimEnd();
+	}
 }

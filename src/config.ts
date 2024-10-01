@@ -2,7 +2,7 @@ import { ExtensionContext, commands, window } from "vscode";
 import { ConnectionStorage } from "./Storage";
 import { getInstance } from "./base";
 import { SQLJobManager } from "./connection/manager";
-import { ServerComponent, UpdateStatus } from "./connection/serverComponent";
+import { ServerComponent } from "./connection/serverComponent";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import Configuration from "./configuration";
 import { ConfigManager } from "./views/jobManager/ConfigManager";
@@ -13,7 +13,6 @@ import { IBMiDetail } from "./IBMiDetail";
 export let Config: ConnectionStorage;
 export let osDetail: IBMiDetail;
 export let JobManager: SQLJobManager = new SQLJobManager();
-
 
 export async function onConnectOrServerInstall(): Promise<boolean> {
   const instance = getInstance();
@@ -69,7 +68,7 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
 export function initConfig(context: ExtensionContext) {
   Config = new ConnectionStorage(context);
 
-  getInstance().onEvent(`disconnected`, async () => {
+  getInstance().subscribe(context, `disconnected`, `db2i-disconnect`, async () => {
     JobManagerView.setVisible(false);
     JobManager.endAll();
     updateStatusBar();
@@ -87,6 +86,17 @@ export async function askAboutNewJob(startup?: boolean): Promise<boolean> {
   const connection = instance.getConnection();
 
   if (connection) {
+
+    // Wait for the job manager to finish creating jobs if one is not selected
+    while (JobManager.getSelection() === undefined && JobManager.isCreatingJob()) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // If a job is created or already selected, don't ask
+    if (JobManager.getSelection()) {
+      return true;
+    }
+
     const options = startup ? [`Yes`, `Always`, `No`, `Never`] : [`Yes`, `No`];
 
     const chosen = await window.showInformationMessage(`Would you like to start an SQL Job?`, ...options);

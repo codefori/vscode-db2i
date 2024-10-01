@@ -3,7 +3,7 @@ import Configuration from "../../configuration";
 import { JDBCOptions } from "../../connection/types";
 import { JobManagerView, SQLJobItem } from "./jobManagerView";
 import { JobManager } from "../../config";
-import { SQLJob } from "../../connection/sqlJob";
+import { OldSQLJob } from "../../connection/sqlJob";
 import { editJobUi } from "./editJob";
 
 interface JobConfigs {

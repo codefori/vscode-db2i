@@ -47,7 +47,7 @@ export class ServerComponent {
     const path = this.getComponentPath();
 
     if (path) {
-      return `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -Dos400.stdio.convert=N -jar ${path}`
+      return `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -Dos400.stdio.convert=N -jar ${path} --single`
     }
   }
 
@@ -67,13 +67,30 @@ export class ServerComponent {
     const instance = getInstance();
     const connection = instance.getConnection();
 
+    if (!connection) {
+      return false;
+    }
+
+    if (!Config.ready) {
+      Config.setConnectionName(connection.currentConnectionName);
+    }
+
+    if (!this.installed) {
+      this.installed = await this.isAlreadyInstalled();
+    }
+
+    return this.installed;
+  }
+
+  static async isAlreadyInstalled() {
+    const instance = getInstance();
+    const connection = instance.getConnection();
+
     const exists = await connection.sendCommand({
       command: `ls ${this.getComponentPath()}`
     });
 
-    this.installed = (exists.code === 0);
-
-    return this.installed;
+    return (exists.code === 0);
   }
 
   /**
@@ -88,15 +105,17 @@ export class ServerComponent {
 
     try {
       const assetPath = path.join(extensionPath, `dist`, SERVER_VERSION_FILE);
-      const assetExists = await exists(assetPath);
+      const assetExistsLocally = await exists(assetPath);
 
-      ServerComponent.writeOutput(JSON.stringify({assetPath, assetExists}));
+      ServerComponent.writeOutput(JSON.stringify({assetPath, assetExists: assetExistsLocally}));
 
-      if (assetExists) {
+      if (assetExistsLocally) {
         const basename = SERVER_VERSION_FILE;
         const lastInstalledName = Config.getServerComponentName();
 
         ServerComponent.writeOutput(JSON.stringify({basename, lastInstalledName}));
+
+        await this.initialise();
 
         if (lastInstalledName !== basename || this.installed === false) {
           // This means we're currently running a different version, 

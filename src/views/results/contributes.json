@@ -1,0 +1,167 @@
+{
+  "contributes": {
+    "configuration": [
+      {
+        "id": "vscode-db2i.resultsets",
+        "title": "Viewing Data",
+        "properties": {
+          "vscode-db2i.resultsets.columnHeadings": {
+            "type": "string",
+            "order": 0,
+            "description": "Descriptor to use for column headings when viewing data",
+            "default": "Name",
+            "enum": [
+              "Name",
+              "Label"
+            ],
+            "enumDescriptions": [
+              "Show the column name",
+              "Show the column label\n'Extended metadata' must be set to true in the JDBC configuration"
+            ]
+          },
+          "vscode-db2i.collapsedResultSet": {
+            "type": "boolean",
+            "description": "Make larger cells collapsed by default",
+            "default": false
+          }
+        }
+      }
+    ],
+    "views": {
+      "ibmi-panel": [
+        {
+          "type": "webview",
+          "id": "vscode-db2i.resultset",
+          "name": "Results",
+          "when": "code-for-ibmi:connected == true",
+          "contextualTitle": "DB2 for i"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "vscode-db2i.runEditorStatement",
+        "title": "Run statement",
+        "category": "Db2 for i",
+        "icon": "$(notebook-execute)"
+      },
+      {
+        "command": "vscode-db2i.runEditorStatement.inView",
+        "title": "Run statement in new view",
+        "category": "Db2 for i",
+        "icon": "$(window)"
+      },
+      {
+        "command": "vscode-db2i.statement.cancel",
+        "title": "Cancel",
+        "category": "Db2 for i",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "vscode-db2i.editorExplain.withRun",
+        "title": "Run and explain statement",
+        "category": "Db2 for i",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "vscode-db2i.editorExplain.withoutRun",
+        "title": "Explain without running",
+        "category": "Db2 for i",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "vscode-db2i.resultset.settings",
+        "title": "Settings",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
+      }
+    ],
+    "submenus": [
+      {
+        "icon": "$(notebook-execute)",
+        "id": "sql/editor/context",
+        "label": "Run SQL statement"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.resultset.settings",
+          "when": "never"
+        }
+      ],
+      "editor/title": [
+        {
+          "when": "editorLangId == sql && code-for-ibmi:connected == true && vscode-db2i:statementCanCancel != true",
+          "group": "navigation@1",
+          "submenu": "sql/editor/context"
+        },
+        {
+          "command": "vscode-db2i.statement.cancel",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
+          "group": "navigation@1"
+        }
+      ],
+      "sql/editor/context": [
+        {
+          "command": "vscode-db2i.runEditorStatement",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.runEditorStatement.inView",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.editorExplain.withRun",
+          "when": "editorLangId == sql",
+          "group": "2_explain@1"
+        },
+        {
+          "command": "vscode-db2i.editorExplain.withoutRun",
+          "when": "editorLangId == sql",
+          "group": "2_explain@2"
+        },
+        {
+          "command": "vscode-db2i.notebook.fromSqlUri",
+          "when": "editorLangId == sql",
+          "group": "3_notebook@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "vscode-db2i.resultset.settings",
+          "group": "navigation",
+          "when": "view == vscode-db2i.resultset"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "vscode-db2i.runEditorStatement",
+        "key": "ctrl+r",
+        "mac": "cmd+r",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
+        "command": "vscode-db2i.runEditorStatement.inView",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+ctrl+r",
+        "when": "editorLangId == sql"
+      },
+      {
+        "command": "vscode-db2i.editorExplain.withRun",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
+        "command": "vscode-db2i.editorExplain.withoutRun",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      }
+    ]
+  }
+}

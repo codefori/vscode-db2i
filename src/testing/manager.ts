@@ -2,7 +2,6 @@ import assert from "assert";
 import { TestSuite } from ".";
 import { JobManager } from "../config";
 import { ServerComponent } from "../connection/serverComponent";
-import { JobStatus } from "../connection/sqlJob";
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,
@@ -34,7 +33,7 @@ export const ManagerSuite: TestSuite = {
       const selected = JobManager.getSelection();
       assert.notStrictEqual(selected, undefined);
       assert.notStrictEqual(selected.job.id, undefined);
-      assert.strictEqual(selected.job.getStatus(), JobStatus.Ready);
+      assert.strictEqual(selected.job.getStatus(), "ready");
       
       // Close the job and see things go away
       JobManager.closeJob(JobManager.selectedJob);
@@ -83,9 +82,9 @@ export const ManagerSuite: TestSuite = {
       assert.strictEqual(runningJobs.length, 2);
 
       // Returns false due to bad name
-      assert.strictEqual(JobManager.setSelection(`badName`), false);
+      assert.strictEqual(JobManager.setSelection(`badName`), undefined);
 
-      assert.strictEqual(JobManager.setSelection(runningJobs[0].name), true);
+      assert.notStrictEqual(JobManager.setSelection(runningJobs[0].name), undefined);
 
       assert.strictEqual(JobManager.getSelection().name, runningJobs[0].name);
 

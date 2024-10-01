@@ -27,6 +27,11 @@ interface TokenState {
 export default class SQLTokeniser {
   matchers: Matcher[] = [
     {
+      name: `PROCEDURE_PARM_TYPE`,
+      match: [{ type: `word`, match: (value: string) => {return [`IN`, `OUT`, `INOUT`].includes(value.toUpperCase())}}],
+      becomes: `parmType`,
+    },
+    {
       name: `STATEMENTTYPE`,
       match: [{ type: `word`, match: (value: string) => {
         return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`].includes(value.toUpperCase());
@@ -69,7 +74,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
+        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `DO`, `THEN`, `LOOP`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },

@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import vscode from "vscode"
-import schemaBrowser from "./views/schemaBrowser/schemaBrowser";
+import schemaBrowser from "./views/schemaBrowser";
 
 import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
@@ -10,21 +10,23 @@ import { getInstance, loadBase } from "./base";
 import { JobManager, onConnectOrServerInstall, initConfig } from "./config";
 import { queryHistory } from "./views/queryHistoryView";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
-import { languageInit } from "./language";
-import { initialise } from "./testing";
+import { languageInit } from "./language/providers";
+import { initialiseTestSuite } from "./testing";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { ServerComponent } from "./connection/serverComponent";
 import { SQLJobManager } from "./connection/manager";
-import { JDBCOptions } from "./connection/types";
-import { SQLJob } from "./connection/sqlJob";
+import { OldSQLJob } from "./connection/sqlJob";
 import { notebookInit } from "./notebooks/IBMiSerializer";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import Configuration from "./configuration";
 import { activateChat } from "./chat/chat";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { Db2iUriHandler, getStatementUri } from "./uriHandler";
+import { DbCache } from "./language/providers/logic/cache";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
-  sqlJob: (options?: JDBCOptions) => SQLJob
+  sqlJob: (options?: JDBCOptions) => OldSQLJob
 }
 
 const CHAT_ID = `vscode-db2i.chat`;
@@ -76,7 +78,9 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     ),
     vscode.window.registerFileDecorationProvider(
       new SelfTreeDecorationProvider()
-    ) 
+    ),
+    vscode.window.registerUriHandler(new Db2iUriHandler()),
+    getStatementUri
   );
 
   JSONServices.initialise(context);
@@ -85,19 +89,27 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   initConfig(context);
 
   console.log(`Developer environment: ${process.env.DEV}`);
-  if (process.env.DEV) {
+  const devMode = process.env.DEV !== undefined;
+  let runTests: Function|undefined;
+  if (devMode) {
     // Run tests if not in production build
-    initialise(context);
+    runTests = initialiseTestSuite(context);
   }
 
   const instance = getInstance();
 
-  instance.onEvent(`connected`, () => {
+  instance.subscribe(context, `connected`, `db2i-connected`, () => {
+    DbCache.resetCache();
     selfCodesView.setRefreshEnabled(false);
+    selfCodesView.setJobOnly(false);
     // Refresh the examples when we have it, so we only display certain examples
     onConnectOrServerInstall().then(() => {
       exampleBrowser.refresh();
-      selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false)
+      selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
+
+      if (devMode && runTests) {
+        runTests();
+      }
     });
   });
 
@@ -147,7 +159,8 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
 
 
-  return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new SQLJob(options) };
+
+  return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new OldSQLJob(options) };
 }
 
 // this method is called when your extension is deactivated
