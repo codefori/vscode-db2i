@@ -3,16 +3,20 @@ import SQLTokeniser from '../tokens'
 import Document from '../document';
 import { ClauseType, StatementType } from '../types';
 
-describe(`Basic statements`, () => {
+const parserScenarios = describe.each([
+  {newDoc: (content: string) => new Document(content)},
+]);
+
+parserScenarios(`Basic statements`, ({newDoc}) => {
   test('One statement, no end', () => {
-    const document = new Document(`select * from sample`);
+    const document = newDoc(`select * from sample`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(4);
   });
 
   test('One statement, with end', () => {
-    const document = new Document(`select * from sample;`);
+    const document = newDoc(`select * from sample;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].type).toBe(StatementType.Select);
@@ -20,7 +24,7 @@ describe(`Basic statements`, () => {
   });
 
   test('Two statements, one end', () => {
-    const document = new Document([
+    const document = newDoc([
       `select * from sample;`,
       `select a from b.b`
     ].join(`\n`));
@@ -34,7 +38,7 @@ describe(`Basic statements`, () => {
   });
 
   test('Two statements, both end', () => {
-    const document = new Document([
+    const document = newDoc([
       `select * from sample;`,
       `select a from b.b;`
     ].join(`\n`));
@@ -45,7 +49,7 @@ describe(`Basic statements`, () => {
   });
 
   test('Two statements, both end, with comments', () => {
-    const document = new Document([
+    const document = newDoc([
       `select * from sample; --Yep`,
       `select a from b.b; -- Nope`
     ].join(`\n`));
@@ -56,7 +60,7 @@ describe(`Basic statements`, () => {
   });
 
   test('Two statements, both end, with comments, trimmed', () => {
-    const document = new Document([
+    const document = newDoc([
       ``,
       `select * from sample; --Yep`,
       ``,
@@ -72,9 +76,9 @@ describe(`Basic statements`, () => {
   });
 });
 
-describe(`Object references`, () => {
+parserScenarios(`Object references`, ({newDoc}) => {
   test('SELECT: Simple unqualified object', () => {
-    const document = new Document(`select * from sample;`);
+    const document = newDoc(`select * from sample;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(4);
@@ -92,7 +96,7 @@ describe(`Object references`, () => {
   });
 
   test('SELECT: Simple qualified object', () => {
-    const document = new Document(`select * from myschema.sample;`);
+    const document = newDoc(`select * from myschema.sample;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(6);
@@ -110,7 +114,7 @@ describe(`Object references`, () => {
   });
 
   test('SELECT: Simple qualified object with alias', () => {
-    const document = new Document(`select * from myschema.sample as a;`);
+    const document = newDoc(`select * from myschema.sample as a;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(8);
@@ -128,7 +132,7 @@ describe(`Object references`, () => {
   });
 
   test('SELECT: Simple unqualified object with alias (no AS)', () => {
-    const document = new Document(`select * from sample a;`);
+    const document = newDoc(`select * from sample a;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(5);
@@ -146,7 +150,7 @@ describe(`Object references`, () => {
   });
 
   test('SELECT: Simple qualified object with alias (no AS)', () => {
-    const document = new Document(`select * from myschema.sample a;`);
+    const document = newDoc(`select * from myschema.sample a;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(7);
@@ -164,7 +168,7 @@ describe(`Object references`, () => {
   });
 
   test('SELECT: Simple qualified object with alias (system naming)', () => {
-    const document = new Document(`select * from myschema/sample as a;`);
+    const document = newDoc(`select * from myschema/sample as a;`);
 
     expect(document.statements.length).toBe(1);
     expect(document.statements[0].tokens.length).toBe(8);
@@ -192,14 +196,14 @@ describe(`Object references`, () => {
       `WHERE ORCUID = CUID`,
     ].join(`\r\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
     const statement = document.statements[0];
 
     const refs = statement.getObjectReferences();
-    expect(refs.length).toBe(3);
+    expect(refs.length).toBe(5);
 
     expect(statement.getClauseForOffset(10)).toBe(ClauseType.Unknown);
     expect(statement.getClauseForOffset(125)).toBe(ClauseType.From);
@@ -216,7 +220,7 @@ describe(`Object references`, () => {
       `WHERE LASTNAME > 'S';`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -246,7 +250,7 @@ describe(`Object references`, () => {
       `WHERE LASTNAME > 'S'`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -279,7 +283,7 @@ describe(`Object references`, () => {
       `WHERE LASTNAME > 'S';`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -309,7 +313,7 @@ describe(`Object references`, () => {
       `WHERE LASTNAME > 'S'`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -336,7 +340,7 @@ describe(`Object references`, () => {
       `SELECT * FROM A CROSS JOIN B`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -366,7 +370,7 @@ describe(`Object references`, () => {
       `WHERE LASTNAME > 'S'`,
     ].join(`\n`);
 
-    const document = new Document(query);
+    const document = newDoc(query);
 
     expect(document.statements.length).toBe(1);
 
@@ -398,7 +402,7 @@ describe(`Object references`, () => {
       `insert into "myschema".hashtags (tag, base_talk) values('#hi', 2);`,
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(2);
 
@@ -423,7 +427,7 @@ describe(`Object references`, () => {
       `delete from talks where id > 2;`
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -441,7 +445,7 @@ describe(`Object references`, () => {
       `call create_Sql_sample('MYNEWSCHEMA');`
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -459,7 +463,7 @@ describe(`Object references`, () => {
       `call "QSYS".create_Sql_sample('MYNEWSCHEMA');`
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -480,7 +484,7 @@ describe(`Object references`, () => {
       `          ON DELETE SET NULL;`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -509,7 +513,7 @@ describe(`Object references`, () => {
       `          ON DELETE SET NULL;`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -539,7 +543,7 @@ describe(`Object references`, () => {
       `       ON DEPARTMENT (MGRNO);`,
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(2);
 
@@ -588,7 +592,7 @@ describe(`Object references`, () => {
       `       ON other.DEPARTMENT (MGRNO);`,
     ].join(`\r\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(2);
 
@@ -635,7 +639,7 @@ describe(`Object references`, () => {
       `  PRIMARY KEY( COL_B ) );`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -658,7 +662,7 @@ describe(`Object references`, () => {
       `);`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -701,7 +705,7 @@ describe(`Object references`, () => {
       `  ;`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -747,7 +751,7 @@ describe(`Object references`, () => {
       `  ;`,
     ].join(`\n`);
 
-    const document = new Document(content);
+    const document = newDoc(content);
 
     expect(document.statements.length).toBe(1);
 
@@ -797,7 +801,7 @@ describe(`Object references`, () => {
       `end;`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const groups = document.getStatementGroups();
 
     expect(groups.length).toBe(1);
@@ -829,9 +833,11 @@ describe(`Object references`, () => {
     const selectStatement = group.statements[2];
     expect(selectStatement.type).toBe(StatementType.Select);
     const refsC = selectStatement.getObjectReferences();
-    expect(refsC.length).toBe(1);
+    expect(refsC.length).toBe(2);
     expect(refsC[0].createType).toBeUndefined();
-    expect(refsC[0].object.name).toBe(`employee`);
+    expect(refsC[0].object.name).toBe(`sum`);
+    expect(refsC[1].createType).toBeUndefined();
+    expect(refsC[1].object.name).toBe(`employee`);
   });
   
   test(`CREATE FUNCTION: with multiple parameters`, () => {
@@ -858,7 +864,7 @@ describe(`Object references`, () => {
       `end;`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const groups = document.getStatementGroups();
 
     expect(groups.length).toBe(1);
@@ -886,7 +892,7 @@ describe(`Object references`, () => {
       `EXTERNAL NAME LIB.PROGRAM GENERAL;`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const groups = document.getStatementGroups();
 
     expect(groups.length).toBe(1);
@@ -913,7 +919,7 @@ describe(`Object references`, () => {
   });
 
   test(`DECLARE VARIABLE`, () => {
-    const document = new Document(`declare watsonx_response   Varchar(10000) CCSID 1208;`);
+    const document = newDoc(`declare watsonx_response   Varchar(10000) CCSID 1208;`);
     const groups = document.getStatementGroups();
 
     expect(groups.length).toBe(1);
@@ -928,7 +934,7 @@ describe(`Object references`, () => {
   });
 
   test(`CREATE OR REPLACE VARIABLE`, () => {
-    const document = new Document(`create or replace variable watsonx.apiVersion varchar(10) ccsid 1208 default '2023-07-07';`);
+    const document = newDoc(`create or replace variable watsonx.apiVersion varchar(10) ccsid 1208 default '2023-07-07';`);
 
     const groups = document.getStatementGroups();
 
@@ -1059,10 +1065,10 @@ describe(`Object references`, () => {
     expect(group.statements.map(s => s.type)).toEqual([
       'Create',  'Declare',
       'Declare', 'Call',
+      'Loop', 'Set',
       'Unknown', 'Unknown',
-      'Unknown', 'Unknown',
-      'Unknown', 'Call',
-      'Unknown', 'End',
+      'If', 'Call',
+      'Leave', 'End',
       'Call',    'End',
       'Unknown', 'End'
     ]);
@@ -1086,9 +1092,9 @@ describe(`Object references`, () => {
   })
 });
 
-describe(`Offset reference tests`, () => {
+parserScenarios(`Offset reference tests`, ({newDoc}) => {
   test(`Writing select`, () => {
-    const document = new Document(`select * from sample.;`);
+    const document = newDoc(`select * from sample.;`);
 
     expect(document.statements.length).toBe(1);
 
@@ -1101,7 +1107,7 @@ describe(`Offset reference tests`, () => {
   });
 
   test(`Writing select, invalid middle`, () => {
-    const document = new Document(`select b. from department b;`);
+    const document = newDoc(`select b. from department b;`);
 
     expect(document.statements.length).toBe(1);
 
@@ -1120,7 +1126,7 @@ describe(`Offset reference tests`, () => {
   });
 });
 
-describe(`PL body tests`, () => {
+parserScenarios(`PL body tests`, ({newDoc}) => {
   test(`CREATE PROCEDURE: with body`, () => {
     const lines = [
       `CREATE PROCEDURE MEDIAN_RESULT_SET (OUT medianSalary DECIMAL(7,2))`,
@@ -1152,12 +1158,12 @@ describe(`PL body tests`, () => {
       `END`,
     ].join(`\r\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
 
     const medianResultSetProc = statements[0];
     expect(medianResultSetProc.type).toBe(StatementType.Create);
-    expect(medianResultSetProc.isBlockOpener()).toBe(true);
+    expect(medianResultSetProc.isCompoundStart()).toBe(true);
 
     const parms = medianResultSetProc.getRoutineParameters();
     expect(parms.length).toBe(1);
@@ -1178,6 +1184,12 @@ describe(`PL body tests`, () => {
 
     // END
     expect(endStatements[1].tokens.length).toBe(1);
+
+    const whileStatement = statements.find(stmt => stmt.type === StatementType.While);
+    expect(whileStatement).toBeDefined();
+
+    const fetchStatement = statements.find(stmt => stmt.type === StatementType.Fetch);
+    expect(fetchStatement).toBeDefined();
   });
 
   test(`CREATE PROCEDURE followed by CALL statement`, () => {
@@ -1213,12 +1225,12 @@ describe(`PL body tests`, () => {
       `CALL MEDIAN_RESULT_SET(12345.55);`,
     ].join(`\r\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
 
     const medianResultSetProc = statements[0];
     expect(medianResultSetProc.type).toBe(StatementType.Create);
-    expect(medianResultSetProc.isBlockOpener()).toBe(true);
+    expect(medianResultSetProc.isCompoundStart()).toBe(true);
 
     const parms = medianResultSetProc.getRoutineParameters();
     expect(parms.length).toBe(1);
@@ -1237,7 +1249,7 @@ describe(`PL body tests`, () => {
 
     const callStatement = statements[statements.length - 1];
     expect(callStatement.type).toBe(StatementType.Call);
-    expect(callStatement.isBlockOpener()).toBe(false);
+    expect(callStatement.isCompoundStart()).toBe(false);
 
     const blockParent = callStatement.getCallableDetail(callStatement.tokens[3].range.start);
     expect(blockParent).toBeDefined();
@@ -1268,7 +1280,7 @@ describe(`PL body tests`, () => {
       `select * from Temp02`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
 
     expect(statements.length).toBe(1);
@@ -1279,27 +1291,36 @@ describe(`PL body tests`, () => {
     const refs = statement.getObjectReferences();
     const ctes = statement.getCTEReferences();
 
-    expect(refs.length).toBe(7);
+    expect(refs.length).toBe(10);
     expect(refs[0].object.name).toBe(`shipments`);
     expect(refs[0].alias).toBe(`s`);
 
     expect(refs[1].object.name).toBe(`BillingDate`);
     expect(refs[1].alias).toBeUndefined();
 
-    expect(refs[2].object.name).toBe(`Temp01`);
-    expect(refs[2].alias).toBe(`t1`);
+    expect(refs[2].object.name).toBe(`sum`);
+    expect(refs[2].alias).toBeUndefined();
 
     expect(refs[3].object.name).toBe(`Temp01`);
     expect(refs[3].alias).toBe(`t1`);
 
-    expect(refs[4].object.name).toBe(`Temp02`);
-    expect(refs[4].alias).toBe(`t2`);
+    expect(refs[4].object.name).toBe(`dec`);
+    expect(refs[4].alias).toBeUndefined();
 
-    expect(refs[5].object.name).toBe(`customers`);
-    expect(refs[5].alias).toBe(`c`);
+    expect(refs[5].object.name).toBe(`round`);
+    expect(refs[5].alias).toBeUndefined();
 
-    expect(refs[6].object.name).toBe(`Temp02`);
-    expect(refs[6].alias).toBeUndefined();
+    expect(refs[6].object.name).toBe(`Temp01`);
+    expect(refs[6].alias).toBe(`t1`);
+
+    expect(refs[7].object.name).toBe(`Temp02`);
+    expect(refs[7].alias).toBe(`t2`);
+
+    expect(refs[8].object.name).toBe(`customers`);
+    expect(refs[8].alias).toBe(`c`);
+
+    expect(refs[9].object.name).toBe(`Temp02`);
+    expect(refs[9].alias).toBeUndefined();
 
     expect(ctes.length).toBe(3);
     expect(ctes[0].name).toBe(`Temp01`);
@@ -1310,11 +1331,13 @@ describe(`PL body tests`, () => {
 
     expect(ctes[2].name).toBe(`Temp03`);
     expect(ctes[2].columns.length).toBe(0);
+
     const temp03Stmt = ctes[2].statement.getObjectReferences();
-    expect(temp03Stmt.length).toBe(3);
-    expect(temp03Stmt[0].object.name).toBe(`Temp01`);
-    expect(temp03Stmt[1].object.name).toBe(`Temp02`);
-    expect(temp03Stmt[2].object.name).toBe(`customers`);
+
+    expect(temp03Stmt[0].object.name).toBe(`dec`);
+    expect(temp03Stmt[1].object.name).toBe(`Temp01`);
+    expect(temp03Stmt[2].object.name).toBe(`Temp02`);
+    expect(temp03Stmt[3].object.name).toBe(`customers`);
   })
 
   test(`WITH: explicit columns`, () => {
@@ -1326,7 +1349,7 @@ describe(`PL body tests`, () => {
       `select * from cteme`
     ].join(`\r\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1355,7 +1378,7 @@ describe(`PL body tests`, () => {
   test(`SELECT: table function`, () => {
     const lines = `select * from table(qsys2.mti_info());`;
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1373,7 +1396,7 @@ describe(`PL body tests`, () => {
   test(`SELECT: table function with name (no AS)`, () => {
     const lines = `select * from table(qsys2.mti_info()) x;`;
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1391,7 +1414,7 @@ describe(`PL body tests`, () => {
   test(`SELECT: table function with name (with AS)`, () => {
     const lines = `select * from table(qsys2.mti_info()) as x;`;
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(1);
 
@@ -1419,7 +1442,7 @@ describe(`PL body tests`, () => {
       `stop;`,
     ].join(`\n`);
 
-    const document = new Document(lines);
+    const document = newDoc(lines);
     const statements = document.statements;
     expect(statements.length).toBe(2);
 
@@ -1427,10 +1450,65 @@ describe(`PL body tests`, () => {
     expect(statement.type).toBe(StatementType.Select);
 
     const objs = statement.getObjectReferences();
-    expect(objs.length).toBe(1);
-    expect(objs[0].object.schema).toBe(`qsys2`);
-    expect(objs[0].object.name).toBe(`ACTIVE_JOB_INFO`);
-  })
+
+    expect(objs.length).toBe(2);
+    expect(objs[1].object.schema).toBe(`qsys2`);
+    expect(objs[1].object.name).toBe(`ACTIVE_JOB_INFO`);
+  });
+
+  test('CASE, WHEN, END', () => {
+    const lines = [
+      `--`,
+      ``,
+      `--`,
+      `-- Hold any jobs that started running an SQL statement more than 2 hours ago.`,
+      `--`,
+      `select JOB_NAME,`,
+      `       case`,
+      `         when QSYS2.QCMDEXC('HLDJOB ' concat JOB_NAME) = 1 then 'Job Held'`,
+      `         else 'Job not held'`,
+      `       end as HLDJOB_RESULT`,
+      `  from table (`,
+      `      QSYS2.ACTIVE_JOB_INFO(DETAILED_INFO => 'ALL')`,
+      `    )`,
+      `  where SQL_STATEMENT_START_TIMESTAMP < current timestamp - 2 hours;`,
+    ].join(`\n`);
+
+    const document = newDoc(lines);
+
+
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Select);
+
+    const objs = statement.getObjectReferences();
+
+    expect(objs.length).toBe(2);
+  });
+
+
+
+  test('SELECT statement with CASE', () => {
+    const content = [
+      `SELECT`,
+      `    CLE,`,
+      `    CASE`,
+      `        WHEN CLE = 1 THEN 'FIRST' Else VALEUR End As VALEUR`,
+      `FROM`,
+      `    QTEMP.Test`,
+    ].join(` `);
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Select);
+
+    
+  });
 });
 
 describe(`Parameter statement tests`, () => {
@@ -1670,10 +1748,10 @@ describe(`Parameter statement tests`, () => {
   test(`Exec with basic DECLARE`, () => {
     const lines = [
       `EXEC SQL`,
-      `DECLARE cursor-name SCROLL CURSOR FOR`,
-      `SELECT column-1, column-2`,
-      `  FROM table-name`,
-      `  WHERE column-1 = expression`,
+      `DECLARE cursor_name SCROLL CURSOR FOR`,
+      `SELECT column_1, column_2`,
+      `FROM table_name`,
+      `WHERE column_1 = expression`,
     ].join(`\n`);
 
     const document = new Document(lines);
@@ -1685,9 +1763,9 @@ describe(`Parameter statement tests`, () => {
     const result = document.removeEmbeddedAreas(statement);
     expect(result.parameterCount).toBe(0);
     expect(result.content).toBe([
-      `SELECT column-1, column-2`,
-      `  FROM table-name`,
-      `  WHERE column-1 = expression`,
+      `SELECT column_1, column_2`,
+      `FROM table_name`,
+      `WHERE column_1 = expression`,
     ].join(`\n`));
   });
 
@@ -1703,6 +1781,50 @@ describe(`Parameter statement tests`, () => {
     const result = document.removeEmbeddedAreas(statement);
     expect(result.parameterCount).toBe(0);
     expect(result.content).toBe(content);
+  });
+
+  test(`Callable blocks`, () => {
+    const lines = [
+        `call qsys2.create_abcd();`,
+        `call qsys2.create_abcd(a, cool(a + b));`,
+    ].join(` `);
+  
+    const document = new Document(lines);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(2);
+  
+    const a = statements[0];
+    expect(a.type).toBe(StatementType.Call);
+  
+    const b = statements[1];
+    expect(b.type).toBe(StatementType.Call);
+  
+    const blockA = a.getBlockRangeAt(23);
+    expect(blockA).toMatchObject({ start: 5, end: 5 });
+  
+    const callableA = a.getCallableDetail(23);
+    expect(callableA).toBeDefined();
+    expect(callableA.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableA.parentRef.object.name).toBe(`create_abcd`);
+  
+    const blockB = a.getBlockRangeAt(24);
+    expect(blockB).toMatchObject({ start: 5, end: 5 });
+  
+    const callableB = a.getCallableDetail(24);
+    expect(callableB).toBeDefined();
+    expect(callableB.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableB.parentRef.object.name).toBe(`create_abcd`);
+  
+    const blockC = b.getBlockRangeAt(49);
+    expect(blockC).toMatchObject({ start: 5, end: 13 });
+  
+    const callableC = b.getCallableDetail(49, true);
+    expect(callableC).toBeDefined();
+    expect(callableC.tokens.length).toBe(4);
+    expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
+    expect(callableC.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableC.parentRef.object.name).toBe(`create_abcd`);
   });
 });
 
@@ -1725,48 +1847,4 @@ describe(`Prefix tests`, () => {
 
     expect(statement.type).toBe(StatementType.Select);
   });
-});
-
-test(`Callable blocks`, () => {
-  const lines = [
-      `call qsys2.create_abcd();`,
-      `call qsys2.create_abcd(a, cool(a + b));`,
-  ].join(` `);
-
-  const document = new Document(lines);
-  const statements = document.statements;
-
-  expect(statements.length).toBe(2);
-
-  const a = statements[0];
-  expect(a.type).toBe(StatementType.Call);
-
-  const b = statements[1];
-  expect(b.type).toBe(StatementType.Call);
-
-  const blockA = a.getBlockRangeAt(23);
-  expect(blockA).toMatchObject({ start: 5, end: 5 });
-
-  const callableA = a.getCallableDetail(23);
-  expect(callableA).toBeDefined();
-  expect(callableA.parentRef.object.schema).toBe(`qsys2`);
-  expect(callableA.parentRef.object.name).toBe(`create_abcd`);
-
-  const blockB = a.getBlockRangeAt(24);
-  expect(blockB).toMatchObject({ start: 5, end: 5 });
-
-  const callableB = a.getCallableDetail(24);
-  expect(callableB).toBeDefined();
-  expect(callableB.parentRef.object.schema).toBe(`qsys2`);
-  expect(callableB.parentRef.object.name).toBe(`create_abcd`);
-
-  const blockC = b.getBlockRangeAt(49);
-  expect(blockC).toMatchObject({ start: 5, end: 13 });
-
-  const callableC = b.getCallableDetail(49, true);
-  expect(callableC).toBeDefined();
-  expect(callableC.tokens.length).toBe(4);
-  expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
-  expect(callableC.parentRef.object.schema).toBe(`qsys2`);
-  expect(callableC.parentRef.object.name).toBe(`create_abcd`);
 });
