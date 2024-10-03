@@ -1,4 +1,5 @@
 
+import { spec } from "node:test/reporters";
 import { getInstance } from "../base";
 
 import { JobManager } from "../config";
@@ -14,6 +15,22 @@ const typeMap = {
 };
 
 export const AllSQLTypes: SQLType[] = ["tables", "views", "aliases", "constraints", "functions", "variables", "indexes", "procedures", "sequences", "packages", "triggers", "types", "logicals"];
+
+export const InternalTypes: {[t: string]: string} = {
+  "tables": `table`,
+  "views": `view`,
+  "aliases": `alias`,
+  "constraints": `constraint`,
+  "functions": `function`,
+  "variables": `variable`,
+  "indexes": `index`,
+  "procedures": `procedure`,
+  "sequences": `sequence`,
+  "packages": `package`,
+  "triggers": `trigger`,
+  "types": `type`,
+  "logicals": `logical`
+}
 
 export const SQL_ESCAPE_CHAR = `\\`;
 
@@ -211,7 +228,7 @@ export default class Schemas {
         schema: object.BASE_SCHEMA || undefined,
         name: object.BASE_OBJ || undefined
       }
-    }));
+    } as BasicSQLObject));
   }
 
   /**
