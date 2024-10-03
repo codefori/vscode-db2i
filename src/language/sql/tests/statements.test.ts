@@ -1489,6 +1489,28 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     expect(objs.length).toBe(2);
   });
+
+
+
+  test('SELECT statement with CASE', () => {
+    const content = [
+      `SELECT`,
+      `    CLE,`,
+      `    CASE`,
+      `        WHEN CLE = 1 THEN 'FIRST' Else VALEUR End As VALEUR`,
+      `FROM`,
+      `    QTEMP.Test`,
+    ].join(` `);
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Select);
+
+    
+  });
 });
 
 describe(`Parameter statement tests`, () => {
