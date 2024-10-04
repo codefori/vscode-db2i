@@ -175,9 +175,9 @@ async function selectProviderAndModel() {
   const copilotModels = await vscode.lm.selectChatModels();
   let ollamaModels: ListResponse = { models: [] };
 
-  try {
-    ollamaModels = await ollama.list();
-  } catch (e) {}
+  // try {
+  //   ollamaModels = await ollama.list();
+  // } catch (e) {}
 
   const provider = await vscode.window.showQuickPick(
     [
