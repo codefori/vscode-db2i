@@ -114,6 +114,25 @@ export async function findPossibleTables(stream: vscode.ChatResponseStream, sche
   return tables;
 }
 
+
+/**
+ * Converts a given set of table references to a Markdown string.
+ * 
+ * Experimental feature for @db2i chat participant
+ *
+ * @param refs - An object containing table references, where each key is a table name
+ * and the value is an array of column definitions for that table.
+ * 
+ * @returns A string formatted in Markdown representing the table references.
+ * 
+ * The function generates a Markdown representation of the table references. If the number
+ * of tables is greater than 5, a condensed format is used, otherwise a detailed format is used.
+ * 
+ * The condensed format includes columns: Column, Type, and Text.
+ * The detailed format includes columns: Column, Type, Nullable, Identity, Text, and Constraint.
+ * 
+ * Tables with names starting with 'SYS' are skipped.
+ */
 export function refsToMarkdown(refs: TableRefs) {
   const condensedResult = Object.keys(refs).length > 5;
 
