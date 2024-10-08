@@ -86,6 +86,10 @@ export class ServerComponent {
     return this.installed;
   }
 
+  static reset(){
+    this.installed = false;
+  }
+
   static async isAlreadyInstalled() {
     const instance = getInstance();
     const connection = instance.getConnection();
@@ -233,7 +237,7 @@ async function compareMD5Hash(connection: IBMi, local: string, remote: string) {
 
   const remoteMD5Result = (await connection.sendCommand({ command: `${connection.remoteFeatures.md5sum} ${remote}` }));
   if (remoteMD5Result.code === 0) {
-    return localMD5 === remoteMD5Result.stdout.split(/\s+/).at(0);
+    return localMD5 === remoteMD5Result.stdout.split(/\s+/)[0];
   }
   else {
     ServerComponent.writeOutput(JSON.stringify(remoteMD5Result));
