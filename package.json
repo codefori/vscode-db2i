@@ -38,37 +38,10 @@
     "language:test": "vitest",
     "dsc": "mkdir -p dist && npx tsx src/dsc",
     "package": "vsce package",
-    "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
-    "webpack": "vscd --clean && webpack --mode development",
-    "webpack-dev": "vscd --clean && webpack --mode development",
+    "vscode:prepublish": "rm -rf dist && webpack --mode production && npm run dsc",
+    "webpack": "webpack --mode development",
+    "webpack-dev": "webpack --mode development",
     "typings": "npx -p typescript tsc ./src/extension.ts --declaration --allowJs --emitDeclarationOnly --outDir types --esModuleInterop -t es2019 --moduleResolution node"
-  },
-  "devDependencies": {
-    "@halcyontech/vscode-ibmi-types": "^2.12.1",
-    "@types/glob": "^7.1.3",
-    "@types/node": "14.x",
-    "@types/vscode": "^1.70.0",
-    "esbuild-loader": "^3.0.1",
-    "eslint": "^7.32.0",
-    "glob": "^7.1.7",
-    "octokit": "^3.1.2",
-    "raw-loader": "^4.0.2",
-    "ts-loader": "^9.3.1",
-    "typescript": "^4.3.2",
-    "vitest": "^0.33.0",
-    "vscd": "^1.0.0",
-    "vscode-test": "^1.5.2",
-    "webpack": "^5.91.0",
-    "webpack-cli": "^4.5.0"
-  },
-  "dependencies": {
-    "@ibm/mapepire-js": "^0.3.0",
-    "chart.js": "^4.4.2",
-    "csv": "^6.1.3",
-    "json-to-markdown-table": "^1.0.0",
-    "node-fetch": "^3.3.1",
-    "showdown": "^2.1.0",
-    "sql-formatter": "^14.0.0"
   },
   "contributes": {
     "chatParticipants": [
@@ -88,20 +61,6 @@
             "description": "Summarize the activity on the system"
           }
         ]
-      }
-    ],
-    "snippets": [
-      {
-        "language": "sql",
-        "path": "snippets/scalars.code-snippets"
-      },
-      {
-        "language": "sql",
-        "path": "snippets/variables.code-snippets"
-      },
-      {
-        "language": "sql",
-        "path": "snippets/aggregates.code-snippets"
       }
     ],
     "configuration": [
@@ -1306,6 +1265,18 @@
     "snippets": [
       {
         "language": "sql",
+        "path": "snippets/scalars.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "snippets/variables.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "snippets/aggregates.code-snippets"
+      },
+      {
+        "language": "sql",
         "path": "snippets/http.code-snippets"
       },
       {
@@ -1326,17 +1297,6 @@
       }
     ]
   },
-  "scripts": {
-    "lint": "eslint .",
-    "pretest": "npm run lint",
-    "language:test": "vitest",
-    "dsc": "mkdir -p dist && npx tsx src/dsc",
-    "package": "vsce package",
-    "vscode:prepublish": "rm -rf dist && webpack --mode production && npm run dsc",
-    "webpack": "webpack --mode development",
-    "webpack-dev": "webpack --mode development --watch",
-    "typings": "npx -p typescript tsc ./src/extension.ts --declaration --allowJs --emitDeclarationOnly --outDir types --esModuleInterop -t es2019 --moduleResolution node"
-  },
   "devDependencies": {
     "@halcyontech/vscode-ibmi-types": "^2.0.0",
     "@types/glob": "^7.1.3",
@@ -1355,6 +1315,7 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
+    "@ibm/mapepire-js": "^0.3.0",
     "chart.js": "^4.4.2",
     "csv": "^6.1.3",
     "json-to-markdown-table": "^1.0.0",
