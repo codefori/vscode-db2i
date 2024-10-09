@@ -65,7 +65,7 @@ export async function findPossibleTables(stream: vscode.ChatResponseStream, sche
   // parse all SCHEMA.TABLE references first
   tables = await parsePromptForRefs(stream, words.filter(word => word.includes('.')));
 
-  const justWords = words.map(word => word.replace(/[.,\/#!?$%\^&\*;:{}=\-_`~()]/g, ""));
+  const justWords = words.map(word => word.replace(/[,\/#!?$%\^&\*;:{}=\-_`~()]/g, ""));
 
   // Remove plurals from words
   justWords.push(...justWords.filter(word => word.endsWith('s')).map(word => word.slice(0, -1)));
