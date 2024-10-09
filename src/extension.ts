@@ -21,6 +21,8 @@ import { Db2iUriHandler, getStatementUri } from "./uriHandler";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
+import Configuration from "./configuration";
+import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
 import { queryHistory } from "./views/queryHistoryView";
 
 export interface Db2i {
@@ -102,6 +104,9 @@ export function activate(context: vscode.ExtensionContext): Db2i {
       }
     });
   });
+
+  // register continue provider
+  registerContinueProvider();
 
   instance.subscribe(context, `disconnected`, `db2i-disconnected`, () => ServerComponent.reset());
 
