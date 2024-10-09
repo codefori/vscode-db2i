@@ -28,14 +28,13 @@ export interface TestCase {
   test: () => Promise<void>
 }
 
-let testSuitesTreeProvider : TestSuitesTreeProvider;
-export function initialise(context: vscode.ExtensionContext) {
+let testSuitesTreeProvider: TestSuitesTreeProvider;
+export function initialiseTestSuite(context: vscode.ExtensionContext) {
   if (env.testing === `true`) {
     const instance = getInstance();
 
     vscode.commands.executeCommand(`setContext`, `vscode-db2i:testing`, true);
-    instance.onEvent(`connected`, runTests);
-    instance.onEvent(`disconnected`, resetTests);
+    instance.subscribe(context, `disconnected`, `db2i-resetTests`, resetTests);
 
     testSuitesTreeProvider = new TestSuitesTreeProvider(suites);
 
@@ -55,6 +54,8 @@ export function initialise(context: vscode.ExtensionContext) {
         }
       })
     );
+
+    return runTests;
   }
 }
 

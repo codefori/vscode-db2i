@@ -1,7 +1,4 @@
 import { CompletionItemKind, CompletionItem } from "vscode";
-import CompletionItemCache from "./completionItemCache";
-
-export const completionItemCache = new CompletionItemCache();
 
 export function createCompletionItem(
   name: string,
@@ -27,13 +24,21 @@ export function getParmAttributes(parm: SQLParm): string {
 }
 
 export function prepareParamType(param: TableColumn | SQLParm): string {
+  let baseType = param.DATA_TYPE.toLowerCase();
+
   if (param.CHARACTER_MAXIMUM_LENGTH) {
-    return `${param.DATA_TYPE}(${param.CHARACTER_MAXIMUM_LENGTH})`;
+    baseType += `(${param.CHARACTER_MAXIMUM_LENGTH})`;
   }
 
   if (param.NUMERIC_PRECISION !== null && param.NUMERIC_SCALE !== null) {
-    return `${param.DATA_TYPE}(${param.NUMERIC_PRECISION}, ${param.NUMERIC_SCALE})`;
+    baseType += `(${param.NUMERIC_PRECISION}, ${param.NUMERIC_SCALE})`;
   }
 
-  return `${param.DATA_TYPE}`;
+  const usefulNull = 'COLUMN_NAME' in param || ('ROW_TYPE' in param && param.ROW_TYPE === 'R');
+
+  if (usefulNull && [`Y`, `YES`].includes(param.IS_NULLABLE)) {
+    baseType += ` nullable`;
+  };
+
+  return baseType;
 }

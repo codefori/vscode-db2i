@@ -1,5 +1,7 @@
+// https://www.ibm.com/docs/en/i/7.4?topic=views-syscolumns2
 interface TableColumn {
-  TABLE_NAME?: string,
+  TABLE_SCHEMA: string,
+  TABLE_NAME: string,
   COLUMN_NAME: string,
   SYSTEM_COLUMN_NAME: string,
   CONSTRAINT_NAME?: string,
@@ -14,7 +16,9 @@ interface TableColumn {
   IS_IDENTITY: "YES" | "NO",
 }
 
+// https://www.ibm.com/docs/en/i/7.4?topic=views-sysparms
 interface SQLParm {
+  SPECIFIC_SCHEMA: string,
   SPECIFIC_NAME: string,
   PARAMETER_NAME: string,
   PARAMETER_MODE: "IN" | "OUT" | "INOUT",
@@ -26,6 +30,7 @@ interface SQLParm {
   DEFAULT?: string,
   LONG_COMMENT?: string,
   ORDINAL_POSITION: number,
+  ROW_TYPE: "P" | "R",
 }
 
 interface BasicSQLObject {

@@ -1,11 +1,15 @@
 import { getInstance } from "../base";
 
-import { Config } from "../config";
 import path from "path";
 import { OutputChannel, extensions, window } from "vscode";
+import { Config } from "../config";
 
 import { stat } from "fs/promises";
 import { SERVER_VERSION_FILE } from "./SCVersion";
+
+import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
+import Crypto from 'crypto';
+import { readFileSync } from "fs";
 
 const ExecutablePathDir = `$HOME/.vscode/`;
 
@@ -33,7 +37,7 @@ export class ServerComponent {
     if (show) {
       this.outputChannel.show();
     }
-    
+
     if (this.outputChannel) {
       this.outputChannel.appendLine(jsonString);
     }
@@ -43,15 +47,15 @@ export class ServerComponent {
     return this.installed;
   }
 
-  static getInitCommand(): string|undefined {
+  static getInitCommand(): string | undefined {
     const path = this.getComponentPath();
 
     if (path) {
-      return `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -Dos400.stdio.convert=N -jar ${path}`
+      return `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -Dos400.stdio.convert=N -jar ${path} --single`
     }
   }
 
-  static getComponentPath(): string|undefined {
+  static getComponentPath(): string | undefined {
     if (Config.ready) {
       const installedVersion = Config.getServerComponentName();
 
@@ -67,13 +71,34 @@ export class ServerComponent {
     const instance = getInstance();
     const connection = instance.getConnection();
 
+    if (!connection) {
+      return false;
+    }
+
+    if (!Config.ready) {
+      Config.setConnectionName(connection.currentConnectionName);
+    }
+
+    if (!this.installed) {
+      this.installed = await this.isAlreadyInstalled();
+    }
+
+    return this.installed;
+  }
+
+  static reset(){
+    this.installed = false;
+  }
+
+  static async isAlreadyInstalled() {
+    const instance = getInstance();
+    const connection = instance.getConnection();
+
     const exists = await connection.sendCommand({
       command: `ls ${this.getComponentPath()}`
     });
 
-    this.installed = (exists.code === 0);
-
-    return this.installed;
+    return (exists.code === 0);
   }
 
   /**
@@ -88,15 +113,17 @@ export class ServerComponent {
 
     try {
       const assetPath = path.join(extensionPath, `dist`, SERVER_VERSION_FILE);
-      const assetExists = await exists(assetPath);
+      const assetExistsLocally = await exists(assetPath);
 
-      ServerComponent.writeOutput(JSON.stringify({assetPath, assetExists}));
+      ServerComponent.writeOutput(JSON.stringify({ assetPath, assetExists: assetExistsLocally }));
 
-      if (assetExists) {
+      if (assetExistsLocally) {
         const basename = SERVER_VERSION_FILE;
         const lastInstalledName = Config.getServerComponentName();
 
-        ServerComponent.writeOutput(JSON.stringify({basename, lastInstalledName}));
+        ServerComponent.writeOutput(JSON.stringify({ basename, lastInstalledName }));
+
+        await this.initialise();
 
         if (lastInstalledName !== basename || this.installed === false) {
           // This means we're currently running a different version, 
@@ -113,26 +140,49 @@ export class ServerComponent {
             const stuffInStderr = commandResult.stderr.length > 0;
             const remotePath = path.posix.join(commandResult.stdout, basename);
 
-            ServerComponent.writeOutput(JSON.stringify({remotePath, ExecutablePathDir}));
+            ServerComponent.writeOutput(JSON.stringify({ remotePath, ExecutablePathDir }));
 
-            await connection.uploadFiles([{local: assetPath, remote: remotePath}]);
+            const remoteExists = await connection.content.testStreamFile(remotePath, "f");
+            const md5IsEqual = remoteExists && await compareMD5Hash(connection, assetPath, remotePath);
+            if (!remoteExists || !md5IsEqual) {
+              if (remoteExists) {
+                const allowWrite = await connection.sendCommand({
+                  command: `chmod 600 ${remotePath}`
+                });
+                if (allowWrite.code !== 0) {
+                  this.writeOutput(JSON.stringify(allowWrite));
+                  window.showErrorMessage(`Remote file ${remotePath} cannot be written; try to delete it and reconnect.`, 'Show')
+                    .then(show => {
+                      if (show) {
+                        this.outputChannel.show();
+                      }
+                    });
+                  return UpdateStatus.FAILED;
+                }
+              }
+              await connection.uploadFiles([{ local: assetPath, remote: remotePath }]);
 
-            const scAuth = await connection.sendCommand({
-              command: `chmod 400 ${remotePath}`
-            });
+              const scAuth = await connection.sendCommand({
+                command: `chmod 400 ${remotePath}`
+              });
 
-            this.writeOutput(JSON.stringify(scAuth));
+              this.writeOutput(JSON.stringify(scAuth));
 
-            await Config.setServerComponentName(basename);
+              await Config.setServerComponentName(basename);
 
-            if (stuffInStderr) {
-              ServerComponent.writeOutput(`Server component was uploaded to ${remotePath} but there was something in stderr, which is not right. It might be worth seeing your user profile startup scripts.`);
+              if (stuffInStderr) {
+                ServerComponent.writeOutput(`Server component was uploaded to ${remotePath} but there was something in stderr, which is not right. It might be worth seeing your user profile startup scripts.`);
+              }
+
+              window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
+              this.installed = true;
+              updateResult = UpdateStatus.JUST_UPDATED;
             }
-
-            window.showInformationMessage(`Db2 for IBM i extension server component has been updated!`);
-            this.installed = true;
-            updateResult = UpdateStatus.JUST_UPDATED;
-            
+            else{
+              await Config.setServerComponentName(basename);
+              this.installed = true;
+              updateResult = UpdateStatus.UP_TO_DATE;
+            }
           } else {
             updateResult = UpdateStatus.FAILED;
 
@@ -175,6 +225,22 @@ async function exists(path: string) {
     await stat(path);
     return true;
   } catch (e) {
+    return false;
+  }
+}
+
+async function compareMD5Hash(connection: IBMi, local: string, remote: string) {
+  const localMD5 = Crypto.createHash("md5")
+    .update(readFileSync(local))
+    .digest("hex")
+    .toLowerCase();
+
+  const remoteMD5Result = (await connection.sendCommand({ command: `${connection.remoteFeatures.md5sum} ${remote}` }));
+  if (remoteMD5Result.code === 0) {
+    return localMD5 === remoteMD5Result.stdout.split(/\s+/)[0];
+  }
+  else {
+    ServerComponent.writeOutput(JSON.stringify(remoteMD5Result));
     return false;
   }
 }

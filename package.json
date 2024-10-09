@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.0.0",
+  "version": "1.5.2",
   "engines": {
     "vscode": "^1.70.0"
   },
@@ -31,21 +31,45 @@
     "halcyontechltd.code-for-ibmi"
   ],
   "main": "./dist/extension.js",
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "language:test": "vitest",
+    "dsc": "npx tsx src/dsc",
+    "package": "vsce package",
+    "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
+    "webpack": "vscd --clean && webpack --mode development",
+    "webpack-dev": "vscd --clean && webpack --mode development",
+    "typings": "npx -p typescript tsc ./src/extension.ts --declaration --allowJs --emitDeclarationOnly --outDir types --esModuleInterop -t es2019 --moduleResolution node"
+  },
+  "devDependencies": {
+    "@halcyontech/vscode-ibmi-types": "^2.12.1",
+    "@types/glob": "^7.1.3",
+    "@types/node": "14.x",
+    "@types/vscode": "^1.70.0",
+    "esbuild-loader": "^3.0.1",
+    "eslint": "^7.32.0",
+    "glob": "^7.1.7",
+    "octokit": "^3.1.2",
+    "raw-loader": "^4.0.2",
+    "ts-loader": "^9.3.1",
+    "typescript": "^4.3.2",
+    "vitest": "^0.33.0",
+    "vscd": "^1.0.0",
+    "vscode-test": "^1.5.2",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^4.5.0"
+  },
+  "dependencies": {
+    "@ibm/mapepire-js": "^0.3.0",
+    "chart.js": "^4.4.2",
+    "csv": "^6.1.3",
+    "json-to-markdown-table": "^1.0.0",
+    "node-fetch": "^3.3.1",
+    "showdown": "^2.1.0",
+    "sql-formatter": "^14.0.0"
+  },
   "contributes": {
-    "snippets": [
-      {
-        "language": "sql",
-        "path": "snippets/scalars.code-snippets"
-      },
-      {
-        "language": "sql",
-        "path": "snippets/variables.code-snippets"
-      },
-      {
-        "language": "sql",
-        "path": "snippets/aggregates.code-snippets"
-      }
-    ],
     "configuration": [
       {
         "id": "vscode-db2i",
@@ -67,30 +91,6 @@
             "description": "Saved configs for",
             "default": {},
             "additionalProperties": true
-          }
-        }
-      },
-      {
-        "id": "vscode-db2i.self",
-        "title": "SQL Error Logging Facility (SELF)",
-        "properties": {
-          "vscode-db2i.jobSelfDefault": {
-            "type": "string",
-            "order": 0,
-            "description": "Default SELF setting for new jobs",
-            "default": "*NONE",
-            "enum": [
-              "*NONE",
-              "*ALL",
-              "*ERROR",
-              "*WARNING"
-            ]
-          },
-          "vscode-db2i.jobSelfViewAutoRefresh": {
-            "type": "boolean",
-            "title": "Auto-refresh SELF Codes view",
-            "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
-            "default": false
           }
         }
       },
@@ -202,18 +202,30 @@
             "description": "Highlight expensive operations in the graph to aid in identifying potential problems with the query."
           }
         }
-      }
-    ],
-    "notebooks": [
+      },
       {
-        "id": "db2i-notebook",
-        "type": "db2i-notebook",
-        "displayName": "IBM i Notebook",
-        "selector": [
-          {
-            "filenamePattern": "*.inb"
+        "id": "vscode-db2i.self",
+        "title": "SQL Error Logging Facility (SELF)",
+        "properties": {
+          "vscode-db2i.jobSelfDefault": {
+            "type": "string",
+            "order": 0,
+            "description": "Default SELF setting for new jobs",
+            "default": "*NONE",
+            "enum": [
+              "*NONE",
+              "*ALL",
+              "*ERROR",
+              "*WARNING"
+            ]
+          },
+          "vscode-db2i.jobSelfViewAutoRefresh": {
+            "type": "boolean",
+            "title": "Auto-refresh SELF Codes view",
+            "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
+            "default": false
           }
-        ]
+        }
       }
     ],
     "viewsContainers": {
@@ -233,6 +245,36 @@
       ]
     },
     "views": {
+      "db2-explorer": [
+        {
+          "id": "testingView-db2i",
+          "name": "Test cases",
+          "when": "code-for-ibmi:connected && vscode-db2i:testing"
+        },
+        {
+          "id": "schemaBrowser",
+          "name": "Schema Browser",
+          "visibility": "visible",
+          "when": "code-for-ibmi:connected == true"
+        },
+        {
+          "id": "queryHistory",
+          "name": "Statement History",
+          "visibility": "visible",
+          "when": "code-for-ibmi:connected == true"
+        },
+        {
+          "id": "jobManager",
+          "name": "SQL Job Manager",
+          "when": "code-for-ibmi:connected && vscode-db2i:jobManager"
+        },
+        {
+          "id": "exampleBrowser",
+          "name": "Examples",
+          "visibility": "collapsed",
+          "when": "code-for-ibmi:connected == true"
+        }
+      ],
       "ibmi-panel": [
         {
           "type": "webview",
@@ -261,133 +303,29 @@
           "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported && vscode-db2i:jobManager == true",
           "visibility": "collapsed"
         }
-      ],
-      "db2-explorer": [
-        {
-          "id": "schemaBrowser",
-          "name": "Schema Browser",
-          "visibility": "visible",
-          "when": "code-for-ibmi:connected == true"
-        },
-        {
-          "id": "queryHistory",
-          "name": "Statement History",
-          "visibility": "visible",
-          "when": "code-for-ibmi:connected == true"
-        },
-        {
-          "id": "exampleBrowser",
-          "name": "Examples",
-          "visibility": "collapsed",
-          "when": "code-for-ibmi:connected == true"
-        },
-        {
-          "id": "jobManager",
-          "name": "SQL Job Manager",
-          "when": "code-for-ibmi:connected && vscode-db2i:jobManager"
-        },
-        {
-          "id": "testingView-db2i",
-          "name": "Test cases",
-          "when": "code-for-ibmi:connected && vscode-db2i:testing"
-        }
       ]
     },
-    "viewsWelcome": [
-      {
-        "view": "queryHistory",
-        "contents": "Statement history will appear here."
-      },
-      {
-        "view": "jobManager",
-        "contents": "The SQL Job Manager allows you to provision one or more jobs for running SQL statements, each with its own connection settings.\n\nUsing managed jobs reduces the use of system resources, improves performance, and maintains  state across subsequent SQL statements.\n\nYou can run SQL statements without starting a job, just be aware that every statement you run requires a temporary, single-use job to be started on your behalf. \n[New SQL job](command:vscode-db2i.jobManager.newJob)"
-      },
-      {
-        "view": "vscode-db2i.self.nodes",
-        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSelfSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
-      }
-    ],
-    "keybindings": [
-      {
-        "command": "vscode-db2i.runEditorStatement",
-        "key": "ctrl+r",
-        "mac": "cmd+r",
-        "when": "editorLangId == sql && resourceExtname != .inb"
-      },
-      {
-        "command": "vscode-db2i.editorExplain.withRun",
-        "key": "ctrl+shift+r",
-        "mac": "cmd+shift+r",
-        "when": "editorLangId == sql && resourceExtname != .inb"
-      },
-      {
-        "command": "vscode-db2i.editorExplain.withoutRun",
-        "key": "ctrl+alt+r",
-        "mac": "cmd+alt+r",
-        "when": "editorLangId == sql && resourceExtname != .inb"
-      },
-      {
-        "command": "notebook.cell.execute",
-        "key": "ctrl+r",
-        "mac": "cmd+r",
-        "when": "editorLangId == sql && resourceExtname == .inb"
-      }
-    ],
     "commands": [
       {
-        "command": "vscode-db2i.notebook.open",
-        "title": "New Notebook",
-        "category": "IBM i Notebooks",
-        "enablement": "code-for-ibmi:connected == true",
-        "icon": "$(notebook)"
+        "command": "vscode-db2i.json.pasteGenerator",
+        "title": "Paste JSON as SQL",
+        "category": "Db2 for i"
       },
       {
-        "command": "vscode-db2i.notebook.fromSqlUri",
-        "title": "Open as Notebook",
-        "category": "IBM i Notebooks",
-        "icon": "$(notebook)"
+        "command": "vscode-db2i.json.pasteParser",
+        "title": "Generate JSON SQL parser",
+        "category": "Db2 for i"
       },
       {
-        "command": "vscode-db2i.notebook.exportAsHtml",
-        "title": "Export",
-        "category": "IBM i Notebooks",
-        "icon": "$(save)"
-      },
-      {
-        "command": "vscode-db2i.openSqlDocument",
-        "title": "Open SQL Document",
-        "category": "Db2 for i",
-        "icon": "$(new-file)"
+        "command": "vscode-db2i.getStatementUri",
+        "title": "Copy sharable statement URI",
+        "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.refreshSchemaBrowser",
         "title": "Refresh Schema Browser",
         "category": "Db2 for i",
         "icon": "$(refresh)"
-      },
-      {
-        "command": "vscode-db2i.self.refresh",
-        "title": "Refresh SELF Codes View",
-        "category": "Db2 for i",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "vscode-db2i.self.enableAutoRefresh",
-        "title": "Enable Auto Refresh",
-        "category": "Db2 for i",
-        "icon": "$(sync)"
-      },
-      {
-        "command": "vscode-db2i.self.disableAutoRefresh",
-        "title": "Disable Auto Refresh",
-        "category": "Db2 for i",
-        "icon": "$(sync-ignored)"
-      },
-      {
-        "command": "vscode-db2i.self.reset",
-        "title": "Reset SELF Codes View",
-        "category": "Db2 for i",
-        "icon": "$(trash)"
       },
       {
         "command": "vscode-db2i.manageSchemaBrowserList",
@@ -409,6 +347,11 @@
       {
         "command": "vscode-db2i.getRelatedObjects",
         "title": "Get Related Objects",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.getMTIs",
+        "title": "Get MTIs",
         "category": "Db2 for i"
       },
       {
@@ -464,15 +407,16 @@
         "icon": "$(search)"
       },
       {
-        "command": "vscode-db2i.pasteGenerator",
-        "title": "Paste JSON as SQL",
-        "category": "Db2 for i"
-      },
-      {
         "command": "vscode-db2i.runEditorStatement",
         "title": "Run statement",
         "category": "Db2 for i",
         "icon": "$(notebook-execute)"
+      },
+      {
+        "command": "vscode-db2i.runEditorStatement.inView",
+        "title": "Run statement in new view",
+        "category": "Db2 for i",
+        "icon": "$(window)"
       },
       {
         "command": "vscode-db2i.statement.cancel",
@@ -493,6 +437,60 @@
         "icon": "$(debug-alt)"
       },
       {
+        "command": "vscode-db2i.resultset.settings",
+        "title": "Settings",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "vscode-db2i.dove.close",
+        "title": "Close",
+        "category": "Db2 for i",
+        "icon": "$(close)"
+      },
+      {
+        "command": "vscode-db2i.dove.displayDetails",
+        "title": "Display details",
+        "category": "Db2 for i",
+        "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.dove.generateSqlForAdvisedIndexes",
+        "title": "Generate SQL for Advised Indexes",
+        "category": "Db2 for i",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "vscode-db2i.dove.closeDetails",
+        "title": "Close",
+        "category": "Db2 for i",
+        "icon": "$(close)"
+      },
+      {
+        "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
+        "title": "Advised Indexes and Statistics",
+        "category": "Db2 for i",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "vscode-db2i.dove.editSettings",
+        "title": "Settings",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "vscode-db2i.dove.export",
+        "title": "Export current VE data",
+        "category": "Db2 for i",
+        "icon": "$(file)"
+      },
+      {
+        "command": "vscode-db2i.dove.node.copy",
+        "title": "Copy value",
+        "category": "Db2 for i",
+        "icon": "$(pencil)"
+      },
+      {
         "command": "vscode-db2i.queryHistory.remove",
         "title": "Remove statement from history",
         "category": "Db2 for i",
@@ -505,16 +503,17 @@
         "icon": "$(trash)"
       },
       {
-        "command": "vscode-db2i.examples.setFilter",
-        "title": "Set filter",
-        "category": "Db2 for i (Examples)",
-        "icon": "$(filter)"
+        "command": "vscode-db2i.openSqlDocument",
+        "title": "Open SQL Document",
+        "category": "Db2 for i",
+        "icon": "$(new-file)"
       },
       {
-        "command": "vscode-db2i.examples.clearFilter",
-        "title": "Clear filter",
-        "category": "Db2 for i (Examples)",
-        "icon": "$(clear-all)"
+        "command": "vscode-db2i.notebook.open",
+        "title": "New Notebook",
+        "category": "IBM i Notebooks",
+        "enablement": "code-for-ibmi:connected == true",
+        "icon": "$(notebook)"
       },
       {
         "command": "vscode-db2i.jobManager.newJob",
@@ -599,52 +598,40 @@
         "icon": "$(trash)"
       },
       {
-        "command": "vscode-db2i.dove.close",
-        "title": "Close",
+        "command": "vscode-db2i.self.refresh",
+        "title": "Refresh SELF Codes View",
         "category": "Db2 for i",
-        "icon": "$(close)"
+        "icon": "$(refresh)"
       },
       {
-        "command": "vscode-db2i.dove.displayDetails",
-        "title": "Display details",
+        "command": "vscode-db2i.self.enableAutoRefresh",
+        "title": "Enable Auto Refresh",
         "category": "Db2 for i",
-        "icon": "$(info)"
+        "icon": "$(sync)"
       },
       {
-        "command": "vscode-db2i.dove.generateSqlForAdvisedIndexes",
-        "title": "Generate SQL for Advised Indexes",
+        "command": "vscode-db2i.self.disableAutoRefresh",
+        "title": "Disable Auto Refresh",
         "category": "Db2 for i",
-        "icon": "$(go-to-file)"
+        "icon": "$(sync-ignored)"
       },
       {
-        "command": "vscode-db2i.dove.closeDetails",
-        "title": "Close",
+        "command": "vscode-db2i.self.enableSelectedJobOnly",
+        "title": "Show Selected Job Only",
         "category": "Db2 for i",
-        "icon": "$(close)"
+        "icon": "$(filter)"
       },
       {
-        "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
-        "title": "Advised Indexes and Statistics",
+        "command": "vscode-db2i.self.disableSelectedJobOnly",
+        "title": "Show errors for user (all jobs)",
         "category": "Db2 for i",
-        "icon": "$(lightbulb)"
+        "icon": "$(account)"
       },
       {
-        "command": "vscode-db2i.dove.editSettings",
-        "title": "Settings",
+        "command": "vscode-db2i.self.reset",
+        "title": "Reset SELF Codes View",
         "category": "Db2 for i",
-        "icon": "$(gear)"
-      },
-      {
-        "command": "vscode-db2i.dove.export",
-        "title": "Export current VE data",
-        "category": "Db2 for i",
-        "icon": "$(file)"
-      },
-      {
-        "command": "vscode-db2i.dove.node.copy",
-        "title": "Copy value",
-        "category": "Db2 for i",
-        "icon": "$(pencil)"
+        "icon": "$(trash)"
       },
       {
         "command": "vscode-db2i.self.copySqlStatement",
@@ -671,34 +658,66 @@
         "icon": "$(question)"
       },
       {
-        "command": "vscode-db2i.resultset.settings",
-        "title": "Settings",
-        "category": "Db2 for i",
-        "icon": "$(gear)"
-      }
-    ],
-    "submenus": [
+        "command": "vscode-db2i.examples.setFilter",
+        "title": "Set filter",
+        "category": "Db2 for i (Examples)",
+        "icon": "$(filter)"
+      },
       {
-        "icon": "$(notebook-execute)",
-        "id": "sql/editor/context",
-        "label": "Run SQL statement"
+        "command": "vscode-db2i.examples.clearFilter",
+        "title": "Clear filter",
+        "category": "Db2 for i (Examples)",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "vscode-db2i.notebook.fromSqlUri",
+        "title": "Open as Notebook",
+        "category": "IBM i Notebooks",
+        "icon": "$(notebook)"
+      },
+      {
+        "command": "vscode-db2i.notebook.exportAsHtml",
+        "title": "Export",
+        "category": "IBM i Notebooks",
+        "icon": "$(save)"
       }
     ],
     "menus": {
-      "notebook/toolbar": [
-        {
-          "command": "vscode-db2i.notebook.exportAsHtml",
-          "when": "code-for-ibmi:connected == true && resourceExtname == .inb",
-          "group": "navigation"
-        }
-      ],
       "commandPalette": [
         {
-          "command": "vscode-db2i.queryHistory.remove",
-          "when": "never"
+          "command": "vscode-db2i.getStatementUri",
+          "when": "editorLangId == sql"
         },
         {
           "command": "vscode-db2i.setSchemaFilter",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.settings",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.displayDetails",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.editSettings",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.export",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.node.copy",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.remove",
           "when": "never"
         },
         {
@@ -744,153 +763,40 @@
         {
           "command": "vscode-db2i.notebook.fromSqlUri",
           "when": "never"
-        },
-        {
-          "command": "vscode-db2i.dove.displayDetails",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
-          "when": "vscode-db2i:explaining == true"
-        },
-        {
-          "command": "vscode-db2i.dove.editSettings",
-          "when": "vscode-db2i:explaining == true"
-        },
-        {
-          "command": "vscode-db2i.dove.export",
-          "when": "vscode-db2i:explaining == true"
-        },
-        {
-          "command": "vscode-db2i.dove.node.copy",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.settings",
-          "when": "never"
         }
       ],
       "editor/context": [
         {
-          "command": "vscode-db2i.pasteGenerator",
-          "group": "1_sql",
+          "command": "vscode-db2i.getStatementUri",
+          "group": "sql@0",
+          "when": "editorLangId == sql"
+        },
+        {
+          "command": "vscode-db2i.json.pasteGenerator",
+          "group": "sql@1",
+          "when": "editorLangId == sql"
+        },
+        {
+          "command": "vscode-db2i.json.pasteParser",
+          "group": "sql@2",
           "when": "editorLangId == sql"
         }
       ],
-      "editor/title": [
-        {
-          "when": "editorLangId == sql && code-for-ibmi:connected == true && vscode-db2i:statementCanCancel != true",
-          "group": "navigation@1",
-          "submenu": "sql/editor/context"
-        },
-        {
-          "command": "vscode-db2i.statement.cancel",
-          "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
-          "group": "navigation@1"
-        }
-      ],
-      "sql/editor/context": [
-        {
-          "command": "vscode-db2i.runEditorStatement",
-          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
-          "group": "navigation@1"
-        },
-        {
-          "command": "vscode-db2i.editorExplain.withRun",
-          "when": "editorLangId == sql",
-          "group": "2_explain@1"
-        },
-        {
-          "command": "vscode-db2i.editorExplain.withoutRun",
-          "when": "editorLangId == sql",
-          "group": "2_explain@2"
-        },
-        {
-          "command": "vscode-db2i.notebook.fromSqlUri",
-          "when": "editorLangId == sql",
-          "group": "3_notebook@1"
-        }
-      ],
       "view/title": [
-        {
-          "command": "vscode-db2i.manageSchemaBrowserList",
-          "group": "navigation",
-          "when": "view == schemaBrowser && vscode-db2i:manageSchemaBrowserEnabled"
-        },
         {
           "command": "vscode-db2i.refreshSchemaBrowser",
           "group": "navigation",
           "when": "view == schemaBrowser"
         },
         {
-          "command": "vscode-db2i.self.refresh",
-          "group": "navigation@1",
-          "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
-        },
-        {
-          "command": "vscode-db2i.self.enableAutoRefresh",
-          "group": "navigation@2",
-          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == false"
-        },
-        {
-          "command": "vscode-db2i.self.disableAutoRefresh",
-          "group": "navigation@2",
-          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == true"
-        },
-        {
-          "command": "vscode-db2i.self.reset",
-          "group": "navigation@3",
-          "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
-        },
-        {
-          "command": "vscode-db2i.self.help",
-          "group": "navigation@4",
-          "when": "view == vscode-db2i.self.nodes"
-        },
-        {
-          "command": "vscode-db2i.queryHistory.clear",
+          "command": "vscode-db2i.manageSchemaBrowserList",
           "group": "navigation",
-          "when": "view == queryHistory"
+          "when": "view == schemaBrowser && vscode-db2i:manageSchemaBrowserEnabled"
         },
         {
-          "command": "vscode-db2i.examples.setFilter",
+          "command": "vscode-db2i.resultset.settings",
           "group": "navigation",
-          "when": "view == exampleBrowser"
-        },
-        {
-          "command": "vscode-db2i.examples.clearFilter",
-          "group": "navigation",
-          "when": "view == exampleBrowser"
-        },
-        {
-          "command": "vscode-db2i.jobManager.newJob",
-          "group": "navigation@1",
-          "when": "view == jobManager"
-        },
-        {
-          "command": "vscode-db2i.jobManager.continue",
-          "group": "navigation@1",
-          "when": "view == jobManager"
-        },
-        {
-          "command": "vscode-db2i.jobManager.defaultSelfSettings",
-          "group": "navigation",
-          "when": "view == jobManager"
-        },
-        {
-          "command": "vscode-db2i.jobManager.endAll",
-          "group": "navigation@2",
-          "when": "view == jobManager"
-        },
-        {
-          "command": "vscode-db2i.openSqlDocument",
-          "group": "navigation@3",
-          "when": "view == jobManager"
-        },
-        {
-          "command": "vscode-db2i.notebook.open",
-          "group": "navigation@4",
-          "when": "view == jobManager"
+          "when": "view == vscode-db2i.resultset"
         },
         {
           "command": "vscode-db2i.dove.advisedIndexesAndStatistics",
@@ -923,27 +829,87 @@
           "when": "view == vscode-db2i.dove.node"
         },
         {
-          "command": "vscode-db2i.resultset.settings",
+          "command": "vscode-db2i.queryHistory.clear",
           "group": "navigation",
-          "when": "view == vscode-db2i.resultset"
+          "when": "view == queryHistory"
+        },
+        {
+          "command": "vscode-db2i.jobManager.newJob",
+          "group": "navigation@1",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.continue",
+          "group": "navigation@1",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.defaultSelfSettings",
+          "group": "navigation",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.endAll",
+          "group": "navigation@2",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.openSqlDocument",
+          "group": "navigation@3",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.notebook.open",
+          "group": "navigation@4",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.self.refresh",
+          "group": "navigation@1",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
+        },
+        {
+          "command": "vscode-db2i.self.enableAutoRefresh",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == false"
+        },
+        {
+          "command": "vscode-db2i.self.disableAutoRefresh",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.autoRefresh == true"
+        },
+        {
+          "command": "vscode-db2i.self.enableSelectedJobOnly",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.specificJob == false"
+        },
+        {
+          "command": "vscode-db2i.self.disableSelectedJobOnly",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.specificJob == true"
+        },
+        {
+          "command": "vscode-db2i.self.reset",
+          "group": "navigation@3",
+          "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
+        },
+        {
+          "command": "vscode-db2i.self.help",
+          "group": "navigation@4",
+          "when": "view == vscode-db2i.self.nodes"
+        },
+        {
+          "command": "vscode-db2i.examples.setFilter",
+          "group": "navigation",
+          "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.examples.clearFilter",
+          "group": "navigation",
+          "when": "view == exampleBrowser"
         }
       ],
       "view/item/context": [
-        {
-          "command": "vscode-db2i.self.copySqlStatement",
-          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
-          "group": "navigation"
-        },
-        {
-          "command": "vscode-db2i.self.displayDetails",
-          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
-          "group": "navigation"
-        },
-        {
-          "command": "vscode-db2i.self.explainSelf",
-          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
-          "group": "navigation"
-        },
         {
           "command": "vscode-db2i.setCurrentSchema",
           "when": "viewItem == schema",
@@ -980,6 +946,11 @@
           "group": "db2workWith@2"
         },
         {
+          "command": "vscode-db2i.getMTIs",
+          "when": "viewItem == table || viewItem == schema",
+          "group": "db2workWith@3"
+        },
+        {
           "command": "vscode-db2i.clearData",
           "when": "viewItem == table",
           "group": "db2data@1"
@@ -1008,6 +979,15 @@
           "command": "vscode-db2i.clearAdvisedIndexes",
           "when": "viewItem == table || viewItem == schema",
           "group": "db2idxAdv@2"
+        },
+        {
+          "command": "vscode-db2i.dove.displayDetails",
+          "when": "view == vscode-db2i.dove.nodes && viewItem == explainTreeItem",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.dove.node.copy",
+          "when": "view == vscode-db2i.dove.node && viewItem == propertyNode"
         },
         {
           "command": "vscode-db2i.queryHistory.remove",
@@ -1065,16 +1045,102 @@
           "group": "inline"
         },
         {
-          "command": "vscode-db2i.dove.displayDetails",
-          "when": "view == vscode-db2i.dove.nodes && viewItem == explainTreeItem",
-          "group": "inline"
+          "command": "vscode-db2i.self.copySqlStatement",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
         },
         {
-          "command": "vscode-db2i.dove.node.copy",
-          "when": "view == vscode-db2i.dove.node && viewItem == propertyNode"
+          "command": "vscode-db2i.self.displayDetails",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "when": "editorLangId == sql && code-for-ibmi:connected == true && vscode-db2i:statementCanCancel != true",
+          "group": "navigation@1",
+          "submenu": "sql/editor/context"
+        },
+        {
+          "command": "vscode-db2i.statement.cancel",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
+          "group": "navigation@1"
+        }
+      ],
+      "sql/editor/context": [
+        {
+          "command": "vscode-db2i.runEditorStatement",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.runEditorStatement.inView",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.editorExplain.withRun",
+          "when": "editorLangId == sql",
+          "group": "2_explain@1"
+        },
+        {
+          "command": "vscode-db2i.editorExplain.withoutRun",
+          "when": "editorLangId == sql",
+          "group": "2_explain@2"
+        },
+        {
+          "command": "vscode-db2i.notebook.fromSqlUri",
+          "when": "editorLangId == sql",
+          "group": "3_notebook@1"
+        }
+      ],
+      "notebook/toolbar": [
+        {
+          "command": "vscode-db2i.notebook.exportAsHtml",
+          "when": "code-for-ibmi:connected == true && resourceExtname == .inb",
+          "group": "navigation"
         }
       ]
     },
+    "submenus": [
+      {
+        "icon": "$(notebook-execute)",
+        "id": "sql/editor/context",
+        "label": "Run SQL statement"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "vscode-db2i.runEditorStatement",
+        "key": "ctrl+r",
+        "mac": "cmd+r",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
+        "command": "vscode-db2i.runEditorStatement.inView",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+ctrl+r",
+        "when": "editorLangId == sql"
+      },
+      {
+        "command": "vscode-db2i.editorExplain.withRun",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
+        "command": "vscode-db2i.editorExplain.withoutRun",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
+        "command": "notebook.cell.execute",
+        "key": "ctrl+r",
+        "mac": "cmd+r",
+        "when": "editorLangId == sql && resourceExtname == .inb"
+      }
+    ],
     "colors": [
       {
         "id": "db2i.dove.resultsView.HighlightIndexAdvised",
@@ -1148,43 +1214,54 @@
           "light": "#5976df"
         }
       }
+    ],
+    "viewsWelcome": [
+      {
+        "view": "queryHistory",
+        "contents": "Statement history will appear here."
+      },
+      {
+        "view": "jobManager",
+        "contents": "The SQL Job Manager allows you to provision one or more jobs for running SQL statements, each with its own connection settings.\n\nUsing managed jobs reduces the use of system resources, improves performance, and maintains  state across subsequent SQL statements.\n\nYou can run SQL statements without starting a job, just be aware that every statement you run requires a temporary, single-use job to be started on your behalf. \n[New SQL job](command:vscode-db2i.jobManager.newJob)"
+      },
+      {
+        "view": "vscode-db2i.self.nodes",
+        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSelfSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
+      }
+    ],
+    "notebooks": [
+      {
+        "id": "db2i-notebook",
+        "type": "db2i-notebook",
+        "displayName": "IBM i Notebook",
+        "selector": [
+          {
+            "filenamePattern": "*.inb"
+          }
+        ]
+      }
+    ],
+    "snippets": [
+      {
+        "language": "sql",
+        "path": "snippets/http.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "snippets/create.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "snippets/scalars.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "snippets/variables.code-snippets"
+      },
+      {
+        "language": "sql",
+        "path": "snippets/aggregates.code-snippets"
+      }
     ]
-  },
-  "scripts": {
-    "lint": "eslint .",
-    "pretest": "npm run lint",
-    "language:test": "vitest",
-    "dsc": "mkdir -p dist && npx tsx src/dsc",
-    "package": "vsce package",
-    "vscode:prepublish": "rm -rf dist && webpack --mode production && npm run dsc",
-    "webpack": "webpack --mode development",
-    "webpack-dev": "webpack --mode development --watch",
-    "typings": "npx -p typescript tsc ./src/extension.ts --declaration --allowJs --emitDeclarationOnly --outDir types --esModuleInterop -t es2019 --moduleResolution node"
-  },
-  "devDependencies": {
-    "@halcyontech/vscode-ibmi-types": "^2.0.0",
-    "@types/glob": "^7.1.3",
-    "@types/node": "14.x",
-    "@types/vscode": "^1.70.0",
-    "esbuild-loader": "^3.0.1",
-    "eslint": "^7.32.0",
-    "glob": "^7.1.7",
-    "octokit": "^3.1.2",
-    "raw-loader": "^4.0.2",
-    "ts-loader": "^9.3.1",
-    "typescript": "^4.3.2",
-    "vitest": "^0.33.0",
-    "vscode-test": "^1.5.2",
-    "webpack": "^5.91.0",
-    "webpack-cli": "^4.5.0"
-  },
-  "dependencies": {
-    "chart.js": "^4.4.2",
-    "csv": "^6.1.3",
-    "json-to-markdown-table": "^1.0.0",
-    "lru-cache": "^6.0.0",
-    "node-fetch": "^3.3.1",
-    "showdown": "^2.1.0",
-    "sql-formatter": "^14.0.0"
   }
 }

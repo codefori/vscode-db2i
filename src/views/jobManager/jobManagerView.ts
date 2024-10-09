@@ -2,8 +2,7 @@ import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, U
 import { JobManager } from "../../config";
 import { JobInfo, SQLJobManager } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";
-import { JobStatus, SQLJob, TransactionEndType } from "../../connection/sqlJob";
-import { JDBCOptions, ServerTraceDest, ServerTraceLevel } from "../../connection/types";
+import { OldSQLJob } from "../../connection/sqlJob";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
@@ -13,6 +12,7 @@ import { updateStatusBar } from "./statusBar";
 import { selfCodesResultsView } from "./selfCodes/selfCodesResultsView";
 import { setCancelButtonVisibility } from "../results";
 import { registerContinueProvider } from "../../aiProviders/continue/continueContextProvider";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -37,7 +37,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         try {
           updateStatusBar({newJob: true});
           await JobManager.newJob(
-            (options ? new SQLJob(options) : undefined), 
+            (options ? new OldSQLJob(options) : undefined), 
             name
           );
         } catch (e) {
@@ -70,10 +70,10 @@ export class JobManagerView implements TreeDataProvider<any> {
 
                 switch (decision) {
                   case `Commit and end`:
-                    await selected.job.endTransaction(TransactionEndType.COMMIT);
+                    await selected.job.endTransaction("commit");
                     break;
                   case `Rollback and end`:
-                    await selected.job.endTransaction(TransactionEndType.ROLLBACK);
+                    await selected.job.endTransaction("rollback");
                     break;
                   default:
                     // Actually... don't end the job
@@ -141,7 +141,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
           try {
-            const currentSelfCodes: SelfValue = selected.job.options.selfcodes;
+            const currentSelfCodes: SelfValue = selected.job.getSelfCode();
             const selfCodeItems: SelfCodesQuickPickItem[] = selfCodesMap.map(
               (code) => new SelfCodesQuickPickItem(code)
             );
@@ -202,7 +202,7 @@ export class JobManagerView implements TreeDataProvider<any> {
 
           ServerComponent.writeOutput(`Enabling tracing for ${selected.name} (${selected.job.id})`, true);
 
-          selected.job.setTraceConfig(ServerTraceDest.IN_MEM, ServerTraceLevel.DATASTREAM);
+          selected.job.setTraceConfig("IN_MEM", "DATASTREAM");
         }
       }),
 
@@ -244,7 +244,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
           if (selected.job.underCommitControl()) {
-            const result = await selected.job.endTransaction(TransactionEndType.COMMIT);
+            const result = await selected.job.endTransaction("commit");
             if (!result.success) {
               vscode.window.showErrorMessage(`Failed to commit.` + result.error);
             }
@@ -260,7 +260,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         if (selected) {
           if (selected.job.underCommitControl()) {
             try {
-              const result = await selected.job.endTransaction(TransactionEndType.ROLLBACK);
+              const result = await selected.job.endTransaction("rollback");
               if (!result.success) {
                 vscode.window.showErrorMessage(`Failed to rollback. ` + result.error);
               }
@@ -304,7 +304,7 @@ export class JobManagerView implements TreeDataProvider<any> {
 
     const selectedJob = JobManager.getSelection();
 
-    setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === JobStatus.Busy);
+    setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === "busy");
     commands.executeCommand(`setContext`, `vscode-db2i:jobManager.hasJob`, selectedJob !== undefined);
   }
 

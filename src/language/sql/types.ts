@@ -3,6 +3,7 @@ import Statement from "./statement";
 export enum StatementType {
 	Unknown = "Unknown",
 	Create = "Create",
+	Close = "Close",
 	Insert = "Insert",
 	Select = "Select",
 	With = "With",
@@ -12,8 +13,27 @@ export enum StatementType {
 	Begin = "Begin",
 	Drop = "Drop",
 	End = "End",
+	Else = "Else",
+	Elseif = "Elseif",
 	Call = "Call",
-	Alter = "Alter"
+	Alter = "Alter",
+	Fetch = "Fetch",
+	For = "For",
+	Get = "Get",
+	Goto = "Goto",
+	If = "If",
+	Include = "Include",
+	Iterate = "Iterate",
+	Leave = "Leave",
+	Loop = "Loop",
+	Open = "Open",
+	Pipe = "Pipe",
+	Repeat = "Repeat",
+	Resignal = "Resignal",
+	Return = "Return",
+	Signal = "Signal",
+	Set = "Set",
+	While = "While"
 }
 
 export const StatementTypeWord = {
@@ -26,9 +46,27 @@ export const StatementTypeWord = {
 	'DECLARE': StatementType.Declare,
 	'DROP': StatementType.Drop,
 	'END': StatementType.End,
+	'ELSE': StatementType.Else,
+	'ELSEIF': StatementType.Elseif,
 	'CALL': StatementType.Call,
 	'BEGIN': StatementType.Begin,
-	'ALTER': StatementType.Alter
+	'ALTER': StatementType.Alter,
+	'FOR': StatementType.For,
+	'FETCH': StatementType.Fetch,
+	'GET': StatementType.Get,
+	'GOTO': StatementType.Goto,
+	'IF': StatementType.If,
+	'INCLUDE': StatementType.Include,
+	'ITERATE': StatementType.Iterate,
+	'LEAVE': StatementType.Leave,
+	'LOOP': StatementType.Loop,
+	'PIPE': StatementType.Pipe,
+	'REPEAT': StatementType.Repeat,
+	'RESIGNAL': StatementType.Resignal,
+	'RETURN': StatementType.Return,
+	'SIGNAL': StatementType.Signal,
+	'SET': StatementType.Set,
+	'WHILE': StatementType.While,
 };
 
 export enum ClauseType {
@@ -84,6 +122,7 @@ export interface ObjectRef {
   alias?: string;
 
 	isUDTF?: boolean;
+	fromLateral?: boolean;
 
 	/** only used within create statements */
 	createType?: string;

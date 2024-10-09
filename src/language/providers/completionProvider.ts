@@ -3,19 +3,17 @@ import { JobManager } from "../../config";
 import {
   default as Database,
   SQLType,
-  default as Schemas,
 } from "../../database/schemas";
 import Statement from "../../database/statement";
-import Table from "../../database/table";
 import Document from "../sql/document";
 import * as LanguageStatement from "../sql/statement";
-import { CTEReference, CallableReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
-import CompletionItemCache, { changedCache } from "./completionItemCache";
-import Callable, { CallableType } from "../../database/callable";
-import { ServerComponent } from "../../connection/serverComponent";
-import { env } from "process";
-import { prepareParamType, createCompletionItem, getParmAttributes, completionItemCache } from "./completion";
-import { isCallableType, getCallableParameters } from "./callable";
+import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
+import { CallableType } from "../../database/callable";
+import { prepareParamType, createCompletionItem, getParmAttributes } from "./logic/completion";
+import { isCallableType, getCallableParameters } from "./logic/callable";
+import { localAssistIsEnabled, remoteAssistIsEnabled } from "./logic/available";
+import { DbCache } from "./logic/cache";
+import { getSqlDocument } from "./logic/parse";
 
 export interface CompletionType {
   order: string;
@@ -48,13 +46,15 @@ const completionTypes: { [index: string]: CompletionType } = {
     label: `function`,
     type: `functions`, 
     icon: CompletionItemKind.Method
+  },
+  variables: {
+    order: `f`,
+    label: `variable`,
+    type: `variables`,
+    icon: CompletionItemKind.Variable,
   }
 };
 
-
-function isEnabled() {
-  return (env.DB2I_DISABLE_CA !== `true`);
-}
 
 
 function getColumnAttributes(column: TableColumn): string {
@@ -88,57 +88,52 @@ async function getObjectColumns(
   isUDTF = false
 ): Promise<CompletionItem[]> {
 
-  const databaseObj = (schema + name).toUpperCase();
-  const tableUpdate: boolean = changedCache.delete(databaseObj);
+  let completionItems: CompletionItem[];
 
-  if (!completionItemCache.has(databaseObj) || tableUpdate) {
     schema = Statement.noQuotes(Statement.delimName(schema, true));
     name = Statement.noQuotes(Statement.delimName(name, true));
-
-    let completionItems: CompletionItem[] = [];
     
-    if (isUDTF) {
-      const resultSet = await Callable.getResultColumns(schema, name, true);
-      
-      if (!resultSet?.length ? true : false) {
-        completionItemCache.set(databaseObj, []);
-        return [];
-      }
-      
-      completionItems = resultSet.map((i) =>
-        createCompletionItem(
-          Statement.prettyName(i.PARAMETER_NAME),
-          CompletionItemKind.Field,
-          getParmAttributes(i),
-          `Schema: ${schema}\nObject: ${name}\n`,
-          `a@objectcolumn`
-        )
-      );
-
-    } else {
-      const columns = await Table.getItems(schema, name);
-
-      if (!columns?.length ? true : false) {
-        completionItemCache.set(databaseObj, []);
-        return [];
-      }
-
-      completionItems = columns.map((i) =>
-        createCompletionItem(
-          Statement.prettyName(i.COLUMN_NAME),
-          CompletionItemKind.Field,
-          getColumnAttributes(i),
-          `Schema: ${schema}\nTable: ${name}\n`,
-          `a@objectcolumn`
-        )
-      );
+  if (isUDTF) {
+    const resultSet = await DbCache.getCachedSignatures(schema, name);
+    
+    if (!resultSet?.length ? true : false) {
+      return [];
     }
+
+    const chosenSig = resultSet[resultSet.length-1];
     
-    const allCols = getAllColumns(name, schema, completionItems);
-    completionItems.push(allCols);
-    completionItemCache.set(databaseObj, completionItems);
+    completionItems = chosenSig.returns.map((i) =>
+      createCompletionItem(
+        Statement.prettyName(i.PARAMETER_NAME),
+        CompletionItemKind.Field,
+        getParmAttributes(i),
+        `Schema: ${schema}\nObject: ${name}\n`,
+        `a@objectcolumn`
+      )
+    );
+
+  } else {
+    const columns = await DbCache.getObjectColumns(schema, name);
+
+    if (!columns?.length ? true : false) {
+      return [];
+    }
+
+    completionItems = columns.map((i) =>
+      createCompletionItem(
+        Statement.prettyName(i.COLUMN_NAME),
+        CompletionItemKind.Field,
+        getColumnAttributes(i),
+        `Schema: ${schema}\nTable: ${name}\n`,
+        `a@objectcolumn`
+      )
+    );
   }
-  return completionItemCache.get(databaseObj);
+  
+  const allCols = getAllColumns(name, schema, completionItems);
+  completionItems.push(allCols);
+
+  return completionItems;
 }
 
 /**
@@ -149,35 +144,33 @@ async function getObjectCompletions(
   sqlTypes: { [index: string]: CompletionType }
 ): Promise<CompletionItem[]> {
   forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
-  const schemaUpdate: boolean = changedCache.delete(forSchema);
-  if (!completionItemCache.has(forSchema) || schemaUpdate) {
-    const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
-      const data = await Database.getObjects(forSchema, [value.type]);
-      return data.map((table) =>
-        createCompletionItem(
-          Statement.prettyName(table.name),
-          value.icon,
-          `Type: ${value.label}`,
-          `Schema: ${table.schema}`,
-          value.order
-        )
-      );
-    });
+  
+  const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
+    const data = await DbCache.getObjects(forSchema, [value.type]);
+    return data.map((table) =>
+      createCompletionItem(
+        Statement.prettyName(table.name),
+        value.icon,
+        value.label,
+        `Schema: ${table.schema}`,
+        value.order
+      )
+    );
+  });
 
-    const results = await Promise.allSettled(promises);
-    const list = results
-      .filter((result) => result.status == "fulfilled")
-      .map((result) => (result as PromiseFulfilledResult<any>).value)
-      .flat();
-    completionItemCache.set(forSchema, list);
-  }
-  return completionItemCache.get(forSchema);
+  const results = await Promise.allSettled(promises);
+  const list = results
+    .filter((result) => result.status == "fulfilled")
+    .map((result) => (result as PromiseFulfilledResult<any>).value)
+    .flat();
+
+  return list;
 }
 
 async function getCompletionItemsForSchema(
   schema: string
 ): Promise<CompletionItem[]> {
-  const data = (await Database.getObjects(schema, ["procedures"]));
+  const data = await DbCache.getObjects(schema, ["procedures"]);
 
   return data
     .filter((v, i, a) => a.findIndex(t => (t.name === v.name)) === i) //Hide overloads here
@@ -185,7 +178,7 @@ async function getCompletionItemsForSchema(
       createCompletionItem(
         Statement.prettyName(item.name),
         CompletionItemKind.Method,
-        `Type: Procedure`,
+        `Procedure`,
         `Schema: ${item.schema}`
       )
     );
@@ -290,23 +283,24 @@ async function getCompletionItemsForTriggerDot(
     }
   } else {
     
+    if (currentStatement.type === StatementType.Call) {
+      const procs = await getProcedures([curRef], getDefaultSchema());
+      list.push(...procs);
 
-    const objectCompletions = await getObjectCompletions(
-      curSchema,
-      completionTypes
-    );
-    list.push(...objectCompletions);
+    } else {
+      const objectCompletions = await getObjectCompletions(
+        curSchema,
+        completionTypes
+      );
+      list.push(...objectCompletions);
+    }
   }
 
   return list;
 }
 
 async function getCachedSchemas() {
-  if (completionItemCache.has(`SCHEMAS-FOR-SYSTEM`)) {
-    return completionItemCache.get(`SCHEMAS-FOR-SYSTEM`);
-  }
-
-  const allSchemas: BasicSQLObject[] = await Schemas.getObjects(
+  const allSchemas: BasicSQLObject[] = await DbCache.getObjects(
     undefined,
     [`schemas`]
   );
@@ -314,12 +308,11 @@ async function getCachedSchemas() {
     createCompletionItem(
       Statement.prettyName(schema.name),
       CompletionItemKind.Module,
-      `Type: Schema`,
+      `Schema`,
       `Text: ${schema.text}`
     )
   );
 
-  completionItemCache.set(`SCHEMAS-FOR-SYSTEM`, completionItems);
   return completionItems;
 }
 
@@ -503,21 +496,123 @@ async function getCompletionItems(
   return getCompletionItemsForRefs(currentStatement, offset, insideCte ? insideCte.columns : undefined);
 }
 
+const VALID_CREATE_TYPES = [`procedure`, `function`]
+
+function getCompletionItemKindFromSqlType(sqlType: string = `any`) {
+  switch (sqlType.toLowerCase()) {
+    case `schema`:
+      return CompletionItemKind.Folder;
+    case `table`:
+      return CompletionItemKind.File;
+    case `view`:
+      return CompletionItemKind.Interface;
+    case `alias`:
+      return CompletionItemKind.Reference;
+    case `procedure`:
+      return CompletionItemKind.Method;
+    case `function`:
+      return CompletionItemKind.Function;
+    case `cursor`:
+      return CompletionItemKind.File;
+    default:
+      return CompletionItemKind.Variable;
+  }
+}
+
+/**
+ * Returns completion items based solely on an SQL document
+ * @param sqlDoc
+ */
+function getLocalDefs(sqlDoc: Document, offset: number) {
+  const groups = sqlDoc.getStatementGroups();
+
+  let items: CompletionItem[] = [];
+
+
+  groups.forEach((group) => {
+    const groupStatements = group.statements;
+    const statement = group.statements[0];
+    const inGroupRange = offset >= group.range.start && offset <= group.range.end;
+
+    if (groupStatements.length === 1) {
+      switch (statement.type) {
+        case StatementType.With:
+          if (inGroupRange) {
+            const ctes = statement.getCTEReferences();
+            items.push(...ctes.map(cte => createCompletionItem(cte.name, CompletionItemKind.Interface)));
+          }
+          break;
+
+        case StatementType.Create:
+          const [currentCreate] = statement.getObjectReferences();
+          if (currentCreate) {
+            items.push(createCompletionItem(currentCreate.object.schema ? `${currentCreate.object.schema}.${currentCreate.object.name}` : currentCreate.object.name, getCompletionItemKindFromSqlType(currentCreate.createType), `Local ${currentCreate.createType || `creation`}`));
+          }
+          break;
+      }
+
+    } else if (groupStatements.length > 1) {
+      // Usually means statements that have a body
+
+      // We only care about create statements when there is a body
+      if (statement.type === StatementType.Create) {
+        const [groupDef] = statement.getObjectReferences();
+        
+        // We only care about certain create types
+        if (groupDef) {
+          const currentType = groupDef.createType.toLowerCase();
+          if (groupDef.createType && VALID_CREATE_TYPES.includes(currentType) && groupDef.object.name) {
+            items.push(createCompletionItem(groupDef.object.schema ? `${groupDef.object.schema}.${groupDef.object.name}` : groupDef.object.name, getCompletionItemKindFromSqlType(groupDef.createType), `Local ${currentType}`));
+          }
+        }
+
+        // When our cursor is in the current statement..
+        if (inGroupRange) {
+          // Show parameters to the routine
+          const localParams = statement.getRoutineParameters();
+          items.push(...localParams.map(param => createCompletionItem(param.alias, CompletionItemKind.Property, param.createType)));
+
+          // Show all the local definitions
+          for (let i = 1; i < groupStatements.length; i++) {
+            const subStatement = groupStatements[i];
+            if (subStatement.type === StatementType.Declare) {
+              const [def] = subStatement.getObjectReferences();
+              if (def) {
+                items.push(createCompletionItem(def.object.name, CompletionItemKind.Variable, def.createType));
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  return items;
+}
+
 export const completionProvider = languages.registerCompletionItemProvider(
   `sql`,
   {
     async provideCompletionItems(document, position, token, context) {
-      if (ServerComponent.isInstalled() && isEnabled()) {
+      if (localAssistIsEnabled()) {
         const trigger = context.triggerCharacter;
         const content = document.getText();
         const offset = document.offsetAt(position);
 
-        const sqlDoc = new Document(content);
+        const sqlDoc = getSqlDocument(document);
         const currentStatement = sqlDoc.getStatementByOffset(offset);
 
-        if (currentStatement) {
-          return getCompletionItems(trigger, currentStatement, offset);
+        const allItems: CompletionItem[] = [];
+
+        if (trigger !== `.`) {
+          allItems.push(...getLocalDefs(sqlDoc, offset))
         }
+
+        if (remoteAssistIsEnabled() && currentStatement) {
+          allItems.push(...await getCompletionItems(trigger, currentStatement, offset))
+        }
+
+        return allItems;
       }
     },
   },

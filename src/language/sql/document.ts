@@ -35,6 +35,7 @@ export default class Document {
     let statementStart = 0;
 
     for (let i = 0; i < tokens.length; i++) {
+      const upperValue = tokens[i].value?.toUpperCase();
       switch (tokens[i].type) {
         case `semicolon`:
           const statementTokens = tokens.slice(statementStart, i);
@@ -45,12 +46,25 @@ export default class Document {
           break;
 
         case `statementType`:
-          currentStatementType = StatementTypeWord[tokens[i].value?.toUpperCase()];
+          currentStatementType = StatementTypeWord[upperValue];
           break;
 
         case `keyword`:
-          switch (tokens[i].value?.toUpperCase()) {
+          switch (upperValue) {
+            case `LOOP`:
+            case `THEN`:
             case `BEGIN`:
+            case `DO`:
+              // This handles the case that 'END LOOP' is supported.
+              if (upperValue === `LOOP` && currentStatementType === StatementType.End) {
+                break;
+              }
+
+              // Support for THEN in conditionals
+              if (upperValue === `THEN` && !Statement.typeIsConditional(currentStatementType)) {
+                break;
+              }
+
               // We include BEGIN in the current statement
               // then the next statement beings
               const statementTokens = tokens.slice(statementStart, i+1);
@@ -95,7 +109,7 @@ export default class Document {
     let depth = 0;
 
     for (const statement of this.statements) {
-        if (statement.isBlockEnder()) {
+        if (statement.isCompoundEnd()) {
           if (depth > 0) {
             currentGroup.push(statement);
               
@@ -111,7 +125,7 @@ export default class Document {
             currentGroup = [];
           }
         } else
-        if (statement.isBlockOpener()) {
+        if (statement.isCompoundStart()) {
           if (depth > 0) {
             currentGroup.push(statement);
           } else {

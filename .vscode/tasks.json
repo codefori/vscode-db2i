@@ -7,10 +7,8 @@
 			"type": "npm",
 			"script": "webpack-dev",
 			"problemMatcher": "$ts-webpack-watch",
-			"isBackground": true,
 			"presentation": {
-				"reveal": "never",
-				"group": "watchers"
+				"reveal": "never"
 			},
 			"group": {
 				"kind": "build",

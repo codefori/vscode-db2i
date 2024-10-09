@@ -38,7 +38,7 @@ export function getLoadingHTML(): string {
   `;
 }
 
-export function generateScroller(basicSelect: string, isCL: boolean): string {
+export function generateScroller(basicSelect: string, isCL: boolean, withCancel?: boolean): string {
   const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
 
   return /*html*/`
@@ -121,6 +121,17 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                   break;
               }
             });
+
+            const cancelButton = document.getElementById('cancelButton');
+
+            if (cancelButton) {
+              cancelButton.addEventListener('click', () => {
+                vscode.postMessage({
+                  command: 'cancel',
+                  queryId: myQueryId
+                });
+              });
+            }
           }
 
           function fetchNextPage() {
@@ -173,13 +184,27 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
                 // Insert a cell at the end of the row
                 var newCell = newRow.insertCell();
 
-                // Append a text node to the cell
-
-                //TODO: handle cell formatting here
                 var newDiv = document.createElement("div");
                 newDiv.className = "hoverable";
-                newDiv.appendChild(document.createTextNode(cell === undefined ? 'null' : cell));
 
+                // Append a formatted JSON object to the cell
+                const contentMightBeJson = typeof cell === 'string' && (cell.startsWith('{') || cell.startsWith('[')) && (cell.endsWith('}') || cell.endsWith(']'));
+                let isJson = false;
+                if (contentMightBeJson) {
+                  try {
+                    const cellJson = JSON.stringify(JSON.parse(cell), null, 2);
+                    newDiv.style.whiteSpace = "pre";
+                    newDiv.style["font-family"] = "monospace";
+                    newDiv.innerText = cellJson;
+                    isJson = true;
+                  } catch (e) {}
+                }
+
+                if (!isJson) {
+                  // Append a text node to the cell
+                  newDiv.appendChild(document.createTextNode(cell === undefined ? 'null' : cell));
+                }
+                
                 newCell.appendChild(newDiv);
               }
             }
@@ -206,6 +231,7 @@ export function generateScroller(basicSelect: string, isCL: boolean): string {
         <div id="spinnerContent" class="center-screen">
           <p id="loadingText">Running statement</p>
           <span class="loader"></span>
+          ${withCancel ? `<button id="cancelButton" class="primaryButton">Cancel</button>` : ``}
         </div>
       </body>
     </html>

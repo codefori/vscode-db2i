@@ -27,11 +27,24 @@ interface TokenState {
 export default class SQLTokeniser {
   matchers: Matcher[] = [
     {
+      name: `PROCEDURE_PARM_TYPE`,
+      match: [{ type: `word`, match: (value: string) => {return [`IN`, `OUT`, `INOUT`].includes(value.toUpperCase())}}],
+      becomes: `parmType`,
+    },
+    {
       name: `STATEMENTTYPE`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`].includes(value.toUpperCase());
+        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`, `IF`, `FOR`, `WHILE`].includes(value.toUpperCase());
       } }],
       becomes: `statementType`,
+    },
+    {
+      name: `CLAUSE-ORDER`,
+      match: [
+        {type: `word`, match: (value: string) => {return value.toUpperCase() === `ORDER`}},
+        {type: `word`, match: (value: string) => {return value.toUpperCase() === `BY`}}
+      ],
+      becomes: `clause`,
     },
     {
       name: `CLAUSE`,
@@ -69,7 +82,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
+        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `DO`, `THEN`, `LOOP`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },
@@ -93,6 +106,11 @@ export default class SQLTokeniser {
       match: [{ type: `equals` }, { type: `morethan` }],
       becomes: `rightpipe`,
     },
+    {
+      name: `NOT`,
+      match: [{type: `lessthan`}, {type: `morethan`}],
+      becomes: `not`
+    }
   ];
   readonly spaces = [`\t`, ` `];
   readonly splitParts: string[] = [`(`, `)`, `/`, `.`, `*`, `-`, `+`, `;`, `"`, `&`, `%`, `,`, `|`, `?`, `:`, `=`, `<`, `>`, `\n`, `\r`, ...this.spaces];

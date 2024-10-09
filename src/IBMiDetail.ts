@@ -56,7 +56,7 @@ export class IBMiDetail {
   
       this.db2Level = Number(db2LevelResults[0].HIGHEST_DB2_PTF_GROUP_LEVEL);
     } catch (e) {
-      ServerComponent.writeOutput(`Failed to get Db2 level: ${e.message}`);
+      ServerComponent.writeOutput(`Failed to get Db2 level. User does not have enough authority: ${e.message}`);
       levelCheckFailed = true;
     }
 
