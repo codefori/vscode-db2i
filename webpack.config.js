@@ -66,7 +66,11 @@ const config = {
         exclude: /node_modules/,
         use: [
           {
-            loader: `esbuild-loader`
+            loader: `esbuild-loader`,
+            options: {
+              // JavaScript version to transpile to
+              target: 'node18'
+            }
           }
         ]
       },
