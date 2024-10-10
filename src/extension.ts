@@ -1,6 +1,6 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import vscode from "vscode";
+import * as vscode from "vscode";
 import schemaBrowser from "./views/schemaBrowser";
 
 import * as JSONServices from "./language/json";
@@ -22,6 +22,7 @@ import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import { queryHistory } from "./views/queryHistoryView";
+import { activateChat } from "./chat/chat";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -102,6 +103,18 @@ export function activate(context: vscode.ExtensionContext): Db2i {
       }
     });
   });
+
+  const copilot = vscode.extensions.getExtension(`github.copilot-chat`);
+
+  if (copilot) {
+    if (!copilot.isActive) {
+      copilot.activate().then(() => {
+        activateChat(context);
+      });
+    } else {
+      activateChat(context);
+    }
+  }
 
   instance.subscribe(context, `disconnected`, `db2i-disconnected`, () => ServerComponent.reset());
 
