@@ -1,28 +1,28 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import vscode from "vscode"
+import * as vscode from "vscode";
 import schemaBrowser from "./views/schemaBrowser";
 
 import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
-import { getInstance, loadBase } from "./base";
-import { JobManager, onConnectOrServerInstall, initConfig } from "./config";
-import { queryHistory } from "./views/queryHistoryView";
-import { ExampleBrowser } from "./views/examples/exampleBrowser";
-import { languageInit } from "./language/providers";
-import { initialiseTestSuite } from "./testing";
-import { JobManagerView } from "./views/jobManager/jobManagerView";
-import { ServerComponent } from "./connection/serverComponent";
-import { SQLJobManager } from "./connection/manager";
-import { OldSQLJob } from "./connection/sqlJob";
-import { notebookInit } from "./notebooks/IBMiSerializer";
-import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
-import Configuration from "./configuration";
-import { activateChat } from "./chat/chat";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
-import { Db2iUriHandler, getStatementUri } from "./uriHandler";
+import { getInstance, loadBase } from "./base";
+import { JobManager, initConfig, onConnectOrServerInstall } from "./config";
+import Configuration from "./configuration";
+import { SQLJobManager } from "./connection/manager";
+import { ServerComponent } from "./connection/serverComponent";
+import { OldSQLJob } from "./connection/sqlJob";
+import { languageInit } from "./language/providers";
 import { DbCache } from "./language/providers/logic/cache";
+import { notebookInit } from "./notebooks/IBMiSerializer";
+import { initialiseTestSuite } from "./testing";
+import { Db2iUriHandler, getStatementUri } from "./uriHandler";
+import { ExampleBrowser } from "./views/examples/exampleBrowser";
+import { JobManagerView } from "./views/jobManager/jobManagerView";
+import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
+import { queryHistory } from "./views/queryHistoryView";
+import { activateChat } from "./chat/chat";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -42,7 +42,7 @@ interface IDB2ChatResult extends vscode.ChatResult {
 // your extension is activated the very first time the command is executed
 
 export function activate(context: vscode.ExtensionContext): Db2i {
-  
+
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
   console.log(`Congratulations, your extension "vscode-db2i" is now active!`);
@@ -90,7 +90,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   console.log(`Developer environment: ${process.env.DEV}`);
   const devMode = process.env.DEV !== undefined;
-  let runTests: Function|undefined;
+  let runTests: Function | undefined;
   if (devMode) {
     // Run tests if not in production build
     runTests = initialiseTestSuite(context);
@@ -159,6 +159,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
 
 
+  instance.subscribe(context, `disconnected`, `db2i-disconnected`, () => ServerComponent.reset());
 
   return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new OldSQLJob(options) };
 }
