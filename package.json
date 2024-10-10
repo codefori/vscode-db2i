@@ -28,8 +28,7 @@
     "onLanguage:sql"
   ],
   "extensionDependencies": [
-    "halcyontechltd.code-for-ibmi",
-    "github.copilot-chat"
+    "halcyontechltd.code-for-ibmi"
   ],
   "main": "./dist/extension.js",
   "scripts": {
