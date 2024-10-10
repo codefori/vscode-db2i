@@ -48,11 +48,12 @@ export async function parsePromptForRefs(stream: vscode.ChatResponseStream, prom
   const tables: TableRefs = {};
   for (const word of prompt) {
     const [schema, table] = word.split(`.`);
-    if (schema && table) {
-      stream.progress(`looking up information for ${schema}.${table}`)
-      const data = await getTableMetaData(schema, table);
-      tables[table] = tables[table] || [];
-      tables[table].push(...data);
+    const cleanedTable = table.replace(/[,\/#!?$%\^&\*;:{}=\-_`~()]/g, "");
+    if (schema && cleanedTable) {
+      stream.progress(`looking up information for ${schema}.${cleanedTable}`)
+      const data = await getTableMetaData(schema, cleanedTable);
+      tables[cleanedTable] = tables[cleanedTable] || [];
+      tables[cleanedTable].push(...data);
     }
   }
   return tables;
