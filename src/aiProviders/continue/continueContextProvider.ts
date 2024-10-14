@@ -68,7 +68,7 @@ export class db2ContextProvider implements IContextProvider {
     const contextItems: ContextItem[] = [];
     try {
       switch (true) {
-        case fullInput.includes(`/self`):
+        case fullInput.includes(`*self`):
           // get current self code errors in job
           // build promt with error information
           // add to contextItems
