@@ -1,3 +1,6 @@
+import { RequestInfo, RequestInit, Response } from "node-fetch";
+import { URL } from "url";
+
 declare global {
   interface Window {
     ide?: "vscode";

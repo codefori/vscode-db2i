@@ -1,10 +1,16 @@
 import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
-import Statement from "../../database/statement";
 import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
 import { findPossibleTables } from "../../chat/context";
-import { ContextItem, ContextProviderDescription, ContextProviderExtras, ContextSubmenuItem, IContextProvider, LoadSubmenuItemsArgs } from "../../..";
+import {
+  ContextItem,
+  ContextProviderDescription,
+  ContextProviderExtras,
+  ContextSubmenuItem,
+  IContextProvider,
+  LoadSubmenuItemsArgs,
+} from "../../..";
 
 const db2ContextProviderDesc: ContextProviderDescription = {
   title: "db2i",
@@ -33,28 +39,55 @@ export class db2ContextProvider implements IContextProvider {
     return currentJob?.job.options.libraries[0] || "QGPL";
   };
 
-  async getSelfCodes(selected: JobInfo): Promise<SelfCodeNode[]|undefined> {
+  async getSelfCodes(selected: JobInfo): Promise<SelfCodeNode[] | undefined> {
     const current_job = selected.job.id;
-    const content = `SELECT 
-                      job_name, user_name, reason_code, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, message_text, message_second_level_text,
-                      program_library, program_name, program_type, module_name, client_applname, client_programid, initial_stack
-                    FROM qsys2.sql_error_log, lateral (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
-                    where job_name = '${current_job}'
-                    order by logged_time desc`;
+    const content = `
+    SELECT 
+      job_name, 
+      user_name, 
+      reason_code, 
+      logged_time, 
+      logged_sqlstate, 
+      logged_sqlcode, 
+      matches, 
+      stmttext, 
+      message_text, 
+      message_second_level_text,
+      program_library, 
+      program_name, 
+      program_type, 
+      module_name, 
+      client_applname, 
+      client_programid, 
+      initial_stack
+    FROM 
+      qsys2.sql_error_log, 
+      LATERAL (
+        SELECT * 
+        FROM TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode))
+      )
+    WHERE 
+      job_name = '${current_job}'
+    ORDER BY 
+      logged_time DESC
+  `;
 
     try {
-      const result = await selected.job.query<SelfCodeNode>(content).execute(10000);
+      const result = await selected.job
+        .query<SelfCodeNode>(content)
+        .execute(10000);
       if (result.success) {
         const data: SelfCodeNode[] = result.data.map((row) => ({
           ...row,
-          INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string)
+          INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string),
         }));
 
-      
         return data;
       }
     } catch (e) {
-      vscode.window.showErrorMessage(`An error occured fetching SELF code errors, and therefore will be disabled.`);
+      vscode.window.showErrorMessage(
+        `An error occured fetching SELF code errors, and therefore will be disabled.`
+      );
     }
   }
 
@@ -75,7 +108,7 @@ export class db2ContextProvider implements IContextProvider {
 
           if (job) {
             const selfCodes = await this.getSelfCodes(job);
-            
+
             let prompt = `Db2 for i  self code errors\n`;
             prompt += `Summarize the SELF code errors provided. The SQL Error Logging Facility (SELF) provides a mechanism that can be used to understand when SQL statements are encountering specific SQL errors or warnings. SELF is built into Db2 for i and can be enabled in specific jobs or system wide. Provide additional details about the errors and how to fix them.\n`;
             prompt += `Errors:\n`;
@@ -98,7 +131,8 @@ export class db2ContextProvider implements IContextProvider {
           );
           for (const table of Object.keys(tableRefs)) {
             const columnData: TableColumn[] = tableRefs[table];
-            const tableSchema = columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null; 
+            const tableSchema =
+              columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
 
             // create context item
             let prompt = `Db2 for i schema ${tableSchema} table ${table}\n`;
@@ -123,26 +157,6 @@ export class db2ContextProvider implements IContextProvider {
     args: LoadSubmenuItemsArgs
   ): Promise<ContextSubmenuItem[]> {
     return [];
-    // const job = this.getCurrentJob();
-    // const schema = this.getDefaultSchema();
-    // try {
-    //   const tableRefs = await this.findAllTables(schema);
-    //   const contextItems: ContextSubmenuItem[] = [];
-    //   for (const table of Object.keys(tableRefs)) {
-    //     const columnData = tableRefs[table];
-
-    //     contextItems.push({
-    //       id: table,
-    //       title: table,
-    //       description: `Schema from ${schema}`
-    //     })
-
-    //   }
-    //   return contextItems;
-    // } catch (error) {
-    //   vscode.window.showErrorMessage(`Failed to query Db2i database: ${error}`);
-    //   throw new Error(`Failed to query Db2i database: ${error}`);
-    // }
   }
 }
 
