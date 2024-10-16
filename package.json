@@ -559,6 +559,12 @@
         "icon": "$(database)"
       },
       {
+        "command": "vscode-db2i.jobManager.continue",
+        "title": "Register Continue Provider",
+        "category": "Db2 for i",
+        "icon": "$(star-full)"
+      },
+      {
         "command": "vscode-db2i.jobManager.closeJob",
         "title": "Close SQL Job",
         "category": "Db2 for i",
@@ -675,6 +681,12 @@
         "title": "Display SELF Code Details",
         "category": "Db2 for i",
         "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.self.explainSelf",
+        "title": "Explain SELF Code with continue",
+        "category": "Db2 for i",
+        "icon": "$(debug-alt)"
       },
       {
         "command": "vscode-db2i.self.help",
@@ -860,6 +872,11 @@
         },
         {
           "command": "vscode-db2i.jobManager.newJob",
+          "group": "navigation@1",
+          "when": "view == jobManager"
+        },
+        {
+          "command": "vscode-db2i.jobManager.continue",
           "group": "navigation@1",
           "when": "view == jobManager"
         },
@@ -1071,6 +1088,11 @@
         },
         {
           "command": "vscode-db2i.self.displayDetails",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.self.explainSelf",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
           "group": "navigation"
         }

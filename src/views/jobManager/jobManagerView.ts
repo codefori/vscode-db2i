@@ -11,6 +11,7 @@ import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
 import { selfCodesResultsView } from "./selfCodes/selfCodesResultsView";
 import { setCancelButtonVisibility } from "../results";
+import { registerContinueProvider } from "../../aiProviders/continue/continueContextProvider";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
@@ -283,6 +284,9 @@ export class JobManagerView implements TreeDataProvider<any> {
         await JobManager.endAll();
         this.refresh();
       }),
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.continue`, async () => {
+        vscode.commands.executeCommand(`continue.focusContinueInput`);
+      })
     )
   }
 

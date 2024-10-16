@@ -21,6 +21,7 @@ import { Db2iUriHandler, getStatementUri } from "./uriHandler";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
+import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
 import { queryHistory } from "./views/queryHistoryView";
 import { activateChat } from "./chat/chat";
 
@@ -93,11 +94,12 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     DbCache.resetCache();
     selfCodesView.setRefreshEnabled(false);
     selfCodesView.setJobOnly(false);
+     // register continue provider
+    registerContinueProvider();
     // Refresh the examples when we have it, so we only display certain examples
     onConnectOrServerInstall().then(() => {
       exampleBrowser.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
-
       if (devMode && runTests) {
         runTests();
       }

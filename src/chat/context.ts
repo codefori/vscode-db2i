@@ -18,6 +18,7 @@ export type TableRefs = { [key: string]: TableColumn[] };
 export async function getTableMetaData(schema: string, tableName: string): Promise<TableColumn[]> {
   const objectFindStatement = [
     `SELECT `,
+    `  column.TABLE_SCHEMA,`,
     `  column.TABLE_NAME,`,
     `  column.COLUMN_NAME,`,
     `  key.CONSTRAINT_NAME,`,
@@ -50,7 +51,9 @@ export async function parsePromptForRefs(stream: vscode.ChatResponseStream, prom
     const [schema, table] = word.split(`.`);
     const cleanedTable = table.replace(/[,\/#!?$%\^&\*;:{}=\-_`~()]/g, "");
     if (schema && cleanedTable) {
-      stream.progress(`looking up information for ${schema}.${cleanedTable}`)
+      if (stream !== null) {
+        stream.progress(`looking up information for ${schema}.${cleanedTable}`)
+      }
       const data = await getTableMetaData(schema, cleanedTable);
       tables[cleanedTable] = tables[cleanedTable] || [];
       tables[cleanedTable].push(...data);
