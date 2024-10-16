@@ -12,6 +12,8 @@ import {
   LoadSubmenuItemsArgs,
 } from "../../..";
 
+const DB2_SYSTEM_PROMPT = `You are an expert in IBM i, specializing in database features of Db2 for i. Your role is to assist developers in writing and debugging their SQL queries, as well as providing SQL programming advice and best practices.`
+
 const db2ContextProviderDesc: ContextProviderDescription = {
   title: "db2i",
   displayTitle: "Db2i",
@@ -101,7 +103,7 @@ export class db2ContextProvider implements IContextProvider {
     const contextItems: ContextItem[] = [];
     try {
       switch (true) {
-        case fullInput.includes(`*self`):
+        case (fullInput.includes(`*SELF`) || query?.includes(`*SELF`)):
           // get current self code errors in job
           // build promt with error information
           // add to contextItems
@@ -129,6 +131,11 @@ export class db2ContextProvider implements IContextProvider {
             schema,
             fullInput.split(` `)
           );
+          contextItems.push({
+            name: `SYSTEM PROMPT`,
+            description: `system prompt context`,
+            content: DB2_SYSTEM_PROMPT,
+          });
           for (const table of Object.keys(tableRefs)) {
             const columnData: TableColumn[] = tableRefs[table];
             const tableSchema =
@@ -136,6 +143,7 @@ export class db2ContextProvider implements IContextProvider {
 
             // create context item
             let prompt = `Db2 for i schema ${tableSchema} table ${table}\n`;
+            prompt += `SYSTEM Prompt`
             prompt += `Column Info: ${JSON.stringify(columnData)}\n\n`;
 
             contextItems.push({
