@@ -1,6 +1,6 @@
 import { getInstance } from "../base";
 
-import path from "path";
+import * as path from "path";
 import { OutputChannel, extensions, window } from "vscode";
 import { Config } from "../config";
 
@@ -8,7 +8,7 @@ import { stat } from "fs/promises";
 import { SERVER_VERSION_FILE } from "./SCVersion";
 
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
-import Crypto from 'crypto';
+import * as Crypto from 'crypto';
 import { readFileSync } from "fs";
 
 const ExecutablePathDir = `$HOME/.vscode/`;

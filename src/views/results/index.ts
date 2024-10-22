@@ -1,4 +1,5 @@
-import vscode, { SnippetString, ViewColumn, TreeView, window } from "vscode"
+import * as vscode from "vscode";
+import { SnippetString, ViewColumn, TreeView, window } from "vscode"
 
 import * as csv from "csv/sync";
 
