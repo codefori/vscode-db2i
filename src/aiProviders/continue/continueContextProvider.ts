@@ -11,8 +11,7 @@ import {
   IContextProvider,
   LoadSubmenuItemsArgs,
 } from "../../..";
-
-const DB2_SYSTEM_PROMPT = `You are an expert in IBM i, specializing in database features of Db2 for i. Your role is to assist developers in writing and debugging their SQL queries, as well as providing SQL programming advice and best practices.`
+import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "./prompts";
 
 const db2ContextProviderDesc: ContextProviderDescription = {
   title: "db2i",
@@ -101,9 +100,14 @@ export class db2ContextProvider implements IContextProvider {
     const schema = this.getDefaultSchema();
     const fullInput = extras.fullInput;
     const contextItems: ContextItem[] = [];
+    contextItems.push({
+      name: `SYSTEM PROMPT`,
+      description: `system prompt context`,
+      content: DB2_SYSTEM_PROMPT,
+    });
     try {
       switch (true) {
-        case (fullInput.includes(`*SELF`) || query?.includes(`*SELF`)):
+        case fullInput.includes(`*SELF`) || query?.includes(`*SELF`):
           // get current self code errors in job
           // build promt with error information
           // add to contextItems
@@ -111,9 +115,7 @@ export class db2ContextProvider implements IContextProvider {
           if (job) {
             const selfCodes = await this.getSelfCodes(job);
 
-            let prompt = `Db2 for i  self code errors\n`;
-            prompt += `Summarize the SELF code errors provided. The SQL Error Logging Facility (SELF) provides a mechanism that can be used to understand when SQL statements are encountering specific SQL errors or warnings. SELF is built into Db2 for i and can be enabled in specific jobs or system wide. Provide additional details about the errors and how to fix them.\n`;
-            prompt += `Errors:\n`;
+            let prompt = DB2_SELF_PROMPT.join(" ");
             prompt += JSON.stringify(selfCodes, null, 2);
 
             contextItems.push({
@@ -131,24 +133,18 @@ export class db2ContextProvider implements IContextProvider {
             schema,
             fullInput.split(` `)
           );
-          contextItems.push({
-            name: `SYSTEM PROMPT`,
-            description: `system prompt context`,
-            content: DB2_SYSTEM_PROMPT,
-          });
           for (const table of Object.keys(tableRefs)) {
             const columnData: TableColumn[] = tableRefs[table];
             const tableSchema =
               columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
 
             // create context item
-            let prompt = `Db2 for i schema ${tableSchema} table ${table}\n`;
-            prompt += `SYSTEM Prompt`
+            let prompt = `Db2 for i Table meta data for schema ${tableSchema} table ${table}\n`;
             prompt += `Column Info: ${JSON.stringify(columnData)}\n\n`;
 
             contextItems.push({
               name: `${job.name}-${tableSchema}-${table}`,
-              description: `Schema and table information or ${table}`,
+              description: `Schema and table information for ${table}`,
               content: prompt,
             });
           }

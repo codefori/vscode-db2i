@@ -112,8 +112,9 @@ export async function findPossibleTables(stream: vscode.ChatResponseStream, sche
   const result: TableColumn[] = await JobManager.runSQL(objectFindStatement);
 
   result.forEach(row => {
-    if (!tables[row.TABLE_NAME]) tables[row.TABLE_NAME] = [];
-    tables[row.TABLE_NAME].push(row);
+    const tableName = row.TABLE_NAME.toLowerCase();
+    if (!tables[tableName]) tables[tableName] = [];
+    tables[tableName].push(row);
   });
   return tables;
 }
