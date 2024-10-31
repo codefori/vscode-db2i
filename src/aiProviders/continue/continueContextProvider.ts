@@ -40,6 +40,14 @@ export class db2ContextProvider implements IContextProvider {
     return currentJob?.job.options.libraries[0] || "QGPL";
   };
 
+  tryParseJson(row: SelfCodeNode) {
+    try {
+      return JSON.parse(row.INITIAL_STACK as unknown as string);
+    } catch (e) {
+      return [];
+    }
+  }
+
   async getSelfCodes(selected: JobInfo): Promise<SelfCodeNode[] | undefined> {
     const current_job = selected.job.id;
     const content = `
@@ -80,7 +88,7 @@ export class db2ContextProvider implements IContextProvider {
       if (result.success) {
         const data: SelfCodeNode[] = result.data.map((row) => ({
           ...row,
-          INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string),
+          INITIAL_STACK: this.tryParseJson(row),
         }));
 
         return data;
