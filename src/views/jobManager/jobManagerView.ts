@@ -284,7 +284,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         await JobManager.endAll();
         this.refresh();
       }),
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.continue`, async () => {
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.focusContinue`, async () => {
         vscode.commands.executeCommand(`continue.focusContinueInput`);
       })
     )
