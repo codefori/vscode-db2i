@@ -13,6 +13,8 @@ import {
 } from "../../..";
 import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "./prompts";
 
+export let isContinueActive = false;
+
 const db2ContextProviderDesc: ContextProviderDescription = {
   title: "db2i",
   displayTitle: "Db2i",
@@ -176,6 +178,15 @@ export async function registerContinueProvider() {
   const provider = new db2ContextProvider();
   const continueID = `Continue.continue`;
   const continueEx = vscode.extensions.getExtension(continueID);
-  const continueAPI = continueEx?.exports;
-  continueAPI?.registerCustomContextProvider(provider);
+  if (continueEx) {
+    if (!continueEx.isActive) {
+      await continueEx.activate();
+    }
+  
+    isContinueActive = true;
+    const continueAPI = continueEx?.exports;
+    continueAPI?.registerCustomContextProvider(provider);
+    vscode.commands.executeCommand('setContext', 'continueExtensionActive', true);
+    vscode.window.showInformationMessage(`@Db2i context provider enabled in Continue!`);
+  }
 }

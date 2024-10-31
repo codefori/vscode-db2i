@@ -16,6 +16,7 @@ import { SQLExample } from "../../examples";
 import { JobInfo } from "../../../connection/manager";
 import { OldSQLJob } from "../../../connection/sqlJob";
 import { JobLogEntry } from "../../../connection/types";
+import { isContinueActive } from "../../../aiProviders/continue/continueContextProvider";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -70,7 +71,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
         }
       }),
       vscode.commands.registerCommand(`vscode-db2i.self.explainSelf`, async (item: SelfCodeTreeItem) => {
-        if (item && item.error) {
+        if (item && item.error && isContinueActive) {
           const jsonData = JSON.stringify(item.error, null, 2);
           const document = await vscode.workspace.openTextDocument({
             content: jsonData,

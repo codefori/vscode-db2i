@@ -9,9 +9,7 @@ import { displayJobLog } from "./jobLog";
 import { SelfValue, selfCodesMap } from "./selfCodes/nodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
-import { selfCodesResultsView } from "./selfCodes/selfCodesResultsView";
 import { setCancelButtonVisibility } from "../results";
-import { registerContinueProvider } from "../../aiProviders/continue/continueContextProvider";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
