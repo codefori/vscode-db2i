@@ -10,7 +10,7 @@ import {
   ContextSubmenuItem,
   IContextProvider,
   LoadSubmenuItemsArgs,
-} from "../../..";
+} from "@continuedev/core";
 import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "./prompts";
 
 export let isContinueActive = false;
