@@ -159,6 +159,25 @@ export class OldSQLJob extends SQLJob {
     return connectResult;
   }
 
+  async setCurrentSchema(schema: string): Promise<QueryResult<any>> {
+    if (schema) {
+      const upperSchema = schema.toUpperCase();
+      const result = await this.execute(`set current schema = ?`, {parameters: [upperSchema]});
+      if (result.success) {
+        const config = getInstance().getConfig();
+        const currentLibrary = config.currentLibrary.toUpperCase();
+    
+        if (upperSchema !== currentLibrary) {
+          config.currentLibrary = upperSchema;
+          await getInstance().setConfig(config);
+        }
+      }
+
+      return result;
+  
+    }
+  }
+
   async setSelfState(code: SelfValue) {
     try {
       const query: string = `SET SYSIBMADM.SELFCODES = '${code}'`

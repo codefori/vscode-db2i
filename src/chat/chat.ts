@@ -10,6 +10,7 @@ import {
   refsToMarkdown,
 } from "./context";
 import { chatRequest } from "./send";
+import { JobManager } from "../config";
 
 const CHAT_ID = `vscode-db2i.chat`;
 
@@ -36,7 +37,7 @@ export function activateChat(context: vscode.ExtensionContext) {
     let messages: vscode.LanguageModelChatMessage[];
 
     if (canTalkToDb()) {
-      const usingSchema = getDefaultSchema();
+      let usingSchema = getDefaultSchema();
 
       switch (request.command) {
         case `activity`:
@@ -58,7 +59,20 @@ export function activateChat(context: vscode.ExtensionContext) {
           await streamModelResponse(messages, stream, token);
 
           return { metadata: { command: "activity" } };
-
+        case `set-schema`:
+          stream.progress(`Setting Current Schema for SQL Job`);
+          const newSchema = request.prompt.split(' ')[0];
+          if (newSchema) {
+            const curJob = JobManager.getSelection()
+            if (curJob) {
+              const result = await curJob.job.setCurrentSchema(newSchema);
+              if (result) {
+                stream.progress(`Set Current Schema: ${newSchema}✅`);
+                usingSchema = newSchema;
+              }
+            }
+            return;
+          } 
         default:
           stream.progress(
             `Getting information from ${Statement.prettyName(usingSchema)}...`
@@ -82,18 +96,20 @@ export function activateChat(context: vscode.ExtensionContext) {
           ];
 
           if (context.history.length > 0) {
-            messages.push(...context.history.map(h => {
-              if ('prompt' in h) {
-                return vscode.LanguageModelChatMessage.Assistant(h.prompt);
-              } else {
-                return vscode.LanguageModelChatMessage.Assistant(
-                  h.response.filter(r => 'value' in r.value).map(r => r.value.value).join(`\n\n`)
-                );
-              }
-            }));
-
-            messages = messages.filter(m => m.content.trim().length > 0);
-          }
+            const historyMessages = context.history.map(h => {
+                if ('prompt' in h) {
+                    return vscode.LanguageModelChatMessage.Assistant(h.prompt);
+                } else {
+                    const responseContent = h.response
+                        .filter(r => r.value instanceof vscode.MarkdownString)
+                        .map(r => (r.value as vscode.MarkdownString).value)
+                        .join('\n\n');
+                    return vscode.LanguageModelChatMessage.Assistant(responseContent);
+                }
+            });
+        
+            messages.push(...historyMessages);
+        }
 
           if (Object.keys(refs).length > 0) {
             messages.push(
