@@ -13,6 +13,7 @@ import { chatRequest } from "./send";
 import { JobManager } from "../config";
 
 const CHAT_ID = `vscode-db2i.chat`;
+let usingSchema = getDefaultSchema();
 
 interface IDB2ChatResult extends vscode.ChatResult {
   metadata: {
@@ -37,7 +38,6 @@ export function activateChat(context: vscode.ExtensionContext) {
     let messages: vscode.LanguageModelChatMessage[];
 
     if (canTalkToDb()) {
-      let usingSchema = getDefaultSchema();
 
       switch (request.command) {
         case `activity`:
