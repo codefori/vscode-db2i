@@ -157,7 +157,7 @@
         },
         {
           "command": "vscode-db2i.self.explainSelf",
-          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && continueExtensionActive",
           "group": "navigation",
           "enablement": "vscode-db2i:continueExtensionActive"
         }
