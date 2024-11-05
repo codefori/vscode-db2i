@@ -562,7 +562,8 @@
         "command": "vscode-db2i.jobManager.focusContinue",
         "title": "Register Continue Provider",
         "category": "Db2 for i",
-        "icon": "$(star-full)"
+        "icon": "$(star-full)",
+        "enablement": "vscode-db2i:continueExtensionActive"
       },
       {
         "command": "vscode-db2i.jobManager.closeJob",
@@ -686,7 +687,8 @@
         "command": "vscode-db2i.self.explainSelf",
         "title": "Explain SELF Code with continue",
         "category": "Db2 for i",
-        "icon": "$(debug-alt)"
+        "icon": "$(debug-alt)",
+        "enablement": "vscode-db2i:continueExtensionActive"
       },
       {
         "command": "vscode-db2i.self.help",

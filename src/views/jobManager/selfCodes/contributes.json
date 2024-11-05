@@ -96,7 +96,8 @@
         "command": "vscode-db2i.self.explainSelf",
         "title": "Explain SELF Code with continue",
         "category": "Db2 for i",
-        "icon": "$(debug-alt)"
+        "icon": "$(debug-alt)",
+        "enablement": "vscode-db2i:continueExtensionActive"
       },
       {
         "command": "vscode-db2i.self.help",
@@ -157,7 +158,8 @@
         {
           "command": "vscode-db2i.self.explainSelf",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
-          "group": "navigation"
+          "group": "navigation",
+          "enablement": "vscode-db2i:continueExtensionActive"
         }
       ]
     }
