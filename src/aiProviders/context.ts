@@ -6,7 +6,7 @@ export function canTalkToDb() {
   return JobManager.getSelection() !== undefined;
 }
 
-export function getDefaultSchema(): string {
+export function getCurrentSchema(): string {
   const currentJob = JobManager.getSelection();
   return currentJob && currentJob.job.options.libraries[0]
     ? currentJob.job.options.libraries[0]
@@ -18,6 +18,7 @@ export type TableRefs = { [key: string]: TableColumn[] };
 export async function getTableMetaData(schema: string, tableName: string): Promise<TableColumn[]> {
   const objectFindStatement = [
     `SELECT `,
+    `  column.TABLE_SCHEMA,`,
     `  column.TABLE_NAME,`,
     `  column.COLUMN_NAME,`,
     `  key.CONSTRAINT_NAME,`,
@@ -50,7 +51,9 @@ export async function parsePromptForRefs(stream: vscode.ChatResponseStream, prom
     const [schema, table] = word.split(`.`);
     const cleanedTable = table.replace(/[,\/#!?$%\^&\*;:{}=\-_`~()]/g, "");
     if (schema && cleanedTable) {
-      stream.progress(`looking up information for ${schema}.${cleanedTable}`)
+      if (stream !== null) {
+        stream.progress(`looking up information for ${schema}.${cleanedTable}`)
+      }
       const data = await getTableMetaData(schema, cleanedTable);
       tables[cleanedTable] = tables[cleanedTable] || [];
       tables[cleanedTable].push(...data);
@@ -109,8 +112,9 @@ export async function findPossibleTables(stream: vscode.ChatResponseStream, sche
   const result: TableColumn[] = await JobManager.runSQL(objectFindStatement);
 
   result.forEach(row => {
-    if (!tables[row.TABLE_NAME]) tables[row.TABLE_NAME] = [];
-    tables[row.TABLE_NAME].push(row);
+    const tableName = row.TABLE_NAME.toLowerCase();
+    if (!tables[tableName]) tables[tableName] = [];
+    tables[tableName].push(row);
   });
   return tables;
 }

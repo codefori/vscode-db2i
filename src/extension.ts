@@ -21,8 +21,9 @@ import { Db2iUriHandler, getStatementUri } from "./uriHandler";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
+import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
 import { queryHistory } from "./views/queryHistoryView";
-import { activateChat } from "./chat/chat";
+import { activateChat, registerCopilotProvider } from "./aiProviders/copilot";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -97,24 +98,17 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     onConnectOrServerInstall().then(() => {
       exampleBrowser.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
-
       if (devMode && runTests) {
         runTests();
       }
     });
   });
 
-  const copilot = vscode.extensions.getExtension(`github.copilot-chat`);
 
-  if (copilot) {
-    if (!copilot.isActive) {
-      copilot.activate().then(() => {
-        activateChat(context);
-      });
-    } else {
-      activateChat(context);
-    }
-  }
+  // register copilot provider
+  registerCopilotProvider(context); 
+  // register continue provider
+  registerContinueProvider();
 
   instance.subscribe(context, `disconnected`, `db2i-disconnected`, () => ServerComponent.reset());
 

@@ -4,6 +4,7 @@ import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import { SQLJob } from "@ibm/mapepire-js";
 import { ConnectionResult, JobStatus, QueryResult, ServerRequest, ServerResponse } from "@ibm/mapepire-js/dist/src/types";
 import { JobLogEntry } from "./types";
+import Statement from "../database/statement";
 
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
@@ -166,6 +167,19 @@ export class OldSQLJob extends SQLJob {
       this.selfState = code;
     } catch (e) {
       throw e;
+    }
+  }
+  
+  async setCurrentSchema(schema: string): Promise<QueryResult<any>> {
+    if (schema) {
+      const upperSchema = Statement.delimName(schema, true);
+      const result = await this.execute(`set current schema = ?`, {parameters: [upperSchema]});
+      if (result.success) {
+        this.options.libraries[0] = upperSchema;
+      }
+
+      return result;
+  
     }
   }
 
