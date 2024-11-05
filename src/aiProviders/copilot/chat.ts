@@ -1,14 +1,14 @@
 import ollama, { ListResponse } from "ollama";
 import * as vscode from "vscode";
-import Statement from "../database/statement";
-import { AiConfig, AiProvider } from "./aiConfig";
+import Statement from "../../database/statement";
+import { AiConfig, AiProvider } from "../aiConfig";
 import {
   canTalkToDb,
   findPossibleTables,
   getDefaultSchema,
   getSystemStatus,
   refsToMarkdown,
-} from "./context";
+} from "../context";
 import { chatRequest } from "./send";
 
 const CHAT_ID = `vscode-db2i.chat`;

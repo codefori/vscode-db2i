@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
-import { findPossibleTables } from "../../chat/context";
+import { findPossibleTables } from "../context";
 import {
   ContextItem,
   ContextProviderDescription,
