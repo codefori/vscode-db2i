@@ -17,6 +17,18 @@ interface IDB2ChatResult extends vscode.ChatResult {
   };
 }
 
+export async function registerCopilotProvider(context: vscode.ExtensionContext) {
+  const copilot = vscode.extensions.getExtension(`github.copilot-chat`);
+
+  if (copilot) {
+    if (!copilot.isActive) {
+      await copilot.activate()
+    }
+
+    activateChat(context);
+  }
+}
+
 export function activateChat(context: vscode.ExtensionContext) {
   // chatHandler deals with the input from the chat windows,
   // and uses streamModelResponse to send the response back to the chat window
