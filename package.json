@@ -1026,9 +1026,8 @@
         },
         {
           "command": "vscode-db2i.self.explainSelf",
-          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && continueExtensionActive",
-          "group": "navigation",
-          "enablement": "vscode-db2i:continueExtensionActive"
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && vscode-db2i:continueExtensionActive",
+          "group": "navigation"
         }
       ],
       "editor/title": [
@@ -1289,7 +1288,6 @@
     "json-to-markdown-table": "^1.0.0",
     "lru-cache": "^6.0.0",
     "node-fetch": "^3.3.1",
-    "ollama": "^0.5.2",
     "showdown": "^2.1.0",
     "sql-formatter": "^14.0.0"
   }

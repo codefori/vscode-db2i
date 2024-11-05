@@ -1,4 +1,3 @@
-import ollama, { ListResponse } from "ollama";
 import * as vscode from "vscode";
 import Statement from "../../database/statement";
 import {

@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
-import { findPossibleTables } from "../context";
+import { canTalkToDb, findPossibleTables } from "../context";
 import {
   ContextItem,
   ContextProviderDescription,
@@ -106,66 +106,74 @@ export class db2ContextProvider implements IContextProvider {
     query: string,
     extras: ContextProviderExtras
   ): Promise<ContextItem[]> {
-    const job: JobInfo = this.getCurrentJob();
-    const schema = this.getDefaultSchema();
-    const fullInput = extras.fullInput;
     const contextItems: ContextItem[] = [];
-    contextItems.push({
-      name: `SYSTEM PROMPT`,
-      description: `system prompt context`,
-      content: DB2_SYSTEM_PROMPT,
-    });
-    try {
-      switch (true) {
-        case fullInput.includes(`*SELF`) || query?.includes(`*SELF`):
-          // get current self code errors in job
-          // build promt with error information
-          // add to contextItems
-
-          if (job) {
-            const selfCodes = await this.getSelfCodes(job);
-
-            let prompt = DB2_SELF_PROMPT.join(" ");
-            prompt += JSON.stringify(selfCodes, null, 2);
-
-            contextItems.push({
-              name: `${job.name}-self`,
-              description: `SELF code errors for ${job.name}`,
-              content: prompt,
-            });
-          }
-
-          return contextItems;
-        default:
-          // const contextItems: ContextItem[] = [];
-          const tableRefs = await findPossibleTables(
-            null,
-            schema,
-            fullInput.split(` `)
-          );
-          for (const table of Object.keys(tableRefs)) {
-            const columnData: TableColumn[] = tableRefs[table];
-            const tableSchema =
-              columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
-
-            // create context item
-            let prompt = `Db2 for i Table meta data for schema ${tableSchema} table ${table}\n`;
-            prompt += `Column Info: ${JSON.stringify(columnData)}\n\n`;
-
-            contextItems.push({
-              name: `${job.name}-${tableSchema}-${table}`,
-              description: `Schema and table information for ${table}`,
-              content: prompt,
-            });
-          }
-
-          return contextItems;
+    if (canTalkToDb()) {
+      const job: JobInfo = this.getCurrentJob();
+      const schema = this.getDefaultSchema();
+      const fullInput = extras.fullInput;
+      contextItems.push({
+        name: `SYSTEM PROMPT`,
+        description: `system prompt context`,
+        content: DB2_SYSTEM_PROMPT,
+      });
+      try {
+        switch (true) {
+          case fullInput.includes(`*SELF`) || query?.includes(`*SELF`):
+            // get current self code errors in job
+            // build promt with error information
+            // add to contextItems
+  
+            if (job) {
+              const selfCodes = await this.getSelfCodes(job);
+  
+              let prompt = DB2_SELF_PROMPT.join(" ");
+              prompt += JSON.stringify(selfCodes, null, 2);
+  
+              contextItems.push({
+                name: `${job.name}-self`,
+                description: `SELF code errors for ${job.name}`,
+                content: prompt,
+              });
+            }
+  
+            return contextItems;
+          default:
+            // const contextItems: ContextItem[] = [];
+            const tableRefs = await findPossibleTables(
+              null,
+              schema,
+              fullInput.split(` `)
+            );
+            for (const table of Object.keys(tableRefs)) {
+              const columnData: TableColumn[] = tableRefs[table];
+              const tableSchema =
+                columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
+  
+              // create context item
+              let prompt = `Db2 for i Table meta data for schema ${tableSchema} table ${table}\n`;
+              prompt += `Column Info: ${JSON.stringify(columnData)}\n\n`;
+  
+              contextItems.push({
+                name: `${job.name}-${tableSchema}-${table}`,
+                description: `Schema and table information for ${table}`,
+                content: prompt,
+              });
+            }
+  
+            return contextItems;
+        }
+      } catch (error) {
+        vscode.window.showErrorMessage(`Failed to query Db2i database: ${error}`);
+        throw new Error(`Failed to query Db2i database: ${error}`);
+      } finally {
       }
-    } catch (error) {
-      vscode.window.showErrorMessage(`Failed to query Db2i database: ${error}`);
-      throw new Error(`Failed to query Db2i database: ${error}`);
-    } finally {
+      
+    } else {
+      throw new Error(
+        `Not connected to the database. Please check your configuration.`
+      );
     }
+    
   }
   async loadSubmenuItems(
     args: LoadSubmenuItemsArgs
