@@ -23,7 +23,7 @@ import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
 import { queryHistory } from "./views/queryHistoryView";
-import { activateChat } from "./aiProviders/copilot/chat";
+import { activateChat } from "./aiProviders/copilot";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,

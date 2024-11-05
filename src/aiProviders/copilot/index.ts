@@ -1,29 +1,20 @@
 import ollama, { ListResponse } from "ollama";
 import * as vscode from "vscode";
 import Statement from "../../database/statement";
-import { AiConfig, AiProvider } from "../aiConfig";
 import {
   canTalkToDb,
   findPossibleTables,
-  getDefaultSchema,
+  getCurrentSchema,
   getSystemStatus,
-  refsToMarkdown,
 } from "../context";
-import { chatRequest } from "./send";
 import { JobManager } from "../../config";
 
 const CHAT_ID = `vscode-db2i.chat`;
-let usingSchema = getDefaultSchema();
 
 interface IDB2ChatResult extends vscode.ChatResult {
   metadata: {
     command: string;
   };
-}
-
-interface ModelQuickPickItem extends vscode.QuickPickItem {
-  provider: AiProvider;
-  family: string;
 }
 
 export function activateChat(context: vscode.ExtensionContext) {
@@ -35,9 +26,11 @@ export function activateChat(context: vscode.ExtensionContext) {
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken
   ): Promise<IDB2ChatResult> => {
+    const copilotFamily = request.model.family;
     let messages: vscode.LanguageModelChatMessage[];
 
     if (canTalkToDb()) {
+      let usingSchema = getCurrentSchema();
 
       switch (request.command) {
         case `activity`:
@@ -56,7 +49,7 @@ export function activateChat(context: vscode.ExtensionContext) {
             vscode.LanguageModelChatMessage.User(request.prompt),
           ];
 
-          await streamModelResponse(messages, stream, token);
+          await copilotRequest(copilotFamily, messages, {}, token, stream);
 
           return { metadata: { command: "activity" } };
 
@@ -125,7 +118,7 @@ export function activateChat(context: vscode.ExtensionContext) {
 
           messages.push(vscode.LanguageModelChatMessage.User(request.prompt))
 
-          await streamModelResponse(messages, stream, token);
+          await copilotRequest(request.model.family, messages, {}, token, stream);
 
           return { metadata: { command: "build" } };
       }
@@ -139,98 +132,23 @@ export function activateChat(context: vscode.ExtensionContext) {
   const chat = vscode.chat.createChatParticipant(CHAT_ID, chatHandler);
   chat.iconPath = new vscode.ThemeIcon(`database`);
 
-  const changeModelCommand = vscode.commands.registerCommand(
-    `vscode-db2i.ai.changeModel`,
-    selectProviderAndModel
-  );
-
-  context.subscriptions.push(chat, changeModelCommand);
+  context.subscriptions.push(chat);
 }
 
-let lastSelectedModel: string | null = null;
-
-async function showModelProviderIfNeeded(
-  stream: vscode.ChatResponseStream,
-  chosenProvider: AiProvider,
-  chosenModel: string
-) {
-  const currentModel = AiConfig.getModel();
-
-  if (lastSelectedModel === null || lastSelectedModel !== currentModel) {
-    stream.markdown(
-      `**Provider👨‍💻:** ${chosenProvider}\n\n**Model🧠:** ${chosenModel}\n\n***\n\n`
-    );
-    lastSelectedModel = currentModel;
-  }
-}
-
-async function streamModelResponse(
+async function copilotRequest(
+  model: string,
   messages: vscode.LanguageModelChatMessage[],
-  stream: vscode.ChatResponseStream,
-  token: vscode.CancellationToken
-) {
-  const chosenProvider = AiConfig.getProvider();
-  const chosenModel = AiConfig.getModel();
+  options: vscode.LanguageModelChatRequestOptions,
+  token: vscode.CancellationToken,
+  stream: vscode.ChatResponseStream
+): Promise<void> {
+  const models = await vscode.lm.selectChatModels({ family: model });
+  if (models.length > 0) {
+    const [first] = models;
+    const response = await first.sendRequest(messages, options, token);
 
-  if (chosenProvider === `none`) {
-    stream.markdown(
-      `No AI provider selected. Please select an AI provider and model.`
-    );
-    stream.button({
-      command: `vscode-db2i.ai.changeModel`,
-      title: `Select AI Provider and Model`,
-    });
-    return;
-  }
-
-  showModelProviderIfNeeded(stream, chosenProvider, chosenModel);
-  stream.progress(`Provider: ${chosenProvider} Model: ${chosenModel}`);
-
-  return chatRequest(chosenProvider, messages, {}, token, stream);
-}
-
-async function selectProviderAndModel() {
-  const selected = AiConfig.getModel();
-  const copilotModels = await vscode.lm.selectChatModels();
-  let ollamaModels: ListResponse = { models: [] };
-
-  // try {
-  //   ollamaModels = await ollama.list();
-  // } catch (e) {}
-
-  const provider = await vscode.window.showQuickPick(
-    [
-      { kind: vscode.QuickPickItemKind.Separator, label: "Ollama Models" },
-      ...ollamaModels.models.map(
-        (model): ModelQuickPickItem => ({
-          label: model.name,
-          family: model.name,
-          provider: "Ollama",
-          iconPath: new vscode.ThemeIcon("heart"),
-          description: selected === model.name ? "Selected" : "",
-        })
-      ),
-      {
-        kind: vscode.QuickPickItemKind.Separator,
-        label: "GitHub Copilot Models",
-      },
-      ...copilotModels.map(
-        (model): ModelQuickPickItem => ({
-          label: model.name,
-          family: model.family,
-          provider: "GitHub Copilot",
-          iconPath: new vscode.ThemeIcon("copilot"),
-          description: selected === model.family ? "Selected" : "",
-        })
-      ),
-    ],
-    {
-      title: "Select the AI model",
+    for await (const fragment of response.text) {
+      stream.markdown(fragment);
     }
-  );
-
-  if (provider && "provider" in provider && "family" in provider) {
-    AiConfig.setProvider(provider.provider);
-    AiConfig.setModel(provider.family);
   }
 }

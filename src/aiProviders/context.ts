@@ -6,7 +6,7 @@ export function canTalkToDb() {
   return JobManager.getSelection() !== undefined;
 }
 
-export function getDefaultSchema(): string {
+export function getCurrentSchema(): string {
   const currentJob = JobManager.getSelection();
   return currentJob && currentJob.job.options.libraries[0]
     ? currentJob.job.options.libraries[0]
