@@ -146,18 +146,20 @@ export class db2ContextProvider implements IContextProvider {
             );
             for (const table of Object.keys(tableRefs)) {
               const columnData: TableColumn[] = tableRefs[table];
-              const tableSchema =
-                columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
-  
-              // create context item
-              let prompt = `Db2 for i Table meta data for schema ${tableSchema} table ${table}\n`;
-              prompt += `Column Info: ${JSON.stringify(columnData)}\n\n`;
-  
-              contextItems.push({
-                name: `${job.name}-${tableSchema}-${table}`,
-                description: `Schema and table information for ${table}`,
-                content: prompt,
-              });
+              if (columnData && columnData.length > 0) {
+                const tableSchema =
+                  columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
+
+                // create context item
+                let prompt = `Db2 for i Table meta data for schema ${tableSchema} table ${table}\n`;
+                prompt += `Column Info: ${JSON.stringify(columnData)}\n\n`;
+
+                contextItems.push({
+                  name: `${job.name}-${tableSchema}-${table}`,
+                  description: `Schema and table information for ${table}`,
+                  content: prompt,
+                });
+              }
             }
   
             return contextItems;
