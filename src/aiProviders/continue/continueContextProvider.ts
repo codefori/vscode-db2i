@@ -197,6 +197,5 @@ export async function registerContinueProvider() {
     const continueAPI = continueEx?.exports;
     continueAPI?.registerCustomContextProvider(provider);
     vscode.commands.executeCommand('setContext', 'vscode-db2i:continueExtensionActive', true);
-    vscode.window.showInformationMessage(`@Db2i context provider enabled in Continue!`);
   }
 }
