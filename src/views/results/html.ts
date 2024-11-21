@@ -120,6 +120,8 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
               if (trWithColumn && trWithColumn.column) {
                 const chosenColumn = trWithColumn.column;
                 const chosenColumnDetail = updateTable.columns.find(col => col.name === chosenColumn);
+                if (!chosenColumnDetail) return;
+                
                 const parentRow = trWithColumn.parentElement;
 
                 const updateKeyColumns = updateTable.columns.filter(col => col.useInWhere);
