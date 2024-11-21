@@ -61,6 +61,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
         case `update`:
           if (message.id && message.update && message.bindings) {
+            console.log(message);
             try {
               const result = await JobManager.runSQL(message.update, {parameters: message.bindings});
               postCellResponse(message.id, true);
@@ -199,7 +200,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           currentColumns = tableInfo.map((column) => ({
             name: column.COLUMN_NAME, 
             jsType: column.NUMERIC_PRECISION ? `number` : `asString`, 
-            useInWhere: column.IS_IDENTITY === `YES` || column.CONSTRAINT_NAME !== null,
+            useInWhere: column.IS_IDENTITY === `YES`,
             maxInputLength: column.CHARACTER_MAXIMUM_LENGTH
           }));
 

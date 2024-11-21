@@ -129,19 +129,19 @@ document.getElementById('resultset').onclick = function(e){
       }
     }
 
-    const finishEditing = (currentNode) => {
-      if (currentNode === undefined) return;
+    const finishEditing = () => {
+      if (editableNode === undefined) return;
 
       // Remove keydown listener
-      currentNode.removeEventListener('keydown', keydownEvent);
+      editableNode.removeEventListener('keydown', keydownEvent);
 
-      currentNode.contentEditable = false;
-      let newValue = currentNode.innerText;
+      editableNode.contentEditable = false;
+      let newValue = editableNode.innerText;
 
       if (newValue === chosenValue) return;
       if (chosenColumnDetail.maxInputLength && newValue.length > chosenColumnDetail.maxInputLength) {
         newValue = newValue.substring(0, chosenColumnDetail.maxInputLength);
-        currentNode.innerText = newValue;
+        editableNode.innerText = newValue;
       }
 
       const useRrn = updateKeyColumns.length === 1 && updateKeyColumns.some(col => col.name === 'RRN');
@@ -159,7 +159,7 @@ document.getElementById('resultset').onclick = function(e){
               bindings.push(newValue);
               updateStatement += '?';
             } else {
-              currentNode.innerHTML = chosenValue;
+              editableNode.innerHTML = chosenValue;
               return;
             }
             break;
@@ -196,9 +196,9 @@ document.getElementById('resultset').onclick = function(e){
         }
       }
 
-      currentNode = undefined;
+      requestCellUpdate(editableNode, chosenValue, updateStatement, bindings);
 
-      requestCellUpdate(currentNode, chosenValue, updateStatement, bindings);
+      editableNode = undefined;
     }
 
     editableNode.addEventListener('blur', (e) => {
