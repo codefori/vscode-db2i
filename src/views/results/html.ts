@@ -38,7 +38,15 @@ export function getLoadingHTML(): string {
   `;
 }
 
-export function generateScroller(basicSelect: string, isCL: boolean, withCancel?: boolean): string {
+export interface UpdatableInfo {table: string, columns: BasicColumn[]};
+
+export interface BasicColumn {
+  name: string;
+  useInWhere: boolean
+  jsType: "number"|"string";
+}
+
+export function generateScroller(basicSelect: string, isCL: boolean, withCancel?: boolean, updatable?: UpdatableInfo): string {
   const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
 
   return /*html*/`
@@ -56,6 +64,10 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
           const statusId = 'status';
           const jobId = 'jobId';
           const messageSpanId = 'messageSpan';
+
+          // Updatable information
+
+          const updateTable = ${JSON.stringify(updatable)};
 
           let myQueryId = '';
           let columnMetaData = undefined;
@@ -75,6 +87,90 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                 }
               }
             }, { threshold: [0] }).observe(document.getElementById(messageSpanId));
+
+            document.getElementById('resultset').onclick = function(e){
+              if (updateTable === undefined) return;
+
+              const updateKeyColumns = updateTable.columns.filter(col => col.useInWhere);
+              let idValues = [];
+
+              var e = e || window.event;
+              var target = e.target || e.srcElement;
+
+              let chosenValue;
+              let trWithColumn;
+              let editableNode;
+
+              if (target.tagName.toLowerCase() == "div") {
+                chosenValue = target.innerText;
+                editableNode = target;
+                trWithColumn = target.parentElement;
+              }
+              else if (target.tagName.toLowerCase() == "td") {
+                // get the inner div
+                chosenValue = target.firstChild.innerText;
+                editableNode = target;
+                trWithColumn = target;
+              }
+
+              if (trWithColumn && trWithColumn.column) {
+                const chosenColumn = trWithColumn.column;
+                const chosenColumnDetail = updateTable.columns.find(col => col.name === chosenColumn);
+                const parentRow = trWithColumn.parentElement;
+
+                let idValues = [];
+                for (let i = 0; i < parentRow.cells.length; i++) {
+                  const cell = parentRow.cells[i];
+                  if (updateKeyColumns.some(col => col.name === cell.column)) {
+                    idValues.push(cell.firstChild.innerText);
+                  }
+                }
+
+                editableNode.contentEditable = true;
+                editableNode.addEventListener('blur', (e) => {
+                  // Code to execute when the element loses focus
+                  editableNode.contentEditable = false;
+                  const newValue = editableNode.innerText;
+
+                  if (newValue === chosenValue) return;
+
+                  let updateStatement = 'UPDATE ' + updateTable.table + ' SET ' + chosenColumn + ' = ';
+
+                  switch (chosenColumnDetail.jsType) {
+                    case 'number':
+                      updateStatement += newValue;
+                      break;
+                    case 'string':
+                      updateStatement += "'" + newValue + "'";
+                      break;
+                  }
+
+                  updateStatement += ' WHERE ';
+                  
+                  for (let i = 0; i < updateKeyColumns.length; i++) {
+                    if (idValues[i] === 'null') continue;
+                    updateStatement += updateKeyColumns[i].name + ' = ';
+                    switch (updateKeyColumns[i].jsType) {
+                      case 'number':
+                        updateStatement += idValues[i];
+                        break;
+                      case 'string':
+                        updateStatement += "'" + idValues[i] + "'";
+                        break;
+                    }
+
+                    if (i < updateKeyColumns.length - 1) {
+                      updateStatement += ' AND ';
+                    }
+                  }
+
+                  vscode.postMessage({
+                    command: 'update',
+                    update: updateStatement,
+                  });
+                }, {once: true});
+              }
+            };
 
             window.addEventListener('message', event => {
               const data = event.data;
@@ -174,17 +270,19 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
           }
 
           function appendRows(rows) {
-            var tBodyRef = document.getElementById(htmlTableId).getElementsByTagName('tbody')[0];
+            let tBodyRef = document.getElementById(htmlTableId).getElementsByTagName('tbody')[0];
 
             for (const row of rows) {
               // Insert a row at the end of table
-              var newRow = tBodyRef.insertRow()
+              let newRow = tBodyRef.insertRow()
+              let currentColumn = 0;
 
               for (const cell of row) {
+                let columnName = columnMetaData[currentColumn].name;
                 // Insert a cell at the end of the row
-                var newCell = newRow.insertCell();
+                let newCell = newRow.insertCell();
 
-                var newDiv = document.createElement("div");
+                let newDiv = document.createElement("div");
                 newDiv.className = "hoverable";
 
                 // Append a formatted JSON object to the cell
@@ -205,7 +303,9 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                   newDiv.appendChild(document.createTextNode(cell === undefined ? 'null' : cell));
                 }
                 
+                newCell.column = columnName;
                 newCell.appendChild(newDiv);
+                currentColumn += 1;
               }
             }
           }

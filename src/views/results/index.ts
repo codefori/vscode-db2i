@@ -6,7 +6,7 @@ import * as csv from "csv/sync";
 
 import { JobManager } from "../../config";
 import Document from "../../language/sql/document";
-import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
+import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import Statement from "../../language/sql/statement";
 import { ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
@@ -224,7 +224,13 @@ async function runHandler(options?: StatementInfo) {
           if (inWindow) {
             useWindow(possibleTitle, options.viewColumn);
           }
-          chosenView.setScrolling(statementDetail.content, false, undefined, inWindow); // Never errors
+
+          let updatableTable: ObjectRef | undefined;
+          if (statement.type === StatementType.Select && refs.length === 1) {
+            updatableTable = refs[0];
+          }
+
+          chosenView.setScrolling(statementDetail.content, false, undefined, inWindow, updatableTable); // Never errors
 
         } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
           // If it's an explain, we need to 

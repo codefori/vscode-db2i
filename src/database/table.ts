@@ -1,8 +1,6 @@
 
-import vscode from "vscode"
 import { JobManager } from "../config";
 import { getInstance } from "../base";
-import Statement from "./statement";
 
 export default class Table {
   /**

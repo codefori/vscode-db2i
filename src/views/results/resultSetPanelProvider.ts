@@ -6,6 +6,9 @@ import { updateStatusBar } from "../jobManager/statusBar";
 import Configuration from "../../configuration";
 import * as html from "./html";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
+import { ObjectRef } from "../../language/sql/types";
+import Table from "../../database/table";
+import Statement from "../../database/statement";
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel;
@@ -45,6 +48,19 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       switch (message.command) {
         case `cancel`:
           this.endQuery();
+          break;
+
+        case `update`:
+          if (message.update) {
+            try {
+              const result = await JobManager.runSQL(message.update);
+            } catch (e) {
+              this.setError(e.message);
+              if (this.currentQuery) {
+                this.currentQuery.close();
+              }
+            }
+          }
           break;
 
         default:
@@ -151,11 +167,36 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
   }
 
-  async setScrolling(basicSelect, isCL = false, queryId: string = ``, withCancel = false) {
+  async setScrolling(basicSelect, isCL = false, queryId: string = ``, withCancel = false, ref?: ObjectRef) {
     this.loadingState = false;
     await this.focus();
 
-    this._view.webview.html = html.generateScroller(basicSelect, isCL, withCancel);
+    let updatable: html.UpdatableInfo|undefined;
+
+    if (ref) {
+      const schema = ref.object.schema || ref.object.system;
+      if (schema) {
+        const tableInfo = await Table.getItems(
+          Statement.delimName(schema, true), 
+          Statement.delimName(ref.object.name, true)
+        );
+
+        if (tableInfo.length > 0) {
+          var currentColumns: html.BasicColumn[]|undefined;
+      
+          currentColumns = tableInfo.map((column) => ({name: column.COLUMN_NAME, jsType: column.NUMERIC_PRECISION ? `number` : `string`, useInWhere: column.IS_IDENTITY === `YES` || column.CONSTRAINT_NAME !== null}));
+
+          if (currentColumns.some(c => c.useInWhere)) {
+            updatable = {
+              table: schema + `.` + ref.object.name,
+              columns: currentColumns
+            }
+          }
+        }
+      }
+    }
+
+    this._view.webview.html = html.generateScroller(basicSelect, isCL, withCancel, updatable);
 
     this._view.webview.postMessage({
       command: `fetch`,
