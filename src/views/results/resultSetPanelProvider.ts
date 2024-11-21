@@ -167,7 +167,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
   }
 
-  async setScrolling(basicSelect, isCL = false, queryId: string = ``, withCancel = false, ref?: ObjectRef) {
+  async setScrolling(basicSelect: string, isCL = false, queryId: string = ``, withCancel = false, ref?: ObjectRef) {
     this.loadingState = false;
     await this.focus();
 
@@ -182,13 +182,21 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         );
 
         if (tableInfo.length > 0) {
-          var currentColumns: html.BasicColumn[]|undefined;
+          let currentColumns: html.BasicColumn[]|undefined;
       
           currentColumns = tableInfo.map((column) => ({name: column.COLUMN_NAME, jsType: column.NUMERIC_PRECISION ? `number` : `asString`, useInWhere: column.IS_IDENTITY === `YES` || column.CONSTRAINT_NAME !== null}));
 
           if (!currentColumns.some(c => c.useInWhere)) {
-            // Let's fallback and use all the columns in the where!
-            currentColumns = tableInfo.map((column) => ({name: column.COLUMN_NAME, jsType: column.NUMERIC_PRECISION ? `number` : `asString`, useInWhere: true}))
+            // We need to override the input statement if they want to do updatable
+            const whereClauseStart = basicSelect.toLowerCase().indexOf(`where`);
+            let fromWhereClause: string|undefined;
+
+            if (whereClauseStart > 0) {
+              fromWhereClause = basicSelect.substring(whereClauseStart);
+            }
+
+            basicSelect = `select rrn(t) as RRN, t.* from ${schema}.${ref.object.name} as t ${fromWhereClause || ``}`;
+            currentColumns = [{name: `RRN`, jsType: `number`, useInWhere: true}, ...currentColumns];
           }
 
           updatable = {

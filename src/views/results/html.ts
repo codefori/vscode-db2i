@@ -119,6 +119,8 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
 
               if (trWithColumn && trWithColumn.column) {
                 const chosenColumn = trWithColumn.column;
+                if (chosenColumn === 'RRN') return;
+
                 const chosenColumnDetail = updateTable.columns.find(col => col.name === chosenColumn);
                 if (!chosenColumnDetail) return;
                 
@@ -158,8 +160,10 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
 
                   if (newValue === chosenValue) return;
 
+                  const useRrn = updateKeyColumns.length === 1 && updateKeyColumns.some(col => col.name === 'RRN');
+
                   let bindings = [];
-                  let updateStatement = 'UPDATE ' + updateTable.table + ' SET ' + chosenColumn + ' = ';
+                  let updateStatement = 'UPDATE ' + updateTable.table + ' t SET t.' + chosenColumn + ' = ';
 
                   if (newValue === 'null') {
                     updateStatement += 'NULL';
@@ -187,7 +191,13 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                   
                   for (let i = 0; i < updateKeyColumns.length; i++) {
                     if (idValues[i] === 'null') continue;
-                    updateStatement += updateKeyColumns[i].name + ' = ?';
+
+                    if (useRrn && updateKeyColumns[i].name === 'RRN') {
+                      updateStatement += 'RRN(t) = ?';
+                    } else {
+                      updateStatement += updateKeyColumns[i].name + ' = ?';
+                    }
+
                     switch (updateKeyColumns[i].jsType) {
                       case 'number':
                         bindings.push(Number(idValues[i]));
