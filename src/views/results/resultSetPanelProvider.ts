@@ -186,12 +186,15 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       
           currentColumns = tableInfo.map((column) => ({name: column.COLUMN_NAME, jsType: column.NUMERIC_PRECISION ? `number` : `asString`, useInWhere: column.IS_IDENTITY === `YES` || column.CONSTRAINT_NAME !== null}));
 
-          if (currentColumns.some(c => c.useInWhere)) {
-            updatable = {
-              table: schema + `.` + ref.object.name,
-              columns: currentColumns
-            }
+          if (!currentColumns.some(c => c.useInWhere)) {
+            // Let's fallback and use all the columns in the where!
+            currentColumns = tableInfo.map((column) => ({name: column.COLUMN_NAME, jsType: column.NUMERIC_PRECISION ? `number` : `asString`, useInWhere: true}))
           }
+
+          updatable = {
+            table: schema + `.` + ref.object.name,
+            columns: currentColumns
+          };
         }
       }
     }

@@ -125,6 +125,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                 const parentRow = trWithColumn.parentElement;
 
                 const updateKeyColumns = updateTable.columns.filter(col => col.useInWhere);
+                if (updateKeyColumns.length === 0) return;
 
                 let idValues = [];
                 for (let i = 0; i < parentRow.cells.length; i++) {
