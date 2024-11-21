@@ -44,6 +44,7 @@ export interface BasicColumn {
   name: string;
   useInWhere: boolean
   jsType: "number"|"asString";
+  maxInputLength?: number;
 }
 
 export function generateScroller(basicSelect: string, isCL: boolean, withCancel?: boolean, updatable?: UpdatableInfo): string {
@@ -156,9 +157,13 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                   editableNode.removeEventListener('keydown', keydownEvent);
 
                   editableNode.contentEditable = false;
-                  const newValue = editableNode.innerText;
+                  let newValue = editableNode.innerText;
 
                   if (newValue === chosenValue) return;
+                  if (chosenColumnDetail.maxInputLength && newValue.length > chosenColumnDetail.maxInputLength) {
+                    newValue = newValue.substring(0, chosenColumnDetail.maxInputLength);
+                    editableNode.innerText = newValue;
+                  }
 
                   const useRrn = updateKeyColumns.length === 1 && updateKeyColumns.some(col => col.name === 'RRN');
 

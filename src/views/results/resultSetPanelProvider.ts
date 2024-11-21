@@ -184,7 +184,12 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         if (tableInfo.length > 0) {
           let currentColumns: html.BasicColumn[]|undefined;
       
-          currentColumns = tableInfo.map((column) => ({name: column.COLUMN_NAME, jsType: column.NUMERIC_PRECISION ? `number` : `asString`, useInWhere: column.IS_IDENTITY === `YES` || column.CONSTRAINT_NAME !== null}));
+          currentColumns = tableInfo.map((column) => ({
+            name: column.COLUMN_NAME, 
+            jsType: column.NUMERIC_PRECISION ? `number` : `asString`, 
+            useInWhere: column.IS_IDENTITY === `YES` || column.CONSTRAINT_NAME !== null,
+            maxInputLength: column.CHARACTER_MAXIMUM_LENGTH
+          }));
 
           if (!currentColumns.some(c => c.useInWhere)) {
             // We need to override the input statement if they want to do updatable
