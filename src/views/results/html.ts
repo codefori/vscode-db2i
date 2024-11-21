@@ -95,6 +95,32 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
               }
             }, { threshold: [0] }).observe(document.getElementById(messageSpanId));
 
+            let updateRequests = {};
+
+            function requestCellUpdate(cellNode, originalValue, statement, bindings) {
+              const randomId = Math.floor(Math.random() * 1000000);
+              updateRequests[randomId] = {cellNode, originalValue};
+
+              vscode.postMessage({
+                command: 'update',
+                id: randomId,
+                update: statement,
+                bindings: bindings
+              });
+            }
+
+            function handleCellResponse(id, success) {
+              const previousRequest = updateRequests[id];
+
+              if (previousRequest) {
+                if (!success) {
+                  previousRequest.cellNode.innerText = previousRequest.originalValue;
+                }
+
+                delete updateRequests[id];
+              }
+            }
+
             document.getElementById('resultset').onclick = function(e){
               console.log('click')
               if (updateTable === undefined) return;
@@ -219,11 +245,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
 
                   editableNode = undefined;
 
-                  vscode.postMessage({
-                    command: 'update',
-                    update: updateStatement,
-                    bindings: bindings
-                  });
+                  requestCellUpdate(target, chosenValue, updateStatement, bindings);
                 }
 
                 editableNode.addEventListener('blur', (e) => {
@@ -246,6 +268,11 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
               }
 
               switch (data.command) {
+                case 'cellResponse':
+                  if (data.id) {
+                    handleCellResponse(data.id, data.success === true);
+                  }
+                  break;
                 case 'rows':
                   hideSpinner();
 

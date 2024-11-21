@@ -1,4 +1,4 @@
-import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
+import { window, CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
 
 import { setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
@@ -44,6 +44,15 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     };
 
     webviewView.webview.html = html.getLoadingHTML();
+
+    const postCellResponse = (id: number, success: boolean) => {
+      this._view.webview.postMessage({
+        command: `cellResponse`,
+        id,
+        success
+      });
+    }
+
     this._view.webview.onDidReceiveMessage(async (message) => {
       switch (message.command) {
         case `cancel`:
@@ -51,14 +60,17 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           break;
 
         case `update`:
-          if (message.update && message.bindings) {
+          if (message.id && message.update && message.bindings) {
             try {
               const result = await JobManager.runSQL(message.update, {parameters: message.bindings});
+              postCellResponse(message.id, true);
             } catch (e) {
-              this.setError(e.message);
-              if (this.currentQuery) {
-                this.currentQuery.close();
-              }
+              // this.setError(e.message);
+              // if (this.currentQuery) {
+              //   this.currentQuery.close();
+              // }
+              postCellResponse(message.id, false);
+              window.showWarningMessage(e.message);
             }
           }
           break;
