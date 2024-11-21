@@ -51,7 +51,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           break;
 
         case `update`:
-          console.log(`update`, message);
           if (message.update && message.bindings) {
             try {
               const result = await JobManager.runSQL(message.update, {parameters: message.bindings});
