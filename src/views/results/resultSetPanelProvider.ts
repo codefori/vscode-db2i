@@ -51,9 +51,10 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           break;
 
         case `update`:
-          if (message.update) {
+          console.log(`update`, message);
+          if (message.update && message.bindings) {
             try {
-              const result = await JobManager.runSQL(message.update);
+              const result = await JobManager.runSQL(message.update, {parameters: message.bindings});
             } catch (e) {
               this.setError(e.message);
               if (this.currentQuery) {
@@ -184,7 +185,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         if (tableInfo.length > 0) {
           var currentColumns: html.BasicColumn[]|undefined;
       
-          currentColumns = tableInfo.map((column) => ({name: column.COLUMN_NAME, jsType: column.NUMERIC_PRECISION ? `number` : `string`, useInWhere: column.IS_IDENTITY === `YES` || column.CONSTRAINT_NAME !== null}));
+          currentColumns = tableInfo.map((column) => ({name: column.COLUMN_NAME, jsType: column.NUMERIC_PRECISION ? `number` : `asString`, useInWhere: column.IS_IDENTITY === `YES` || column.CONSTRAINT_NAME !== null}));
 
           if (currentColumns.some(c => c.useInWhere)) {
             updatable = {

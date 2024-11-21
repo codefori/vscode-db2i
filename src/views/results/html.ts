@@ -43,7 +43,7 @@ export interface UpdatableInfo {table: string, columns: BasicColumn[]};
 export interface BasicColumn {
   name: string;
   useInWhere: boolean
-  jsType: "number"|"string";
+  jsType: "number"|"asString";
 }
 
 export function generateScroller(basicSelect: string, isCL: boolean, withCancel?: boolean, updatable?: UpdatableInfo): string {
@@ -76,6 +76,12 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
           let noMoreRows = false;
           let isFetching = false;
 
+          function isNumeric(str) {
+            if (typeof str != "string") return false // we only process strings!  
+            return !isNaN(str) && // use type coercion to parse the _entirety_ of the string ('parseFloat' alone does not do this)...
+                  !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+          }
+
           window.addEventListener("load", main);
             function main() {
               new IntersectionObserver(function(entries) {
@@ -89,10 +95,8 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
             }, { threshold: [0] }).observe(document.getElementById(messageSpanId));
 
             document.getElementById('resultset').onclick = function(e){
+              console.log('click')
               if (updateTable === undefined) return;
-
-              const updateKeyColumns = updateTable.columns.filter(col => col.useInWhere);
-              let idValues = [];
 
               var e = e || window.event;
               var target = e.target || e.srcElement;
@@ -118,6 +122,8 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                 const chosenColumnDetail = updateTable.columns.find(col => col.name === chosenColumn);
                 const parentRow = trWithColumn.parentElement;
 
+                const updateKeyColumns = updateTable.columns.filter(col => col.useInWhere);
+
                 let idValues = [];
                 for (let i = 0; i < parentRow.cells.length; i++) {
                   const cell = parentRow.cells[i];
@@ -126,36 +132,65 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                   }
                 }
 
+                // Already editable, just return
+                if (editableNode.contentEditable === 'true') return;
                 editableNode.contentEditable = true;
-                editableNode.addEventListener('blur', (e) => {
-                  // Code to execute when the element loses focus
+                editableNode.focus();
+
+                const keydownEvent = (e) => {
+                  if (e.keyCode === 13) {
+                    e.preventDefault();
+                    finishEditing();
+                  }
+                }
+
+                const finishEditing = () => {
+                  if (editableNode === undefined) return;
+
+                  // Remove keydown listener
+                  editableNode.removeEventListener('keydown', keydownEvent);
+
                   editableNode.contentEditable = false;
                   const newValue = editableNode.innerText;
 
                   if (newValue === chosenValue) return;
 
+                  let bindings = [];
                   let updateStatement = 'UPDATE ' + updateTable.table + ' SET ' + chosenColumn + ' = ';
 
-                  switch (chosenColumnDetail.jsType) {
-                    case 'number':
-                      updateStatement += newValue;
-                      break;
-                    case 'string':
-                      updateStatement += "'" + newValue + "'";
-                      break;
+                  if (newValue === 'null') {
+                    updateStatement += 'NULL';
+
+                  } else { 
+                    switch (chosenColumnDetail.jsType) {
+                      case 'number':
+                        if (isNumeric(newValue)) {
+                          bindings.push(newValue);
+                          updateStatement += '?';
+                        } else {
+                          editableNode.innerHTML = chosenValue;
+                          return;
+                        }
+                        break;
+
+                      case 'asString':
+                        updateStatement += '?';
+                        bindings.push(newValue);
+                        break;
+                    }
                   }
 
                   updateStatement += ' WHERE ';
                   
                   for (let i = 0; i < updateKeyColumns.length; i++) {
                     if (idValues[i] === 'null') continue;
-                    updateStatement += updateKeyColumns[i].name + ' = ';
+                    updateStatement += updateKeyColumns[i].name + ' = ?';
                     switch (updateKeyColumns[i].jsType) {
                       case 'number':
-                        updateStatement += idValues[i];
+                        bindings.push(Number(idValues[i]));
                         break;
-                      case 'string':
-                        updateStatement += "'" + idValues[i] + "'";
+                      case 'asString':
+                        bindings.push(idValues[i]);
                         break;
                     }
 
@@ -164,11 +199,23 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                     }
                   }
 
+                  editableNode = undefined;
+
                   vscode.postMessage({
                     command: 'update',
                     update: updateStatement,
+                    bindings: bindings
                   });
+                }
+
+                editableNode.addEventListener('blur', (e) => {
+                  e.stopPropagation();
+                  console.log('blur');
+                  // Code to execute when the element loses focus
+                  finishEditing();
                 }, {once: true});
+
+                editableNode.addEventListener('keydown', keydownEvent);
               }
             };
 
