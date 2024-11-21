@@ -47,6 +47,172 @@ export interface BasicColumn {
   maxInputLength?: number;
 }
 
+const editableCellsLogic = /*js*/`
+let updateRequests = {};
+
+function requestCellUpdate(cellNode, originalValue, statement, bindings) {
+  const randomId = Math.floor(Math.random() * 1000000);
+  updateRequests[randomId] = {cellNode, originalValue};
+
+  vscode.postMessage({
+    command: 'update',
+    id: randomId,
+    update: statement,
+    bindings: bindings
+  });
+}
+
+function handleCellResponse(id, success) {
+  const previousRequest = updateRequests[id];
+
+  if (previousRequest) {
+    if (!success) {
+      previousRequest.cellNode.innerText = previousRequest.originalValue;
+    }
+
+    delete updateRequests[id];
+  }
+}
+
+document.getElementById('resultset').onclick = function(e){
+  console.log('click')
+  if (updateTable === undefined) return;
+
+  var e = e || window.event;
+  var target = e.target || e.srcElement;
+
+  let chosenValue;
+  let trWithColumn;
+  let editableNode;
+
+  if (target.tagName.toLowerCase() == "div") {
+    chosenValue = target.innerText;
+    editableNode = target;
+    trWithColumn = target.parentElement;
+  }
+  else if (target.tagName.toLowerCase() == "td") {
+    // get the inner div
+    chosenValue = target.firstChild.innerText;
+    editableNode = target;
+    trWithColumn = target;
+  }
+
+  if (trWithColumn && trWithColumn.column) {
+    const chosenColumn = trWithColumn.column;
+    if (chosenColumn === 'RRN') return;
+
+    const chosenColumnDetail = updateTable.columns.find(col => col.name === chosenColumn);
+    if (!chosenColumnDetail) return;
+    
+    const parentRow = trWithColumn.parentElement;
+
+    const updateKeyColumns = updateTable.columns.filter(col => col.useInWhere);
+    if (updateKeyColumns.length === 0) return;
+
+    let idValues = [];
+    for (let i = 0; i < parentRow.cells.length; i++) {
+      const cell = parentRow.cells[i];
+      if (updateKeyColumns.some(col => col.name === cell.column)) {
+        idValues.push(cell.firstChild.innerText);
+      }
+    }
+
+    // Already editable, just return
+    if (editableNode.contentEditable === 'true') return;
+    editableNode.contentEditable = true;
+    editableNode.focus();
+
+    const keydownEvent = (e) => {
+      if (e.key === 'Enter') {  
+        e.preventDefault();
+        finishEditing(e.target);
+      }
+    }
+
+    const finishEditing = (currentNode) => {
+      if (currentNode === undefined) return;
+
+      // Remove keydown listener
+      currentNode.removeEventListener('keydown', keydownEvent);
+
+      currentNode.contentEditable = false;
+      let newValue = currentNode.innerText;
+
+      if (newValue === chosenValue) return;
+      if (chosenColumnDetail.maxInputLength && newValue.length > chosenColumnDetail.maxInputLength) {
+        newValue = newValue.substring(0, chosenColumnDetail.maxInputLength);
+        currentNode.innerText = newValue;
+      }
+
+      const useRrn = updateKeyColumns.length === 1 && updateKeyColumns.some(col => col.name === 'RRN');
+
+      let bindings = [];
+      let updateStatement = 'UPDATE ' + updateTable.table + ' t SET t.' + chosenColumn + ' = ';
+
+      if (newValue === 'null') {
+        updateStatement += 'NULL';
+
+      } else { 
+        switch (chosenColumnDetail.jsType) {
+          case 'number':
+            if (isNumeric(newValue)) {
+              bindings.push(newValue);
+              updateStatement += '?';
+            } else {
+              currentNode.innerHTML = chosenValue;
+              return;
+            }
+            break;
+
+          case 'asString':
+            updateStatement += '?';
+            bindings.push(newValue);
+            break;
+        }
+      }
+
+      updateStatement += ' WHERE ';
+      
+      for (let i = 0; i < updateKeyColumns.length; i++) {
+        if (idValues[i] === 'null') continue;
+
+        if (useRrn && updateKeyColumns[i].name === 'RRN') {
+          updateStatement += 'RRN(t) = ?';
+        } else {
+          updateStatement += updateKeyColumns[i].name + ' = ?';
+        }
+
+        switch (updateKeyColumns[i].jsType) {
+          case 'number':
+            bindings.push(Number(idValues[i]));
+            break;
+          case 'asString':
+            bindings.push(idValues[i]);
+            break;
+        }
+
+        if (i < updateKeyColumns.length - 1) {
+          updateStatement += ' AND ';
+        }
+      }
+
+      currentNode = undefined;
+
+      requestCellUpdate(currentNode, chosenValue, updateStatement, bindings);
+    }
+
+    editableNode.addEventListener('blur', (e) => {
+      e.stopPropagation();
+      console.log('blur');
+      // Code to execute when the element loses focus
+      finishEditing(e.target);
+    }, {once: true});
+
+    editableNode.addEventListener('keydown', keydownEvent);
+  }
+};
+`;
+
 export function generateScroller(basicSelect: string, isCL: boolean, withCancel?: boolean, updatable?: UpdatableInfo): string {
   const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
 
@@ -95,169 +261,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
               }
             }, { threshold: [0] }).observe(document.getElementById(messageSpanId));
 
-            let updateRequests = {};
-
-            function requestCellUpdate(cellNode, originalValue, statement, bindings) {
-              const randomId = Math.floor(Math.random() * 1000000);
-              updateRequests[randomId] = {cellNode, originalValue};
-
-              vscode.postMessage({
-                command: 'update',
-                id: randomId,
-                update: statement,
-                bindings: bindings
-              });
-            }
-
-            function handleCellResponse(id, success) {
-              const previousRequest = updateRequests[id];
-
-              if (previousRequest) {
-                if (!success) {
-                  previousRequest.cellNode.innerText = previousRequest.originalValue;
-                }
-
-                delete updateRequests[id];
-              }
-            }
-
-            document.getElementById('resultset').onclick = function(e){
-              console.log('click')
-              if (updateTable === undefined) return;
-
-              var e = e || window.event;
-              var target = e.target || e.srcElement;
-
-              let chosenValue;
-              let trWithColumn;
-              let editableNode;
-
-              if (target.tagName.toLowerCase() == "div") {
-                chosenValue = target.innerText;
-                editableNode = target;
-                trWithColumn = target.parentElement;
-              }
-              else if (target.tagName.toLowerCase() == "td") {
-                // get the inner div
-                chosenValue = target.firstChild.innerText;
-                editableNode = target;
-                trWithColumn = target;
-              }
-
-              if (trWithColumn && trWithColumn.column) {
-                const chosenColumn = trWithColumn.column;
-                if (chosenColumn === 'RRN') return;
-
-                const chosenColumnDetail = updateTable.columns.find(col => col.name === chosenColumn);
-                if (!chosenColumnDetail) return;
-                
-                const parentRow = trWithColumn.parentElement;
-
-                const updateKeyColumns = updateTable.columns.filter(col => col.useInWhere);
-                if (updateKeyColumns.length === 0) return;
-
-                let idValues = [];
-                for (let i = 0; i < parentRow.cells.length; i++) {
-                  const cell = parentRow.cells[i];
-                  if (updateKeyColumns.some(col => col.name === cell.column)) {
-                    idValues.push(cell.firstChild.innerText);
-                  }
-                }
-
-                // Already editable, just return
-                if (editableNode.contentEditable === 'true') return;
-                editableNode.contentEditable = true;
-                editableNode.focus();
-
-                const keydownEvent = (e) => {
-                  if (e.key === 'Enter') {  
-                    e.preventDefault();
-                    finishEditing();
-                  }
-                }
-
-                const finishEditing = () => {
-                  if (editableNode === undefined) return;
-
-                  // Remove keydown listener
-                  editableNode.removeEventListener('keydown', keydownEvent);
-
-                  editableNode.contentEditable = false;
-                  let newValue = editableNode.innerText;
-
-                  if (newValue === chosenValue) return;
-                  if (chosenColumnDetail.maxInputLength && newValue.length > chosenColumnDetail.maxInputLength) {
-                    newValue = newValue.substring(0, chosenColumnDetail.maxInputLength);
-                    editableNode.innerText = newValue;
-                  }
-
-                  const useRrn = updateKeyColumns.length === 1 && updateKeyColumns.some(col => col.name === 'RRN');
-
-                  let bindings = [];
-                  let updateStatement = 'UPDATE ' + updateTable.table + ' t SET t.' + chosenColumn + ' = ';
-
-                  if (newValue === 'null') {
-                    updateStatement += 'NULL';
-
-                  } else { 
-                    switch (chosenColumnDetail.jsType) {
-                      case 'number':
-                        if (isNumeric(newValue)) {
-                          bindings.push(newValue);
-                          updateStatement += '?';
-                        } else {
-                          editableNode.innerHTML = chosenValue;
-                          return;
-                        }
-                        break;
-
-                      case 'asString':
-                        updateStatement += '?';
-                        bindings.push(newValue);
-                        break;
-                    }
-                  }
-
-                  updateStatement += ' WHERE ';
-                  
-                  for (let i = 0; i < updateKeyColumns.length; i++) {
-                    if (idValues[i] === 'null') continue;
-
-                    if (useRrn && updateKeyColumns[i].name === 'RRN') {
-                      updateStatement += 'RRN(t) = ?';
-                    } else {
-                      updateStatement += updateKeyColumns[i].name + ' = ?';
-                    }
-
-                    switch (updateKeyColumns[i].jsType) {
-                      case 'number':
-                        bindings.push(Number(idValues[i]));
-                        break;
-                      case 'asString':
-                        bindings.push(idValues[i]);
-                        break;
-                    }
-
-                    if (i < updateKeyColumns.length - 1) {
-                      updateStatement += ' AND ';
-                    }
-                  }
-
-                  editableNode = undefined;
-
-                  requestCellUpdate(target, chosenValue, updateStatement, bindings);
-                }
-
-                editableNode.addEventListener('blur', (e) => {
-                  e.stopPropagation();
-                  console.log('blur');
-                  // Code to execute when the element loses focus
-                  finishEditing();
-                }, {once: true});
-
-                editableNode.addEventListener('keydown', keydownEvent);
-              }
-            };
+            ${editableCellsLogic}
 
             window.addEventListener('message', event => {
               const data = event.data;

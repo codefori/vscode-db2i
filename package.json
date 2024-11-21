@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.6.3-scott3",
+  "version": "1.6.3-scott6",
   "engines": {
     "vscode": "^1.95.0"
   },
