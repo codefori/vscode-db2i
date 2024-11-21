@@ -18,7 +18,7 @@ import { updateStatusBar } from "../jobManager/statusBar";
 import { ExplainType } from "@ibm/mapepire-js/dist/src/types";
 import { DbCache } from "../../language/providers/logic/cache";
 
-export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
+export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 
 export interface StatementInfo {
   content: string,
@@ -219,14 +219,14 @@ async function runHandler(options?: StatementInfo) {
           }
           chosenView.setScrolling(statementDetail.content, true); // Never errors
           
-        } else if (statementDetail.qualifier === `statement`) {
+        } else if ([`statement`, `update`].includes(statementDetail.qualifier)) {
           // If it's a basic statement, we can let it scroll!
           if (inWindow) {
             useWindow(possibleTitle, options.viewColumn);
           }
 
           let updatableTable: ObjectRef | undefined;
-          if (statement.type === StatementType.Select && refs.length === 1) {
+          if (statementDetail.qualifier === `update` && statement.type === StatementType.Select && refs.length === 1) {
             updatableTable = refs[0];
           }
 
@@ -394,7 +394,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     }
 
     if (statementInfo.content) {
-      [`cl`, `json`, `csv`, `sql`, `explain`].forEach(mode => {
+      [`cl`, `json`, `csv`, `sql`, `explain`, `update`].forEach(mode => {
         if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
           statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 
