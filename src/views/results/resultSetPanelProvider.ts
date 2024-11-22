@@ -205,6 +205,25 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           }));
 
           if (!currentColumns.some(c => c.useInWhere)) {
+            const cName = ref.alias || `t`;
+
+            // Support for using a custom column list
+            const selectClauseStart = basicSelect.toLowerCase().indexOf(`select `);
+            const fromClauseStart = basicSelect.toLowerCase().indexOf(`from`);
+            let possibleColumnList: string|undefined;
+
+            possibleColumnList = `${cName}.*`;
+            if (fromClauseStart > 0) {
+              possibleColumnList = basicSelect.substring(0, fromClauseStart);
+              if (selectClauseStart >= 0) {
+                possibleColumnList = possibleColumnList.substring(selectClauseStart + 7);
+
+                if (possibleColumnList.trim() === `*`) {
+                  possibleColumnList = `${cName}.*`;
+                }
+              }
+            }
+
             // We need to override the input statement if they want to do updatable
             const whereClauseStart = basicSelect.toLowerCase().indexOf(`where`);
             let fromWhereClause: string|undefined;
@@ -213,7 +232,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
               fromWhereClause = basicSelect.substring(whereClauseStart);
             }
 
-            basicSelect = `select rrn(t) as RRN, t.* from ${schema}.${ref.object.name} as t ${fromWhereClause || ``}`;
+
+            basicSelect = `select rrn(${cName}) as RRN, ${possibleColumnList} from ${schema}.${ref.object.name} as ${cName} ${fromWhereClause || ``}`;
             currentColumns = [{name: `RRN`, jsType: `number`, useInWhere: true}, ...currentColumns];
           }
 
