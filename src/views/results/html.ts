@@ -76,6 +76,16 @@ function handleCellResponse(id, success) {
 
 const validKeyPresses = ['Enter', 'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight'];
 
+const updateMessageContent = (show, initialMessage) => {
+  const updateMessage = document.getElementById(updateMessageId);
+  if (updateMessage) {
+    if (initialMessage) {
+      updateMessage.innerHTML = initialMessage;
+    }
+    updateMessage.style.display = show ? '' : 'none';
+  }
+}
+
 document.getElementById('resultset').onclick = function(e){
   console.log('click')
   if (updateTable === undefined) return;
@@ -83,18 +93,18 @@ document.getElementById('resultset').onclick = function(e){
   var e = e || window.event;
   var target = e.target || e.srcElement;
 
-  let chosenValue;
+  let originalValue;
   let trWithColumn;
   let editableNode;
 
   if (target.tagName.toLowerCase() == "div") {
-    chosenValue = target.innerText;
+    originalValue = target.innerText;
     editableNode = target;
     trWithColumn = target.parentElement;
   }
   else if (target.tagName.toLowerCase() == "td") {
     // get the inner div
-    chosenValue = target.firstChild.innerText;
+    originalValue = target.firstChild.innerText;
     editableNode = target;
     trWithColumn = target;
   }
@@ -119,45 +129,8 @@ document.getElementById('resultset').onclick = function(e){
       }
     }
 
-    // Already editable, just return
-    if (editableNode.contentEditable === 'true') return;
-    editableNode.contentEditable = true;
-    editableNode.focus();
-
-    const keydownEvent = (e) => {
-      if (chosenColumnDetail.maxInputLength && editableNode.innerText.length >= chosenColumnDetail.maxInputLength) {
-        if (!validKeyPresses.includes(e.key)) {
-          e.preventDefault();
-        }
-      }
-
-      switch (e.key) {
-        case 'Enter':
-          e.preventDefault();
-          finishEditing();
-          break;
-        case 'Escape':
-          editableNode.innerHTML = chosenValue;
-          finishEditing();
-          break;
-      }
-    }
-
-    const finishEditing = () => {
-      if (editableNode === undefined) return;
-
-      // Remove keydown listener
-      editableNode.removeEventListener('keydown', keydownEvent);
-
-      editableNode.contentEditable = false;
-      let newValue = editableNode.innerText;
-
-      if (newValue === chosenValue) return;
-      if (chosenColumnDetail.maxInputLength && newValue.length > chosenColumnDetail.maxInputLength) {
-        newValue = newValue.substring(0, chosenColumnDetail.maxInputLength);
-        editableNode.innerText = newValue;
-      }
-
+    // Can return undefined or {updateStatement, bindings, saneStatement?}
+    const getSqlStatement = (newValue, withSane = false) => {
       const useRrn = updateKeyColumns.length === 1 && updateKeyColumns.some(col => col.name === 'RRN');
 
       let bindings = [];
@@ -173,7 +146,6 @@ document.getElementById('resultset').onclick = function(e){
               bindings.push(newValue);
               updateStatement += '?';
             } else {
-              editableNode.innerHTML = chosenValue;
               return;
             }
             break;
@@ -210,7 +182,90 @@ document.getElementById('resultset').onclick = function(e){
         }
       }
 
-      requestCellUpdate(editableNode, chosenValue, updateStatement, bindings);
+      let statementParts = updateStatement.split('?');
+      let saneStatement = '';
+
+      if (withSane) {
+        for (let i = 0; i < statementParts.length; i++) {
+          saneStatement += statementParts[i];
+          if (bindings[i]) {
+            if (typeof bindings[i] === 'string') {
+              saneStatement += "'" + bindings[i] + "'";
+            } else {
+              saneStatement += bindings[i];
+            }
+          }
+        }
+      }
+
+      return {
+        updateStatement,
+        bindings,
+        saneStatement
+      }
+    };
+
+    const updateMessageWithSql = (newValue) => {
+      const sql = getSqlStatement(newValue, true);
+      updateMessageContent(true, '<pre style="margin: 0;">' + sql.saneStatement + '</pre>');
+    }
+
+    // Already editable, just return
+    if (editableNode.contentEditable === 'true') return;
+    editableNode.contentEditable = true;
+    editableNode.focus();
+    updateMessageWithSql(originalValue);
+
+    const keydownEvent = (e) => {
+      const newValue = editableNode.innerText;
+      if (chosenColumnDetail.maxInputLength && newValue.length >= chosenColumnDetail.maxInputLength) {
+        if (!validKeyPresses.includes(e.key)) {
+          e.preventDefault();
+        }
+      }
+
+      switch (e.key) {
+        case 'Enter':
+          e.preventDefault();
+          editableNode.blur();
+          break;
+        case 'Escape':
+          editableNode.innerHTML = originalValue;
+          editableNode.blur();
+          break;
+      }
+    }
+
+    const keyupEvent = (e) => {
+      const newValue = editableNode.innerText;
+      updateMessageWithSql(newValue);
+    }
+
+    const finishEditing = () => {
+      updateMessageContent(false);
+      if (editableNode === undefined) return;
+
+      // Remove keydown listener
+      editableNode.removeEventListener('keydown', keydownEvent);
+      editableNode.removeEventListener('keyup', keyupEvent);
+
+      editableNode.contentEditable = false;
+      let newValue = editableNode.innerText;
+
+      if (newValue === originalValue) return;
+      if (chosenColumnDetail.maxInputLength && newValue.length > chosenColumnDetail.maxInputLength) {
+        newValue = newValue.substring(0, chosenColumnDetail.maxInputLength);
+        editableNode.innerText = newValue;
+      }
+
+      const sql = getSqlStatement(newValue);
+
+      if (!sql) {
+        editableNode.innerHTML = originalValue;
+        return;
+      }
+
+      requestCellUpdate(editableNode, originalValue, sql.updateStatement, sql.bindings);
 
       editableNode = undefined;
     }
@@ -223,6 +278,7 @@ document.getElementById('resultset').onclick = function(e){
     }, {once: true});
 
     editableNode.addEventListener('keydown', keydownEvent);
+    editableNode.addEventListener('keyup', keyupEvent);
   }
 };
 `;
@@ -245,6 +301,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
           const statusId = 'status';
           const jobId = 'jobId';
           const messageSpanId = 'messageSpan';
+          const updateMessageId = 'updateMessage';
 
           // Updatable information
 
@@ -363,6 +420,16 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
             // Initialize the footer
             var footer = document.getElementById(htmlTableId).getElementsByTagName('tfoot')[0];
             footer.innerHTML = '';
+
+            // Foot specificaly for updating tables.
+            if (updateTable) {
+              const newRow = footer.insertRow();
+              const updateCell = newRow.insertCell();
+              updateCell.colSpan = columnMetaData.length;
+              updateCell.id = updateMessageId;
+              updateCell.appendChild(document.createTextNode(' '));
+            }
+
             const newRow = footer.insertRow();
 
             const statusCell = newRow.insertCell();
@@ -435,7 +502,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
         <table id="resultset">
           <thead></thead>
           <tbody></tbody>
-          <tfoot></tfoot>
+          <tfoot id="resultfooter"></tfoot>
           </table>
         <p id="messageSpan"></p>
         <div id="spinnerContent" class="center-screen">
