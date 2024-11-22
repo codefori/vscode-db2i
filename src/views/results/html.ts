@@ -131,9 +131,15 @@ document.getElementById('resultset').onclick = function(e){
         }
       }
 
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        finishEditing();
+      switch (e.key) {
+        case 'Enter':
+          e.preventDefault();
+          finishEditing();
+          break;
+        case 'Escape':
+          editableNode.innerHTML = chosenValue;
+          finishEditing();
+          break;
       }
     }
 
