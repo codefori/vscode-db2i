@@ -74,6 +74,8 @@ function handleCellResponse(id, success) {
   }
 }
 
+const validKeyPresses = ['Enter', 'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight'];
+
 document.getElementById('resultset').onclick = function(e){
   console.log('click')
   if (updateTable === undefined) return;
@@ -123,9 +125,15 @@ document.getElementById('resultset').onclick = function(e){
     editableNode.focus();
 
     const keydownEvent = (e) => {
-      if (e.key === 'Enter') {  
+      if (chosenColumnDetail.maxInputLength && editableNode.innerText.length >= chosenColumnDetail.maxInputLength) {
+        if (!validKeyPresses.includes(e.key)) {
+          e.preventDefault();
+        }
+      }
+
+      if (e.key === 'Enter') {
         e.preventDefault();
-        finishEditing(e.target);
+        finishEditing();
       }
     }
 
@@ -205,7 +213,7 @@ document.getElementById('resultset').onclick = function(e){
       e.stopPropagation();
       console.log('blur');
       // Code to execute when the element loses focus
-      finishEditing(e.target);
+      finishEditing();
     }, {once: true});
 
     editableNode.addEventListener('keydown', keydownEvent);
