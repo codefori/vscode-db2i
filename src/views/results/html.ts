@@ -498,7 +498,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
           }
         </script>
       </head>
-      <body>
+      <body style="padding: 0;">
         <table id="resultset">
           <thead></thead>
           <tbody></tbody>

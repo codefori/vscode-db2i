@@ -9,7 +9,7 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       border-collapse: collapse;
       font-size: 0.9em;
       font-family: sans-serif;
-      min-width: 400px;
+      min-width: 100%;
     }
 
     thead tr {
