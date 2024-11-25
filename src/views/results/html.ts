@@ -511,7 +511,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
           <tbody></tbody>
           <tfoot id="resultfooter"></tfoot>
           </table>
-        <p id="messageSpan"></p>
+        <p style="padding-left: 20px;" id="messageSpan"></p>
         <div id="spinnerContent" class="center-screen">
           <p id="loadingText">Running statement</p>
           <span class="loader"></span>
