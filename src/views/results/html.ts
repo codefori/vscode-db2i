@@ -103,7 +103,14 @@ document.getElementById('resultset').onclick = function(e){
     trWithColumn = target.parentElement;
   }
   else if (target.tagName.toLowerCase() == "td") {
-    // get the inner div
+    // Usually means it is blank
+    if (!target.firstChild) {
+      // Add a div to the cell
+      const newDiv = document.createElement("div");
+      newDiv.innerText = '';
+      target.appendChild(newDiv);
+    }
+    
     originalValue = target.firstChild.innerText;
     editableNode = target;
     trWithColumn = target;
