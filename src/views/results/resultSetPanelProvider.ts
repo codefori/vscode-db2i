@@ -194,10 +194,16 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
         const isPartitioned = await Table.isPartitioned(goodSchema, goodName);
         if (!isPartitioned) {
-          const tableInfo = await Table.getItems(
-            goodSchema,
-            goodName
-          );
+          let tableInfo: TableColumn[] = [];
+
+          if ([`SESSION`, `QTEMP`].includes(goodSchema)) {
+            tableInfo = await Table.getSessionItems(goodName);
+          } else {
+            tableInfo = await Table.getItems(
+              goodSchema,
+              goodName
+            );
+          }
 
           const uneditableTypes = [`VARBIN`, `BINARY`, `ROWID`, `DATALINK`, `DBCLOB`, `BLOB`, `GRAPHIC`]
 

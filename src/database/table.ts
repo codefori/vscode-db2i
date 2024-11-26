@@ -30,11 +30,38 @@ export default class Table {
       `    column.table_schema = key.table_schema and`,
       `    column.table_name = key.table_name and`,
       `    column.column_name = key.column_name`,
-      `WHERE column.TABLE_SCHEMA = '${schema}' AND column.TABLE_NAME = '${name}'`,
+      `WHERE column.TABLE_SCHEMA = ? AND column.TABLE_NAME = ?`,
       `ORDER BY column.ORDINAL_POSITION`,
     ].join(` `);
 
-    return JobManager.runSQL(sql);
+    return JobManager.runSQL(sql, {parameters: [schema, name]});
+  }
+
+  /**
+   * This is to be used instead of getItems when the table is in session/QTEMP
+   */
+  static async getSessionItems(name: string): Promise<TableColumn[]> {
+    const sql = [
+      `SELECT `,
+      `  column.TABLE_SCHEMA,`,
+      `  column.TABLE_NAME,`,
+      `  column.COLUMN_NAME,`,
+      `  '' as CONSTRAINT_NAME,`,
+      `  column.DATA_TYPE, `,
+      `  column.CHARACTER_MAXIMUM_LENGTH,`,
+      `  column.NUMERIC_SCALE, `,
+      `  column.NUMERIC_PRECISION,`,
+      `  column.IS_NULLABLE, `,
+      `  column.HAS_DEFAULT, `,
+      `  column.COLUMN_DEFAULT, `,
+      `  column.COLUMN_TEXT, `,
+      `  column.IS_IDENTITY`,
+      `FROM QSYS2.SYSCOLUMNS2_SESSION as column`,
+      `WHERE column.TABLE_NAME = ?`,
+      `ORDER BY column.ORDINAL_POSITION`,
+    ].join(` `);
+
+    return JobManager.runSQL(sql, {parameters: [name]});
   }
 
   static async isPartitioned(schema: string, name: string): Promise<boolean> {
