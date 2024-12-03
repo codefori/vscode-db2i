@@ -148,7 +148,7 @@ export class db2ContextProvider implements IContextProvider {
               const columnData: TableColumn[] = tableRefs[table];
               if (columnData && columnData.length > 0) {
                 const tableSchema =
-                  columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
+                  columnData[0].TABLE_SCHEMA ?? schema;
 
                 // create context item
                 let prompt = `Db2 for i Table meta data for schema ${tableSchema} table ${table}\n`;
