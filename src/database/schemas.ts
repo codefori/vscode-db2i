@@ -15,6 +15,22 @@ const typeMap = {
 
 export const AllSQLTypes: SQLType[] = ["tables", "views", "aliases", "constraints", "functions", "variables", "indexes", "procedures", "sequences", "packages", "triggers", "types", "logicals"];
 
+export const InternalTypes: {[t: string]: string} = {
+  "tables": `table`,
+  "views": `view`,
+  "aliases": `alias`,
+  "constraints": `constraint`,
+  "functions": `function`,
+  "variables": `variable`,
+  "indexes": `index`,
+  "procedures": `procedure`,
+  "sequences": `sequence`,
+  "packages": `package`,
+  "triggers": `trigger`,
+  "types": `type`,
+  "logicals": `logical`
+}
+
 export const SQL_ESCAPE_CHAR = `\\`;
 
 type BasicColumnType = string|number;
@@ -211,17 +227,33 @@ export default class Schemas {
         schema: object.BASE_SCHEMA || undefined,
         name: object.BASE_OBJ || undefined
       }
-    }));
+    } as BasicSQLObject));
   }
 
   /**
    * @param schema Not user input
    * @param object Not user input
    */
-  static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
-    const lines = await JobManager.runSQL<{ SRCDTA: string }>([
-      `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
-    ].join(` `), { parameters: [object, schema, internalType] });
+  static async generateSQL(schema: string, object: string, internalType: string, basic?: boolean): Promise<string> {
+    let statement = `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`;
+
+    if (basic) {
+      let options: string[] = [
+        `CREATE_OR_REPLACE_OPTION => '0'`,
+        `PRIVILEGES_OPTION => '0'`,
+        `COMMENT_OPTION => '0'`,
+        `LABEL_OPTION => '0'`,
+        `HEADER_OPTION => '0'`,
+        `TRIGGER_OPTION => '0'`,
+        `CONSTRAINT_OPTION => '0'`,
+        // `PRIVILEGES_OPTION => '0'`,
+        // `ACTIVATE_ACCESS_CONTROL_OPTION => '0'`,
+        `MASK_AND_PERMISSION_OPTION => '0'`,
+      ];
+      statement = `CALL QSYS2.GENERATE_SQL(?, ?, ?, ${options.join(`, `)})`;
+    }
+
+    const lines = await JobManager.runSQL<{ SRCDTA: string }>(statement, { parameters: [object, schema, internalType] });
 
     const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
 
