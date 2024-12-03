@@ -2,9 +2,11 @@ import { assert, describe, expect, test } from 'vitest'
 import SQLTokeniser from '../tokens'
 import Document from '../document';
 import { ClauseType, StatementType } from '../types';
+import { formatSql } from '../formatter';
 
 const parserScenarios = describe.each([
   {newDoc: (content: string) => new Document(content)},
+  {newDoc: (content: string) => new Document(formatSql(content))}
 ]);
 
 parserScenarios(`Basic statements`, ({newDoc}) => {

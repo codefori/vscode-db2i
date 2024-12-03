@@ -84,14 +84,21 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
           if (result) {
             if ('routine' in result) {
               const routineOffset = ref.tokens[ref.tokens.length-1].range.end+1;
-              const callableRef = statementAt.getCallableDetail(routineOffset, false);
-              if (callableRef) {
-                const { currentCount } = getPositionData(callableRef, routineOffset);
-                const signatures = await DbCache.getCachedSignatures(callableRef.parentRef.object.schema, callableRef.parentRef.object.name);
-                const possibleSignatures = signatures.filter((s) => s.parms.length >= currentCount).sort((a, b) => a.parms.length - b.parms.length);
-                const signature = possibleSignatures.find((signature) => currentCount <= signature.parms.length);
-                if (signature) {
-                  addRoutineMd(md, signature, result);
+              const callableRef = statementAt.getCallableDetail(routineOffset, false)
+              const signatures = await DbCache.getCachedSignatures(schema, ref.object.name);
+
+              if (signatures.length > 0) {
+                let chosenSignature: CallableSignature | undefined;
+                if (callableRef) {
+                  const { currentCount } = getPositionData(callableRef, routineOffset);
+                  const possibleSignatures = signatures.filter((s) => s.parms.length >= currentCount).sort((a, b) => a.parms.length - b.parms.length);
+                  chosenSignature = possibleSignatures.find((signature) => currentCount <= signature.parms.length);
+                } else {
+                  chosenSignature = signatures[0];
+                }
+
+                if (chosenSignature) {
+                  addRoutineMd(md, chosenSignature, result);
                 }
               }
             } else {
