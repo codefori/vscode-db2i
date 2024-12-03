@@ -45,12 +45,12 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
         const possibleObjects = await Schemas.getObjects(schema, types, {filter: name});
 
         if (possibleObjects.length) {
-          const lines: string[] = [];
+          const lines: string[] = [`-- Condensed version of the object definition`];
           for (const obj of possibleObjects) {
             const type = InternalTypes[obj.type];
             if (type) {
-              const contents = await Schemas.generateSQL(obj.schema, obj.name, type.toUpperCase());
-              lines.push(contents, ``, ``);
+              const contents = await Schemas.generateSQL(obj.schema, obj.name, type.toUpperCase(), true);
+              lines.push(Statement.format(contents), ``, ``);
             }
           }
 

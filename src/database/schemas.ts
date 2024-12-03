@@ -1,5 +1,4 @@
 
-import { spec } from "node:test/reporters";
 import { getInstance } from "../base";
 
 import { JobManager } from "../config";
@@ -235,10 +234,26 @@ export default class Schemas {
    * @param schema Not user input
    * @param object Not user input
    */
-  static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
-    const lines = await JobManager.runSQL<{ SRCDTA: string }>([
-      `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
-    ].join(` `), { parameters: [object, schema, internalType] });
+  static async generateSQL(schema: string, object: string, internalType: string, basic?: boolean): Promise<string> {
+    let statement = `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`;
+
+    if (basic) {
+      let options: string[] = [
+        `CREATE_OR_REPLACE_OPTION => '0'`,
+        `PRIVILEGES_OPTION => '0'`,
+        `COMMENT_OPTION => '0'`,
+        `LABEL_OPTION => '0'`,
+        `HEADER_OPTION => '0'`,
+        `TRIGGER_OPTION => '0'`,
+        `CONSTRAINT_OPTION => '0'`,
+        // `PRIVILEGES_OPTION => '0'`,
+        // `ACTIVATE_ACCESS_CONTROL_OPTION => '0'`,
+        `MASK_AND_PERMISSION_OPTION => '0'`,
+      ];
+      statement = `CALL QSYS2.GENERATE_SQL(?, ?, ?, ${options.join(`, `)})`;
+    }
+
+    const lines = await JobManager.runSQL<{ SRCDTA: string }>(statement, { parameters: [object, schema, internalType] });
 
     const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
 
