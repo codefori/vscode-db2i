@@ -7,6 +7,7 @@ const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 
 export default class Statement {
 	public type: StatementType = StatementType.Unknown;
+	private label: string|undefined;
 
   constructor(public tokens: Token[], public range: IRange) {
 		this.tokens = this.tokens.filter(newToken => newToken.type !== `newline`);
@@ -19,11 +20,15 @@ export default class Statement {
 			first = this.tokens[2];
 		}
 
-		if (tokenIs(first, `statementType`) || tokenIs(first, `keyword`, `END`) || tokenIs(first, `keyword`, `BEGIN`)) {
-			const wordValue = first.value?.toUpperCase();
-
-			this.type = StatementTypeWord[wordValue];
+		if (first.value !== undefined && tokenIs(this.tokens[1], `colon`)) {
+			// Possible label?
+			this.label = first.value;
+			first = this.tokens[2];
 		}
+
+		const wordValue = first.value?.toUpperCase();
+
+		this.type = StatementTypeWord[wordValue] || StatementType.Unknown;
 		
 		switch (this.type) {
 			case StatementType.Create:
@@ -35,7 +40,7 @@ export default class Statement {
 		}
 	}
 
-	isBlockOpener() {
+	isCompoundStart() {
 		if (this.tokens.length === 1 && tokenIs(this.tokens[0], `keyword`, `BEGIN`)) {
 			return true;
 		}
@@ -51,7 +56,19 @@ export default class Statement {
 		return false;
 	}
 
-	isBlockEnder() {
+	static typeIsConditional(type: StatementType) {
+		return [StatementType.If, StatementType.While, StatementType.Loop, StatementType.For].includes(type);
+	}
+
+	isConditionStart() {
+		return Statement.typeIsConditional(this.type);
+	}
+
+	isConditionEnd() {
+		return this.type === StatementType.End && this.tokens.length > 1;
+	}
+
+	isCompoundEnd() {
 		return this.type === StatementType.End && this.tokens.length === 1;
 	}
 
@@ -314,19 +331,32 @@ export default class Statement {
 		}
 
 		const basicQueryFinder = (startIndex: number): void => {
+			let currentClause: undefined|"select"|"from";
 			for (let i = startIndex; i < this.tokens.length; i++) {
 				if (tokenIs(this.tokens[i], `clause`, `FROM`)) {
-					inFromClause = true;
-				} else if (inFromClause && tokenIs(this.tokens[i], `clause`) || tokenIs(this.tokens[i], `join`) || tokenIs(this.tokens[i], `closebracket`)) {
-					inFromClause = false;
+					currentClause = `from`;
+				}
+				else if (tokenIs(this.tokens[i], `statementType`, `SELECT`)) {
+					currentClause = `select`;
+				} else if (currentClause === `from` && tokenIs(this.tokens[i], `clause`) || tokenIs(this.tokens[i], `join`) || tokenIs(this.tokens[i], `closebracket`)) {
+					currentClause = undefined;
 				}
 
 				if (tokenIs(this.tokens[i], `clause`, `FROM`) || 
 					 (this.type !== StatementType.Select && tokenIs(this.tokens[i], `clause`, `INTO`)) || 
 					 tokenIs(this.tokens[i], `join`) || 
-					 (inFromClause && tokenIs(this.tokens[i], `comma`)
+					 (currentClause === `from` && tokenIs(this.tokens[i], `comma`)
 				)) {
 					const sqlObj = this.getRefAtToken(i+1);
+					if (sqlObj) {
+						doAdd(sqlObj);
+						i += sqlObj.tokens.length;
+						if (sqlObj.isUDTF || sqlObj.fromLateral) {
+							i += 3; //For the brackets
+						}
+					}
+				} else if (currentClause === `select` && tokenIs(this.tokens[i], `function`)) {
+					const sqlObj = this.getRefAtToken(i);
 					if (sqlObj) {
 						doAdd(sqlObj);
 						i += sqlObj.tokens.length;
@@ -592,7 +622,7 @@ export default class Statement {
 			}
 
 			if (options.withSystemName) {
-				if (tokenIs(this.tokens[endIndex+1], `keyword`, `FOR`) && tokenIs(this.tokens[endIndex+2], `word`, `SYSTEM`) && tokenIs(this.tokens[endIndex+3], `word`, `NAME`)) {
+				if (tokenIs(this.tokens[endIndex+1], `statementType`, `FOR`) && tokenIs(this.tokens[endIndex+2], `word`, `SYSTEM`) && tokenIs(this.tokens[endIndex+3], `word`, `NAME`)) {
 					if (this.tokens[endIndex+4] && NameTypes.includes(this.tokens[endIndex+4].type)) {
 						sqlObj.object.system = this.tokens[endIndex+4].value;
 					}
@@ -624,10 +654,25 @@ export default class Statement {
 
 			switch (currentToken.type) {
 				case `statementType`:
-					if (declareStmt) continue;
+					const currentValue = currentToken.value.toLowerCase();
+					if (declareStmt) {
+						if (currentValue === `for`) {
+							ranges.push({
+								type: `remove`,
+								range: {
+									start: declareStmt.range.start,
+									end: currentToken.range.end
+								}
+							});
+	
+							declareStmt = undefined;
+						}
+
+						continue;
+					};
 
 					// If we're in a DECLARE, it's likely a cursor definition
-					if (currentToken.value.toLowerCase() === `declare`) {
+					if (currentValue === `declare`) {
 						declareStmt = currentToken;
 					}
 					break;
@@ -716,19 +761,6 @@ export default class Statement {
 								}
 							});
 						}
-					} else 
-					if (declareStmt && tokenIs(currentToken, `keyword`, `FOR`)) {
-						// If we're a DECLARE, and we found the FOR keyword, the next
-						// set of tokens should be the select.
-						ranges.push({
-							type: `remove`,
-							range: {
-								start: declareStmt.range.start,
-								end: currentToken.range.end
-							}
-						});
-
-						declareStmt = undefined;
 					}
 					break;
 			}

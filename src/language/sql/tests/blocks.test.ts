@@ -1,9 +1,12 @@
 
-import { assert, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import Document from '../document';
-import { StatementType } from '../types';
 
-describe(`Block statement tests`, () => {
+const parserScenarios = describe.each([
+  {newDoc: (content: string) => new Document(content), isFormatted: false},
+]);
+
+parserScenarios(`Block statement tests`, ({newDoc, isFormatted}) => {
   test('Block start tests', () => {
     const lines = [
       `CREATE ALIAS "TestDelimiters"."Delimited Alias" FOR "TestDelimiters"."Delimited Table";`,
@@ -15,19 +18,19 @@ describe(`Block statement tests`, () => {
       `LANGUAGE SQL BEGIN SET "Delimited Parameter" = 13; END;`,
     ].join(`\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     // CREATE, CREATE, RETURN, END, CREATE, SET, END
     expect(doc.statements.length).toBe(7);
 
     const aliasDef = doc.statements[0];
-    expect(aliasDef.isBlockOpener()).toBeFalsy();
+    expect(aliasDef.isCompoundStart()).toBeFalsy();
 
     const functionDef = doc.statements[1];
-    expect(functionDef.isBlockOpener()).toBeTruthy();
+    expect(functionDef.isCompoundStart()).toBeTruthy();
 
     const procedureDef = doc.statements[4];
-    expect(procedureDef.isBlockOpener()).toBeTruthy();
+    expect(procedureDef.isCompoundStart()).toBeTruthy();
   });
 
   test('Compound statement test', () => {
@@ -53,21 +56,21 @@ describe(`Block statement tests`, () => {
       `LANGUAGE SQL BEGIN SET "Delimited Parameter" = 13; END;`,
     ].join(`\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     const t = doc.statements.length;
 
     const aliasDef = doc.statements[0];
-    expect(aliasDef.isBlockOpener()).toBeFalsy();
+    expect(aliasDef.isCompoundStart()).toBeFalsy();
 
     const functionDef = doc.statements[1];
-    expect(functionDef.isBlockOpener()).toBeTruthy();
+    expect(functionDef.isCompoundStart()).toBeTruthy();
 
     const functionEnd = doc.statements[3];
-    expect(functionEnd.isBlockEnder()).toBeTruthy();
+    expect(functionEnd.isCompoundEnd()).toBeTruthy();
 
     const beginBlock = doc.statements[4];
-    expect(beginBlock.isBlockOpener()).toBeTruthy();
+    expect(beginBlock.isCompoundStart()).toBeTruthy();
   });
 
   test('Statement groups', () => {
@@ -96,23 +99,58 @@ describe(`Block statement tests`, () => {
       `LANGUAGE SQL BEGIN SET "Delimited Parameter" = 13; END;`,
     ].join(`\r\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     const groups = doc.getStatementGroups();
 
     expect(groups.length).toBe(4);
 
     const aliasStatement = groups[0];
-    const aliasSubstring = lines.substring(aliasStatement.range.start, aliasStatement.range.end);
+    const aliasSubstring = doc.content.substring(aliasStatement.range.start, aliasStatement.range.end);
     expect(aliasSubstring).toBe(`CREATE ALIAS "TestDelimiters"."Delimited Alias" FOR "TestDelimiters"."Delimited Table"`);
 
+    const functionStatement = groups[1];
+    const functionSubstring = doc.content.substring(functionStatement.range.start, functionStatement.range.end);
+
+    if (isFormatted) {
+      expect(functionSubstring).toBe([
+        `CREATE FUNCTION "TestDelimiters"."Delimited Function"(`,
+        `    "Delimited Parameter" INTEGER`,
+        `) RETURNS INTEGER LANGUAGE SQL BEGIN`,
+        `    RETURN "Delimited Parameter";`,
+        `END`,
+      ].join(`\r\n`));
+    } else {
+      expect(functionSubstring).toBe([
+        `CREATE FUNCTION "TestDelimiters"."Delimited Function" ("Delimited Parameter" INTEGER) `,
+        `RETURNS INTEGER LANGUAGE SQL BEGIN RETURN "Delimited Parameter"; END`
+      ].join(`\r\n`))
+    }
     const beginStatement = groups[2];
-    const compoundSubstring = lines.substring(beginStatement.range.start, beginStatement.range.end);
-    expect(compoundSubstring).toBe(compoundStatement);
+    expect(beginStatement.statements.length).toBe(9);
+    const compoundSubstring = doc.content.substring(beginStatement.range.start, beginStatement.range.end);
+
+    if (isFormatted) {
+      expect(compoundSubstring).toBe([
+        `BEGIN`,
+        `    DECLARE already_exists SMALLINT DEFAULT 0;`,
+        `    DECLARE dup_object_hdlr CONDITION FOR SQLSTATE '42710';`,
+        `    DECLARE CONTINUE HANDLER FOR dup_object_hdlr SET already_exists = 1;`,
+        `    CREATE TABLE table1(`,
+        `        col1 INT`,
+        `    );`,
+        `    IF already_exists > 0 THEN;`,
+        `        DELETE FROM table1;`,
+        `    END IF;`,
+        `END`,
+      ].join(`\r\n`));
+    } else {
+      expect(compoundSubstring).toBe(compoundStatement);
+    }
   });
 });
 
-describe(`Definition tests`, () => {
+parserScenarios(`Definition tests`, ({newDoc}) => {
   test(`Alias, function, procedure`, () => {
     const lines = [
       `CREATE ALIAS "TestDelimiters"."Delimited Alias" FOR "TestDelimiters"."Delimited Table";`,
@@ -124,7 +162,7 @@ describe(`Definition tests`, () => {
       `LANGUAGE SQL BEGIN SET "Delimited Parameter" = 13; END;`,
     ].join(`\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     const defs = doc.getDefinitions();
 
@@ -161,7 +199,7 @@ describe(`Definition tests`, () => {
       `END;`,
     ].join(`\r\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     const defs = doc.getDefinitions();
 
@@ -245,7 +283,7 @@ describe(`Definition tests`, () => {
       `END  ; `,
     ].join(`\n`);
 
-    const doc = new Document(lines);
+    const doc = newDoc(lines);
 
     const groups = doc.getStatementGroups();
     expect(groups.length).toBe(1);

@@ -2,9 +2,9 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.5.1",
+  "version": "1.6.3-scott12",
   "engines": {
-    "vscode": "^1.70.0"
+    "vscode": "^1.95.0"
   },
   "icon": "media/logo.png",
   "keywords": [
@@ -35,39 +35,12 @@
     "lint": "eslint .",
     "pretest": "npm run lint",
     "language:test": "vitest",
-    "dsc": "mkdir -p dist && npx tsx src/dsc",
+    "dsc": "npx tsx src/dsc",
     "package": "vsce package",
     "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
     "webpack": "vscd --clean && webpack --mode development",
     "webpack-dev": "vscd --clean && webpack --mode development",
     "typings": "npx -p typescript tsc ./src/extension.ts --declaration --allowJs --emitDeclarationOnly --outDir types --esModuleInterop -t es2019 --moduleResolution node"
-  },
-  "devDependencies": {
-    "@halcyontech/vscode-ibmi-types": "^2.12.1",
-    "@types/glob": "^7.1.3",
-    "@types/node": "14.x",
-    "@types/vscode": "^1.70.0",
-    "esbuild-loader": "^3.0.1",
-    "eslint": "^7.32.0",
-    "glob": "^7.1.7",
-    "octokit": "^3.1.2",
-    "raw-loader": "^4.0.2",
-    "ts-loader": "^9.3.1",
-    "typescript": "^4.3.2",
-    "vitest": "^0.33.0",
-    "vscd": "^1.0.0",
-    "vscode-test": "^1.5.2",
-    "webpack": "^5.91.0",
-    "webpack-cli": "^4.5.0"
-  },
-  "dependencies": {
-    "@ibm/mapepire-js": "^0.3.0",
-    "chart.js": "^4.4.2",
-    "csv": "^6.1.3",
-    "json-to-markdown-table": "^1.0.0",
-    "node-fetch": "^3.3.1",
-    "showdown": "^2.1.0",
-    "sql-formatter": "^14.0.0"
   },
   "contributes": {
     "configuration": [
@@ -592,6 +565,13 @@
         "icon": "$(trash)"
       },
       {
+        "command": "vscode-db2i.jobManager.focusContinue",
+        "title": "Register Continue Provider",
+        "category": "Db2 for i",
+        "icon": "$(star-full)",
+        "enablement": "vscode-db2i:continueExtensionActive"
+      },
+      {
         "command": "vscode-db2i.self.refresh",
         "title": "Refresh SELF Codes View",
         "category": "Db2 for i",
@@ -638,6 +618,13 @@
         "title": "Display SELF Code Details",
         "category": "Db2 for i",
         "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.self.explainSelf",
+        "title": "Explain SELF Code with continue",
+        "category": "Db2 for i",
+        "icon": "$(debug-alt)",
+        "enablement": "vscode-db2i:continueExtensionActive"
       },
       {
         "command": "vscode-db2i.self.help",
@@ -1036,6 +1023,11 @@
           "command": "vscode-db2i.self.displayDetails",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
           "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.self.explainSelf",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && vscode-db2i:continueExtensionActive",
+          "group": "navigation"
         }
       ],
       "editor/title": [
@@ -1224,6 +1216,29 @@
         ]
       }
     ],
+    "chatParticipants": [
+      {
+        "id": "vscode-db2i.chat",
+        "name": "db2i",
+        "fullName": "Db2 for i",
+        "description": "Chat with the Db2 for i AI assistant",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "build",
+            "description": "Build an SQL statement"
+          },
+          {
+            "name": "activity",
+            "description": "Summarize the activity on the system"
+          },
+          {
+            "name": "set-schema",
+            "description": "Set the current schema"
+          }
+        ]
+      }
+    ],
     "snippets": [
       {
         "language": "sql",
@@ -1246,5 +1261,34 @@
         "path": "snippets/aggregates.code-snippets"
       }
     ]
+  },
+  "devDependencies": {
+    "@continuedev/core": "^1.0.13",
+    "@halcyontech/vscode-ibmi-types": "^2.0.0",
+    "@types/glob": "^7.1.3",
+    "@types/node": "14.x",
+    "@types/vscode": "^1.95.0",
+    "esbuild-loader": "^3.0.1",
+    "eslint": "^7.32.0",
+    "glob": "^7.1.7",
+    "octokit": "^3.1.2",
+    "raw-loader": "^4.0.2",
+    "ts-loader": "^9.3.1",
+    "typescript": "^4.3.2",
+    "vitest": "^0.33.0",
+    "vscd": "^1.1.0",
+    "vscode-test": "^1.5.2",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^4.5.0"
+  },
+  "dependencies": {
+    "@ibm/mapepire-js": "^0.3.0",
+    "chart.js": "^4.4.2",
+    "csv": "^6.1.3",
+    "json-to-markdown-table": "^1.0.0",
+    "lru-cache": "^6.0.0",
+    "node-fetch": "^3.3.1",
+    "showdown": "^2.1.0",
+    "sql-formatter": "^14.0.0"
   }
 }

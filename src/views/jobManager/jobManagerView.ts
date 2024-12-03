@@ -1,4 +1,5 @@
-import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
+import * as vscode from "vscode";
+import { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo, SQLJobManager } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";
@@ -9,7 +10,6 @@ import { displayJobLog } from "./jobLog";
 import { SelfValue, selfCodesMap } from "./selfCodes/nodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
-import { selfCodesResultsView } from "./selfCodes/selfCodesResultsView";
 import { setCancelButtonVisibility } from "../results";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 
@@ -283,6 +283,9 @@ export class JobManagerView implements TreeDataProvider<any> {
         await JobManager.endAll();
         this.refresh();
       }),
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.focusContinue`, async () => {
+        vscode.commands.executeCommand(`continue.focusContinueInput`);
+      })
     )
   }
 

@@ -1,4 +1,4 @@
-import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
+import { window, CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
 
 import { setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
@@ -6,6 +6,9 @@ import { updateStatusBar } from "../jobManager/statusBar";
 import Configuration from "../../configuration";
 import * as html from "./html";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
+import { ObjectRef } from "../../language/sql/types";
+import Table from "../../database/table";
+import Statement from "../../database/statement";
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel;
@@ -41,10 +44,36 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     };
 
     webviewView.webview.html = html.getLoadingHTML();
+
+    const postCellResponse = (id: number, success: boolean) => {
+      this._view.webview.postMessage({
+        command: `cellResponse`,
+        id,
+        success
+      });
+    }
+
     this._view.webview.onDidReceiveMessage(async (message) => {
       switch (message.command) {
         case `cancel`:
           this.endQuery();
+          break;
+
+        case `update`:
+          if (message.id && message.update && message.bindings) {
+            console.log(message);
+            try {
+              const result = await JobManager.runSQL(message.update, { parameters: message.bindings });
+              postCellResponse(message.id, true);
+            } catch (e) {
+              // this.setError(e.message);
+              // if (this.currentQuery) {
+              //   this.currentQuery.close();
+              // }
+              postCellResponse(message.id, false);
+              window.showWarningMessage(e.message);
+            }
+          }
           break;
 
         default:
@@ -69,7 +98,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
               if (this.currentQuery.getState() !== "RUN_DONE") {
                 setCancelButtonVisibility(true);
-                
+
                 let queryResults = this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE" ? await this.currentQuery.fetchMore() : await this.currentQuery.execute();
 
                 const jobId = this.currentQuery.getHostJob().id;
@@ -151,11 +180,88 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
   }
 
-  async setScrolling(basicSelect, isCL = false, queryId: string = ``, withCancel = false) {
+  async setScrolling(basicSelect: string, isCL = false, queryId: string = ``, withCancel = false, ref?: ObjectRef) {
     this.loadingState = false;
     await this.focus();
 
-    this._view.webview.html = html.generateScroller(basicSelect, isCL, withCancel);
+    let updatable: html.UpdatableInfo | undefined;
+
+    if (ref) {
+      const schema = ref.object.schema || ref.object.system;
+      if (schema) {
+        const goodSchema = Statement.delimName(schema, true);
+        const goodName = Statement.delimName(ref.object.name, true);
+
+        const isPartitioned = await Table.isPartitioned(goodSchema, goodName);
+        if (!isPartitioned) {
+          let tableInfo: TableColumn[] = [];
+
+          if ([`SESSION`, `QTEMP`].includes(goodSchema)) {
+            tableInfo = await Table.getSessionItems(goodName);
+          } else {
+            tableInfo = await Table.getItems(
+              goodSchema,
+              goodName
+            );
+          }
+
+          const uneditableTypes = [`VARBIN`, `BINARY`, `ROWID`, `DATALINK`, `DBCLOB`, `BLOB`, `GRAPHIC`]
+
+          if (tableInfo.length > 0) {
+            let currentColumns: html.BasicColumn[] | undefined;
+
+            currentColumns = tableInfo
+              .filter((column) => !uneditableTypes.includes(column.DATA_TYPE))
+              .map((column) => ({
+                name: column.COLUMN_NAME,
+                jsType: column.NUMERIC_PRECISION ? `number` : `asString`,
+                useInWhere: column.IS_IDENTITY === `YES`,
+                maxInputLength: column.CHARACTER_MAXIMUM_LENGTH
+              }));
+
+            if (!currentColumns.some(c => c.useInWhere)) {
+              const cName = ref.alias || `t`;
+
+              // Support for using a custom column list
+              const selectClauseStart = basicSelect.toLowerCase().indexOf(`select `);
+              const fromClauseStart = basicSelect.toLowerCase().indexOf(`from`);
+              let possibleColumnList: string | undefined;
+
+              possibleColumnList = `${cName}.*`;
+              if (fromClauseStart > 0) {
+                possibleColumnList = basicSelect.substring(0, fromClauseStart);
+                if (selectClauseStart >= 0) {
+                  possibleColumnList = possibleColumnList.substring(selectClauseStart + 7);
+
+                  if (possibleColumnList.trim() === `*`) {
+                    possibleColumnList = `${cName}.*`;
+                  }
+                }
+              }
+
+              // We need to override the input statement if they want to do updatable
+              const whereClauseStart = basicSelect.toLowerCase().indexOf(`where`);
+              let fromWhereClause: string | undefined;
+
+              if (whereClauseStart > 0) {
+                fromWhereClause = basicSelect.substring(whereClauseStart);
+              }
+
+
+              basicSelect = `select rrn(${cName}) as RRN, ${possibleColumnList} from ${schema}.${ref.object.name} as ${cName} ${fromWhereClause || ``}`;
+              currentColumns = [{ name: `RRN`, jsType: `number`, useInWhere: true }, ...currentColumns];
+            }
+
+            updatable = {
+              table: schema + `.` + ref.object.name,
+              columns: currentColumns
+            };
+          }
+        }
+      }
+    }
+
+    this._view.webview.html = html.generateScroller(basicSelect, isCL, withCancel, updatable);
 
     this._view.webview.postMessage({
       command: `fetch`,

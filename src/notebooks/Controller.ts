@@ -83,7 +83,7 @@ export class IBMiController {
 
               // Execute the query
               const query = selected.job.query(content);
-              const results = await query.execute();
+              const results = await query.execute(1000);
 
               const table = results.data;
               if (table === undefined && results.success && !results.has_results) {

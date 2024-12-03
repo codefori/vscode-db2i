@@ -1,0 +1,27 @@
+{
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "vscode-db2i.chat",
+        "name": "db2i",
+        "fullName": "Db2 for i",
+        "description": "Chat with the Db2 for i AI assistant",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "build",
+            "description": "Build an SQL statement"
+          },
+          {
+            "name": "activity",
+            "description": "Summarize the activity on the system"
+          },
+          {
+            "name": "set-schema",
+            "description": "Set the current schema"
+          }
+        ]
+      }
+    ]
+  }
+}
