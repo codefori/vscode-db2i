@@ -3,6 +3,7 @@
 		"module": "commonjs",
 		"target": "ES2019",
 		"checkJs": true,  /* Typecheck .js files. */
+		"esModuleInterop": true,
 		"lib": [
 			"ES2019"
 		],
