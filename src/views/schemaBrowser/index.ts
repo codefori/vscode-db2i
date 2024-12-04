@@ -162,7 +162,7 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.viewAuthorities`, async (object: SQLObject) => {
+      vscode.commands.registerCommand(`vscode-db2i.viewPermissions`, async (object: SQLObject) => {
         if (object) {
           const content = `SELECT AUTHORIZATION_NAME, OBJECT_AUTHORITY,
           OWNER, OBJECT_OPERATIONAL, OBJECT_MANAGEMENT, OBJECT_EXISTENCE, OBJECT_ALTER, OBJECT_REFERENCE,
