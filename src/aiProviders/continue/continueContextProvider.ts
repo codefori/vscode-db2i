@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
-import { canTalkToDb, findPossibleTables } from "../context";
+import { canTalkToDb, findPossibleTables, TableRefs } from "../context";
 import {
   ContextItem,
   ContextProviderDescription,
@@ -12,6 +12,7 @@ import {
   LoadSubmenuItemsArgs,
 } from "@continuedev/core";
 import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "./prompts";
+import { table } from "console";
 
 export let isContinueActive = false;
 
@@ -102,6 +103,25 @@ export class db2ContextProvider implements IContextProvider {
     }
   }
 
+  parseSelectedCode(fullInput: string): string | null {
+    const regex = /```(?:.*?\n)?(.*?)```/gs;
+
+    // Extract matches
+    const matches = fullInput.match(regex);
+
+    if (matches && matches.length > 0) {
+        // Extract SQL code from the first match
+        let sqlCode = matches[0].replace(/```(?:.*?\n)?|```/g, '').trim();
+        // Remove all newline characters
+        sqlCode = sqlCode.replace(/[\r\n]+/g, ' ').trim();
+        return sqlCode;
+    }
+
+    // Return null if no SQL code is found
+    return null;
+}
+
+
   async getContextItems(
     query: string,
     extras: ContextProviderExtras
@@ -111,6 +131,10 @@ export class db2ContextProvider implements IContextProvider {
       const job: JobInfo = this.getCurrentJob();
       const schema = this.getDefaultSchema();
       const fullInput = extras.fullInput;
+      const selectedCode = extras.selectedCode;
+      if (selectedCode) {
+        const parsedCode = this.parseSelectedCode(fullInput);
+      }
       contextItems.push({
         name: `SYSTEM PROMPT`,
         description: `system prompt context`,
@@ -138,14 +162,25 @@ export class db2ContextProvider implements IContextProvider {
   
             return contextItems;
           default:
-            // const contextItems: ContextItem[] = [];
+
+            // check for selected code refs since these are apart of markdown string
+            let selectedCodeRefs: TableRefs = {};
+            if (selectedCode.length > 0) {
+              const parsedCode = this.parseSelectedCode(fullInput);
+              selectedCodeRefs = await findPossibleTables(null, schema, parsedCode.split(` `));
+            }
+            
+            // check full input for table refs
             const tableRefs = await findPossibleTables(
               null,
               schema,
               fullInput.split(` `)
             );
-            for (const table of Object.keys(tableRefs)) {
-              const columnData: TableColumn[] = tableRefs[table];
+
+            // Merge selectedCodeRefs into tableRefs
+            const mergedRefs = { ...tableRefs, ...selectedCodeRefs };
+            for (const table of Object.keys(mergedRefs)) {
+              const columnData: TableColumn[] = mergedRefs[table];
               if (columnData && columnData.length > 0) {
                 const tableSchema =
                   columnData[0].TABLE_SCHEMA ?? schema;
