@@ -1,10 +1,28 @@
-export const CHECKER_NAME = `validate_statement`;
+export const VALIDATOR_NAME = `VALIDATE_STATEMENT`;
+export const WRAPPER_NAME = `CHECKSTMTWRAPPED`
 
-export function getCheckerSource(schema: string, version: number) {
-  const WRAPPED_NAME = `CHECKSTMTWRAPPED_${version}`
+export function getValidatorSource(schema: string, version: number) {
   return /*sql*/`
+  create or replace procedure ${schema}.${WRAPPER_NAME} (
+    IN statementText char(1000) FOR SBCS DATA,
+    IN statementLength int,
+    IN recordsProvided int,
+    IN statementLanguage char(10),
+    IN options char(24),
+    OUT statementInfo char(1000),
+    IN statementInfoLength int,
+    OUT recordsProcessed int,
+    OUT errorCode char(1000)
+  ) 
+  LANGUAGE RPGLE
+  NOT DETERMINISTIC
+  MODIFIES SQL DATA
+  EXTERNAL NAME QSYS/QSQCHKS
+  PARAMETER STYLE GENERAL;
 
-  create or replace function ${schema}.${CHECKER_NAME}(statementText char(1000) FOR SBCS DATA) --todo: support 1208 parms
+  comment on procedure ${schema}/${WRAPPER_NAME} is '${version} - QSQCHKS Wrapper';
+
+  create or replace function ${schema}.${VALIDATOR_NAME}(statementText char(1000) FOR SBCS DATA) --todo: support 1208 parms
   returns table (
     messageFileName char(10),
     messageFileLibrary char(10),
@@ -55,34 +73,11 @@ export function getCheckerSource(schema: string, version: number) {
     declare errorReplacementText char(1000) default ''; 
     declare messageText char(132) default '';
   
-    begin
-     if not exists (
-      select 1 from qsys2.procedures where procschema = '${schema}' and procname = '${WRAPPED_NAME}'
-     ) then
-       create or replace procedure ${schema}.${WRAPPED_NAME} (
-        IN statementText char(1000) FOR SBCS DATA,
-        IN statementLength int,
-        IN recordsProvided int,
-        IN statementLanguage char(10),
-        IN options char(24),
-        OUT statementInfo char(1000),
-        IN statementInfoLength int,
-        OUT recordsProcessed int,
-        OUT errorCode char(1000)
-      ) 
-      LANGUAGE RPGLE
-      NOT DETERMINISTIC
-      MODIFIES SQL DATA
-      EXTERNAL NAME QSYS/QSQCHKS
-      PARAMETER STYLE GENERAL;
-     end if;
-    end;
-  
     set stmtLength = length(rtrim(statementText));
     set options = x'00000001' concat x'00000001' concat x'0000000A' concat '*NONE     '; --No naming convention
     -- set options = x'00000001' concat x'00000008' concat x'00000004' concat x'000004B0'; -- ccsid
     
-    call ${schema}.${WRAPPED_NAME}( statementText, stmtLength, recordsProvided, statementLanguage, options, statementInfo, statementInfoLength, recordsProcessed, errorCode);
+    call ${schema}.${WRAPPER_NAME}( statementText, stmtLength, recordsProvided, statementLanguage, options, statementInfo, statementInfoLength, recordsProcessed, errorCode);
   
     -- set ${schema}.outlog = statementInfo;
     -- set ${schema}.outlog = substr(statementInfo, 21, 4);
@@ -136,7 +131,7 @@ export function getCheckerSource(schema: string, version: number) {
     return;
   end;
 
-  comment on function ${schema}/${CHECKER_NAME} is '${version} - SQL Syntax Checker';
+  comment on function ${schema}/${VALIDATOR_NAME} is '${version} - SQL Syntax Checker';
   
   --select *
   --from table(${schema}.validate_statement('select from sample.employee order by a')) x;

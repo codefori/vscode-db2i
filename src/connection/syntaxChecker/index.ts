@@ -1,11 +1,11 @@
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
 import { ComponentIdentification, ComponentState, IBMiComponent } from "@halcyontech/vscode-ibmi-types/components/component";
 import { posix } from "path";
-import { getCheckerSource } from "./checker";
+import { getValidatorSource, VALIDATOR_NAME, WRAPPER_NAME } from "./checker";
 import { JobManager } from "../../config";
 import { getInstance } from "../../base";
 
-interface SqlError {
+interface SqlCheckError {
   CURSTMTLENGTH: number;
   ERRORFIRSTCOLUMNNUMBER: number;
   ERRORFIRSTRECORDNUMBER: number;
@@ -22,12 +22,19 @@ interface SqlError {
   NUMBEROFSTATEMENTSBACK: number;
 }
 
+export interface SqlSyntaxError {
+  sqlid: string;
+  sqlstate: string;
+  text: string;
+  offset: number;
+}
+
 export class SQLStatementChecker implements IBMiComponent {
   static ID = "SQLStatementChecker";
-  private readonly functionName = 'VALIDATE_STATEMENT';
+  private readonly functionName = VALIDATOR_NAME;
   private readonly currentVersion = 1;
 
-  private installedVersion = 0;
+  private installedVersion = 1;
   private library = "";
 
   static get(): SQLStatementChecker|undefined {
@@ -43,16 +50,28 @@ export class SQLStatementChecker implements IBMiComponent {
     return { name: SQLStatementChecker.ID, version: this.installedVersion };
   }
 
-  async getRemoteState(connection: IBMi) {
-    this.library = connection.config?.tempLibrary.toUpperCase() || "ILEDITOR";
-    const [result] = await connection.runSQL(`select cast(LONG_COMMENT as VarChar(200)) LONG_COMMENT from qsys2.sysroutines where routine_schema = '${this.library}' and routine_name = '${this.functionName}'`);
+  static async getVersionOf(connection: IBMi, schema: string, name: string) {
+    const [result] = await connection.runSQL(`select cast(LONG_COMMENT as VarChar(200)) LONG_COMMENT from qsys2.sysroutines where routine_schema = '${schema}' and routine_name = '${name}'`);
     if (result?.LONG_COMMENT) {
       const comment = String(result.LONG_COMMENT);
       const dash = comment.indexOf('-');
       if (dash > -1) {
-        this.installedVersion = Number(comment.substring(0, dash).trim());
+        return Number(comment.substring(0, dash).trim());
       }
     }
+
+    return -1;
+  }
+
+  async getRemoteState(connection: IBMi) {
+    this.library = connection.config?.tempLibrary.toUpperCase() || "ILEDITOR";
+
+    const wrapperVersion = await SQLStatementChecker.getVersionOf(connection, this.library, WRAPPER_NAME);
+    if (wrapperVersion < this.currentVersion) {
+      return `NeedsUpdate`;
+    }
+
+    this.installedVersion = await SQLStatementChecker.getVersionOf(connection, this.library, this.functionName);
     if (this.installedVersion < this.currentVersion) {
       return `NeedsUpdate`;
     }
@@ -78,13 +97,13 @@ export class SQLStatementChecker implements IBMiComponent {
   }
 
   private getSource() {
-    return getCheckerSource(this.library, this.currentVersion);
+    return getValidatorSource(this.library, this.currentVersion);
   }
 
-  async call(statement: string) {
+  async call(statement: string): Promise<SqlSyntaxError|undefined> {
     const currentJob = JobManager.getSelection();
     if (currentJob) {
-      const result = await currentJob.job.execute<SqlError>(`select * from table(${this.library}.${this.functionName}(?)) x`, {parameters: [statement]});
+      const result = await currentJob.job.execute<SqlCheckError>(`select * from table(${this.library}.${this.functionName}(?)) x`, {parameters: [statement]});
       
       if (!result.success || result.data.length === 0) return;
       const sqlError = result.data[0];
