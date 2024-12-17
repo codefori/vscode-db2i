@@ -1,15 +1,16 @@
 import path from "path";
 
+import { existsSync, mkdirSync } from "fs";
+import { writeFile } from "fs/promises";
 import fetch from "node-fetch";
 import { Octokit } from "octokit";
-import { writeFile } from "fs/promises";
-import { SERVER_VERSION_TAG } from "./connection/SCVersion";
+import { SERVER_VERSION_FILE, SERVER_VERSION_TAG } from "./connection/SCVersion";
 
 async function work() {
   const octokit = new Octokit();
 
-  const owner = `ThePrez`;
-  const repo = `CodeForIBMiServer`;
+  const owner = `Mapepire-IBMi`;
+  const repo = `mapepire-server`;
 
   try {
     const result = await octokit.request(`GET /repos/{owner}/{repo}/releases/tags/${SERVER_VERSION_TAG}`, {
@@ -26,13 +27,15 @@ async function work() {
       console.log(`Asset found: ${newAsset.name}`);
 
       const url = newAsset.browser_download_url;
-      const basename = newAsset.name;
+      const distDirectory = path.join(`.`, `dist`);
+      if (!existsSync(distDirectory)) {
+        mkdirSync(distDirectory);
+      }
 
-      const dist = path.join(`.`, `dist`, basename);
+      const serverFile = path.join(distDirectory, SERVER_VERSION_FILE);
+      await downloadFile(url, serverFile);
 
-      await downloadFile(url, dist);
-
-      console.log(`Asset downloaded.`);
+      console.log(`Asset downloaded: ${serverFile}`);
 
     } else {
       console.log(`Release found but no asset found.`);
@@ -46,8 +49,8 @@ async function work() {
 
 function downloadFile(url, outputPath) {
   return fetch(url)
-      .then(x => x.arrayBuffer())
-      .then(x => writeFile(outputPath, Buffer.from(x)));
+    .then(x => x.arrayBuffer())
+    .then(x => writeFile(outputPath, Buffer.from(x)));
 }
 
 work();

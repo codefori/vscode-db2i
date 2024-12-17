@@ -7,12 +7,14 @@
 			"type": "npm",
 			"script": "webpack-dev",
 			"problemMatcher": "$ts-webpack-watch",
+			"isBackground": false,
+			
 			"presentation": {
 				"reveal": "never"
 			},
 			"group": {
 				"kind": "build",
-				"isDefault": true
+				"isDefault": true,
 			}
 		}
 	]

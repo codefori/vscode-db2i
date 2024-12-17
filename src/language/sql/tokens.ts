@@ -25,7 +25,7 @@ interface TokenState {
 }
 
 export default class SQLTokeniser {
-  matchers: Matcher[] = [
+  static matchers: Matcher[] = [
     {
       name: `PROCEDURE_PARM_TYPE`,
       match: [{ type: `word`, match: (value: string) => {return [`IN`, `OUT`, `INOUT`].includes(value.toUpperCase())}}],
@@ -34,9 +34,17 @@ export default class SQLTokeniser {
     {
       name: `STATEMENTTYPE`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`].includes(value.toUpperCase());
+        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`, `IF`, `FOR`, `WHILE`].includes(value.toUpperCase());
       } }],
       becomes: `statementType`,
+    },
+    {
+      name: `CLAUSE-ORDER`,
+      match: [
+        {type: `word`, match: (value: string) => {return value.toUpperCase() === `ORDER`}},
+        {type: `word`, match: (value: string) => {return value.toUpperCase() === `BY`}}
+      ],
+      becomes: `clause`,
     },
     {
       name: `CLAUSE`,
@@ -74,7 +82,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
+        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `DO`, `THEN`, `LOOP`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },
@@ -98,6 +106,11 @@ export default class SQLTokeniser {
       match: [{ type: `equals` }, { type: `morethan` }],
       becomes: `rightpipe`,
     },
+    {
+      name: `NOT`,
+      match: [{type: `lessthan`}, {type: `morethan`}],
+      becomes: `not`
+    }
   ];
   readonly spaces = [`\t`, ` `];
   readonly splitParts: string[] = [`(`, `)`, `/`, `.`, `*`, `-`, `+`, `;`, `"`, `&`, `%`, `,`, `|`, `?`, `:`, `=`, `<`, `>`, `\n`, `\r`, ...this.spaces];
@@ -132,6 +145,8 @@ export default class SQLTokeniser {
   readonly startCommentBlock = `/*`;
   readonly endCommentBlock = `*/`;
 
+  storeComments: boolean = false;
+
   constructor() { }
 
   tokenise(content: string) {
@@ -153,6 +168,11 @@ export default class SQLTokeniser {
         // Handle when the end of line is there and we're in a comment
       } else if (state === ReadState.IN_SIMPLE_COMMENT && content[i] === this.endCommentString) {
         const preNewLine = i - 1;
+
+        if (this.storeComments) {
+          result.push({ value: content.substring(commentStart, i), type: `comment`, range: { start: commentStart, end: i } });
+        }
+
         content = content.substring(0, commentStart) + ` `.repeat(preNewLine - commentStart) + content.substring(preNewLine);
         i--; // So we process the newline next
         state = ReadState.NORMAL;
@@ -255,8 +275,8 @@ export default class SQLTokeniser {
     let tokens = state.tokens;
 
     for (let i = 0; i < tokens.length; i++) {
-      for (let y = 0; y < this.matchers.length; y++) {
-        const type = this.matchers[y];
+      for (let y = 0; y < SQLTokeniser.matchers.length; y++) {
+        const type = SQLTokeniser.matchers[y];
         let goodMatch = true;
 
         for (let x = 0; x < type.match.length; x++) {

@@ -6,7 +6,6 @@ import * as mdTable from 'json-to-markdown-table';
 import { getInstance } from '../base';
 import { JobManager } from '../config';
 import { ChartJsType, chartJsTypes, generateChartHTMLCell } from './logic/chartJs';
-import { JobStatus } from '../connection/sqlJob';
 import { ChartDetail, generateChart } from './logic/chart';
 import { getStatementDetail } from './logic/statement';
 
@@ -65,7 +64,7 @@ export class IBMiController {
 
     execution.token.onCancellationRequested(() => {
       this.globalCancel = true;
-      if (selected && selected.job.getStatus() === JobStatus.Busy) {
+      if (selected && selected.job.getStatus() === "busy") {
         selected.job.requestCancel();
       }
     });
@@ -84,7 +83,7 @@ export class IBMiController {
 
               // Execute the query
               const query = selected.job.query(content);
-              const results = await query.run();
+              const results = await query.execute(1000);
 
               const table = results.data;
               if (table === undefined && results.success && !results.has_results) {

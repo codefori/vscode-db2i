@@ -9,7 +9,7 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       border-collapse: collapse;
       font-size: 0.9em;
       font-family: sans-serif;
-      min-width: 400px;
+      min-width: 100%;
     }
 
     thead tr {
@@ -20,16 +20,23 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       top: 0;           /* Don't forget this, required for the stickiness */
     }
 
+    tfoot {
+      position: sticky;
+      bottom: 0;
+    }
+
     tfoot tr {
       background-color: var(--vscode-multiDiffEditor-headerBackground);
       text-align: left;
-      position: sticky; /* Lock the footer row to the bottom so it's always visible as rows are scrolled */
-      bottom: 0;        /* Don't forget this, required for the stickiness */
     }
 
     #resultset th,
     #resultset td {
       padding: 5px 15px;
+    }
+
+    #resultset tbody tr:hover {
+      background-color: var(--vscode-list-hoverBackground);
     }
     
     #resultset tbody tr {

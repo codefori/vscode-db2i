@@ -1,10 +1,9 @@
-import { Disposable, ProgressLocation, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, window } from "vscode";
+import { Disposable, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, window } from "vscode";
 import Configuration from "../../configuration";
-import { JDBCOptions } from "../../connection/types";
-import { JobManagerView, SQLJobItem } from "./jobManagerView";
+import { SQLJobItem } from "./jobManagerView";
 import { JobManager } from "../../config";
-import { SQLJob } from "../../connection/sqlJob";
 import { editJobUi } from "./editJob";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 
 interface JobConfigs {
   [name: string]: JDBCOptions

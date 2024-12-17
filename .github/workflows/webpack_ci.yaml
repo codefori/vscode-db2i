@@ -40,7 +40,16 @@ jobs:
         name: test_vsix
         path: ${{env.vsix_name}}
           
+    - name: Find Comment
+      uses: peter-evans/find-comment@v1
+      id: fc
+      with:
+        issue-number: ${{ github.event.pull_request.number }}
+        comment-author: 'github-actions[bot]'
+        body-includes: new build is available
+
     - name: Post comment
+      if: steps.fc.outputs.comment-id == ''
       uses: actions/github-script@v5
       with:
         script: |
@@ -48,5 +57,17 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: '👋  A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.\n * [Download here.](https://github.com/halcyon-tech/vscode-db2i/actions/runs/${{ github.run_id }})\n'
+            body: '👋 A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.\n * [Download here.](https://github.com/codefori/vscode-ibmi/actions/runs/${{ github.run_id }})\n* [Read more about how to test](https://github.com/codefori/vscode-ibmi/blob/master/.github/pr_testing_template.md)'
           })
+
+    - name: Update comment
+      if: steps.fc.outputs.comment-id != ''
+      uses: peter-evans/create-or-update-comment@v1
+      with:
+        edit-mode: replace
+        comment-id: ${{ steps.fc.outputs.comment-id }}
+        body: |
+          👋 A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.
+
+          * [Download here.](https://github.com/codefori/vscode-ibmi/actions/runs/${{ github.run_id }})
+          * [Read more about how to test](https://github.com/codefori/vscode-ibmi/blob/master/.github/pr_testing_template.md)

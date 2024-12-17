@@ -1,23 +1,24 @@
-import vscode, { SnippetString, ViewColumn, TreeView, window } from "vscode"
+import * as vscode from "vscode";
+import { SnippetString, ViewColumn, TreeView, window } from "vscode"
 
 import * as csv from "csv/sync";
 
 
 import { JobManager } from "../../config";
 import Document from "../../language/sql/document";
-import { changedCache } from "../../language/providers/completionItemCache";
-import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
+import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import Statement from "../../language/sql/statement";
 import { ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider } from "./resultSetPanelProvider";
-import { ExplainType } from "../../connection/sqlJob";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
+import { ExplainType } from "@ibm/mapepire-js/dist/src/types";
+import { DbCache } from "../../language/providers/logic/cache";
 
-export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
+export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 
 export interface StatementInfo {
   content: string,
@@ -202,7 +203,10 @@ async function runHandler(options?: StatementInfo) {
         statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
           ? ref.object.schema || ``
           : ref.object.schema + ref.object.name;
-      changedCache.add((databaseObj || ``).toUpperCase());
+
+      if (databaseObj) {
+        DbCache.resetObject(databaseObj);
+      }
     }
 
     if (statementDetail.content.trim().length > 0) {
@@ -215,12 +219,18 @@ async function runHandler(options?: StatementInfo) {
           }
           chosenView.setScrolling(statementDetail.content, true); // Never errors
           
-        } else if (statementDetail.qualifier === `statement`) {
+        } else if ([`statement`, `update`].includes(statementDetail.qualifier)) {
           // If it's a basic statement, we can let it scroll!
           if (inWindow) {
             useWindow(possibleTitle, options.viewColumn);
           }
-          chosenView.setScrolling(statementDetail.content, false, undefined, inWindow); // Never errors
+
+          let updatableTable: ObjectRef | undefined;
+          if (statementDetail.qualifier === `update` && statement.type === StatementType.Select && refs.length === 1) {
+            updatableTable = refs[0];
+          }
+
+          chosenView.setScrolling(statementDetail.content, false, undefined, inWindow, updatableTable); // Never errors
 
         } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
           // If it's an explain, we need to 
@@ -229,7 +239,7 @@ async function runHandler(options?: StatementInfo) {
             const onlyExplain = statementDetail.qualifier === `onlyexplain`;
 
             chosenView.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
-            const explainType: ExplainType = onlyExplain ? ExplainType.DoNotRun : ExplainType.Run;
+            const explainType: ExplainType = onlyExplain ? "doNotRun" : "run";
 
               setCancelButtonVisibility(true);
               const explained = await selectedJob.job.explain(statementDetail.content, explainType); // Can throw
@@ -314,6 +324,11 @@ async function runHandler(options?: StatementInfo) {
           }
         }
 
+        // If we the API is called with no open, then don't add it to history
+        if (statementDetail.open === false) {
+          statementDetail.history = false;
+        }
+
         if ((statementDetail.qualifier === `statement` || statementDetail.qualifier === `explain`) && statementDetail.history !== false) {
           vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
         }
@@ -379,7 +394,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     }
 
     if (statementInfo.content) {
-      [`cl`, `json`, `csv`, `sql`, `explain`].forEach(mode => {
+      [`cl`, `json`, `csv`, `sql`, `explain`, `update`].forEach(mode => {
         if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
           statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 

@@ -22,6 +22,13 @@
     ],
     "commands": [
       {
+        "command": "vscode-db2i.notebook.open",
+        "title": "New Notebook",
+        "category": "IBM i Notebooks",
+        "enablement": "code-for-ibmi:connected == true",
+        "icon": "$(notebook)"
+      },
+      {
         "command": "vscode-db2i.notebook.fromSqlUri",
         "title": "Open as Notebook",
         "category": "IBM i Notebooks",

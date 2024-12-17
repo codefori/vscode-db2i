@@ -93,6 +93,13 @@
         "icon": "$(info)"
       },
       {
+        "command": "vscode-db2i.self.explainSelf",
+        "title": "Explain SELF Code with continue",
+        "category": "Db2 for i",
+        "icon": "$(debug-alt)",
+        "enablement": "vscode-db2i:continueExtensionActive"
+      },
+      {
         "command": "vscode-db2i.self.help",
         "title": "Open SELF Documentation",
         "category": "Db2 for i",
@@ -146,6 +153,11 @@
         {
           "command": "vscode-db2i.self.displayDetails",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.self.explainSelf",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && vscode-db2i:continueExtensionActive",
           "group": "navigation"
         }
       ]

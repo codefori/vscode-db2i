@@ -27,6 +27,19 @@ test('Comment test', () => {
   expect(tokens.length).toBe(10);
 });
 
+test('Comment token test', () => {
+  const tokeniser = new SQLTokeniser();
+  tokeniser.storeComments = true;
+
+  const tokens = tokeniser.tokenise([
+    `--hello: world!!!: coolness`,
+    `select * from table(func()) x`
+  ].join(`\n`));
+
+  expect(tokens.length).toBe(12);
+  expect(tokens.some(t => t.value === `--hello: world!!!: coolness`));
+});
+
 test('New line (\\n) and comments test', () => {
   const tokeniser = new SQLTokeniser();
 

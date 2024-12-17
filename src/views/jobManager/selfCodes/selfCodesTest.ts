@@ -1,8 +1,7 @@
-import { SQLJob } from "../../../connection/sqlJob";
+import { OldSQLJob } from "../../../connection/sqlJob";
 import { TestCase } from "../../../testing";
 import assert from "assert";
-import { SelfCodeNode, SelfValue } from "./nodes";
-import { QueryResult } from "../../../connection/types";
+import { SelfValue } from "./nodes";
 
 export const selfCodeTests = [
   {
@@ -26,13 +25,13 @@ export function testSelfCodes(): TestCase[] {
     const testCase: TestCase = {
       name: `Self code Error for test ${test.name}`,
       test: async () => {
-        let newJob = new SQLJob();
+        let newJob = new OldSQLJob();
         await newJob.connect();
         await newJob.setSelfState(test.code as SelfValue);
         try {
-          await newJob.query(test.sql).run();
+          await newJob.query(test.sql).execute();
         } catch (e) {}
-        let result = await newJob.query(content, {parameters: [newJob.id]}).run();
+        let result = await newJob.query(content, {parameters: [newJob.id]}).execute();
         assert(result.data[0]['MATCHES'] >= 1);
         
         newJob.close();

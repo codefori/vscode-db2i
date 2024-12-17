@@ -1,11 +1,9 @@
 import { CompletionItem, CompletionItemKind, SnippetString } from "vscode";
-import Callable, { CallableSignature, CallableType } from "../../database/callable";
-import { ObjectRef, QualifiedObject, CallableReference } from "../sql/types";
-import Statement from "../../database/statement";
-import { completionItemCache, createCompletionItem, getParmAttributes } from "./completion";
-import { toKey } from "./completionItemCache";
-
-const SIGNATURE_CONTEXT_KEY = `sigs`;
+import { CallableSignature, CallableType } from "../../../database/callable";
+import { ObjectRef, CallableReference } from "../../sql/types";
+import Statement from "../../../database/statement";
+import { createCompletionItem, getParmAttributes } from "./completion";
+import { DbCache } from "./cache";
 
 /**
  * Checks if the ref exists as a procedure or function. Then,
@@ -16,21 +14,13 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
     ref.object.schema = Statement.noQuotes(Statement.delimName(ref.object.schema, true));
     ref.object.name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
 
-    const cacheKey = toKey(SIGNATURE_CONTEXT_KEY, ref.object);
-
-    if (completionItemCache.has(cacheKey)) {
-      return true;
-    }
-
-    const callableRoutine = await Callable.getType(ref.object.schema, ref.object.name, type);
+    const callableRoutine = await DbCache.getRoutine(ref.object.schema, ref.object.name, type);
 
     if (callableRoutine) {
-      const parms = await Callable.getSignaturesFor(ref.object.schema, callableRoutine.specificNames);
-      completionItemCache.set(cacheKey, parms);
+      await DbCache.getSignaturesFor(ref.object.schema, ref.object.name, callableRoutine.specificNames);
       return true;
     } else {
       // Not callable, let's just cache it as empty to stop spamming the db
-      completionItemCache.set(cacheKey, []);
     }
   }
 
@@ -42,7 +32,7 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
  * that are stored in the cache for a specific procedure
  */
 export function getCallableParameters(ref: CallableReference, offset: number): CompletionItem[] {
-  const signatures = getCachedSignatures(ref);
+  const signatures = DbCache.getCachedSignatures(ref.parentRef.object.schema, ref.parentRef.object.name)
   if (signatures) {
     const { firstNamedParameter, currentCount } = getPositionData(ref, offset);
 
@@ -149,11 +139,4 @@ export function getPositionData(ref: CallableReference, offset: number) {
     currentCount: paramCommas.length + 1,
     firstNamedParameter
   };
-}
-
-export function getCachedSignatures(ref: CallableReference): CallableSignature[] | undefined {
-  const key = toKey(SIGNATURE_CONTEXT_KEY, ref.parentRef.object);
-  if (completionItemCache.has(key)) {
-    return completionItemCache.get(key);
-  }
 }
