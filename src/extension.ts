@@ -39,7 +39,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   // This line of code will only be executed once when your extension is activated
   console.log(`Congratulations, your extension "vscode-db2i" is now active!`);
 
-  loadBase();
+  loadBase(context);
 
   const exampleBrowser = new ExampleBrowser(context);
   const selfCodesView = new selfCodesResultsView(context);

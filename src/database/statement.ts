@@ -5,77 +5,7 @@ import { JobManager } from "../config";
 
 import {format, FormatOptionsWithLanguage, IdentifierCase, KeywordCase} from "sql-formatter"
 
-interface SqlError {
-  CURSTMTLENGTH: number;
-  ERRORFIRSTCOLUMNNUMBER: number;
-  ERRORFIRSTRECORDNUMBER: number;
-  ERRORLASTCOLUMNNUMBER: number;
-  ERRORLASTRECORDNUMBER: number;
-  ERRORREPLACEMENTTEXT: string;
-  ERRORSQLMESSAGEID: string;
-  ERRORSQLSTATE: string;
-  ERRORSYNTAXCOLUMNNUMBER: number;
-  ERRORSYNTAXRECORDNUMBER: number;
-  MESSAGEFILELIBRARY: string;
-  MESSAGEFILENAME: string;
-  MESSAGETEXT: string;
-  NUMBEROFSTATEMENTSBACK: number;
-}
-
 export default class Statement {
-  static async validateSQL(sql: string) {
-    const [result] = await JobManager.runSQL<SqlError>(`select * from table(liama.validate_statement(?)) x`, {parameters: [sql]});
-    if (!result) return;
-    if (result.ERRORSQLSTATE === `00000`) return;
-
-    const replaceTokens = this.splitReplaceText(result.ERRORREPLACEMENTTEXT)
-
-    let text = result.MESSAGETEXT;
-    replaceTokens.forEach((token, index) => {
-      text = text.replace(`&${index+1}`, token);
-    });
-
-    return {
-      sqlid: result.ERRORSQLMESSAGEID,
-      sqlstate: result.ERRORSQLSTATE,
-      text,
-      offset: result.ERRORSYNTAXCOLUMNNUMBER,
-    };
-  }
-
-  private static splitReplaceText(input: string) {
-    const firstGoodChar = input.split('').findIndex(c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126);
-
-    let replacements: string[] = [];    
-    let inReplacement = false;
-    let currentReplacement = ``;
-
-    for (let i = firstGoodChar; i < input.length; i++) {
-      const isGoodChar = input.charCodeAt(i) >= 32 && input.charCodeAt(i) <= 126;
-
-      if (isGoodChar) {
-        inReplacement = true;
-
-        if (inReplacement) {
-          currentReplacement += input[i];
-        }
-      } else {
-        if (inReplacement) {
-          replacements.push(currentReplacement);
-          currentReplacement = ``;
-        }
-        
-        inReplacement = false;
-      }
-    }
-
-    if (currentReplacement) {
-      replacements.push(currentReplacement);
-    }
-
-    return replacements;
-  }
-
   static format(sql: string, options: FormatOptionsWithLanguage = {}) {
     const identifierCase: IdentifierCase = <IdentifierCase>(Configuration.get(`sqlFormat.identifierCase`) || `preserve`);
     const keywordCase: KeywordCase = <KeywordCase>(Configuration.get(`sqlFormat.keywordCase`) || `lower`);

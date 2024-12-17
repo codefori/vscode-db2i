@@ -4,9 +4,9 @@ import {
 } from "../../database/schemas";
 import Statement from "../../database/statement";
 import Document from "../sql/document";
-import { env } from "process";
-import { remoteAssistIsEnabled } from "./available";
+import { remoteAssistIsEnabled } from "./logic/available";
 import Configuration from "../../configuration";
+import { SQLStatementChecker } from "../../connection/syntaxChecker";
 
 export interface CompletionType {
   order: string;
@@ -24,7 +24,8 @@ function getTimeout() {
 
 export const problemProvider = workspace.onDidChangeTextDocument(e => {
   const isSql = e.document.languageId === `sql`;
-  if (isSql && remoteAssistIsEnabled()) {
+  const checker = SQLStatementChecker.get();
+  if (isSql && remoteAssistIsEnabled() && checker) {
     if (currentTimeout) {
       clearTimeout(currentTimeout);
     }
@@ -46,9 +47,8 @@ export const problemProvider = workspace.onDidChangeTextDocument(e => {
             document.positionAt(currentStatement.range.end)
           ));
 
-          const result = await Statement.validateSQL(statementContents);
+          const result = await checker.call(statementContents);
           if (result) {
-
             const selectedWord 
               = document.getWordRangeAtPosition(document.positionAt(currentStatement.range.start+result.offset)) 
               || new Range(
