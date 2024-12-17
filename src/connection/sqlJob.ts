@@ -224,5 +224,6 @@ export class OldSQLJob extends SQLJob {
     this.channel.close();
     this.channel = undefined;
     this.status = "ended";
+    this.responseEmitter.removeAllListeners();
   }
 }

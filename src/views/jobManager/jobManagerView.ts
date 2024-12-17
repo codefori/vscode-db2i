@@ -1,4 +1,5 @@
-import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
+import * as vscode from "vscode";
+import { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo, SQLJobManager } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";

@@ -1,11 +1,12 @@
-import vscode, { SnippetString, ViewColumn, TreeView, window } from "vscode"
+import * as vscode from "vscode";
+import { SnippetString, ViewColumn, TreeView, window } from "vscode"
 
 import * as csv from "csv/sync";
 
 
 import { JobManager } from "../../config";
 import Document from "../../language/sql/document";
-import { ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
+import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import Statement from "../../language/sql/statement";
 import { ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
@@ -17,7 +18,7 @@ import { updateStatusBar } from "../jobManager/statusBar";
 import { ExplainType } from "@ibm/mapepire-js/dist/src/types";
 import { DbCache } from "../../language/providers/logic/cache";
 
-export type StatementQualifier = "statement" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
+export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 
 export interface StatementInfo {
   content: string,
@@ -218,12 +219,18 @@ async function runHandler(options?: StatementInfo) {
           }
           chosenView.setScrolling(statementDetail.content, true); // Never errors
           
-        } else if (statementDetail.qualifier === `statement`) {
+        } else if ([`statement`, `update`].includes(statementDetail.qualifier)) {
           // If it's a basic statement, we can let it scroll!
           if (inWindow) {
             useWindow(possibleTitle, options.viewColumn);
           }
-          chosenView.setScrolling(statementDetail.content, false, undefined, inWindow); // Never errors
+
+          let updatableTable: ObjectRef | undefined;
+          if (statementDetail.qualifier === `update` && statement.type === StatementType.Select && refs.length === 1) {
+            updatableTable = refs[0];
+          }
+
+          chosenView.setScrolling(statementDetail.content, false, undefined, inWindow, updatableTable); // Never errors
 
         } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
           // If it's an explain, we need to 
@@ -387,7 +394,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     }
 
     if (statementInfo.content) {
-      [`cl`, `json`, `csv`, `sql`, `explain`].forEach(mode => {
+      [`cl`, `json`, `csv`, `sql`, `explain`, `update`].forEach(mode => {
         if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
           statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 

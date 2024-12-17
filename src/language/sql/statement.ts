@@ -20,7 +20,7 @@ export default class Statement {
 			first = this.tokens[2];
 		}
 
-		if (tokenIs(first, `word`) && tokenIs(this.tokens[1], `colon`)) {
+		if (first.value !== undefined && tokenIs(this.tokens[1], `colon`)) {
 			// Possible label?
 			this.label = first.value;
 			first = this.tokens[2];

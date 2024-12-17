@@ -6,11 +6,13 @@ export default class Document {
   content: string;
   statements: Statement[];
 
-  constructor(content: string) {
+  constructor(content: string, keepComments = false) {
     this.content = content;
     this.statements = [];
 
     const tokeniser = new SQLTokeniser();
+    tokeniser.storeComments = keepComments;
+
     this.parseStatements(tokeniser.tokenise(content));
   }
 
