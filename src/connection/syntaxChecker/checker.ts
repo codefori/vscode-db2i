@@ -79,7 +79,7 @@ export function getCheckerSource(schema: string, version: number) {
     end;
   
     set stmtLength = length(rtrim(statementText));
-    set options = x'00000001' concat x'00000001' concat x'0000000A' concat '*NONE     '; --sql naming 
+    set options = x'00000001' concat x'00000001' concat x'0000000A' concat '*NONE     '; --No naming convention
     -- set options = x'00000001' concat x'00000008' concat x'00000004' concat x'000004B0'; -- ccsid
     
     call ${schema}.${WRAPPED_NAME}( statementText, stmtLength, recordsProvided, statementLanguage, options, statementInfo, statementInfoLength, recordsProcessed, errorCode);
