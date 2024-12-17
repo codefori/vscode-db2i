@@ -5,6 +5,8 @@ import { JobManager } from "../../config";
 import { isContinueActive } from "./continueContextProvider";
 import { findPossibleTables } from "../context";
 import Statement from "../../database/statement";
+import Schemas from "../../database/schemas";
+import Table from "../../database/table";
 
 const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",
@@ -15,7 +17,7 @@ const listDb2Table: ContextProviderDescription = {
 
 class ListDb2iTables implements IContextProvider {
   get description(): ContextProviderDescription {
-    return listDb2Table
+    return listDb2Table;
   }
 
   getCurrentJob(): JobInfo {
@@ -26,72 +28,69 @@ class ListDb2iTables implements IContextProvider {
   private getDefaultSchema = (): string => {
     const currentJob: JobInfo = this.getCurrentJob();
     return currentJob?.job.options.libraries[0] || "QGPL";
-  }
-
-  async getTables(curSchema: string) {
-    const schema = Statement.delimName(curSchema, true);
-    const sql = `
-      SELECT TABLE_NAME, TABLE_SCHEMA
-      FROM QSYS2.SYSTABLES
-      WHERE TABLE_SCHEMA = '${schema}'
-        AND TABLE_TYPE = 'T'
-      ORDER BY TABLE_NAME
-    `;
-
-    const result = await JobManager.runSQL(sql);
-    return result;
-  }
+  };
 
   async getColumnInfoForAllTables(schema: string) {
-    const sql = `
-      SELECT COLUMN_NAME, TABLE_NAME, DATA_TYPE
-      FROM QSYS2.SYSCOLUMNS
-      WHERE TABLE_SCHEMA = '${Statement.delimName(schema)}'
-    `;
+    const items: TableColumn[] = await Table.getItems(schema);
 
-    const result = await JobManager.runSQL(sql);
-    return result;
-
+    return items.map((column) => ({
+      table_name: column.TABLE_NAME,
+      schema: column.TABLE_SCHEMA,
+      column_name: column.COLUMN_NAME,
+      column_data_type: column.DATA_TYPE,
+    }));
   }
 
-  async getContextItems(query: string, extras: ContextProviderExtras): Promise<ContextItem[]> {
+  async getContextItems(
+    query: string,
+    extras: ContextProviderExtras
+  ): Promise<ContextItem[]> {
+    let contextitems: ContextItem[] = [];
     const schema = this.getDefaultSchema();
     if (query.toUpperCase() === schema.toUpperCase()) {
       const tableInfo = await this.getColumnInfoForAllTables(schema);
-      return [{
+      contextitems.push({
         name: `Info for all tables in ${schema}`,
-        content: JSON.stringify(tableInfo),
-        description: "table metadata"
-      }]
+        content: `Db2 for i table Assistant: The following table and column information is from the ${query} schema. Utilize the provided schema and table metadata to assist the user:\n${JSON.stringify(tableInfo)}`,
+        description: "table metadata",
+      });
+    } else {
+      const tableInfo = await findPossibleTables(
+        null,
+        schema,
+        query.split(` `)
+      );
+      contextitems.push({
+        name: `${query}`,
+        content: `Db2 for i table Assistant: The following information is based on the ${query} table within the ${schema} schema. Utilize the provided schema and table metadata to assist the user:\n${JSON.stringify(tableInfo)}`,
+        description: "table metadata",
+      });
     }
-    const tableInfo = await findPossibleTables(null, schema, query.split(` `));
-    return [{
-      name: `${query}`,
-      content: JSON.stringify(tableInfo),
-      description: "table metadata"
-
-    }]
+    return contextitems;
   }
-  
-  async loadSubmenuItems(args: LoadSubmenuItemsArgs): Promise<ContextSubmenuItem[]> {
+
+  async loadSubmenuItems(
+    args: LoadSubmenuItemsArgs
+  ): Promise<ContextSubmenuItem[]> {
     const schema = this.getDefaultSchema();
-    const tables: any[] = await this.getTables(schema);
-    
+    const tables: BasicSQLObject[] = await Schemas.getObjects(schema, [
+      `tables`,
+    ]);
+
     const schemaSubmenuItem: ContextSubmenuItem = {
       id: schema,
       title: schema,
-      description: `All table info in schema: ${schema}`
+      description: `All table info in schema: ${schema}`,
     };
 
     const tableSubmenuItems: ContextSubmenuItem[] = tables.map((table) => ({
-      id: table.TABLE_NAME,
-      title: table.TABLE_NAME,
-      description: `${table.TABLE_SCHEMA}-${table.TABLE_NAME}`,
+      id: table.name,
+      title: table.name,
+      description: `${table.schema}-${table.name}`,
     }));
 
     return [schemaSubmenuItem, ...tableSubmenuItems];
   }
-  
 }
 
 export async function registerDb2iTablesProvider() {
