@@ -151,7 +151,7 @@ export class db2ContextProvider implements IContextProvider {
                   columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
 
                 // create context item
-                let prompt = `Db2 for i Table meta data for schema ${tableSchema} table ${table}\n`;
+                let prompt = `Db2 for i table Assistant: The following information is based on the ${table} table within the ${tableSchema} schema. Utilize the provided schema and table metadata to assist the user:\n`;
                 prompt += `Column Info: ${JSON.stringify(columnData)}\n\n`;
 
                 contextItems.push({
