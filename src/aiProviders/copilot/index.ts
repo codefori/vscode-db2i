@@ -5,6 +5,7 @@ import {
   findPossibleTables,
   getCurrentSchema,
   getSystemStatus,
+  refsToMarkdown,
 } from "../context";
 import { JobManager } from "../../config";
 
@@ -89,6 +90,8 @@ export function activateChat(context: vscode.ExtensionContext) {
             request.prompt.split(` `)
           );
 
+          const markdownRefs = refsToMarkdown(refs);
+
           messages = [
             vscode.LanguageModelChatMessage.Assistant(
               `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice.`
@@ -118,11 +121,14 @@ export function activateChat(context: vscode.ExtensionContext) {
         }
 
           if (Object.keys(refs).length > 0) {
-            messages.push(
-              vscode.LanguageModelChatMessage.Assistant(
-                `Here are new table references ${JSON.stringify(refs)}`
-              ),
-            );
+            for (const tableRef of markdownRefs) {
+              messages.push(
+                vscode.LanguageModelChatMessage.Assistant(
+                  `Here are new table references for ${tableRef.TABLE_NAME} (Schema: ${tableRef.SCHMEA})\nFormat: column_name (column_text) type(length:precision) is_identity is_nullable\n${tableRef.COLUMN_INFO}`
+                ),
+              );
+
+            }
           }
 
           stream.progress(`Building response...`);
