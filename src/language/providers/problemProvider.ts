@@ -23,8 +23,12 @@ const diagnosticTypeMap: { [key: string]: DiagnosticSeverity } = {
 let currentTimeout: NodeJS.Timeout;
 let sqlDiagnosticCollection = languages.createDiagnosticCollection(`db2i-sql`);
 
+export function getCheckerEnabled() {
+  return (Configuration.get<boolean>(`syntax.checkAutomatically`) || false);
+}
+
 export function getCheckerTimeout() {
-  return (Configuration.get<number>(`syntaxCheckInterval`) || 1500);
+  return (Configuration.get<number>(`syntax.checkInterval`) || 1500);
 }
 
 const CHECKER_AVAILABLE_CONTEXT = `vscode-db2i.syntax.checkerAvailable`;
@@ -88,7 +92,7 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
 export const problemProvider = workspace.onDidChangeTextDocument(e => {
   const isSql = e.document.languageId === `sql`;
   const checker = SQLStatementChecker.get();
-  if (isSql && remoteAssistIsEnabled() && checker) {
+  if (isSql && remoteAssistIsEnabled() && getCheckerEnabled() && checker) {
     if (currentTimeout) {
       clearTimeout(currentTimeout);
     }

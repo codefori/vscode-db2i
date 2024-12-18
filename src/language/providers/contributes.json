@@ -1,5 +1,23 @@
 {
   "contributes": {
+    "configuration": [
+      {
+        "id": "vscode-db2i.syntax",
+        "title": "SQL Syntax Checking",
+        "properties": {
+          "vscode-db2i.syntax.checkAutomatically": {
+            "type": "boolean",
+            "description": "Whether the syntax checker should run automatically",
+            "default": true
+          },
+          "vscode-db2i.syntax.checkInterval": {
+            "type": "number",
+            "description": "Time between editing (ms) and sending a request to syntax check on the server",
+            "default": 1500
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "command": "vscode-db2i.syntax.checkDocument",

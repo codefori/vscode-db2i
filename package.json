@@ -64,11 +64,6 @@
             "description": "Saved configs for",
             "default": {},
             "additionalProperties": true
-          },
-          "vscode-db2i.syntaxCheckInterval": {
-            "type": "number",
-            "description": "Time between editing (ms) and sending a request to syntax check on the server",
-            "default": 1500
           }
         }
       },
@@ -202,6 +197,22 @@
             "title": "Auto-refresh SELF Codes view",
             "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
             "default": false
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.syntax",
+        "title": "SQL Syntax Checking",
+        "properties": {
+          "vscode-db2i.syntax.checkAutomatically": {
+            "type": "boolean",
+            "description": "Whether the syntax checker should run automatically",
+            "default": true
+          },
+          "vscode-db2i.syntax.checkInterval": {
+            "type": "number",
+            "description": "Time between editing (ms) and sending a request to syntax check on the server",
+            "default": 1500
           }
         }
       }
