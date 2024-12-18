@@ -18,7 +18,7 @@ export interface CompletionType {
 let currentTimeout: NodeJS.Timeout;
 let sqlDiagnosticCollection = languages.createDiagnosticCollection(`db2i-sql`);
 
-function getTimeout() {
+export function getCheckerTimeout() {
   return (Configuration.get<number>(`syntaxCheckInterval`) || 1500);
 }
 
@@ -67,6 +67,6 @@ export const problemProvider = workspace.onDidChangeTextDocument(e => {
           }
         }
       }
-    }, getTimeout());
+    }, getCheckerTimeout());
   }
 });
