@@ -33,7 +33,7 @@ export interface SqlSyntaxError {
 export class SQLStatementChecker implements IBMiComponent {
   static ID = "SQLStatementChecker";
   private readonly functionName = VALIDATOR_NAME;
-  private readonly currentVersion = 1;
+  private readonly currentVersion = 2;
 
   private installedVersion = 1;
   private library = "";
