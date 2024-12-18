@@ -23,6 +23,7 @@ interface SqlCheckError {
 }
 
 export interface SqlSyntaxError {
+  isError: boolean;
   sqlid: string;
   sqlstate: string;
   text: string;
@@ -106,27 +107,44 @@ export class SQLStatementChecker implements IBMiComponent {
       const result = await currentJob.job.execute<SqlCheckError>(`select * from table(${this.library}.${this.functionName}(?)) x`, {parameters: [statement]});
       
       if (!result.success || result.data.length === 0) return;
+
       const sqlError = result.data[0];
-
-      if (sqlError.ERRORSQLSTATE === `00000`) return;
-
-      const replaceTokens = splitReplaceText(sqlError.ERRORREPLACEMENTTEXT)
-
-      let text = sqlError.MESSAGETEXT;
-      replaceTokens.forEach((token, index) => {
-        text = text.replace(`&${index+1}`, token);
-      });
-
-      return {
-        sqlid: sqlError.ERRORSQLMESSAGEID,
-        sqlstate: sqlError.ERRORSQLSTATE,
-        text,
-        offset: sqlError.ERRORSYNTAXCOLUMNNUMBER,
-      };
+      return niceError(sqlError);
     }
 
     return undefined;
   }
+
+  async checkMultipleStatements(statements: string[]): Promise<SqlSyntaxError[]|undefined> {
+    const checks = statements.map(stmt => `select * from table(${this.library}.${this.functionName}(?)) x`).join(` union all `);
+    const currentJob = JobManager.getSelection();
+
+    if (currentJob) {
+      const result = await currentJob.job.execute<SqlCheckError>(checks, {parameters: statements});
+      if (!result.success || result.data.length === 0) return [];
+
+      return result.data.map(sqlError => niceError(sqlError));
+    }
+
+    return undefined;
+  }
+}
+
+function niceError(sqlError: SqlCheckError): SqlSyntaxError {
+  const replaceTokens = splitReplaceText(sqlError.ERRORREPLACEMENTTEXT)
+
+  let text = sqlError.MESSAGETEXT;
+  replaceTokens.forEach((token, index) => {
+    text = text.replace(`&${index+1}`, token);
+  });
+
+  return {
+    isError: sqlError.ERRORSQLSTATE !== `00000`,
+    sqlid: sqlError.ERRORSQLMESSAGEID,
+    sqlstate: sqlError.ERRORSQLSTATE,
+    text,
+    offset: sqlError.ERRORSYNTAXCOLUMNNUMBER,
+  };
 }
 
 function splitReplaceText(input: string) {

@@ -1,0 +1,22 @@
+{
+  "contributes": {
+    "commands": [
+      {
+        "command": "vscode-db2i.syntax.checkDocument",
+        "title": "Check SQL syntax",
+        "category": "Db2 for IBM i",
+        "enablement": "code-for-ibmi:connected == true && vscode-db2i:jobManager.hasJob && vscode-db2i:statementCanCancel != true && vscode-db2i.syntax.checkerAvailable == true",
+        "icon": "$(check-all)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "vscode-db2i.syntax.checkDocument",
+          "when": "editorLangId == sql && code-for-ibmi:connected == true",
+          "group": "navigation"
+        }
+      ]
+    }
+  }
+}

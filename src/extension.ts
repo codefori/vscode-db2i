@@ -24,6 +24,8 @@ import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobMan
 import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
 import { queryHistory } from "./views/queryHistoryView";
 import { activateChat, registerCopilotProvider } from "./aiProviders/copilot";
+import { SQLStatementChecker } from "./connection/syntaxChecker";
+import { setCheckerAvailableContext } from "./language/providers/problemProvider";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -94,6 +96,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     DbCache.resetCache();
     selfCodesView.setRefreshEnabled(false);
     selfCodesView.setJobOnly(false);
+    setCheckerAvailableContext();
     // Refresh the examples when we have it, so we only display certain examples
     onConnectOrServerInstall().then(() => {
       exampleBrowser.refresh();

@@ -660,6 +660,13 @@
         "title": "Export",
         "category": "IBM i Notebooks",
         "icon": "$(save)"
+      },
+      {
+        "command": "vscode-db2i.syntax.checkDocument",
+        "title": "Check SQL syntax",
+        "category": "Db2 for IBM i",
+        "enablement": "code-for-ibmi:connected == true && vscode-db2i:jobManager.hasJob && vscode-db2i:statementCanCancel != true && vscode-db2i.syntax.checkerAvailable == true",
+        "icon": "$(check-all)"
       }
     ],
     "menus": {
@@ -1045,6 +1052,11 @@
           "command": "vscode-db2i.statement.cancel",
           "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
           "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.syntax.checkDocument",
+          "when": "editorLangId == sql && code-for-ibmi:connected == true",
+          "group": "navigation"
         }
       ],
       "sql/editor/context": [
