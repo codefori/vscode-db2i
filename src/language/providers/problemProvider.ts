@@ -15,6 +15,11 @@ export interface CompletionType {
   icon: CompletionItemKind;
 }
 
+const diagnosticTypeMap: { [key: string]: DiagnosticSeverity } = {
+  'error': DiagnosticSeverity.Error,
+  'warning': DiagnosticSeverity.Warning,
+}
+
 let currentTimeout: NodeJS.Timeout;
 let sqlDiagnosticCollection = languages.createDiagnosticCollection(`db2i-sql`);
 
@@ -51,7 +56,7 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
             for (let i = 0; i < groups.length; i++) {
               const groupError = syntaxChecked[i];
 
-              if (groupError.isError) {
+              if (groupError.type !== `none`) {
                 const selectedWord
                   = document.getWordRangeAtPosition(document.positionAt(groups[i].range.start + groupError.offset))
                   || new Range(
@@ -63,7 +68,7 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
                   message: `${groupError.text} - ${groupError.sqlstate}`,
                   code: groupError.sqlid,
                   range: selectedWord,
-                  severity: DiagnosticSeverity.Error,
+                  severity: diagnosticTypeMap[groupError.type],
                 });
               }
             }
@@ -106,7 +111,7 @@ export const problemProvider = workspace.onDidChangeTextDocument(e => {
           ));
 
           const result = await checker.call(statementContents);
-          if (result && result.isError) {
+          if (result && result.type !== `none`) {
             const selectedWord
               = document.getWordRangeAtPosition(document.positionAt(currentStatement.range.start + result.offset))
               || new Range(
@@ -118,7 +123,7 @@ export const problemProvider = workspace.onDidChangeTextDocument(e => {
               message: `${result.text} - ${result.sqlstate}`,
               code: result.sqlid,
               range: selectedWord,
-              severity: DiagnosticSeverity.Error,
+              severity: diagnosticTypeMap[result.type],
             }]);
           } else {
             sqlDiagnosticCollection.set(document.uri, []);

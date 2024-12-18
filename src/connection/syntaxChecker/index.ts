@@ -22,8 +22,16 @@ interface SqlCheckError {
   NUMBEROFSTATEMENTSBACK: number;
 }
 
+type SqlErrorType = "error"|"warning"|"none";
+
+const ERROR_STATE_MAP: {[state: string]: SqlErrorType} = {
+  '00': 'none',
+  '01': 'warning',
+  '02': 'error',
+}
+
 export interface SqlSyntaxError {
-  isError: boolean;
+  type: SqlErrorType;
   sqlid: string;
   sqlstate: string;
   text: string;
@@ -131,15 +139,21 @@ export class SQLStatementChecker implements IBMiComponent {
 }
 
 function niceError(sqlError: SqlCheckError): SqlSyntaxError {
-  const replaceTokens = splitReplaceText(sqlError.ERRORREPLACEMENTTEXT)
+  const replaceTokens = splitReplaceText(sqlError.ERRORREPLACEMENTTEXT);
 
-  let text = sqlError.MESSAGETEXT;
+  let text = sqlError.MESSAGETEXT || `Unknown error message ${sqlError.ERRORSQLMESSAGEID ? `(${sqlError.ERRORSQLMESSAGEID})` : `(No message ID)`}`;
   replaceTokens.forEach((token, index) => {
     text = text.replace(`&${index+1}`, token);
   });
 
+  let errorType: SqlErrorType = `none`;
+  const sqlState = sqlError.ERRORSQLSTATE.substring(0, 2);
+  if (sqlState in ERROR_STATE_MAP) {
+    errorType = ERROR_STATE_MAP[sqlState];
+  }
+
   return {
-    isError: sqlError.ERRORSQLSTATE !== `00000`,
+    type: errorType,
     sqlid: sqlError.ERRORSQLMESSAGEID,
     sqlstate: sqlError.ERRORSQLSTATE,
     text,
