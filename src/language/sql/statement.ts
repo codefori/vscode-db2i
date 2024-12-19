@@ -17,11 +17,6 @@ export default class Statement {
 		if (tokenIs(first, `word`, `EXEC`) && tokenIs(this.tokens[1], `word`, `SQL`)) {
 			first = this.tokens[2];
 		} else if (tokenIs(first, `word`) && tokenIs(this.tokens[1], `colon`)) {
-			first = this.tokens[2];
-		}
-
-		if (first.value !== undefined && tokenIs(this.tokens[1], `colon`)) {
-			// Possible label?
 			this.label = first.value;
 			first = this.tokens[2];
 		}
@@ -38,6 +33,10 @@ export default class Statement {
 				this.tokens = SQLTokeniser.findScalars(this.tokens);
 				break;
 		}
+	}
+
+	getLabel(): string|undefined {
+		return this.label;
 	}
 
 	isCompoundStart() {

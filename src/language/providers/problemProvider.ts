@@ -7,6 +7,7 @@ import Document from "../sql/document";
 import { remoteAssistIsEnabled } from "./logic/available";
 import Configuration from "../../configuration";
 import { SQLStatementChecker, SqlSyntaxError } from "../../connection/syntaxChecker";
+import { StatementGroup, StatementType } from "../sql/types";
 
 export interface CompletionType {
   order: string;
@@ -14,6 +15,8 @@ export interface CompletionType {
   type: SQLType;
   icon: CompletionItemKind;
 }
+
+type StatementRange = [number, number];
 
 const diagnosticTypeMap: { [key: string]: DiagnosticSeverity } = {
   'error': DiagnosticSeverity.Error,
@@ -57,24 +60,33 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
       const sqlDocument = new Document(content);
 
       window.withProgress({ location: ProgressLocation.Window, title: `Checking SQL Syntax...` }, async () => {
-        const groups = sqlDocument.getStatementGroups();
+        const allGroups = sqlDocument.getStatementGroups();
+        let statementRanges: StatementRange[] = [];
 
-        const sqlStatementContents = groups.map(group => content.substring(group.range.start, group.range.end));
+        for (const group of allGroups) {
+          const range = getStatementRangeFromGroup(group);
+          if (range) {
+            statementRanges.push(range);
+          }
+        }
+
+        const sqlStatementContents = statementRanges.map(range => content.substring(range[0], range[1]));
         const syntaxChecked = await checker.checkMultipleStatements(sqlStatementContents);
 
         if (syntaxChecked) {
           if (syntaxChecked.length > 0) {
             let errors: Diagnostic[] = [];
-            for (let i = 0; i < groups.length; i++) {
+            for (let i = 0; i < statementRanges.length; i++) {
+              const currentRange = statementRanges[i];
               const groupError = syntaxChecked[i];
 
               if (shouldShowError(groupError)) {
 
                 const selectedWord
-                  = document.getWordRangeAtPosition(document.positionAt(groups[i].range.start + groupError.offset))
+                  = document.getWordRangeAtPosition(document.positionAt(currentRange[0] + groupError.offset))
                   || new Range(
-                    document.positionAt(groups[i].range.start + groupError.offset - 1),
-                    document.positionAt(groups[i].range.start + groupError.offset)
+                    document.positionAt(currentRange[0] + groupError.offset - 1),
+                    document.positionAt(currentRange[0] + groupError.offset)
                   );
 
                 errors.push({
@@ -115,34 +127,49 @@ export const problemProvider = workspace.onDidChangeTextDocument(e => {
         const offset = document.offsetAt(position);
 
         const sqlDoc = new Document(content);
-        const currentStatement = sqlDoc.getGroupByOffset(offset);
+        const currentGroup = sqlDoc.getGroupByOffset(offset);
 
-        if (currentStatement) {
-          const statementContents = document.getText(new Range(
-            document.positionAt(currentStatement.range.start),
-            document.positionAt(currentStatement.range.end)
-          ));
+        if (currentGroup) {
+          const statementRange = getStatementRangeFromGroup(currentGroup);
 
-          const result = await checker.call(statementContents);
-          if (result && shouldShowError(result)) {
-            const selectedWord
-              = document.getWordRangeAtPosition(document.positionAt(currentStatement.range.start + result.offset))
-              || new Range(
-                document.positionAt(currentStatement.range.start + result.offset - 1),
-                document.positionAt(currentStatement.range.start + result.offset)
-              );
+          if (statementRange) {
+            const statementContents = content.substring(statementRange[0], statementRange[1]);
 
-            sqlDiagnosticCollection.set(document.uri, [{
-              message: `${result.text} - ${result.sqlstate}`,
-              code: result.sqlid,
-              range: selectedWord,
-              severity: diagnosticTypeMap[result.type],
-            }]);
-          } else {
-            sqlDiagnosticCollection.set(document.uri, []);
+            const result = await checker.call(statementContents);
+            if (result && shouldShowError(result)) {
+              const selectedWord
+                = document.getWordRangeAtPosition(document.positionAt(statementRange[0] + result.offset))
+                || new Range(
+                  document.positionAt(statementRange[0] + result.offset - 1),
+                  document.positionAt(statementRange[0] + result.offset)
+                );
+
+              sqlDiagnosticCollection.set(document.uri, [{
+                message: `${result.text} - ${result.sqlstate}`,
+                code: result.sqlid,
+                range: selectedWord,
+                severity: diagnosticTypeMap[result.type],
+              }]);
+            } else {
+              sqlDiagnosticCollection.set(document.uri, []);
+            }
           }
         }
       }
     }, getCheckerTimeout());
   }
 });
+
+function getStatementRangeFromGroup(currentGroup: StatementGroup): StatementRange|undefined {
+  let statementRange: StatementRange|undefined;
+  const firstStatement = currentGroup.statements[0];
+  if (firstStatement && firstStatement.type !== StatementType.Unknown) {
+    statementRange = [currentGroup.range.start, currentGroup.range.end];
+
+    if (firstStatement.getLabel()) {
+      statementRange = [firstStatement.tokens[2].range.start, currentGroup.range.end];
+    }
+  }
+
+  return statementRange;
+}
