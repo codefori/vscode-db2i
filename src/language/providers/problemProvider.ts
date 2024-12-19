@@ -6,7 +6,7 @@ import Statement from "../../database/statement";
 import Document from "../sql/document";
 import { remoteAssistIsEnabled } from "./logic/available";
 import Configuration from "../../configuration";
-import { SQLStatementChecker } from "../../connection/syntaxChecker";
+import { SQLStatementChecker, SqlSyntaxError } from "../../connection/syntaxChecker";
 
 export interface CompletionType {
   order: string;
@@ -31,7 +31,15 @@ export function getCheckerTimeout() {
   return (Configuration.get<number>(`syntax.checkInterval`) || 1500);
 }
 
+function shouldShowWarnings() {
+  return Configuration.get<boolean>(`syntax.showWarnings`) || false;
+}
+
 const CHECKER_AVAILABLE_CONTEXT = `vscode-db2i.syntax.checkerAvailable`;
+
+function shouldShowError(error: SqlSyntaxError) {
+  return error.type === `error` || (error.type === `warning` && shouldShowWarnings());
+}
 
 export function setCheckerAvailableContext() {
   const available = SQLStatementChecker.get() !== undefined;
@@ -60,7 +68,8 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
             for (let i = 0; i < groups.length; i++) {
               const groupError = syntaxChecked[i];
 
-              if (groupError.type !== `none`) {
+              if (shouldShowError(groupError)) {
+
                 const selectedWord
                   = document.getWordRangeAtPosition(document.positionAt(groups[i].range.start + groupError.offset))
                   || new Range(
@@ -115,7 +124,7 @@ export const problemProvider = workspace.onDidChangeTextDocument(e => {
           ));
 
           const result = await checker.call(statementContents);
-          if (result && result.type !== `none`) {
+          if (result && shouldShowError(result)) {
             const selectedWord
               = document.getWordRangeAtPosition(document.positionAt(currentStatement.range.start + result.offset))
               || new Range(

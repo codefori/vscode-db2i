@@ -213,6 +213,11 @@
             "type": "number",
             "description": "Time between editing (ms) and sending a request to syntax check on the server",
             "default": 1500
+          },
+          "vscode-db2i.syntax.showWarnings": {
+            "type": "boolean",
+            "description": "Whether SQL syntax warnings should show in the editor",
+            "default": false
           }
         }
       }
