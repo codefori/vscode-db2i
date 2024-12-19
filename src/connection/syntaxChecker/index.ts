@@ -27,7 +27,6 @@ type SqlErrorType = "error"|"warning"|"none";
 const ERROR_STATE_MAP: {[state: string]: SqlErrorType} = {
   '00': 'none',
   '01': 'warning',
-  '02': 'error',
 }
 
 export interface SqlSyntaxError {
@@ -146,11 +145,8 @@ function niceError(sqlError: SqlCheckError): SqlSyntaxError {
     text = text.replace(`&${index+1}`, token);
   });
 
-  let errorType: SqlErrorType = `error`;
   const sqlState = sqlError.ERRORSQLSTATE.substring(0, 2);
-  if (sqlState in ERROR_STATE_MAP) {
-    errorType = ERROR_STATE_MAP[sqlState];
-  }
+  let errorType: SqlErrorType = (sqlState in ERROR_STATE_MAP ? ERROR_STATE_MAP[sqlState] : `error`);
 
   return {
     type: errorType,
