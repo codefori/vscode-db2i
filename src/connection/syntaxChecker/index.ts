@@ -146,7 +146,7 @@ function niceError(sqlError: SqlCheckError): SqlSyntaxError {
     text = text.replace(`&${index+1}`, token);
   });
 
-  let errorType: SqlErrorType = `none`;
+  let errorType: SqlErrorType = `error`;
   const sqlState = sqlError.ERRORSQLSTATE.substring(0, 2);
   if (sqlState in ERROR_STATE_MAP) {
     errorType = ERROR_STATE_MAP[sqlState];
