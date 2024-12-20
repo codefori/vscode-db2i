@@ -1,4 +1,4 @@
-import { commands, CompletionItemKind, Diagnostic, DiagnosticSeverity, languages, ProgressLocation, Range, Uri, window, workspace } from "vscode";
+import { commands, CompletionItemKind, Diagnostic, DiagnosticSeverity, languages, Range, Uri, window, workspace } from "vscode";
 import {
   SQLType,
 } from "../../database/schemas";
@@ -26,7 +26,7 @@ const diagnosticTypeMap: { [key: string]: DiagnosticSeverity } = {
 let currentTimeout: NodeJS.Timeout;
 let sqlDiagnosticCollection = languages.createDiagnosticCollection(`db2i-sql`);
 
-export function getCheckerEnabled() {
+export function getCheckerAutomatically() {
   return (Configuration.get<boolean>(`syntax.checkAutomatically`) || false);
 }
 
@@ -59,53 +59,47 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
       const content = document.getText();
       const sqlDocument = new Document(content);
 
-      window.withProgress({ location: ProgressLocation.Window, title: `Checking SQL Syntax...` }, async () => {
-        const allGroups = sqlDocument.getStatementGroups();
-        let statementRanges: StatementRange[] = [];
+      const allGroups = sqlDocument.getStatementGroups();
+      let statementRanges: StatementRange[] = [];
 
-        for (const group of allGroups) {
-          const range = getStatementRangeFromGroup(group);
-          if (range) {
-            statementRanges.push(range);
-          }
+      for (const group of allGroups) {
+        const range = getStatementRangeFromGroup(group);
+        if (range) {
+          statementRanges.push(range);
         }
+      }
 
-        const sqlStatementContents = statementRanges.map(range => content.substring(range[0], range[1]));
-        const syntaxChecked = await checker.checkMultipleStatements(sqlStatementContents);
+      const sqlStatementContents = statementRanges.map(range => content.substring(range[0], range[1]));
+      const syntaxChecked = await checker.checkMultipleStatements(sqlStatementContents);
 
-        if (syntaxChecked) {
-          if (syntaxChecked.length > 0) {
-            let errors: Diagnostic[] = [];
-            for (let i = 0; i < statementRanges.length; i++) {
-              const currentRange = statementRanges[i];
-              const groupError = syntaxChecked[i];
+      if (syntaxChecked) {
+        if (syntaxChecked.length > 0) {
+          let errors: Diagnostic[] = [];
+          for (let i = 0; i < statementRanges.length; i++) {
+            const currentRange = statementRanges[i];
+            const groupError = syntaxChecked[i];
 
-              if (shouldShowError(groupError)) {
+            if (shouldShowError(groupError)) {
 
-                const selectedWord
-                  = document.getWordRangeAtPosition(document.positionAt(currentRange[0] + groupError.offset))
-                  || new Range(
-                    document.positionAt(currentRange[0] + groupError.offset - 1),
-                    document.positionAt(currentRange[0] + groupError.offset)
-                  );
+              const selectedWord
+                = document.getWordRangeAtPosition(document.positionAt(currentRange[0] + groupError.offset))
+                || new Range(
+                  document.positionAt(currentRange[0] + groupError.offset - 1),
+                  document.positionAt(currentRange[0] + groupError.offset)
+                );
 
-                errors.push({
-                  message: `${groupError.text} - ${groupError.sqlstate}`,
-                  code: groupError.sqlid,
-                  range: selectedWord,
-                  severity: diagnosticTypeMap[groupError.type],
-                });
-              }
-            }
-
-            sqlDiagnosticCollection.set(document.uri, errors);
-
-            if (errors.length === 0) {
-              window.showInformationMessage(`SQL Syntax Checker found no errors.`);
+              errors.push({
+                message: `${groupError.text} - ${groupError.sqlstate}`,
+                code: groupError.sqlid,
+                range: selectedWord,
+                severity: diagnosticTypeMap[groupError.type],
+              });
             }
           }
+
+          sqlDiagnosticCollection.set(document.uri, errors);
         }
-      });
+      }
     }
   }
 });
@@ -113,7 +107,7 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
 export const problemProvider = workspace.onDidChangeTextDocument(e => {
   const isSql = e.document.languageId === `sql`;
   const checker = SQLStatementChecker.get();
-  if (isSql && remoteAssistIsEnabled() && getCheckerEnabled() && checker) {
+  if (isSql && remoteAssistIsEnabled() && getCheckerAutomatically() && checker) {
     if (currentTimeout) {
       clearTimeout(currentTimeout);
     }
