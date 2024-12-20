@@ -1,4 +1,4 @@
-import { commands, CompletionItemKind, Diagnostic, DiagnosticSeverity, languages, Range, TextDocument, Uri, window, workspace } from "vscode";
+import { commands, CompletionItemKind, Diagnostic, DiagnosticSeverity, languages, ProgressLocation, Range, TextDocument, Uri, window, workspace } from "vscode";
 import {
   SQLType,
 } from "../../database/schemas";
@@ -105,10 +105,8 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
 
     const sqlStatementContents = statementRanges.map(range => content.substring(range[0], range[1]));
     const se = performance.now();
-    const syntaxChecked = await checker.checkMultipleStatements(sqlStatementContents);
+    const syntaxChecked = await window.withProgress({location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax`}, () => {return checker.checkMultipleStatements(sqlStatementContents)});
     const ee = performance.now();
-
-    console.log(`Syntax check took: ${ee - se}ms`);
 
     if (syntaxChecked) {
       if (syntaxChecked.length > 0) {
