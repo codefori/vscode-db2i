@@ -1,6 +1,7 @@
-import { loadBase } from "../../base";
+import { getBase, getInstance, loadBase } from "../../base";
 
-export const copyUI = loadBase().customUI()
+export function getCopyUi() {
+  return getBase()!.customUI()
     .addInput('toFile', 'To File', 'Name', {
         minlength: 1,
         maxlength: 10
@@ -34,3 +35,4 @@ export const copyUI = loadBase().customUI()
         { id: 'copy', label: 'Copy', requiresValidation: true },
         { id: 'cancel', label: 'Cancel' }
     );
+}
