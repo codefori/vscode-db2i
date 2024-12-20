@@ -107,7 +107,7 @@ export function getValidatorSource(schema: string, version: number) {
   
       select message_text
       into messageText
-      from table(qsys2.message_file_data('QSYS', 'QSQLMSG'))
+      from table(qsys2.message_file_data(messageFileLibrary, messageFileName))
       where message_id = errorSQLMessageID;
   
       pipe (
