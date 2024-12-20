@@ -139,8 +139,13 @@ function getStatementRangeFromGroup(currentGroup: StatementGroup): StatementRang
   if (firstStatement && firstStatement.type !== StatementType.Unknown) {
     statementRange = [currentGroup.range.start, currentGroup.range.end];
 
-    if (firstStatement.getLabel()) {
-      statementRange = [firstStatement.tokens[2].range.start, currentGroup.range.end];
+    const label = firstStatement.getLabel();
+    if (label) { 
+      if (label.toUpperCase() === `CL`) {
+        statementRange = undefined;
+      } else {
+        statementRange = [firstStatement.tokens[2].range.start, currentGroup.range.end];
+      }
     }
   }
 
