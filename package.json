@@ -686,7 +686,7 @@
         "command": "vscode-db2i.syntax.checkDocument",
         "title": "Check SQL syntax",
         "category": "Db2 for IBM i",
-        "enablement": "code-for-ibmi:connected == true && vscode-db2i:jobManager.hasJob && vscode-db2i:statementCanCancel != true && vscode-db2i.syntax.checkerAvailable == true",
+        "enablement": "code-for-ibmi:connected == true && vscode-db2i:jobManager.hasJob && vscode-db2i:statementCanCancel != true && vscode-db2i.syntax.checkerAvailable == true && vscode-db2i.syntax.checkerRunning != true",
         "icon": "$(check-all)"
       }
     ],

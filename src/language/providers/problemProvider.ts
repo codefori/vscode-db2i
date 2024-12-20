@@ -47,10 +47,17 @@ function shouldShowWarnings() {
 }
 
 const CHECKER_AVAILABLE_CONTEXT = `vscode-db2i.syntax.checkerAvailable`;
+const CHECKER_RUNNING_CONTEXT = `vscode-db2i.syntax.checkerRunning`;
 
 export function setCheckerAvailableContext() {
   const available = SQLStatementChecker.get() !== undefined;
   commands.executeCommand(`setContext`, CHECKER_AVAILABLE_CONTEXT, available);
+}
+
+let checkerRunning = false;
+export function setCheckerRunningContext(isRunning: boolean) {
+  checkerRunning = isRunning;
+  commands.executeCommand(`setContext`, CHECKER_RUNNING_CONTEXT, isRunning);
 }
 
 export const CHECK_DOCUMENT_COMMAND = `vscode-db2i.syntax.checkDocument`;
@@ -89,7 +96,8 @@ interface SqlDiagnostic extends Diagnostic {
 
 async function validateSqlDocument(document: TextDocument, specificStatement?: number) {
   const checker = SQLStatementChecker.get();
-  if (remoteAssistIsEnabled() && checker) {
+  if (remoteAssistIsEnabled() && checker && !checkerRunning) {
+    setCheckerRunningContext(true);
     const content = document.getText();
     const sqlDocument = new Document(content);
 
@@ -162,7 +170,7 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
                 severity: diagnosticTypeMap[groupError.type],
                 groupId: currentRange.groupId
               };
-              
+
               if (existingError >= 0) {
                 currentErrors[existingError] = newDiag;
               } else {
@@ -177,6 +185,8 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
       }
     }
   }
+  
+  setCheckerRunningContext(false);
 }
 
 function shouldShowError(error: SqlSyntaxError) {
