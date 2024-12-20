@@ -99,40 +99,44 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
           }
         }
 
-        statementRanges.push(range);
+        if (range[0] !== range[1]) {
+          statementRanges.push(range);
+        }
       }
     }
 
-    const sqlStatementContents = statementRanges.map(range => content.substring(range[0], range[1]));
-    const se = performance.now();
-    const syntaxChecked = await window.withProgress({location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax`}, () => {return checker.checkMultipleStatements(sqlStatementContents)});
-    const ee = performance.now();
+    if (statementRanges.length > 0) {
+      const sqlStatementContents = statementRanges.map(range => content.substring(range[0], range[1]));
+      const se = performance.now();
+      const syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(sqlStatementContents) });
+      const ee = performance.now();
 
-    if (syntaxChecked) {
-      if (syntaxChecked.length > 0) {
-        let errors: Diagnostic[] = [];
-        for (let i = 0; i < statementRanges.length; i++) {
-          const currentRange = statementRanges[i];
-          const groupError = syntaxChecked[i];
+      if (syntaxChecked) {
+        if (syntaxChecked.length > 0) {
+          let errors: Diagnostic[] = [];
+          for (let i = 0; i < statementRanges.length; i++) {
+            const currentRange = statementRanges[i];
+            const groupError = syntaxChecked[i];
 
-          if (shouldShowError(groupError)) {
+            if (shouldShowError(groupError)) {
 
-            const selectedWord = document.getWordRangeAtPosition(document.positionAt(currentRange[0] + groupError.offset))
-              || new Range(
-                document.positionAt(currentRange[0] + groupError.offset - 1),
-                document.positionAt(currentRange[0] + groupError.offset)
-              );
+              const selectedWord = document.getWordRangeAtPosition(document.positionAt(currentRange[0] + groupError.offset))
+                || new Range(
+                  document.positionAt(currentRange[0] + groupError.offset - 1),
+                  document.positionAt(currentRange[0] + groupError.offset)
+                );
 
-            errors.push({
-              message: `${groupError.text} - ${groupError.sqlstate}`,
-              code: groupError.sqlid,
-              range: selectedWord,
-              severity: diagnosticTypeMap[groupError.type],
-            });
+              errors.push({
+                message: `${groupError.text} - ${groupError.sqlstate}`,
+                code: groupError.sqlid,
+                range: selectedWord,
+                severity: diagnosticTypeMap[groupError.type],
+              });
+            }
           }
-        }
 
-        sqlDiagnosticCollection.set(document.uri, errors);
+          sqlDiagnosticCollection.set(document.uri, errors);
+        }
       }
     }
   }
@@ -149,7 +153,7 @@ function getStatementRangeFromGroup(currentGroup: StatementGroup): StatementRang
     statementRange = [currentGroup.range.start, currentGroup.range.end];
 
     const label = firstStatement.getLabel();
-    if (label) { 
+    if (label) {
       if (label.toUpperCase() === `CL`) {
         statementRange = undefined;
       } else {
