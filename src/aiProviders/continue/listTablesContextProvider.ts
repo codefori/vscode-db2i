@@ -131,23 +131,14 @@ export async function registerDb2iTablesProvider() {
       // HACK: re register context provider work around
       // save continue config file to trigger a config reload to update list tables provider
       const configFile = path.join(os.homedir(), `.continue`, `config.json`);
-      
-      fs.readFile(configFile, `utf-8`, (err, data) => {
+      const now = new Date();
+      fs.utimes(configFile, now, now, (err) => {
         if (err) {
-          console.error('Error reading Continue config file: ', err);
+          console.error('Error saving Continue config file:', err);
+          return;
         }
-
-        const updatedData = data + ``;
-        
-        fs.writeFile(configFile, updatedData, `utf-8`, (err) => {
-          if (err) {
-            console.error(`Error writing Continue config file`, err);
-            return;
-          }
-          vscode.window.showInformationMessage(`Updated @Db2-Tables!`)
-        })
-      })
-
+        vscode.window.showInformationMessage('Updated @Db2-Tables!');
+      });
     } else {
       continueAPI?.registerCustomContextProvider(provider);
       listDb2TableContextProvider = true;
