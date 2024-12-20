@@ -24,6 +24,7 @@ import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobMan
 import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
 import { queryHistory } from "./views/queryHistoryView";
 import { activateChat, registerCopilotProvider } from "./aiProviders/copilot";
+import { registerDb2iTablesProvider } from "./aiProviders/continue/listTablesContextProvider";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -98,6 +99,8 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     onConnectOrServerInstall().then(() => {
       exampleBrowser.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
+      // register list tables
+      registerDb2iTablesProvider();
       if (devMode && runTests) {
         runTests();
       }
@@ -109,6 +112,8 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   registerCopilotProvider(context); 
   // register continue provider
   registerContinueProvider();
+
+
 
   instance.subscribe(context, `disconnected`, `db2i-disconnected`, () => ServerComponent.reset());
 

@@ -12,6 +12,7 @@ import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
 import { setCancelButtonVisibility } from "../results";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { registerDb2iTablesProvider } from "../../aiProviders/continue/listTablesContextProvider";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -124,6 +125,9 @@ export class JobManagerView implements TreeDataProvider<any> {
 
                 try {
                   await selected.job.connect();
+                  
+                  // re register tables provider with potential new Schema
+                  await registerDb2iTablesProvider();
                 } catch (e) {
                   window.showErrorMessage(`Failed to start new job with updated properties.`);
                 }

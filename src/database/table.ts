@@ -8,7 +8,8 @@ export default class Table {
    * @param {string} name Not user input
    * @returns {Promise<TableColumn[]>}
    */
-  static async getItems(schema: string, name: string): Promise<TableColumn[]> {
+  static async getItems(schema: string, name?: string): Promise<TableColumn[]> {
+    const params = name ? [schema, name] : [schema];
     const sql = [
       `SELECT `,
       `  column.TABLE_SCHEMA,`,
@@ -30,11 +31,14 @@ export default class Table {
       `    column.table_schema = key.table_schema and`,
       `    column.table_name = key.table_name and`,
       `    column.column_name = key.column_name`,
-      `WHERE column.TABLE_SCHEMA = ? AND column.TABLE_NAME = ?`,
+      `WHERE column.TABLE_SCHEMA = ?`,
+      ...[
+        name ? `AND column.TABLE_NAME = ${name}` : ``,
+      ],
       `ORDER BY column.ORDINAL_POSITION`,
     ].join(` `);
 
-    return JobManager.runSQL(sql, {parameters: [schema, name]});
+    return JobManager.runSQL(sql, {parameters: params});
   }
 
   /**
