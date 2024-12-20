@@ -16,7 +16,7 @@ export function languageInit() {
     signatureProvider,
     hoverProvider,
     openProvider,
-    problemProvider,
+    ...problemProvider,
     checkDocumentDefintion,
     sqlLanguageStatus
   );

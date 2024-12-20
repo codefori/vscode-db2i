@@ -211,7 +211,7 @@
           },
           "vscode-db2i.syntax.checkOnEdit": {
             "type": "boolean",
-            "description": "Whether the syntax checker should run automatically",
+            "description": "Whether the syntax checker should run automatically when the document is edited",
             "default": true
           },
           "vscode-db2i.syntax.checkInterval": {

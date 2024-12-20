@@ -46,7 +46,7 @@ export class SQLStatementChecker implements IBMiComponent {
   private library = "";
 
   static get(): SQLStatementChecker|undefined {
-    return getInstance().getConnection().getComponent<SQLStatementChecker>(SQLStatementChecker.ID);
+    return getInstance()?.getConnection()?.getComponent<SQLStatementChecker>(SQLStatementChecker.ID);
   }
 
   reset() {
