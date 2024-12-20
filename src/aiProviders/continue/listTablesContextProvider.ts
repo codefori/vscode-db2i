@@ -7,6 +7,9 @@ import { findPossibleTables } from "../context";
 import Statement from "../../database/statement";
 import Schemas from "../../database/schemas";
 import Table from "../../database/table";
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",
@@ -14,6 +17,8 @@ const listDb2Table: ContextProviderDescription = {
   description: "Add Db2i Table info to Context",
   type: "submenu"
 }
+
+export let listDb2TableContextProvider: Boolean = false;
 
 class ListDb2iTables implements IContextProvider {
   get description(): ContextProviderDescription {
@@ -93,6 +98,24 @@ class ListDb2iTables implements IContextProvider {
   }
 }
 
+class emptyContextProvider implements IContextProvider {
+  get description(): ContextProviderDescription {
+    return {
+      title: "",
+      displayTitle: "",
+      description: "",
+      type: "normal"
+    };
+  }
+  async getContextItems(query: string, extras: ContextProviderExtras): Promise<ContextItem[]> {
+    return [];
+  }
+  async loadSubmenuItems(args: LoadSubmenuItemsArgs): Promise<ContextSubmenuItem[]> {
+    return [];
+  }
+  
+}
+
 export async function registerDb2iTablesProvider() {
   const provider = new ListDb2iTables();
   const continueID = `Continue.continue`;
@@ -103,6 +126,31 @@ export async function registerDb2iTablesProvider() {
     }
   
     const continueAPI = continueEx?.exports;
-    continueAPI?.registerCustomContextProvider(provider);
+    if (listDb2TableContextProvider) {
+
+      // HACK: re register context provider work around
+      // save continue config file to trigger a config reload to update list tables provider
+      const configFile = path.join(os.homedir(), `.continue`, `config.json`);
+      
+      fs.readFile(configFile, `utf-8`, (err, data) => {
+        if (err) {
+          console.error('Error reading Continue config file: ', err);
+        }
+
+        const updatedData = data + ``;
+        
+        fs.writeFile(configFile, updatedData, `utf-8`, (err) => {
+          if (err) {
+            console.error(`Error writing Continue config file`, err);
+            return;
+          }
+          vscode.window.showInformationMessage(`Updated @Db2-Tables!`)
+        })
+      })
+
+    } else {
+      continueAPI?.registerCustomContextProvider(provider);
+      listDb2TableContextProvider = true;
+    }
   }
 }
