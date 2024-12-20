@@ -31,7 +31,7 @@ export function checkOnOpen() {
 }
 
 export function checkOnChange() {
-  return (Configuration.get<boolean>(`syntax.checkAutomatically`) || false);
+  return (Configuration.get<boolean>(`syntax.checkOnEdit`) || false);
 }
 
 export function getCheckerTimeout() {

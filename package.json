@@ -209,7 +209,7 @@
             "description": "If enabled, will check the syntax of the SQL file when it is opened",
             "default": false
           },
-          "vscode-db2i.syntax.checkAutomatically": {
+          "vscode-db2i.syntax.checkOnEdit": {
             "type": "boolean",
             "description": "Whether the syntax checker should run automatically",
             "default": true
