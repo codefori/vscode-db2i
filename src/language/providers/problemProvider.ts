@@ -68,19 +68,19 @@ export const problemProvider = [
 
   workspace.onDidChangeTextDocument(e => {
     const isSql = e.document.languageId === `sql`;
-    if (isSql && checkOnChange()) {
+    if (isSql && checkOnChange() && e.contentChanges.length > 0) {
       if (currentTimeout) {
         clearTimeout(currentTimeout);
       }
 
       currentTimeout = setTimeout(() => {
-        validateSqlDocument(e.document);
+        validateSqlDocument(e.document, e.document.offsetAt(e.contentChanges[0].range.start));
       }, getCheckerTimeout());
     }
   })
 ];
 
-async function validateSqlDocument(document: TextDocument) {
+async function validateSqlDocument(document: TextDocument, specificStatement?: number) {
   const checker = SQLStatementChecker.get();
   if (remoteAssistIsEnabled() && checker) {
     const content = document.getText();
@@ -92,12 +92,23 @@ async function validateSqlDocument(document: TextDocument) {
     for (const group of allGroups) {
       const range = getStatementRangeFromGroup(group);
       if (range) {
+        if (specificStatement) {
+          // If specificStatement is outline this range, continue
+          if (specificStatement <= range[0] || specificStatement >= range[1]) {
+            continue;
+          }
+        }
+
         statementRanges.push(range);
       }
     }
 
     const sqlStatementContents = statementRanges.map(range => content.substring(range[0], range[1]));
+    const se = performance.now();
     const syntaxChecked = await checker.checkMultipleStatements(sqlStatementContents);
+    const ee = performance.now();
+
+    console.log(`Syntax check took: ${ee - se}ms`);
 
     if (syntaxChecked) {
       if (syntaxChecked.length > 0) {
