@@ -16,7 +16,11 @@ export interface CompletionType {
   icon: CompletionItemKind;
 }
 
-type StatementRange = [number, number];
+interface StatementRange {
+  groupId: number;
+  start: number;
+  end: number;
+};
 
 const diagnosticTypeMap: { [key: string]: DiagnosticSeverity } = {
   'error': DiagnosticSeverity.Error,
@@ -79,6 +83,9 @@ export const problemProvider = [
     }
   })
 ];
+interface SqlDiagnostic extends Diagnostic {
+  groupId: number;
+}
 
 async function validateSqlDocument(document: TextDocument, specificStatement?: number) {
   const checker = SQLStatementChecker.get();
@@ -89,53 +96,83 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
     const allGroups = sqlDocument.getStatementGroups();
     let statementRanges: StatementRange[] = [];
 
-    for (const group of allGroups) {
-      const range = getStatementRangeFromGroup(group);
+    for (let i = 0; i < allGroups.length; i++) {
+      const group = allGroups[i];
+      if (specificStatement) {
+        // If specificStatement is outline this group, continue
+        if (specificStatement <= group.range.start || specificStatement >= (allGroups[i+1] ? allGroups[i+1].range.start : group.range.end)) {
+          continue;
+        }
+      }
+
+      const range = getStatementRangeFromGroup(group, i);
+
       if (range) {
-        if (specificStatement) {
-          // If specificStatement is outline this range, continue
-          if (specificStatement <= range[0] || specificStatement >= range[1]) {
-            continue;
+        statementRanges.push(range);
+      }
+
+        // We also add the surrounding ranges, as we need to check the end of the statement
+      if (specificStatement) {
+        for (let j = i - 1; j <= i + 1; j++) {
+          if (allGroups[j]) {
+            const nextRange = getStatementRangeFromGroup(allGroups[j], j);
+            if (nextRange) {
+              statementRanges.push(nextRange);
+            }
           }
         }
 
-        if (range[0] !== range[1]) {
-          statementRanges.push(range);
-        }
+        break;
       }
     }
 
+
     if (statementRanges.length > 0) {
-      const sqlStatementContents = statementRanges.map(range => content.substring(range[0], range[1]));
+      const sqlStatementContents = statementRanges.map(range => content.substring(range.start, range.end));
       const se = performance.now();
       const syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(sqlStatementContents) });
       const ee = performance.now();
 
       if (syntaxChecked) {
         if (syntaxChecked.length > 0) {
-          let errors: Diagnostic[] = [];
+          let currentErrors: SqlDiagnostic[] = specificStatement ? languages.getDiagnostics(document.uri) as SqlDiagnostic[] : [];
+
           for (let i = 0; i < statementRanges.length; i++) {
             const currentRange = statementRanges[i];
             const groupError = syntaxChecked[i];
+            let existingError: number = currentErrors.findIndex(e => e.groupId === currentRange.groupId);
 
-            if (shouldShowError(groupError)) {
+            if (groupError.type === `none`) {
+              if (existingError !== -1) {
+                currentErrors.splice(existingError, 1);
+              }
 
-              const selectedWord = document.getWordRangeAtPosition(document.positionAt(currentRange[0] + groupError.offset))
+            } else if (shouldShowError(groupError)) {
+              const selectedWord = document.getWordRangeAtPosition(document.positionAt(currentRange.start + groupError.offset))
                 || new Range(
-                  document.positionAt(currentRange[0] + groupError.offset - 1),
-                  document.positionAt(currentRange[0] + groupError.offset)
+                  document.positionAt(currentRange.start + groupError.offset - 1),
+                  document.positionAt(currentRange.start + groupError.offset)
                 );
 
-              errors.push({
+
+              const newDiag: SqlDiagnostic = {
                 message: `${groupError.text} - ${groupError.sqlstate}`,
                 code: groupError.sqlid,
                 range: selectedWord,
                 severity: diagnosticTypeMap[groupError.type],
-              });
+                groupId: currentRange.groupId
+              };
+              
+              if (existingError >= 0) {
+                currentErrors[existingError] = newDiag;
+              } else {
+                currentErrors.push(newDiag);
+              }
+
             }
           }
 
-          sqlDiagnosticCollection.set(document.uri, errors);
+          sqlDiagnosticCollection.set(document.uri, currentErrors);
         }
       }
     }
@@ -146,18 +183,18 @@ function shouldShowError(error: SqlSyntaxError) {
   return error.type === `error` || (error.type === `warning` && shouldShowWarnings());
 }
 
-function getStatementRangeFromGroup(currentGroup: StatementGroup): StatementRange | undefined {
+function getStatementRangeFromGroup(currentGroup: StatementGroup, groupId: number): StatementRange | undefined {
   let statementRange: StatementRange | undefined;
   const firstStatement = currentGroup.statements[0];
   if (firstStatement) {
-    statementRange = [currentGroup.range.start, currentGroup.range.end];
+    statementRange = { groupId, start: firstStatement.range.start, end: currentGroup.range.end };
 
     const label = firstStatement.getLabel();
     if (label) {
       if (label.toUpperCase() === `CL`) {
         statementRange = undefined;
       } else {
-        statementRange = [firstStatement.tokens[2].range.start, currentGroup.range.end];
+        statementRange.start = firstStatement.tokens[2].range.start;
       }
     }
   }
