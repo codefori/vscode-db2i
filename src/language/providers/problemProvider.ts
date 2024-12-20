@@ -136,7 +136,7 @@ function shouldShowError(error: SqlSyntaxError) {
 function getStatementRangeFromGroup(currentGroup: StatementGroup): StatementRange | undefined {
   let statementRange: StatementRange | undefined;
   const firstStatement = currentGroup.statements[0];
-  if (firstStatement && firstStatement.type !== StatementType.Unknown) {
+  if (firstStatement) {
     statementRange = [currentGroup.range.start, currentGroup.range.end];
 
     const label = firstStatement.getLabel();
