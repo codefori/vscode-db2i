@@ -5,6 +5,11 @@
         "id": "vscode-db2i.syntax",
         "title": "SQL Syntax Checking",
         "properties": {
+          "vscode-db2i.syntax.checkOnOpen": {
+            "type": "boolean",
+            "description": "If enabled, will check the syntax of the SQL file when it is opened",
+            "default": false
+          },
           "vscode-db2i.syntax.checkAutomatically": {
             "type": "boolean",
             "description": "Whether the syntax checker should run automatically",
