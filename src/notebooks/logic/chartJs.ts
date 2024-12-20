@@ -31,7 +31,7 @@ export function generateChartHTMLEmbedded(id: number, detail: ChartDetail, label
 
   const hasYaxis = detail.type === `bar` || detail.type === `line`;
 
-  const script = /*javascript*/`
+  const script = /*javascript*/ `
   if (!window.ibmicharts) {
     window.ibmicharts = {};
   }
@@ -44,8 +44,8 @@ export function generateChartHTMLEmbedded(id: number, detail: ChartDetail, label
         const maxHeight = window.innerHeight * 0.8;
         const maxWidth = window.innerWidth * 0.8;
         const targetSize = Math.min(maxHeight, maxWidth);
-        chartEle.style.maxHeight = `${targetSize}px`;
-        chartEle.style.maxWidth = `${targetSize}px`;  
+        chartEle.style.maxHeight = targetSize + 'px';
+        chartEle.style.maxWidth = targetSize + 'px';  
         try {
           window.ibmicharts['myChart${id}'] = new Chart(chartEle.getContext('2d'), {
             type: '${detail.type}',
