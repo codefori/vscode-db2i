@@ -1,15 +1,13 @@
-import * as vscode from "vscode";
 import { ContextItem, ContextProviderDescription, ContextProviderExtras, ContextSubmenuItem, IContextProvider, LoadSubmenuItemsArgs } from "@continuedev/core";
-import { JobInfo } from "../../connection/manager";
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import * as vscode from "vscode";
 import { JobManager } from "../../config";
-import { isContinueActive } from "./continueContextProvider";
-import { findPossibleTables } from "../context";
-import Statement from "../../database/statement";
+import { JobInfo } from "../../connection/manager";
 import Schemas from "../../database/schemas";
 import Table from "../../database/table";
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import { findPossibleTables } from "../context";
 
 const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",
@@ -113,7 +111,7 @@ class emptyContextProvider implements IContextProvider {
   async loadSubmenuItems(args: LoadSubmenuItemsArgs): Promise<ContextSubmenuItem[]> {
     return [];
   }
-  
+
 }
 
 export async function registerDb2iTablesProvider() {
@@ -124,7 +122,7 @@ export async function registerDb2iTablesProvider() {
     if (!continueEx.isActive) {
       await continueEx.activate();
     }
-  
+
     const continueAPI = continueEx?.exports;
     if (listDb2TableContextProvider) {
 
