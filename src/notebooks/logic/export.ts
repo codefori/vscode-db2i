@@ -114,24 +114,38 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                           }
   
                           if (fallbackToTable) {
-                            cellContents.push([
-                              `<table style="width: 100%; margin-left: auto; margin-right: auto;">`,
-                              `<thead>`,
-                              `<tr>`,
-                              columns.map(c => `<th>${c}</th>`).join(``),
-                              `</tr>`,
-                              `</thead>`,
-                              `<tbody>`,
-                              table.map(row => {
-                                return [
-                                  `<tr>`,
-                                  keys.map(key => `<td>${row[key]}</td>`).join(``),
-                                  `</tr>`
-                                ].join(``);
-                              }).join(``),
-                              `</tbody>`,
-                              `</table>`
-                            ].join(``));
+                            cellContents.push(
+                              [
+                                `<table style="width: 100%; margin-left: auto; margin-right: auto;">`,
+                                `<thead>`,
+                                `<tr>`,
+                                columns
+                                  .map(
+                                    (c) =>
+                                      `<th style="text-align: left;">${c}</th>`
+                                  )
+                                  .join(``),
+                                `</tr>`,
+                                `</thead>`,
+                                `<tbody>`,
+                                table
+                                  .map((row) => {
+                                    return [
+                                      `<tr>`,
+                                      keys
+                                        .map(
+                                          (key) =>
+                                            `<td style="text-align: left;">${row[key]}</td>`
+                                        )
+                                        .join(``),
+                                      `</tr>`,
+                                    ].join(``);
+                                  })
+                                  .join(``),
+                                `</tbody>`,
+                                `</table>`,
+                              ].join(``)
+                            );
                           }
                         } else {
                           // items.push(vscode.NotebookCellOutputItem.stderr(`No rows returned from statement.`));
