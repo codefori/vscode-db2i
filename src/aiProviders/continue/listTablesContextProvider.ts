@@ -96,24 +96,6 @@ class ListDb2iTables implements IContextProvider {
   }
 }
 
-class emptyContextProvider implements IContextProvider {
-  get description(): ContextProviderDescription {
-    return {
-      title: "",
-      displayTitle: "",
-      description: "",
-      type: "normal"
-    };
-  }
-  async getContextItems(query: string, extras: ContextProviderExtras): Promise<ContextItem[]> {
-    return [];
-  }
-  async loadSubmenuItems(args: LoadSubmenuItemsArgs): Promise<ContextSubmenuItem[]> {
-    return [];
-  }
-
-}
-
 export async function registerDb2iTablesProvider() {
   const provider = new ListDb2iTables();
   const continueID = `Continue.continue`;
