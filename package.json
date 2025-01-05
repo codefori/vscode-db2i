@@ -333,6 +333,11 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.getRecordLocks",
+        "title": "Get Record Locks",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.clearData",
         "title": "Clear...",
         "category": "Db2 for i"
@@ -919,6 +924,11 @@
           "command": "vscode-db2i.getMTIs",
           "when": "viewItem == table || viewItem == schema",
           "group": "db2workWith@3"
+        },
+        {
+          "command": "vscode-db2i.getRecordLocks",
+          "when": "viewItem == table",
+          "group": "db2workWith@6"
         },
         {
           "command": "vscode-db2i.clearData",
