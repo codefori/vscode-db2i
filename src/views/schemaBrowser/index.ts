@@ -10,7 +10,7 @@ import Configuration from "../../configuration";
 import Types from "../types";
 import Statement from "../../database/statement";
 import { copyUI } from "./copyUI";
-import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement } from "./statements";
+import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement } from "./statements";
 
 const viewItem = {
   "tables": `table`,
@@ -187,6 +187,17 @@ export default class schemaBrowser {
         }
       }),
       
+      vscode.commands.registerCommand(`vscode-db2i.getAuthorities`, async (object: SQLObject) => {
+        if (object) {
+          const content = getAuthoritiesStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            qualifier: `statement`,
+            open: false,
+          });
+        }
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.getObjectLocks`, async (object: SQLObject) => {
         if (object) {
           const content = getObjectLocksStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
@@ -197,7 +208,7 @@ export default class schemaBrowser {
           });
         }
       }),
-      
+
       vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject|SchemaItem) => { //table
         if (object) {
           let content: string|undefined;
