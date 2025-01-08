@@ -235,3 +235,36 @@ export function getMTIStatement(schema: string, table: string = `*ALL`) {
     `order by key_definition`,
   ].join(` `);
 }
+
+export function getAuthoritiesStatement(schema: string, table: string, objectType: string, tableType: string): string {
+  let sql: string = `
+    select 
+      authorization_name "User profile name", 
+      object_authority "Object authority", 
+      owner "Object owner", 
+      authorization_list "Authorization list", 
+      primary_group "Primary group", 
+      authorization_list_management "Authorization list management", 
+      object_owner "User is object owner", 
+      object_operational "Object operational authority", 
+      object_management "Object management authority", 
+      object_existence "Object existence authority", 
+      object_alter "Object alter authority", 
+      object_reference "Object reference authority", 
+      data_read "Data read authority", 
+      data_add "Data add authority", 
+      data_update "Data update authority", 
+      data_delete "Data delete authority", 
+      data_execute "Data execute authority", 
+      text_description "Description"
+    from qsys2.object_privileges
+    where object_schema = '${schema}' 
+      and object_name = '${table}'
+  `;
+  if (objectType === 'TABLE' && tableType != 'T') {
+    sql += ` and object_type = '*FILE'`;
+  } else {
+    sql += ` and sql_object_type = '${objectType}'`;    
+  }
+  return sql;
+}
