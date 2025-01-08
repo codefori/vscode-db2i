@@ -72,6 +72,10 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
 });
 
 export const problemProvider = [
+  workspace.onDidCloseTextDocument(e => {
+    sqlDiagnosticCollection.delete(e.uri);
+  }),
+
   workspace.onDidOpenTextDocument(e => {
     const isSql = e.languageId === `sql`;
     if (isSql && checkOnOpen()) {
