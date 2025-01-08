@@ -129,7 +129,7 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
         for (let j = i - 1; j <= i + 1; j++) {
           if (allGroups[j]) {
             const nextRange = getStatementRangeFromGroup(allGroups[j], j);
-            if (nextRange) {
+            if (nextRange && !statementRanges.some(r => r.groupId === nextRange.groupId)) {
               statementRanges.push(nextRange);
             }
           }
@@ -173,6 +173,11 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
                 }
 
               } else if (shouldShowError(groupError)) {
+                if (groupError.offset > currentRange.end) {
+                  // This is a syntax error that is outside the range of the statement.
+                  groupError.offset = currentRange.end;
+                }
+
                 const selectedWord = document.getWordRangeAtPosition(document.positionAt(currentRange.start + groupError.offset))
                   || new Range(
                     document.positionAt(currentRange.start + groupError.offset - 1),
