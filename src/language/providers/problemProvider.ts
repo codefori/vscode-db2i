@@ -224,6 +224,12 @@ function getStatementRangeFromGroup(currentGroup: StatementGroup, groupId: numbe
   if (firstStatement) {
     statementRange = { groupId, start: firstStatement.range.start, end: currentGroup.range.end, validate: true };
 
+    // Support for ACS' STOP statement.
+    if (firstStatement.type === StatementType.Unknown && firstStatement.tokens.length === 1 && firstStatement.tokens[0].value.toUpperCase() === `STOP`) {
+      statementRange.validate = false;
+      return;
+    }
+
     const label = firstStatement.getLabel();
     if (label) {
       if (label.toUpperCase() === `CL`) {
@@ -234,7 +240,7 @@ function getStatementRangeFromGroup(currentGroup: StatementGroup, groupId: numbe
     }
   }
 
-  const stmtLength = currentGroup.range.end - firstStatement.range.start;
+  const stmtLength = currentGroup.range.end - statementRange.start;
   if (stmtLength >= VALID_STATEMENT_LENGTH) { 
     // Just too long for our API.
     statementRange.validate = false;
