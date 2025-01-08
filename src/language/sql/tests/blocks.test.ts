@@ -465,7 +465,7 @@ test(`Procedure with depths`, () => {
     `        /* Put INTEGER CAST into SELECT list to make sure that it is */`,
     `        /* called only for data that matches the WHERE condition.    */`,
     `        DECLARE CONTINUE HANDLER FOR SQLSTATE '22018' RETURN 0;`,
-    `        DECLARE CONTINUE HANDLER FOR SQLSTATE '01565' RETURN 0;`,
+    `        LARE CONTINUE HANDLER FOR SQLSTATE '01565' RETURN 0;`,
     `        SET "L_EXISTS_VAR_DATE" = ( `,
     `            SELECT `,
     `              SUM ( CASE `,
@@ -512,10 +512,31 @@ test(`Procedure with depths`, () => {
   const doc = new Document(lines);
 
   const groups = doc.getStatementGroups();
-  console.log(groups[0].statements[groups[0].statements.length - 1]);
   expect(groups.length).toBe(1);
+});
 
-  for (const stmt of groups[0].statements) {
-    const content = lines.substring(stmt.range.start, stmt.range.end);
-  }
-})
+test('CREATE statements', () => {
+  const lines = [
+   `CREATE TABLE temp_t1`,
+   `(PK BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY,`,
+   ` RB TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,`,
+   ` RE TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,`,
+   ` TS TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS TRANSACTION START ID,`,
+   ` C1 INT,`,
+   ` C2 char(10),`,
+   ` C3 NOT NULL GENERATED ALWAYS FOR EACH ROW  ON UPDATE AS ROW CHANGE TIMESTAMP IMPLICITLY HIDDEN,`,
+   ` PERIOD SYSTEM_TIME (RB, RE)`,
+   `);`,
+   ``,
+   ``,
+   `reate or replace view temp_v1t1 as select * from temp_t1 where RB<>RE with check option;`,
+   ``,
+   `nsert into temp_v1t1(c1, c2) values(1,'first part');`,
+   
+  ].join(`\n`);
+
+  const doc = new Document(lines);
+
+  const groups = doc.getStatementGroups();
+  expect(groups.length).toBe(3);
+});

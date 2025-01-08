@@ -5,6 +5,7 @@ import { Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementT
 export default class Document {
   content: string;
   statements: Statement[];
+  debug: boolean = false;
 
   constructor(content: string, keepComments = false) {
     this.content = content;
@@ -14,6 +15,12 @@ export default class Document {
     tokeniser.storeComments = keepComments;
 
     this.parseStatements(tokeniser.tokenise(content));
+  }
+
+  log(content: string) {
+    if (this.debug) {
+      console.log(content);
+    }
   }
 
   private addStatement(tokens: Token[]) {
@@ -35,10 +42,17 @@ export default class Document {
   private parseStatements(tokens: Token[]) {
     let currentStatementType: StatementType = StatementType.Unknown;
     let statementStart = 0;
+    let bracketDepth = 0;
 
     for (let i = 0; i < tokens.length; i++) {
       const upperValue = tokens[i].value?.toUpperCase();
       switch (tokens[i].type) {
+        case `openbracket`:
+          bracketDepth++;
+          break;
+        case `closebracket`:
+          bracketDepth--;
+          break;
         case `semicolon`:
           const statementTokens = tokens.slice(statementStart, i);
 
@@ -52,38 +66,40 @@ export default class Document {
           break;
 
         case `keyword`:
-          switch (upperValue) {
-            case `LOOP`:
-            case `THEN`:
-            case `BEGIN`:
-            case `ELSE`:
-            case `DO`:
-              // This handles the case that 'END LOOP' is supported.
-              if (upperValue === `LOOP` && currentStatementType === StatementType.End) {
-                break;
-              }
+          if (bracketDepth === 0) {
+            switch (upperValue) {
+              case `LOOP`:
+              case `THEN`:
+              case `BEGIN`:
+              case `ELSE`:
+              case `DO`:
+                // This handles the case that 'END LOOP' is supported.
+                if (upperValue === `LOOP` && currentStatementType === StatementType.End) {
+                  break;
+                }
 
-              // Support for THEN in conditionals
-              if (upperValue === `THEN` && !Statement.typeIsConditional(currentStatementType)) {
-                break;
-              }
+                // Support for THEN in conditionals
+                if (upperValue === `THEN` && !Statement.typeIsConditional(currentStatementType)) {
+                  break;
+                }
 
-              if (upperValue === `ELSE` && currentStatementType === StatementType.Select) {
-                break;
-              }
+                if (upperValue === `ELSE` && currentStatementType === StatementType.Select) {
+                  break;
+                }
 
-              // We include BEGIN in the current statement
-              // then the next statement beings
-              const statementTokens = tokens.slice(statementStart, i+1);
-              this.addStatement(statementTokens);
-              statementStart = i + 1;
-              break;
-            case `END`:
-              // We ignore the END statement keyword when it's solo.
-              if (statementStart === i && (tokens[i] === undefined || tokens[i].type === `semicolon`)) {
+                // We include BEGIN in the current statement
+                // then the next statement beings
+                const statementTokens = tokens.slice(statementStart, i+1);
+                this.addStatement(statementTokens);
                 statementStart = i + 1;
-              }
-              break;
+                break;
+              case `END`:
+                // We ignore the END statement keyword when it's solo.
+                if (statementStart === i && (tokens[i] === undefined || tokens[i].type === `semicolon`)) {
+                  statementStart = i + 1;
+                }
+                break;
+            }
           }
           break;
       }
@@ -122,7 +138,7 @@ export default class Document {
               
             depth--;
 
-            console.log(`<` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
+            this.log(`<` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           }
 
           if (depth === 0) {
@@ -137,7 +153,7 @@ export default class Document {
           }
         } else
         if (statement.isCompoundStart()) {
-          console.log(`>` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
+          this.log(`>` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           if (depth > 0) {
             currentGroup.push(statement);
           } else {
@@ -147,7 +163,7 @@ export default class Document {
           depth++;
 
         } else {
-          console.log(` ` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
+          this.log(` ` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           if (depth > 0) {
             currentGroup.push(statement);
           } else {
