@@ -83,7 +83,7 @@ export default class Document {
                   break;
                 }
 
-                if (upperValue === `ELSE` && currentStatementType === StatementType.Select) {
+                if (upperValue === `ELSE` && !Statement.typeIsConditional(currentStatementType)) {
                   break;
                 }
 
