@@ -17,6 +17,7 @@ export interface CompletionType {
 }
 
 interface StatementRange {
+  validate: boolean;
   groupId: number;
   start: number;
   end: number;
@@ -108,7 +109,7 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
       const group = allGroups[i];
       if (specificStatement) {
         // If specificStatement is outline this group, continue
-        if (specificStatement <= group.range.start || specificStatement >= (allGroups[i+1] ? allGroups[i+1].range.start : group.range.end)) {
+        if (specificStatement <= group.range.start || specificStatement >= (allGroups[i + 1] ? allGroups[i + 1].range.start : group.range.end)) {
           continue;
         }
       }
@@ -119,7 +120,7 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
         statementRanges.push(range);
       }
 
-        // We also add the surrounding ranges, as we need to check the end of the statement
+      // We also add the surrounding ranges, as we need to check the end of the statement
       if (specificStatement) {
         for (let j = i - 1; j <= i + 1; j++) {
           if (allGroups[j]) {
@@ -136,56 +137,69 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
 
 
     if (statementRanges.length > 0) {
-      const sqlStatementContents = statementRanges.map(range => content.substring(range.start, range.end));
-      const se = performance.now();
-      const syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(sqlStatementContents) });
-      const ee = performance.now();
+      const validStatements = statementRanges.filter(r => r.validate);
+      const invalidStatements = statementRanges.filter(r => !r.validate);
+      const sqlStatementContents = validStatements.map(range => content.substring(range.start, range.end));
 
-      if (syntaxChecked) {
-        if (syntaxChecked.length > 0) {
-          let currentErrors: SqlDiagnostic[] = specificStatement ? languages.getDiagnostics(document.uri) as SqlDiagnostic[] : [];
+      if (validStatements.length > 0) {
+        const se = performance.now();
+        const syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(sqlStatementContents) });
+        const ee = performance.now();
 
-          for (let i = 0; i < statementRanges.length; i++) {
-            const currentRange = statementRanges[i];
-            const groupError = syntaxChecked[i];
-            let existingError: number = currentErrors.findIndex(e => e.groupId === currentRange.groupId);
+        if (syntaxChecked) {
+          if (syntaxChecked.length > 0) {
+            let currentErrors: SqlDiagnostic[] = specificStatement ? languages.getDiagnostics(document.uri) as SqlDiagnostic[] : [];
 
-            if (groupError.type === `none`) {
-              if (existingError !== -1) {
+            // Remove old CL errors.
+            for (const invalidStatement of invalidStatements) {
+              const existingError = currentErrors.findIndex(e => e.groupId === invalidStatement.groupId);
+              if (existingError >= 0) {
                 currentErrors.splice(existingError, 1);
               }
-
-            } else if (shouldShowError(groupError)) {
-              const selectedWord = document.getWordRangeAtPosition(document.positionAt(currentRange.start + groupError.offset))
-                || new Range(
-                  document.positionAt(currentRange.start + groupError.offset - 1),
-                  document.positionAt(currentRange.start + groupError.offset)
-                );
-
-
-              const newDiag: SqlDiagnostic = {
-                message: `${groupError.text} - ${groupError.sqlstate}`,
-                code: groupError.sqlid,
-                range: selectedWord,
-                severity: diagnosticTypeMap[groupError.type],
-                groupId: currentRange.groupId
-              };
-
-              if (existingError >= 0) {
-                currentErrors[existingError] = newDiag;
-              } else {
-                currentErrors.push(newDiag);
-              }
-
             }
-          }
 
-          sqlDiagnosticCollection.set(document.uri, currentErrors);
+            for (let i = 0; i < validStatements.length; i++) {
+              const currentRange = validStatements[i];
+              const groupError = syntaxChecked[i];
+              let existingError: number = currentErrors.findIndex(e => e.groupId === currentRange.groupId);
+
+              if (groupError.type === `none`) {
+                if (existingError !== -1) {
+                  currentErrors.splice(existingError, 1);
+                }
+
+              } else if (shouldShowError(groupError)) {
+                const selectedWord = document.getWordRangeAtPosition(document.positionAt(currentRange.start + groupError.offset))
+                  || new Range(
+                    document.positionAt(currentRange.start + groupError.offset - 1),
+                    document.positionAt(currentRange.start + groupError.offset)
+                  );
+
+
+                const newDiag: SqlDiagnostic = {
+                  message: `${groupError.text} - ${groupError.sqlstate}`,
+                  code: groupError.sqlid,
+                  range: selectedWord,
+                  severity: diagnosticTypeMap[groupError.type],
+                  groupId: currentRange.groupId
+                };
+
+                if (existingError >= 0) {
+                  currentErrors[existingError] = newDiag;
+                } else {
+                  currentErrors.push(newDiag);
+                }
+
+              }
+            }
+
+            sqlDiagnosticCollection.set(document.uri, currentErrors);
+          }
         }
       }
     }
   }
-  
+
   setCheckerRunningContext(false);
 }
 
@@ -194,15 +208,15 @@ function shouldShowError(error: SqlSyntaxError) {
 }
 
 function getStatementRangeFromGroup(currentGroup: StatementGroup, groupId: number): StatementRange | undefined {
-  let statementRange: StatementRange | undefined;
+  let statementRange: StatementRange;
   const firstStatement = currentGroup.statements[0];
   if (firstStatement) {
-    statementRange = { groupId, start: firstStatement.range.start, end: currentGroup.range.end };
+    statementRange = { groupId, start: firstStatement.range.start, end: currentGroup.range.end, validate: true };
 
     const label = firstStatement.getLabel();
     if (label) {
       if (label.toUpperCase() === `CL`) {
-        statementRange = undefined;
+        statementRange.validate = false;
       } else {
         statementRange.start = firstStatement.tokens[2].range.start;
       }
