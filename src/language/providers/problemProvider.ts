@@ -8,6 +8,7 @@ import { remoteAssistIsEnabled } from "./logic/available";
 import Configuration from "../../configuration";
 import { SQLStatementChecker, SqlSyntaxError } from "../../connection/syntaxChecker";
 import { StatementGroup, StatementType } from "../sql/types";
+import { VALID_STATEMENT_LENGTH } from "../../connection/syntaxChecker/checker";
 
 export interface CompletionType {
   order: string;
@@ -224,6 +225,12 @@ function getStatementRangeFromGroup(currentGroup: StatementGroup, groupId: numbe
         statementRange.start = firstStatement.tokens[2].range.start;
       }
     }
+  }
+
+  const stmtLength = currentGroup.range.end - firstStatement.range.start;
+  if (stmtLength >= VALID_STATEMENT_LENGTH) { 
+    // Just too long for our API.
+    statementRange.validate = false;
   }
 
   return statementRange;

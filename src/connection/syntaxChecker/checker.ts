@@ -1,10 +1,11 @@
 export const VALIDATOR_NAME = `VALIDATE_STATEMENT`;
-export const WRAPPER_NAME = `CHECKSTMTWRAPPED`
+export const WRAPPER_NAME = `CHECKSTMTWRAPPED`;
+export const VALID_STATEMENT_LENGTH = 32740;
 
 export function getValidatorSource(schema: string, version: number) {
   return /*sql*/`
   create or replace procedure ${schema}.${WRAPPER_NAME} (
-    IN statementText char(15000) FOR SBCS DATA,
+    IN statementText char(${VALID_STATEMENT_LENGTH}) FOR SBCS DATA,
     IN statementLength int,
     IN recordsProvided int,
     IN statementLanguage char(10),
@@ -22,7 +23,7 @@ export function getValidatorSource(schema: string, version: number) {
 
   comment on procedure ${schema}/${WRAPPER_NAME} is '${version} - QSQCHKS Wrapper';
 
-  create or replace function ${schema}.${VALIDATOR_NAME}(statementText char(15000) FOR SBCS DATA) --todo: support 1208 parms
+  create or replace function ${schema}.${VALIDATOR_NAME}(statementText char(${VALID_STATEMENT_LENGTH}) FOR SBCS DATA) --todo: support 1208 parms
   returns table (
     messageFileName char(10),
     messageFileLibrary char(10),
