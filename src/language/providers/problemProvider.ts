@@ -108,8 +108,11 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
     for (let i = 0; i < allGroups.length; i++) {
       const group = allGroups[i];
       if (specificStatement) {
-        // If specificStatement is outline this group, continue
-        if (specificStatement <= group.range.start || specificStatement >= (allGroups[i + 1] ? allGroups[i + 1].range.start : group.range.end)) {
+        // If specificStatement is outside this group, continue
+        if (
+          specificStatement < group.range.start || 
+          (specificStatement > (allGroups[i + 1] ? allGroups[i + 1].range.start : group.range.end))
+        ) {
           continue;
         }
       }
