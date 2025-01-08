@@ -56,6 +56,7 @@ export default class Document {
             case `LOOP`:
             case `THEN`:
             case `BEGIN`:
+            case `ELSE`:
             case `DO`:
               // This handles the case that 'END LOOP' is supported.
               if (upperValue === `LOOP` && currentStatementType === StatementType.End) {
@@ -64,6 +65,10 @@ export default class Document {
 
               // Support for THEN in conditionals
               if (upperValue === `THEN` && !Statement.typeIsConditional(currentStatementType)) {
+                break;
+              }
+
+              if (upperValue === `ELSE` && currentStatementType === StatementType.Select) {
                 break;
               }
 
@@ -116,18 +121,23 @@ export default class Document {
             currentGroup.push(statement);
               
             depth--;
+
+            console.log(`<` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           }
 
           if (depth === 0) {
-            groups.push({
-              range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
-              statements: currentGroup
-            });
+            if (currentGroup.length > 0) {
+              groups.push({
+                range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
+                statements: currentGroup
+              });
 
-            currentGroup = [];
+              currentGroup = [];
+            }
           }
         } else
         if (statement.isCompoundStart()) {
+          console.log(`>` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           if (depth > 0) {
             currentGroup.push(statement);
           } else {
@@ -137,6 +147,7 @@ export default class Document {
           depth++;
 
         } else {
+          console.log(` ` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           if (depth > 0) {
             currentGroup.push(statement);
           } else {

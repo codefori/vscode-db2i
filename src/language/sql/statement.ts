@@ -787,7 +787,7 @@ export default class Statement {
     return tokens;
   }
 
-	private static formatSimpleTokens(tokens: Token[]) {
+	public static formatSimpleTokens(tokens: Token[]) {
 		let outString = ``;
 		for (let i = 0; i < tokens.length; i++) {
 			const cT = tokens[i];

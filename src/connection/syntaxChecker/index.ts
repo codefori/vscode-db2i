@@ -127,7 +127,10 @@ export class SQLStatementChecker implements IBMiComponent {
     const currentJob = JobManager.getSelection();
 
     if (currentJob) {
-      const result = await currentJob.job.execute<SqlCheckError>(checks, {parameters: statements});
+      const stmt = currentJob.job.query<SqlCheckError>(checks, {parameters: statements});
+      const result = await stmt.execute(statements.length);
+      stmt.close();
+    
       if (!result.success || result.data.length === 0) return [];
 
       return result.data.map(sqlError => niceError(sqlError));
