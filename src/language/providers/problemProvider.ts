@@ -173,15 +173,17 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
                 }
 
               } else if (shouldShowError(groupError)) {
-                if (groupError.offset > currentRange.end) {
+                let baseIndex = () => { return currentRange.start + groupError.offset };
+
+                if (baseIndex() > currentRange.end) {
                   // This is a syntax error that is outside the range of the statement.
-                  groupError.offset = currentRange.end;
+                  groupError.offset = (currentRange.end-currentRange.start);
                 }
 
-                const selectedWord = document.getWordRangeAtPosition(document.positionAt(currentRange.start + groupError.offset))
+                const selectedWord = document.getWordRangeAtPosition(document.positionAt(baseIndex()))
                   || new Range(
-                    document.positionAt(currentRange.start + groupError.offset - 1),
-                    document.positionAt(currentRange.start + groupError.offset)
+                    document.positionAt(baseIndex() - 1),
+                    document.positionAt(baseIndex())
                   );
 
 
