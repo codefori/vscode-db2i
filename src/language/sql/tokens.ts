@@ -303,6 +303,10 @@ export default class SQLTokeniser {
           }
         }
 
+        if (i > 0 && i < tokens.length - 2 && tokens[i].value.toLowerCase() === 'for' && tokens[i - 1].type === 'closebracket' && tokens[i + 2].value.toLowerCase() === 'data') {
+          goodMatch = false; // data-type with FOR BIT/SBCS/MIXED DATA
+        }
+
         if (goodMatch) {
           const matchedTokens = tokens.slice(i, i + type.match.length);
           const value = state.content.substring(matchedTokens[0].range.start, matchedTokens[matchedTokens.length - 1].range.end);
