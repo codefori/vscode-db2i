@@ -131,6 +131,22 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(obj.alias).toBe(`a`)
   });
 
+  test('SELECT: one invalid, one valid', () => {
+    const content = [
+      `SELECT * FROM QSYS2.AUTHORITY_COLLECTION_LIBRARIES where;`,
+      `SELECT * FROM QSYS2.AUTHORITY_COLLECTION;`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+
+    expect(document.statements.length).toBe(2);
+    expect(document.statements[0].tokens.length).toBe(7);
+    expect(document.statements[1].tokens.length).toBe(6);
+
+    expect(document.statements[0].type).toBe(StatementType.Select);
+    expect(document.statements[1].type).toBe(StatementType.Select);
+  })
+
   test('SELECT: Simple unqualified object with alias (no AS)', () => {
     const document = newDoc(`select * from sample a;`);
 
