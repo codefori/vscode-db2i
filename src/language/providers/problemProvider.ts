@@ -136,8 +136,8 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
           if (specificStatement) {
             // If specificStatement is outside this group, continue
             if (
-              specificStatement < group.range.start ||
-              (specificStatement > (allGroups[i + 1] ? allGroups[i + 1].range.start : group.range.end))
+              (specificStatement < group.range.start && i !== 0) ||
+              (specificStatement > (allGroups[i + 1] ? allGroups[i + 1].range.start : group.range.end) && i !== allGroups.length - 1)
             ) {
               continue;
             }
@@ -170,7 +170,7 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
 
           if (validStatements.length > MAX_STATEMENT_COUNT) {
             window.showWarningMessage(`${basename}: the SQL syntax checker cannot run because the statement limit has been reached (${validStatements.length} of ${MAX_STATEMENT_COUNT} max).`);
-            
+
           } else {
 
             const invalidStatements = statementRanges.filter(r => !r.validate);
@@ -240,6 +240,16 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
                         currentErrors.push(newDiag);
                       }
 
+                    }
+                  }
+
+                  const lastGroup = allGroups[allGroups.length - 1];
+
+                  if (lastGroup) {
+                    for (let i = currentErrors.length - 1; i >= 0; i--) {
+                      if (document.offsetAt(currentErrors[i].range.start) > lastGroup.range.end) {
+                        currentErrors.splice(i, 1);
+                      }
                     }
                   }
 
