@@ -35,6 +35,7 @@ interface SQLParm {
 
 interface BasicSQLObject {
   type: string;
+  tableType: string;
   schema: string;
   name: string;
   specificName: string;

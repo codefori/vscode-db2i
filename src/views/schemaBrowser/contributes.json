@@ -50,6 +50,11 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.getAuthorities",
+        "title": "Get Authorities",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.getRecordLocks",
         "title": "Get Record Locks",
         "category": "Db2 for i"
@@ -161,6 +166,11 @@
           "command": "vscode-db2i.getMTIs",
           "when": "viewItem == table || viewItem == schema",
           "group": "db2workWith@3"
+        },
+        {
+          "command": "vscode-db2i.getAuthorities",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "group": "db2workWith@4"
         },
         {
           "command": "vscode-db2i.getRecordLocks",
