@@ -86,7 +86,7 @@ export const problemProvider = [
     if (isSql) {
       if (checkerAvailable() && !isSafeDocument(e)) {
         const basename = e.fileName ? path.basename(e.fileName) : `Untitled`;
-        window.showWarningMessage(`${basename}: the SQL syntax checker is disabled for this document because it is too large.`);
+        documentLargeError(basename);
       }
 
       if (checkOnOpen()) {
@@ -121,132 +121,137 @@ interface SqlDiagnostic extends Diagnostic {
 async function validateSqlDocument(document: TextDocument, specificStatement?: number) {
   const checker = SQLStatementChecker.get();
   if (remoteAssistIsEnabled() && checker && !checkerRunning) {
-    setCheckerRunningContext(true);
-    const sqlDocument = getSqlDocument(document);
+    const basename = document.fileName ? path.basename(document.fileName) : `Untitled`;
+    if (isSafeDocument(document)) {
+      setCheckerRunningContext(true);
+      const sqlDocument = getSqlDocument(document);
 
-    if (sqlDocument) {
-      const allGroups = sqlDocument.getStatementGroups();
+      if (sqlDocument) {
+        const allGroups = sqlDocument.getStatementGroups();
 
-      let statementRanges: StatementRange[] = [];
+        let statementRanges: StatementRange[] = [];
 
-      for (let i = 0; i < allGroups.length; i++) {
-        const group = allGroups[i];
-        if (specificStatement) {
-          // If specificStatement is outside this group, continue
-          if (
-            specificStatement < group.range.start ||
-            (specificStatement > (allGroups[i + 1] ? allGroups[i + 1].range.start : group.range.end))
-          ) {
-            continue;
-          }
-        }
-
-        const range = getStatementRangeFromGroup(group, i);
-
-        if (range) {
-          statementRanges.push(range);
-        }
-
-        // We also add the surrounding ranges, as we need to check the end of the statement
-        if (specificStatement) {
-          for (let j = i - 1; j <= i + 1; j++) {
-            if (allGroups[j]) {
-              const nextRange = getStatementRangeFromGroup(allGroups[j], j);
-              if (nextRange && !statementRanges.some(r => r.groupId === nextRange.groupId)) {
-                statementRanges.push(nextRange);
-              }
+        for (let i = 0; i < allGroups.length; i++) {
+          const group = allGroups[i];
+          if (specificStatement) {
+            // If specificStatement is outside this group, continue
+            if (
+              specificStatement < group.range.start ||
+              (specificStatement > (allGroups[i + 1] ? allGroups[i + 1].range.start : group.range.end))
+            ) {
+              continue;
             }
           }
 
-          break;
-        }
-      }
+          const range = getStatementRangeFromGroup(group, i);
 
-
-      if (statementRanges.length > 0) {
-        const basename = document.fileName ? path.basename(document.fileName) : `Untitled`;
-        const validStatements = statementRanges.filter(r => r.validate);
-
-        if (validStatements.length > MAX_STATEMENT_COUNT) {
-          window.showWarningMessage(`${basename}: the SQL syntax checker cannot run because the statement limit has been reached (${validStatements.length} of ${MAX_STATEMENT_COUNT} max).`);
-          return;
-        }
-
-        const invalidStatements = statementRanges.filter(r => !r.validate);
-        const sqlStatementContents = validStatements.map(range => sqlDocument.content.substring(range.start, range.end));
-
-        if (validStatements.length > 0) {
-          const se = performance.now();
-
-          let syntaxChecked: SqlSyntaxError[]|undefined;
-          try {
-            syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(sqlStatementContents) });
-          } catch (e) {
-            window.showErrorMessage(`${basename}: the SQL syntax checker failed to run. ${e.message}`);
-            syntaxChecked = undefined;
+          if (range) {
+            statementRanges.push(range);
           }
 
-          const ee = performance.now();
-
-          if (syntaxChecked) {
-            if (syntaxChecked.length > 0) {
-              let currentErrors: SqlDiagnostic[] = specificStatement ? languages.getDiagnostics(document.uri) as SqlDiagnostic[] : [];
-
-              // Remove old CL errors.
-              for (const invalidStatement of invalidStatements) {
-                const existingError = currentErrors.findIndex(e => e.groupId === invalidStatement.groupId);
-                if (existingError >= 0) {
-                  currentErrors.splice(existingError, 1);
+          // We also add the surrounding ranges, as we need to check the end of the statement
+          if (specificStatement) {
+            for (let j = i - 1; j <= i + 1; j++) {
+              if (allGroups[j]) {
+                const nextRange = getStatementRangeFromGroup(allGroups[j], j);
+                if (nextRange && !statementRanges.some(r => r.groupId === nextRange.groupId)) {
+                  statementRanges.push(nextRange);
                 }
               }
+            }
 
-              for (let i = 0; i < validStatements.length; i++) {
-                const currentRange = validStatements[i];
-                const groupError = syntaxChecked[i];
-                let existingError: number = currentErrors.findIndex(e => e.groupId === currentRange.groupId);
-
-                if (groupError.type === `none`) {
-                  if (existingError !== -1) {
-                    currentErrors.splice(existingError, 1);
-                  }
-
-                } else if (shouldShowError(groupError)) {
-                  let baseIndex = () => { return currentRange.start + groupError.offset };
-
-                  if (baseIndex() > currentRange.end) {
-                    // This is a syntax error that is outside the range of the statement.
-                    groupError.offset = (currentRange.end - currentRange.start);
-                  }
-
-                  const selectedWord = document.getWordRangeAtPosition(document.positionAt(baseIndex()))
-                    || new Range(
-                      document.positionAt(baseIndex() - 1),
-                      document.positionAt(baseIndex())
-                    );
+            break;
+          }
+        }
 
 
-                  const newDiag: SqlDiagnostic = {
-                    message: `${groupError.text} - ${groupError.sqlstate}`,
-                    code: groupError.sqlid,
-                    range: selectedWord,
-                    severity: diagnosticTypeMap[groupError.type],
-                    groupId: currentRange.groupId
-                  };
+        if (statementRanges.length > 0) {
+          const validStatements = statementRanges.filter(r => r.validate);
 
-                  if (existingError >= 0) {
-                    currentErrors[existingError] = newDiag;
-                  } else {
-                    currentErrors.push(newDiag);
-                  }
+          if (validStatements.length > MAX_STATEMENT_COUNT) {
+            window.showWarningMessage(`${basename}: the SQL syntax checker cannot run because the statement limit has been reached (${validStatements.length} of ${MAX_STATEMENT_COUNT} max).`);
+            
+          } else {
 
-                }
+            const invalidStatements = statementRanges.filter(r => !r.validate);
+            const sqlStatementContents = validStatements.map(range => sqlDocument.content.substring(range.start, range.end));
+
+            if (validStatements.length > 0) {
+              const se = performance.now();
+
+              let syntaxChecked: SqlSyntaxError[] | undefined;
+              try {
+                syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(sqlStatementContents) });
+              } catch (e) {
+                window.showErrorMessage(`${basename}: the SQL syntax checker failed to run. ${e.message}`);
+                syntaxChecked = undefined;
               }
 
-              sqlDiagnosticCollection.set(document.uri, currentErrors);
+              const ee = performance.now();
+
+              if (syntaxChecked) {
+                if (syntaxChecked.length > 0) {
+                  let currentErrors: SqlDiagnostic[] = specificStatement ? languages.getDiagnostics(document.uri) as SqlDiagnostic[] : [];
+
+                  // Remove old CL errors.
+                  for (const invalidStatement of invalidStatements) {
+                    const existingError = currentErrors.findIndex(e => e.groupId === invalidStatement.groupId);
+                    if (existingError >= 0) {
+                      currentErrors.splice(existingError, 1);
+                    }
+                  }
+
+                  for (let i = 0; i < validStatements.length; i++) {
+                    const currentRange = validStatements[i];
+                    const groupError = syntaxChecked[i];
+                    let existingError: number = currentErrors.findIndex(e => e.groupId === currentRange.groupId);
+
+                    if (groupError.type === `none`) {
+                      if (existingError !== -1) {
+                        currentErrors.splice(existingError, 1);
+                      }
+
+                    } else if (shouldShowError(groupError)) {
+                      let baseIndex = () => { return currentRange.start + groupError.offset };
+
+                      if (baseIndex() > currentRange.end) {
+                        // This is a syntax error that is outside the range of the statement.
+                        groupError.offset = (currentRange.end - currentRange.start);
+                      }
+
+                      const selectedWord = document.getWordRangeAtPosition(document.positionAt(baseIndex()))
+                        || new Range(
+                          document.positionAt(baseIndex() - 1),
+                          document.positionAt(baseIndex())
+                        );
+
+
+                      const newDiag: SqlDiagnostic = {
+                        message: `${groupError.text} - ${groupError.sqlstate}`,
+                        code: groupError.sqlid,
+                        range: selectedWord,
+                        severity: diagnosticTypeMap[groupError.type],
+                        groupId: currentRange.groupId
+                      };
+
+                      if (existingError >= 0) {
+                        currentErrors[existingError] = newDiag;
+                      } else {
+                        currentErrors.push(newDiag);
+                      }
+
+                    }
+                  }
+
+                  sqlDiagnosticCollection.set(document.uri, currentErrors);
+                }
+              }
             }
           }
         }
       }
+    } else {
+      documentLargeError(basename);
     }
   }
 
@@ -286,4 +291,8 @@ function getStatementRangeFromGroup(currentGroup: StatementGroup, groupId: numbe
   }
 
   return statementRange;
+}
+
+function documentLargeError(basename: string) {
+  window.showWarningMessage(`${basename}: the SQL syntax checker is disabled for this document because it is too large.`);
 }
