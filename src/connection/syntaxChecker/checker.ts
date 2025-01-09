@@ -1,7 +1,7 @@
 export const VALIDATOR_NAME = `VALIDATE_STATEMENT`;
 export const WRAPPER_NAME = `CHECKSTMTWRAPPED`;
 export const VALID_STATEMENT_LENGTH = 32740;
-export const MAX_STATEMENT_COUNT = 500;
+export const MAX_STATEMENT_COUNT = 200;
 
 export function getValidatorSource(schema: string, version: number) {
   return /*sql*/`
