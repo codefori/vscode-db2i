@@ -540,3 +540,18 @@ test('CREATE statements', () => {
   const groups = doc.getStatementGroups();
   expect(groups.length).toBe(3);
 });
+
+test(`ALTER with BEGIN`, () => {
+  const lines = [
+    `ALTER TABLE mylongtable1`,
+    `  ADD COLUMN ib TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN`,
+    `  ADD COLUMN ie TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END`,
+    `  ADD COLUMN tid TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS TRANSACTION START`,
+    `  ID`,
+    `  ADD PERIOD SYSTEM_TIME (ib, ie);`,
+  ].join(`\n`);
+
+  const doc = new Document(lines);
+  const groups = doc.getStatementGroups();
+  expect(groups.length).toBe(1);
+})

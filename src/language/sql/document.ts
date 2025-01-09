@@ -87,6 +87,10 @@ export default class Document {
                   break;
                 }
 
+                if (upperValue === `BEGIN` && currentStatementType === StatementType.Alter) {
+                  break;
+                }
+
                 // We include BEGIN in the current statement
                 // then the next statement beings
                 const statementTokens = tokens.slice(statementStart, i+1);
