@@ -164,10 +164,10 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
 
 
       if (statementRanges.length > 0) {
+        const basename = document.fileName ? path.basename(document.fileName) : `Untitled`;
         const validStatements = statementRanges.filter(r => r.validate);
 
         if (validStatements.length > MAX_STATEMENT_COUNT) {
-          const basename = document.fileName ? path.basename(document.fileName) : `Untitled`;
           window.showWarningMessage(`${basename}: the SQL syntax checker cannot run because the statement limit has been reached (${validStatements.length} of ${MAX_STATEMENT_COUNT} max).`);
           return;
         }
@@ -177,7 +177,15 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
 
         if (validStatements.length > 0) {
           const se = performance.now();
-          const syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(sqlStatementContents) });
+
+          let syntaxChecked: SqlSyntaxError[]|undefined;
+          try {
+            syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(sqlStatementContents) });
+          } catch (e) {
+            window.showErrorMessage(`${basename}: the SQL syntax checker failed to run. ${e.message}`);
+            syntaxChecked = undefined;
+          }
+
           const ee = performance.now();
 
           if (syntaxChecked) {
