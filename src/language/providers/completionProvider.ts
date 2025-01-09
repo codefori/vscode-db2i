@@ -600,6 +600,9 @@ export const completionProvider = languages.registerCompletionItemProvider(
         const offset = document.offsetAt(position);
 
         const sqlDoc = getSqlDocument(document);
+
+        if (!sqlDoc) return;
+
         const currentStatement = sqlDoc.getStatementByOffset(offset);
 
         const allItems: CompletionItem[] = [];

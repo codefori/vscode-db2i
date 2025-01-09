@@ -19,6 +19,8 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
       const sqlDoc = getSqlDocument(document);
       const defaultSchema = getDefaultSchema();
 
+      if (!sqlDoc) return;
+
       for (const statement of sqlDoc.statements) {
         const refs = statement.getObjectReferences();
         if (refs.length) {
@@ -63,6 +65,8 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
     const defaultSchema = getDefaultSchema();
     const sqlDoc = getSqlDocument(document);
     const offset = document.offsetAt(position);
+
+    if (!sqlDoc) return;
 
     const tokAt = sqlDoc.getTokenByOffset(offset);
     const statementAt = sqlDoc.getStatementByOffset(offset);
