@@ -57,7 +57,7 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: '👋 A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.\n * [Download here.](https://github.com/codefori/vscode-ibmi/actions/runs/${{ github.run_id }})\n* [Read more about how to test](https://github.com/codefori/vscode-ibmi/blob/master/.github/pr_testing_template.md)'
+            body: '👋 A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.\n * [Download here.](https://github.com/codefori/vscode-db2i/actions/runs/${{ github.run_id }})\n* [Read more about how to test](https://github.com/codefori/vscode-db2i/blob/master/.github/pr_testing_template.md)'
           })
 
     - name: Update comment
@@ -69,5 +69,5 @@ jobs:
         body: |
           👋 A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.
 
-          * [Download here.](https://github.com/codefori/vscode-ibmi/actions/runs/${{ github.run_id }})
-          * [Read more about how to test](https://github.com/codefori/vscode-ibmi/blob/master/.github/pr_testing_template.md)
+          * [Download here.](https://github.com/codefori/vscode-db2i/actions/runs/${{ github.run_id }})
+          * [Read more about how to test](https://github.com/codefori/vscode-db2i/blob/master/.github/pr_testing_template.md)

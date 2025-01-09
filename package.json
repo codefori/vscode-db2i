@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.7.0",
+  "version": "1.7.0-syntaxcheck12",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -196,6 +196,32 @@
             "type": "boolean",
             "title": "Auto-refresh SELF Codes view",
             "description": "Enable auto-refresh for SELF Codes view when connecting to a system",
+            "default": false
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.syntax",
+        "title": "SQL Syntax Checking",
+        "properties": {
+          "vscode-db2i.syntax.checkOnOpen": {
+            "type": "boolean",
+            "description": "If enabled, will check the syntax of the SQL file when it is opened",
+            "default": false
+          },
+          "vscode-db2i.syntax.checkOnEdit": {
+            "type": "boolean",
+            "description": "Whether the syntax checker should run automatically when the document is edited",
+            "default": true
+          },
+          "vscode-db2i.syntax.checkInterval": {
+            "type": "number",
+            "description": "Time between editing (ms) and sending a request to syntax check on the server",
+            "default": 1500
+          },
+          "vscode-db2i.syntax.showWarnings": {
+            "type": "boolean",
+            "description": "Whether SQL syntax warnings should show in the editor",
             "default": false
           }
         }
@@ -660,6 +686,13 @@
         "title": "Export",
         "category": "IBM i Notebooks",
         "icon": "$(save)"
+      },
+      {
+        "command": "vscode-db2i.syntax.checkDocument",
+        "title": "Check SQL syntax",
+        "category": "Db2 for IBM i",
+        "enablement": "code-for-ibmi:connected == true && vscode-db2i:jobManager.hasJob && vscode-db2i:statementCanCancel != true && vscode-db2i.syntax.checkerAvailable == true && vscode-db2i.syntax.checkerRunning != true",
+        "icon": "$(check-all)"
       }
     ],
     "menus": {
@@ -1050,6 +1083,11 @@
           "command": "vscode-db2i.statement.cancel",
           "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
           "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.syntax.checkDocument",
+          "when": "editorLangId == sql && code-for-ibmi:connected == true",
+          "group": "navigation"
         }
       ],
       "sql/editor/context": [
@@ -1274,9 +1312,9 @@
   },
   "devDependencies": {
     "@continuedev/core": "^1.0.13",
-    "@halcyontech/vscode-ibmi-types": "^2.0.0",
+    "@halcyontech/vscode-ibmi-types": "^2.14.0",
     "@types/glob": "^7.1.3",
-    "@types/node": "14.x",
+    "@types/node": "18.x",
     "@types/vscode": "^1.95.0",
     "esbuild-loader": "^3.0.1",
     "eslint": "^7.32.0",
@@ -1285,7 +1323,7 @@
     "raw-loader": "^4.0.2",
     "ts-loader": "^9.3.1",
     "typescript": "^4.3.2",
-    "vitest": "^0.33.0",
+    "vitest": "^2.1.8",
     "vscd": "^1.1.0",
     "vscode-test": "^1.5.2",
     "webpack": "^5.91.0",
