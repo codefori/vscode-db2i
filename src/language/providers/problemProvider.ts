@@ -86,7 +86,7 @@ export const problemProvider = [
     if (isSql) {
       if (checkerAvailable() && !isSafeDocument(e)) {
         const basename = e.fileName ? path.basename(e.fileName) : `Untitled`;
-        window.showWarningMessage(`The SQL syntax checker is disabled for this document (${basename}) because it is too large.`);
+        window.showWarningMessage(`${basename}: the SQL syntax checker is disabled for this document because it is too large.`);
       }
 
       if (checkOnOpen()) {
