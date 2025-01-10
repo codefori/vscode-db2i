@@ -82,7 +82,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `DO`, `THEN`, `LOOP`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
+        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `DO`, `THEN`, `LOOP`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`, `ELSE`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },
@@ -301,6 +301,10 @@ export default class SQLTokeniser {
           } else {
             goodMatch = false;
           }
+        }
+
+        if (i > 0 && i < tokens.length - 2 && tokens[i].value.toLowerCase() === 'for' && tokens[i - 1].type === 'closebracket' && tokens[i + 2].value.toLowerCase() === 'data') {
+          goodMatch = false; // data-type with FOR BIT/SBCS/MIXED DATA
         }
 
         if (goodMatch) {
