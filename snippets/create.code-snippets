@@ -3,9 +3,8 @@
     "prefix": "create procedure",
     "body": [
       "create or replace procedure ${1:procedure_name}($2)",
+      "  program type sub modifies sql data",
       "  set option usrprf = *user, dynusrprf = *user, commit = *none",
-      "  program type sub",
-      "  modifies sql data",
       "begin",
       "  $0",
       "end;"

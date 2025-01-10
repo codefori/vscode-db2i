@@ -131,6 +131,22 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(obj.alias).toBe(`a`)
   });
 
+  test('SELECT: one invalid, one valid', () => {
+    const content = [
+      `SELECT * FROM QSYS2.AUTHORITY_COLLECTION_LIBRARIES where;`,
+      `SELECT * FROM QSYS2.AUTHORITY_COLLECTION;`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+
+    expect(document.statements.length).toBe(2);
+    expect(document.statements[0].tokens.length).toBe(7);
+    expect(document.statements[1].tokens.length).toBe(6);
+
+    expect(document.statements[0].type).toBe(StatementType.Select);
+    expect(document.statements[1].type).toBe(StatementType.Select);
+  })
+
   test('SELECT: Simple unqualified object with alias (no AS)', () => {
     const document = newDoc(`select * from sample a;`);
 
@@ -147,6 +163,17 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(obj.object.name).toBe(`sample`);
     expect(obj.object.schema).toBeUndefined();
     expect(obj.alias).toBe(`a`)
+  });
+
+  test('SELECT: for in data-type (issue #315)', () => {
+    const document = newDoc([
+      `select cast(x'01' as char(1) for bit data) as something,`,
+      `case when 1=1 then 'makes sense' else 'what?' end as something_else`,
+      `from sysibm.sysdummy1;`
+    ].join(`\n`));
+  
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Select);
   });
 
   test('SELECT: Simple qualified object with alias (no AS)', () => {

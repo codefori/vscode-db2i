@@ -2,6 +2,10 @@ import { completionProvider } from "./completionProvider";
 import { formatProvider } from "./formatProvider";
 import { hoverProvider, openProvider } from "./hoverProvider";
 import { signatureProvider } from "./parameterProvider";
+import { checkDocumentDefintion, problemProvider } from "./problemProvider";
+import { Db2StatusProvider } from "./statusProvider";
+
+export const sqlLanguageStatus = new Db2StatusProvider();
 
 export function languageInit() {
   let functionality = [];
@@ -11,7 +15,10 @@ export function languageInit() {
     formatProvider,
     signatureProvider,
     hoverProvider,
-    openProvider
+    openProvider,
+    ...problemProvider,
+    checkDocumentDefintion,
+    sqlLanguageStatus
   );
   
   return functionality;

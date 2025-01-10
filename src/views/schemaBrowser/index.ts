@@ -9,7 +9,7 @@ import Configuration from "../../configuration";
 
 import Types from "../types";
 import Statement from "../../database/statement";
-import { copyUI } from "./copyUI";
+import { getCopyUi } from "./copyUI";
 import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getRecordLocksStatement } from "./statements";
 
 const viewItem = {
@@ -327,7 +327,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.copyData`, async (object: SQLObject) => {
         if (object) {
-          const page = await copyUI.loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
+          const page = await getCopyUi().loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
           
           if(page && page.data) {
             const data = page.data;
