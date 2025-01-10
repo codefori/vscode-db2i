@@ -13,6 +13,7 @@ import { updateStatusBar } from "./statusBar";
 import { setCancelButtonVisibility } from "../results";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import { registerDb2iTablesProvider } from "../../aiProviders/continue/listTablesContextProvider";
+import { sqlLanguageStatus } from "../../language/providers";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -308,6 +309,7 @@ export class JobManagerView implements TreeDataProvider<any> {
     const selectedJob = JobManager.getSelection();
 
     setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === "busy");
+    sqlLanguageStatus.setState(selectedJob !== undefined);
     commands.executeCommand(`setContext`, `vscode-db2i:jobManager.hasJob`, selectedJob !== undefined);
   }
 

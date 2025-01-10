@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
-import { canTalkToDb, findPossibleTables } from "../context";
+import { canTalkToDb, findPossibleTables, refsToMarkdown } from "../context";
 import {
   ContextItem,
   ContextProviderDescription,
@@ -135,7 +135,7 @@ export class db2ContextProvider implements IContextProvider {
                 content: prompt,
               });
             }
-  
+
             return contextItems;
           default:
             // const contextItems: ContextItem[] = [];
@@ -144,24 +144,19 @@ export class db2ContextProvider implements IContextProvider {
               schema,
               fullInput.split(` `)
             );
-            for (const table of Object.keys(tableRefs)) {
-              const columnData: TableColumn[] = tableRefs[table];
-              if (columnData && columnData.length > 0) {
-                const tableSchema =
-                  columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
+            const markdownRefs = refsToMarkdown(tableRefs);
 
-                // create context item
-                let prompt = `Db2 for i table Assistant: The following information is based on the ${table} table within the ${tableSchema} schema. Utilize the provided schema and table metadata to assist the user:\n`;
-                prompt += `Column Info: ${JSON.stringify(columnData)}\n\n`;
-
-                contextItems.push({
-                  name: `${job.name}-${tableSchema}-${table}`,
-                  description: `Schema and table information for ${table}`,
-                  content: prompt,
-                });
-              }
+            for (const tableRef of markdownRefs) {
+              let prompt = `Table: ${tableRef.TABLE_NAME} (Schema: ${tableRef.SCHMEA}) Column Information:\n`;
+              prompt += `Format: column_name (column_text) type(length:precision) is_identity is_nullable\n`
+              prompt += `${tableRef.COLUMN_INFO}`;
+              contextItems.push({
+                name: `${job.name}-${tableRef.SCHMEA}-${tableRef.TABLE_NAME}`,
+                description: `Column information for ${tableRef.TABLE_NAME}`,
+                content: prompt,
+              });
             }
-  
+
             return contextItems;
         }
       } catch (error) {

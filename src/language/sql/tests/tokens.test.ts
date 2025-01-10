@@ -108,3 +108,17 @@ test(`Block comments`, () => {
   expect(tokens[0].value).toBe(`Create`)
   expect(lines.substring(tokens[0].range.start, tokens[0].range.end)).toBe(`Create`)
 });
+
+test('For in data-type (issue #315)', () => {
+  const tokeniser = new SQLTokeniser();
+
+  const tokens = tokeniser.tokenise([
+    `select cast(x'01' as char(1) for bit data) as something,`,
+    `case when 1=1 then 'makes sense' else 'what?' end as something_else`,
+    `from sysibm.sysdummy1;`
+  ].join(`\n`));
+
+  expect(tokens.length).toBe(35);
+  expect(tokens[9].type).toBe(`word`);
+  expect(tokens[9].value.toLowerCase()).toBe(`for`);
+});

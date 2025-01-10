@@ -9,8 +9,8 @@ import Configuration from "../../configuration";
 
 import Types from "../types";
 import Statement from "../../database/statement";
-import { copyUI } from "./copyUI";
-import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement } from "./statements";
+import { getCopyUi } from "./copyUI";
+import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement } from "./statements";
 
 const viewItem = {
   "tables": `table`,
@@ -187,6 +187,17 @@ export default class schemaBrowser {
         }
       }),
       
+      vscode.commands.registerCommand(`vscode-db2i.getAuthorities`, async (object: SQLObject) => {
+        if (object) {
+          const content = getAuthoritiesStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            qualifier: `statement`,
+            open: false,
+          });
+        }
+      }),
+      
       vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject|SchemaItem) => { //table
         if (object) {
           let content: string|undefined;
@@ -305,7 +316,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.copyData`, async (object: SQLObject) => {
         if (object) {
-          const page = await copyUI.loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
+          const page = await getCopyUi().loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
           
           if(page && page.data) {
             const data = page.data;
@@ -546,6 +557,7 @@ class SQLObject extends vscode.TreeItem {
   name: string;
   specificName: string;
   type: string;
+  tableType: string;
   system: {
     schema: string;
     name: string;
@@ -562,6 +574,7 @@ class SQLObject extends vscode.TreeItem {
     this.specificName = item.specificName; // Only applies to routines
     this.system = item.system;
     this.type = type;
+    this.tableType = item.tableType;
     this.description = item.text;
     // For functions and procedures, set a tooltip that includes the specific name
     if (Schemas.isRoutineType(this.type)) {
