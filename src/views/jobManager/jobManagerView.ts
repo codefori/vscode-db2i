@@ -128,7 +128,8 @@ export class JobManagerView implements TreeDataProvider<any> {
                   await selected.job.connect();
                   
                   // re register tables provider with potential new Schema
-                  await registerDb2iTablesProvider();
+                  const schema = selected.job.options.libraries[0];
+                  await registerDb2iTablesProvider(schema);
                 } catch (e) {
                   window.showErrorMessage(`Failed to start new job with updated properties.`);
                 }
@@ -280,6 +281,8 @@ export class JobManagerView implements TreeDataProvider<any> {
       vscode.commands.registerCommand(selectJobCommand, async (selectedName: string) => {
         if (selectedName) {
           await JobManager.setSelection(selectedName);
+          const schema = JobManager.getSelection().job.options.libraries[0];
+          await registerDb2iTablesProvider(schema);
           this.refresh();
         }
       }),

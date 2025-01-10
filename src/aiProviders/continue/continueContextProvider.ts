@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
-import { canTalkToDb, findPossibleTables, refsToMarkdown } from "../context";
+import { canTalkToDb, createContinueContextItems, findPossibleTables, refsToMarkdown } from "../context";
 import {
   ContextItem,
   ContextProviderDescription,
@@ -146,16 +146,7 @@ export class db2ContextProvider implements IContextProvider {
             );
             const markdownRefs = refsToMarkdown(tableRefs);
 
-            for (const tableRef of markdownRefs) {
-              let prompt = `Table: ${tableRef.TABLE_NAME} (Schema: ${tableRef.SCHMEA}) Column Information:\n`;
-              prompt += `Format: column_name (column_text) type(length:precision) is_identity is_nullable\n`
-              prompt += `${tableRef.COLUMN_INFO}`;
-              contextItems.push({
-                name: `${job.name}-${tableRef.SCHMEA}-${tableRef.TABLE_NAME}`,
-                description: `Column information for ${tableRef.TABLE_NAME}`,
-                content: prompt,
-              });
-            }
+            contextItems.push(...createContinueContextItems(markdownRefs));
 
             return contextItems;
         }
