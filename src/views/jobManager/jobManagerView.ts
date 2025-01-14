@@ -126,10 +126,6 @@ export class JobManagerView implements TreeDataProvider<any> {
 
                 try {
                   await selected.job.connect();
-                  
-                  // re register tables provider with potential new Schema
-                  const schema = selected.job.options.libraries[0];
-                  await registerDb2iTablesProvider(schema);
                 } catch (e) {
                   window.showErrorMessage(`Failed to start new job with updated properties.`);
                 }
@@ -281,8 +277,6 @@ export class JobManagerView implements TreeDataProvider<any> {
       vscode.commands.registerCommand(selectJobCommand, async (selectedName: string) => {
         if (selectedName) {
           await JobManager.setSelection(selectedName);
-          const schema = JobManager.getSelection().job.options.libraries[0];
-          await registerDb2iTablesProvider(schema);
           this.refresh();
         }
       }),
@@ -310,6 +304,9 @@ export class JobManagerView implements TreeDataProvider<any> {
     updateStatusBar();
 
     const selectedJob = JobManager.getSelection();
+    
+    // re-register db2i tables context provider with current schema
+    registerDb2iTablesProvider(selectedJob.job.options.libraries[0]);
 
     setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === "busy");
     sqlLanguageStatus.setState(selectedJob !== undefined);
