@@ -30,7 +30,7 @@ export class SQLJobManager {
       const config = instance.getConfig();
 
       const newJob = predefinedJob || (new OldSQLJob({
-        libraries: [config.currentLibrary, ...config.libraryList],
+        libraries: uniqueStrings([config.currentLibrary, ...config.libraryList]),
         naming: `system`,
         "full open": false,
         "transaction isolation": "none",
@@ -162,3 +162,9 @@ export class SQLJobManager {
     return Configuration.get<SelfValue>(`jobSelfDefault`) || `*NONE`;
   }
 }
+
+const uniqueStrings = (arr: string[]): string[] => {
+  return arr.filter((item,
+      index) => arr.indexOf(item) === index);
+}
+
