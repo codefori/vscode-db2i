@@ -28,9 +28,7 @@ const listDb2Table: ContextProviderDescription = {
 let provider: ListDb2iTables = undefined;
 
 class ListDb2iTables implements IContextProvider {
-  private schema: string;
-
-  constructor(schema: string) {
+  constructor(private schema: string) {
     this.schema = schema;
   }
 
@@ -120,7 +118,6 @@ export async function registerDb2iTablesProvider(schema: string) {
 
     if (provider) {
       provider.setCurrentSchema(schema);
-      // HACK: re register context provider work around
       // save continue config file to trigger a config reload to update list tables provider
       const configFile = path.join(os.homedir(), `.continue`, `config.json`);
       const now = new Date();
