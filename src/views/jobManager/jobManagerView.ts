@@ -308,7 +308,7 @@ export class JobManagerView implements TreeDataProvider<any> {
     
     // re-register db2i tables context provider with current schema
     if (provider && provider.getCurrentSchema().toLowerCase() !== selectedSchema.toLowerCase()) {
-      registerDb2iTablesProvider(selectedJob.job.options.libraries[0]);
+      registerDb2iTablesProvider(selectedSchema);
     }
 
     setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === "busy");
