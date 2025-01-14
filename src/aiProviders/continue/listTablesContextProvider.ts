@@ -112,7 +112,10 @@ class ListDb2iTables implements IContextProvider {
   }
 }
 
-export async function registerDb2iTablesProvider(schema: string) {
+export async function registerDb2iTablesProvider(schema?: string) {
+  if (!schema) {
+    return;
+  }
   const continueID = `Continue.continue`;
   const continueEx = vscode.extensions.getExtension(continueID);
   if (continueEx) {

@@ -305,15 +305,28 @@ export class JobManagerView implements TreeDataProvider<any> {
 
     const selectedJob = JobManager.getSelection();
     const selectedSchema = selectedJob.job.options.libraries[0];
-    
+
     // re-register db2i tables context provider with current schema
-    if (provider && provider.getCurrentSchema().toLowerCase() !== selectedSchema.toLowerCase()) {
+    if (
+      provider &&
+      selectedJob !== undefined &&
+      provider.getCurrentSchema() &&
+      selectedSchema &&
+      provider.getCurrentSchema().trim().toLowerCase() !==
+        selectedSchema.trim().toLowerCase()
+    ) {
       registerDb2iTablesProvider(selectedSchema);
     }
 
-    setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === "busy");
+    setCancelButtonVisibility(
+      selectedJob && selectedJob.job.getStatus() === "busy"
+    );
     sqlLanguageStatus.setState(selectedJob !== undefined);
-    commands.executeCommand(`setContext`, `vscode-db2i:jobManager.hasJob`, selectedJob !== undefined);
+    commands.executeCommand(
+      `setContext`,
+      `vscode-db2i:jobManager.hasJob`,
+      selectedJob !== undefined
+    );
   }
 
   getTreeItem(element: vscode.TreeItem) {

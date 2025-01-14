@@ -102,7 +102,9 @@ export function activate(context: vscode.ExtensionContext): Db2i {
       exampleBrowser.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
       // register list tables
-      registerDb2iTablesProvider(JobManager.getSelection().job.options.libraries[0]);
+      const currentJob = JobManager.getSelection();
+      const currentSchema = currentJob?.job.options.libraries[0];
+      registerDb2iTablesProvider(currentSchema);
       if (devMode && runTests) {
         runTests();
       }
