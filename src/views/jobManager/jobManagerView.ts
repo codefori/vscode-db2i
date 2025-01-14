@@ -304,7 +304,7 @@ export class JobManagerView implements TreeDataProvider<any> {
     updateStatusBar();
 
     const selectedJob = JobManager.getSelection();
-    const selectedSchema = selectedJob.job.options.libraries[0];
+    const selectedSchema = selectedJob?.job.options.libraries[0];
 
     // re-register db2i tables context provider with current schema
     if (
