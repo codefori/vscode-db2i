@@ -30,7 +30,7 @@ export class SQLJobManager {
       const config = instance.getConfig();
 
       const newJob = predefinedJob || (new OldSQLJob({
-        libraries: [config.currentLibrary, ...config.libraryList],
+        libraries: [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)],
         naming: `system`,
         "full open": false,
         "transaction isolation": "none",
