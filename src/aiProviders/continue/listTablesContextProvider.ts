@@ -25,7 +25,7 @@ const listDb2Table: ContextProviderDescription = {
   type: "submenu",
 };
 
-let provider: ListDb2iTables = undefined;
+export let provider: ListDb2iTables = undefined;
 
 class ListDb2iTables implements IContextProvider {
   constructor(private schema: string) {
@@ -38,6 +38,10 @@ class ListDb2iTables implements IContextProvider {
 
   setCurrentSchema(schema: string) {
     this.schema = schema;
+  }
+
+  getCurrentSchema() {
+    return this.schema;
   }
 
   async getColumnInfoForAllTables(schema: string) {
