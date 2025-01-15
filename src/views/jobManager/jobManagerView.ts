@@ -306,13 +306,13 @@ export class JobManagerView implements TreeDataProvider<any> {
     const selectedJob = JobManager.getSelection();
     
     // re-register db2i tables context provider with current schema
-    const selectedSchema = selectedJob?.job.options.libraries[0]?.trim().toLowerCase();
-    const currentSchema = provider?.getCurrentSchema().trim().toLowerCase();
+    const selectedSchema = selectedJob?.job.options.libraries[0];
+    const currentSchema = provider?.getCurrentSchema();
     if (
       provider &&
       selectedJob &&
       selectedSchema &&
-      currentSchema !== selectedSchema
+      currentSchema.toLowerCase() !== selectedSchema.toLowerCase()
     ) {
       registerDb2iTablesProvider(selectedSchema);
     }
