@@ -12,6 +12,7 @@ import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
 import { setCancelButtonVisibility } from "../results";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { provider, registerDb2iTablesProvider } from "../../aiProviders/continue/listTablesContextProvider";
 import { sqlLanguageStatus } from "../../language/providers";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
@@ -303,10 +304,28 @@ export class JobManagerView implements TreeDataProvider<any> {
     updateStatusBar();
 
     const selectedJob = JobManager.getSelection();
+    
+    // re-register db2i tables context provider with current schema
+    const selectedSchema = selectedJob?.job.options.libraries[0];
+    const currentSchema = provider?.getCurrentSchema();
+    if (
+      provider &&
+      selectedJob &&
+      selectedSchema &&
+      currentSchema.toLowerCase() !== selectedSchema.toLowerCase()
+    ) {
+      registerDb2iTablesProvider(selectedSchema);
+    }
 
-    setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === "busy");
+    setCancelButtonVisibility(
+      selectedJob && selectedJob.job.getStatus() === "busy"
+    );
     sqlLanguageStatus.setState(selectedJob !== undefined);
-    commands.executeCommand(`setContext`, `vscode-db2i:jobManager.hasJob`, selectedJob !== undefined);
+    commands.executeCommand(
+      `setContext`,
+      `vscode-db2i:jobManager.hasJob`,
+      selectedJob !== undefined
+    );
   }
 
   getTreeItem(element: vscode.TreeItem) {
