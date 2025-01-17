@@ -264,7 +264,40 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;
   } else {
-    sql += ` and sql_object_type = '${objectType}'`;    
+    sql += ` and sql_object_type = '${objectType}'`;
   }
   return sql;
+}
+
+export function getObjectLocksStatement(schema: string, table: string, objectType: string, tableType: string): string {
+    let sql: string = `
+      select
+        system_table_member "Member",
+        member_lock_type "Member Lock Type", 
+        lock_state "Lock State", 
+        lock_status "Lock Status", 
+        lock_scope "Scope", 
+        substr(job_name, locate_in_string(job_name, '/', -1) + 1) "Job Name",
+        substr(job_name, locate_in_string(job_name, '/', 1) + 1, locate_in_string(job_name, '/', -1) - locate_in_string(job_name, '/', 1) - 1) "Job User",
+        substr(job_name, 1, locate_in_string(job_name, '/', 1) - 1) "Job Number",
+        thread_id "Thread", 
+        lock_space_id "Lock Space", 
+        lock_count "Lock Count", 
+        program_library_name "Program Library", 
+        program_name "Program Name", 
+        module_library_name "Module Library", 
+        module_name "Module Name", 
+        procedure_name "Procedure Name", 
+        statement_id "Statement ID", 
+        machine_instruction "Instruction"
+      from qsys2.object_lock_info
+      where object_schema = '${schema}' 
+        and object_name = '${table}'
+    `;
+    if (objectType === 'TABLE' && tableType != 'T') {
+        sql += ` and object_type = '*FILE'`;
+    } else {
+        sql += ` and sql_object_type = '${objectType.toUpperCase()}'`;
+    }
+    return sql;
 }
