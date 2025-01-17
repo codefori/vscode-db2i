@@ -23,8 +23,8 @@ import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
 import { queryHistory } from "./views/queryHistoryView";
-import { activateChat, registerCopilotProvider } from "./aiProviders/copilot";
-import { SQLStatementChecker } from "./connection/syntaxChecker";
+import { registerCopilotProvider } from "./aiProviders/copilot";
+import { registerDb2iTablesProvider } from "./aiProviders/continue/listTablesContextProvider";
 import { setCheckerAvailableContext } from "./language/providers/problemProvider";
 
 export interface Db2i {
@@ -101,6 +101,10 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     onConnectOrServerInstall().then(() => {
       exampleBrowser.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
+      // register list tables
+      const currentJob = JobManager.getSelection();
+      const currentSchema = currentJob?.job.options.libraries[0];
+      registerDb2iTablesProvider(currentSchema);
       if (devMode && runTests) {
         runTests();
       }
@@ -112,6 +116,8 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   registerCopilotProvider(context); 
   // register continue provider
   registerContinueProvider();
+
+
 
   instance.subscribe(context, `disconnected`, `db2i-disconnected`, () => ServerComponent.reset());
 

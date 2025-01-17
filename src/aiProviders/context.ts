@@ -1,6 +1,7 @@
 import { JobManager } from "../config";
 import * as vscode from "vscode";
 import Statement from "../database/statement";
+import { ContextItem } from "@continuedev/core";
 
 export function canTalkToDb() {
   return JobManager.getSelection() !== undefined;
@@ -99,7 +100,7 @@ export async function findPossibleTables(stream: vscode.ChatResponseStream, sche
  * 
  * Tables with names starting with 'SYS' are skipped.
  */
-export function refsToMarkdown(refs: TableRefs) {
+export function refsToMarkdown(refs: TableRefs): MarkdownRef[] {
   const condensedResult = Object.keys(refs).length > 5;
 
   let markdownRefs: MarkdownRef[] = [];
@@ -120,6 +121,23 @@ export function refsToMarkdown(refs: TableRefs) {
   }
 
   return markdownRefs;
+}
+
+export function createContinueContextItems(refs: MarkdownRef[]) {
+  const contextItems: ContextItem[] = [];
+  const job = JobManager.getSelection();
+  for (const tableRef of refs) {
+    let prompt = `Table: ${tableRef.TABLE_NAME} (Schema: ${tableRef.SCHMEA}) Column Information:\n`;
+    prompt += `Format: column_name (column_text) type(length:precision) is_identity is_nullable\n`
+    prompt += `${tableRef.COLUMN_INFO}`;
+    contextItems.push({
+      name: `${job.name}-${tableRef.SCHMEA}-${tableRef.TABLE_NAME}`,
+      description: `Column information for ${tableRef.TABLE_NAME}`,
+      content: prompt,
+    });
+  }
+
+  return contextItems;
 }
 
 export async function getSystemStatus(): Promise<string> {
