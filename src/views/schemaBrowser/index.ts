@@ -209,20 +209,18 @@ export default class schemaBrowser {
         }
       }),
 
+      vscode.commands.registerCommand(`vscode-db2i.getRecordLocks`, async (object: SQLObject) => {
+        if (object) {
+          const content = getRecordLocksStatement(object.schema, object.name);
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            qualifier: `statement`,
+            open: false,
+          });
+        }
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject|SchemaItem) => { //table
-
-        vscode.commands.registerCommand(`vscode-db2i.getRecordLocks`, async (object: SQLObject) => {
-            if (object) {
-                const content = getRecordLocksStatement(object.schema, object.name);
-                vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-                    content,
-                    qualifier: `statement`,
-                    open: false,
-                });
-            }
-        }),
-
-        vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject|SchemaItem) => { //table
         if (object) {
           let content: string|undefined;
           if (`name` in object) {
