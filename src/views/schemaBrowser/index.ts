@@ -10,7 +10,7 @@ import Configuration from "../../configuration";
 import Types from "../types";
 import Statement from "../../database/statement";
 import { getCopyUi } from "./copyUI";
-import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement } from "./statements";
+import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement } from "./statements";
 
 const viewItem = {
   "tables": `table`,
@@ -186,7 +186,7 @@ export default class schemaBrowser {
           });
         }
       }),
-      
+
       vscode.commands.registerCommand(`vscode-db2i.getAuthorities`, async (object: SQLObject) => {
         if (object) {
           const content = getAuthoritiesStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
@@ -201,6 +201,17 @@ export default class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.getObjectLocks`, async (object: SQLObject) => {
         if (object) {
           const content = getObjectLocksStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            qualifier: `statement`,
+            open: false,
+          });
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.getRecordLocks`, async (object: SQLObject) => {
+        if (object) {
+          const content = getRecordLocksStatement(object.schema, object.name);
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             qualifier: `statement`,
