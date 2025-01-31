@@ -44,9 +44,9 @@ const itemIcons = {
 export default class schemaBrowser {
   emitter: vscode.EventEmitter<any | undefined | null | void>;
   onDidChangeTreeData: vscode.Event<any | undefined | null | void>;
-  cache: {[key: string]: object[]};
+  cache: { [key: string]: object[] };
 
-  filters: {[schema: string]: string} = {};
+  filters: { [schema: string]: string } = {};
 
   /**
    * @param {vscode.ExtensionContext} context
@@ -138,13 +138,15 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.generateSQL`, async (object: SQLObject) => {
         if (object) {
-          try {
-            const content = await Schemas.generateSQL(object.schema, object.uniqueName(), object.type.toUpperCase());
-            const textDoc = await vscode.workspace.openTextDocument({language: `sql`, content});
-            await vscode.window.showTextDocument(textDoc);
-          } catch (e) {
-            vscode.window.showErrorMessage(e.message);
-          }
+          vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL` }, async () => {
+            try {
+              const content = await Schemas.generateSQL(object.schema, object.uniqueName(), object.type.toUpperCase());
+              const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+              await vscode.window.showTextDocument(textDoc);
+            } catch (e) {
+              vscode.window.showErrorMessage(e.message);
+            }
+          });
         }
       }),
 
@@ -162,10 +164,10 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.getMTIs`, async (object: SQLObject|SchemaItem) => {
+      vscode.commands.registerCommand(`vscode-db2i.getMTIs`, async (object: SQLObject | SchemaItem) => {
         if (object) {
           const content = getMTIStatement(object.schema, (`name` in object ? object.name : undefined));
-          
+
           if (content) {
             vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
               content,
@@ -186,7 +188,7 @@ export default class schemaBrowser {
           });
         }
       }),
-      
+
       vscode.commands.registerCommand(`vscode-db2i.getAuthorities`, async (object: SQLObject) => {
         if (object) {
           const content = getAuthoritiesStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
@@ -209,16 +211,16 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject|SchemaItem) => { //table
+      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject | SchemaItem) => { //table
         if (object) {
-          let content: string|undefined;
+          let content: string | undefined;
           if (`name` in object) {
             content = getAdvisedIndexesStatement(object.schema, object.name);
           }
           else {
             content = getAdvisedIndexesStatement(object.schema);
           }
-          
+
           if (content) {
             vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
               content,
@@ -229,16 +231,16 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.clearAdvisedIndexes`, async (object: SQLObject|SchemaItem) => {
+      vscode.commands.registerCommand(`vscode-db2i.clearAdvisedIndexes`, async (object: SQLObject | SchemaItem) => {
         if (object) {
           const isObject = `name` in object;
           let result;
 
-          result = await vscode.window.showWarningMessage(`Are you sure you want to clear all of the advised index rows from the Index Advisor for ${object.schema}${isObject ? `${object.name}` : ''}?`,  {
+          result = await vscode.window.showWarningMessage(`Are you sure you want to clear all of the advised index rows from the Index Advisor for ${object.schema}${isObject ? `${object.name}` : ''}?`, {
             modal: true,
           }, 'No', 'Yes');
-          
-          if(result === 'Yes') {
+
+          if (result === 'Yes') {
             try {
               await Schemas.clearAdvisedIndexes(object.schema, isObject ? object.name : undefined);
             } catch (e) {
@@ -254,7 +256,7 @@ export default class schemaBrowser {
             modal: true,
           }, 'No', 'Yes');
 
-          if(result === 'Yes') {
+          if (result === 'Yes') {
             try {
               await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
@@ -289,7 +291,7 @@ export default class schemaBrowser {
                 }, async () => {
                   await Schemas.renameObject(object.schema, object.name, name, object.type);
                 });
-                
+
                 vscode.window.showInformationMessage(`Renamed ${object.name} to ${name}`);
                 this.clearCacheAndRefresh();
               } catch (e) {
@@ -301,14 +303,14 @@ export default class schemaBrowser {
           }
         }
       }),
-      
+
       vscode.commands.registerCommand(`vscode-db2i.clearData`, async (object: SQLObject) => {
         if (object) {
           const result = await vscode.window.showWarningMessage(`Are you sure you want to clear ${object.name}?`, {
             modal: true,
           }, 'No', 'Yes');
 
-          if(result === 'Yes') {
+          if (result === 'Yes') {
             try {
               await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
@@ -328,8 +330,8 @@ export default class schemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.copyData`, async (object: SQLObject) => {
         if (object) {
           const page = await getCopyUi().loadPage<any>((`Copy File - ${object.schema}.${object.name}`));
-          
-          if(page && page.data) {
+
+          if (page && page.data) {
             const data = page.data;
             page.panel.dispose();
 
@@ -341,7 +343,7 @@ export default class schemaBrowser {
                 }, async () => {
                   await Table.copyFile(object.system.schema, object.system.name, data);
                 });
-  
+
                 vscode.window.showInformationMessage(`Table copied`);
                 this.clearCacheAndRefresh();
               } catch (e) {
@@ -369,7 +371,7 @@ export default class schemaBrowser {
 
           const config = getInstance().getConfig();
           const currentLibrary = config.currentLibrary.toUpperCase();
-  
+
           if (schema && schema !== currentLibrary) {
             config.currentLibrary = schema;
             await getInstance().setConfig(config);
@@ -477,7 +479,7 @@ export default class schemaBrowser {
     return element;
   }
 
-  async getChildren(element?: Schema|SchemaItem|SQLObject) {
+  async getChildren(element?: Schema | SchemaItem | SQLObject) {
     let items = [];
 
     if (element) {
@@ -489,7 +491,7 @@ export default class schemaBrowser {
         let filterValue = this.filters[element.schema];
         if (filterValue) {
           const validSchemaName = Statement.noQuotes(element.schema);
-          const filteredObjects = await Schemas.getObjects(validSchemaName, AllSQLTypes, {filter: filterValue});
+          const filteredObjects = await Schemas.getObjects(validSchemaName, AllSQLTypes, { filter: filterValue });
           items = filteredObjects.map(obj => new SQLObject(obj));
 
         } else {
@@ -499,16 +501,16 @@ export default class schemaBrowser {
 
 
       } else
-      if (element instanceof SchemaItem) {
-        items = await this.fetchData(element.schema, contextValue as SQLType, false);
-      } else
-      if (element instanceof SQLObject) {
-        const type = element.type;
+        if (element instanceof SchemaItem) {
+          items = await this.fetchData(element.schema, contextValue as SQLType, false);
+        } else
+          if (element instanceof SQLObject) {
+            const type = element.type;
 
-        if (Types[type]) {
-          items = await Types[type].getChildren(element.schema, element.uniqueName());
-        }
-      }
+            if (Types[type]) {
+              items = await Types[type].getChildren(element.schema, element.uniqueName());
+            }
+          }
 
     } else {
       const connection = getInstance().getConnection();
