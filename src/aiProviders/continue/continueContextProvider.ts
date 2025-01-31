@@ -87,7 +87,7 @@ export class db2ContextProvider implements IContextProvider {
       const result = await selected.job
         .query<SelfCodeNode>(content)
         .execute(10000);
-      if (result.success) {
+      if (result.success && result.data) {
         const data: SelfCodeNode[] = result.data.map((row) => ({
           ...row,
           INITIAL_STACK: this.tryParseJson(row),
