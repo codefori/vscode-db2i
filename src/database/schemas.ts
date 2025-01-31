@@ -220,11 +220,21 @@ export default class Schemas {
    * @param object Not user input
    */
   static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
-    const lines = await JobManager.runSQL<{ SRCDTA: string }>([
-      `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
+    await JobManager.runSQL<{ SRCDTA: string }>([
+      `CALL QSYS2.GENERATE_SQL( DATABASE_OBJECT_NAME => ?, DATABASE_OBJECT_LIBRARY_NAME => ?, DATABASE_OBJECT_TYPE => ?
+                              , CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0'
+                              , DATABASE_SOURCE_FILE_NAME => '*STMF'
+                              , STATEMENT_FORMATTING_OPTION => '0'
+                              , SOURCE_STREAM_FILE => '/tmp/Q_GENSQL_' concat current_user concat '.sql'
+                              , SOURCE_STREAM_FILE_END_OF_LINE => 'LF'
+                              , SOURCE_STREAM_FILE_CCSID => 1208 )`
     ].join(` `), { parameters: [object, schema, internalType] });
+    const lines = await JobManager.runSQL<{ LINE: string }>(
+      `select LINE
+         from table( QSYS2.IFS_READ( PATH_NAME => '/tmp/Q_GENSQL_' concat current_user concat '.sql' ) )`
+    );
 
-    const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
+    const generatedStatement = lines.map( elem => elem.LINE ).join(`\n`);
 
     return generatedStatement;
   }
