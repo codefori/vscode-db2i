@@ -42,7 +42,6 @@ export class SQLStatementChecker implements IBMiComponent {
   private readonly functionName = VALIDATOR_NAME;
   private readonly currentVersion = 5;
 
-  private installedVersion = 1;
   private library = "";
 
   static get(): SQLStatementChecker|undefined {
@@ -50,12 +49,11 @@ export class SQLStatementChecker implements IBMiComponent {
   }
 
   reset() {
-    this.installedVersion = 0;
     this.library = "";
   }
 
   getIdentification(): ComponentIdentification {
-    return { name: SQLStatementChecker.ID, version: this.installedVersion };
+    return { name: SQLStatementChecker.ID, version: this.currentVersion };
   }
 
   static async getVersionOf(connection: IBMi, schema: string, name: string) {
@@ -79,8 +77,8 @@ export class SQLStatementChecker implements IBMiComponent {
       return `NeedsUpdate`;
     }
 
-    this.installedVersion = await SQLStatementChecker.getVersionOf(connection, this.library, this.functionName);
-    if (this.installedVersion < this.currentVersion) {
+    const installedVersion = await SQLStatementChecker.getVersionOf(connection, this.library, this.functionName);
+    if (installedVersion < this.currentVersion) {
       return `NeedsUpdate`;
     }
 
