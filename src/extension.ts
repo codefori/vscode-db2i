@@ -23,7 +23,9 @@ import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
 import { queryHistory } from "./views/queryHistoryView";
-import { activateChat, registerCopilotProvider } from "./aiProviders/copilot";
+import { registerCopilotProvider } from "./aiProviders/copilot";
+import { registerDb2iTablesProvider } from "./aiProviders/continue/listTablesContextProvider";
+import { setCheckerAvailableContext } from "./language/providers/problemProvider";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -39,7 +41,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   // This line of code will only be executed once when your extension is activated
   console.log(`Congratulations, your extension "vscode-db2i" is now active!`);
 
-  loadBase();
+  loadBase(context);
 
   const exampleBrowser = new ExampleBrowser(context);
   const selfCodesView = new selfCodesResultsView(context);
@@ -94,10 +96,15 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     DbCache.resetCache();
     selfCodesView.setRefreshEnabled(false);
     selfCodesView.setJobOnly(false);
+    setCheckerAvailableContext();
     // Refresh the examples when we have it, so we only display certain examples
     onConnectOrServerInstall().then(() => {
       exampleBrowser.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
+      // register list tables
+      const currentJob = JobManager.getSelection();
+      const currentSchema = currentJob?.job.options.libraries[0];
+      registerDb2iTablesProvider(currentSchema);
       if (devMode && runTests) {
         runTests();
       }
@@ -109,6 +116,8 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   registerCopilotProvider(context); 
   // register continue provider
   registerContinueProvider();
+
+
 
   instance.subscribe(context, `disconnected`, `db2i-disconnected`, () => ServerComponent.reset());
 

@@ -1,6 +1,6 @@
 
+import path from "path";
 import { getInstance } from "../base";
-
 import { JobManager } from "../config";
 
 export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types" | "logicals";
@@ -72,13 +72,13 @@ export default class Schemas {
     let filter: PartStatementInfo;
 
     // If there are multiple types, we build a union. It's important that the ordering of the columns in the selects are consistant:
-    // OBJ_TYPE, NAME, TEXT, SYS_NAME, SYS_SCHEMA, SPECNAME, BASE_SCHEMA, BASE_OBJ
+    // OBJ_TYPE, TABLE_TYPE, NAME, TEXT, SYS_NAME, SYS_SCHEMA, SPECNAME, BASE_SCHEMA, BASE_OBJ
 
     for (const type of types) {
       switch (type) {
         case `schemas`:
           selects.push([
-            `select '${type}' as OBJ_TYPE, SCHEMA_NAME as NAME, SCHEMA_TEXT as TEXT, SYSTEM_SCHEMA_NAME as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, SCHEMA_NAME as NAME, SCHEMA_TEXT as TEXT, SYSTEM_SCHEMA_NAME as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
             `from QSYS2.SYSSCHEMAS`,
             details.filter ? `where UPPER(SCHEMA_NAME) = ? or UPPER(SYSTEM_SCHEMA_NAME) = ?` : ``,
           ].join(` `));
@@ -94,7 +94,7 @@ export default class Schemas {
         case `logicals`:
           filter = getFilterClause(`TABLE_NAME`, details.filter);
           selects.push([
-            `select '${type}' as OBJ_TYPE, TABLE_NAME as NAME, TABLE_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, BASE_TABLE_SCHEMA as BASE_SCHEMA, BASE_TABLE_NAME as BASE_OBJ`,
+            `select '${type}' as OBJ_TYPE, TABLE_TYPE as TABLE_TYPE, TABLE_NAME as NAME, TABLE_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, BASE_TABLE_SCHEMA as BASE_SCHEMA, BASE_TABLE_NAME as BASE_OBJ`,
             `from QSYS2.SYSTABLES`,
             `where TABLE_SCHEMA = ? and TABLE_TYPE in (${typeMap[type].map(item => `'${item}'`).join(`, `)}) ${filter.clause}`,
           ].join(` `));
@@ -105,7 +105,7 @@ export default class Schemas {
         case `constraints`:
           filter = getFilterClause(`CONSTRAINT_NAME`, details.filter);
           selects.push([
-            `select '${type}' as OBJ_TYPE, CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
             `from QSYS2.SYSCST`,
             `where CONSTRAINT_SCHEMA = ? ${filter.clause}`,
           ].join(` `));
@@ -116,7 +116,7 @@ export default class Schemas {
         case `functions`:
           filter = getFilterClause(`ROUTINE_NAME`, details.filter);
           selects.push([
-            `select '${type}' as OBJ_TYPE, ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
             `from QSYS2.SYSFUNCS`,
             `where ROUTINE_SCHEMA = ? ${filter.clause} and FUNCTION_ORIGIN in ('E','U')`,
           ].join(` `));
@@ -127,7 +127,7 @@ export default class Schemas {
         case `variables`:
           filter = getFilterClause(`VARIABLE_NAME`, details.filter);
           selects.push([
-            `select '${type}' as OBJ_TYPE, VARIABLE_NAME as NAME, VARIABLE_TEXT as TEXT, SYSTEM_VAR_NAME as SYS_NAME, SYSTEM_VAR_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, VARIABLE_NAME as NAME, VARIABLE_TEXT as TEXT, SYSTEM_VAR_NAME as SYS_NAME, SYSTEM_VAR_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
             `from QSYS2.SYSVARIABLES`,
             `where VARIABLE_SCHEMA = ? ${filter.clause}`,
           ].join(` `));
@@ -138,7 +138,7 @@ export default class Schemas {
         case `indexes`:
           filter = getFilterClause(`INDEX_NAME`, details.filter);
           selects.push([
-            `select '${type}' as OBJ_TYPE, INDEX_NAME as NAME, INDEX_TEXT as TEXT, SYSTEM_INDEX_NAME as SYS_NAME, SYSTEM_INDEX_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, INDEX_NAME as NAME, INDEX_TEXT as TEXT, SYSTEM_INDEX_NAME as SYS_NAME, SYSTEM_INDEX_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
             `from QSYS2.SYSINDEXES`,
             `where INDEX_SCHEMA = ? ${filter.clause}`,
           ].join(` `));
@@ -149,7 +149,7 @@ export default class Schemas {
         case `procedures`:
           filter = getFilterClause(`ROUTINE_NAME`, details.filter);
           selects.push([
-            `select '${type}' as OBJ_TYPE, ROUTINE_NAME as NAME, ROUTINE_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, ROUTINE_NAME as NAME, ROUTINE_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
             `from QSYS2.SYSPROCS`,
             `where ROUTINE_SCHEMA = ? ${filter.clause}`,
           ].join(` `));
@@ -160,7 +160,7 @@ export default class Schemas {
         case `sequences`:
           filter = getFilterClause(`SEQUENCE_NAME`, details.filter);
           selects.push([
-            `select '${type}' as OBJ_TYPE, SEQUENCE_NAME as NAME, SEQUENCE_TEXT as TEXT, SYSTEM_SEQ_NAME as SYS_NAME, SYSTEM_SEQ_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, SEQUENCE_NAME as NAME, SEQUENCE_TEXT as TEXT, SYSTEM_SEQ_NAME as SYS_NAME, SYSTEM_SEQ_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
             `from QSYS2.SYSSEQUENCES`,
             `where SEQUENCE_SCHEMA = ? ${filter.clause}`,
           ].join(` `));
@@ -170,7 +170,7 @@ export default class Schemas {
 
         // case `packages`:
         //   selects.push([
-        //     `select '${type}' as OBJ_TYPE, PACKAGE_NAME as NAME, PACKAGE_TEXT as TEXT, PROGRAM_SCHEMA as BASE_SCHEMA, PROGRAM_NAME as BASE_OBJ, `,
+        //     `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, PACKAGE_NAME as NAME, PACKAGE_TEXT as TEXT, PROGRAM_SCHEMA as BASE_SCHEMA, PROGRAM_NAME as BASE_OBJ, `,
         //     `  '' as SYS_SCHEMA, '' as SYS_NAME, '' as SPECNAME`,
         //     `from QSYS2.SQLPACKAGE`,
         //     `where PACKAGE_SCHEMA = '${schema}' ${details.filter ? `and PACKAGE_NAME like '%${filter.clause}%'`: ``}`,
@@ -180,7 +180,7 @@ export default class Schemas {
         case `triggers`:
           filter = getFilterClause(`TRIGGER_NAME`, details.filter);
           selects.push([
-            `select '${type}' as OBJ_TYPE, TRIGGER_NAME as NAME, TRIGGER_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, EVENT_OBJECT_SCHEMA as BASE_SCHEMA, EVENT_OBJECT_TABLE as BASE_OBJ`,
+            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, TRIGGER_NAME as NAME, TRIGGER_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, EVENT_OBJECT_SCHEMA as BASE_SCHEMA, EVENT_OBJECT_TABLE as BASE_OBJ`,
             `from QSYS2.SYSTRIGGERS`,
             `where TRIGGER_SCHEMA = ? ${filter.clause}`,
           ].join(` `));
@@ -191,7 +191,7 @@ export default class Schemas {
         case `types`:
           filter = getFilterClause(`USER_DEFINED_TYPE_NAME`, details.filter);
           selects.push([
-            `select '${type}' as OBJ_TYPE, USER_DEFINED_TYPE_NAME as NAME, TYPE_TEXT as TEXT, SYSTEM_TYPE_NAME as SYS_NAME, SYSTEM_TYPE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, USER_DEFINED_TYPE_NAME as NAME, TYPE_TEXT as TEXT, SYSTEM_TYPE_NAME as SYS_NAME, SYSTEM_TYPE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
             `from QSYS2.SYSTYPES`,
             `where USER_DEFINED_TYPE_SCHEMA = ? ${filter.clause}`,
           ].join(` `));
@@ -215,6 +215,7 @@ export default class Schemas {
 
     return objects.map(object => ({
       type: object.OBJ_TYPE,
+      tableType: object.TABLE_TYPE,
       schema,
       name: object.NAME || undefined,
       specificName: object.SPECNAME || undefined,
@@ -234,30 +235,47 @@ export default class Schemas {
    * @param schema Not user input
    * @param object Not user input
    */
-  static async generateSQL(schema: string, object: string, internalType: string, basic?: boolean): Promise<string> {
-    let statement = `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`;
+  static async generateSQL(schema: string, object: string, internalType: string, isBasic?: boolean): Promise<string> {
+    const instance = getInstance();
+    const connection = instance.getConnection();
 
-    if (basic) {
-      let options: string[] = [
-        `CREATE_OR_REPLACE_OPTION => '0'`,
-        `PRIVILEGES_OPTION => '0'`,
-        `COMMENT_OPTION => '0'`,
-        `LABEL_OPTION => '0'`,
-        `HEADER_OPTION => '0'`,
-        `TRIGGER_OPTION => '0'`,
-        `CONSTRAINT_OPTION => '0'`,
-        // `PRIVILEGES_OPTION => '0'`,
-        // `ACTIVATE_ACCESS_CONTROL_OPTION => '0'`,
-        `MASK_AND_PERMISSION_OPTION => '0'`,
+    const result = await connection.withTempDirectory<string>(async (tempDir) => {
+      const tempFilePath = path.posix.join(tempDir, `generatedSql.sql`);
+
+      let options = [
+        `DATABASE_OBJECT_NAME => ?`,
+        `DATABASE_OBJECT_LIBRARY_NAME => ?`,
+        `DATABASE_OBJECT_TYPE => ?`,
+        `DATABASE_SOURCE_FILE_NAME => '*STMF'`,
+        `STATEMENT_FORMATTING_OPTION => '1'`,
+        `SOURCE_STREAM_FILE => '${tempFilePath}'`,
+        `SOURCE_STREAM_FILE_END_OF_LINE => 'LF'`,
+        `SOURCE_STREAM_FILE_CCSID => 1208`
       ];
-      statement = `CALL QSYS2.GENERATE_SQL(?, ?, ?, ${options.join(`, `)})`;
-    }
 
-    const lines = await JobManager.runSQL<{ SRCDTA: string }>(statement, { parameters: [object, schema, internalType] });
+      if (isBasic) {
+        options.push(
+          `CREATE_OR_REPLACE_OPTION => '0'`,
+          `PRIVILEGES_OPTION => '0'`,
+          `COMMENT_OPTION => '0'`,
+          `LABEL_OPTION => '0'`,
+          `HEADER_OPTION => '0'`,
+          `TRIGGER_OPTION => '0'`,
+          `CONSTRAINT_OPTION => '0'`,
+          `MASK_AND_PERMISSION_OPTION => '0'`,
+        );
+      }
 
-    const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
+      await JobManager.runSQL<{ SRCDTA: string }>([
+        `CALL QSYS2.GENERATE_SQL( ${options.join(`, `)} )`,
+      ].join(` `), { parameters: [object, schema, internalType] });
 
-    return generatedStatement;
+      // TODO: eventually .content -> .getContent(), it's not available yet
+      const contents = (await connection.content.downloadStreamfileRaw(tempFilePath)).toString();
+      return contents;
+    })
+
+    return result;
   }
 
   static async deleteObject(schema: string, name: string, type: string): Promise<void> {

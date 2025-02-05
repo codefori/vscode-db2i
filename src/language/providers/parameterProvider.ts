@@ -17,6 +17,9 @@ export const signatureProvider = languages.registerSignatureHelpProvider({ langu
     if (remoteAssistIsEnabled()) {
 
       const sqlDoc = getSqlDocument(document);
+
+      if (!sqlDoc) return;
+
       const currentStatement = sqlDoc.getStatementByOffset(offset);
 
       if (currentStatement) {

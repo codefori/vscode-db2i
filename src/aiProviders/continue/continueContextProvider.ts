@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
-import { canTalkToDb, findPossibleTables } from "../context";
+import { canTalkToDb, createContinueContextItems, findPossibleTables, refsToMarkdown } from "../context";
 import {
   ContextItem,
   ContextProviderDescription,
@@ -87,7 +87,7 @@ export class db2ContextProvider implements IContextProvider {
       const result = await selected.job
         .query<SelfCodeNode>(content)
         .execute(10000);
-      if (result.success) {
+      if (result.success && result.data) {
         const data: SelfCodeNode[] = result.data.map((row) => ({
           ...row,
           INITIAL_STACK: this.tryParseJson(row),
@@ -135,7 +135,7 @@ export class db2ContextProvider implements IContextProvider {
                 content: prompt,
               });
             }
-  
+
             return contextItems;
           default:
             // const contextItems: ContextItem[] = [];
@@ -144,24 +144,10 @@ export class db2ContextProvider implements IContextProvider {
               schema,
               fullInput.split(` `)
             );
-            for (const table of Object.keys(tableRefs)) {
-              const columnData: TableColumn[] = tableRefs[table];
-              if (columnData && columnData.length > 0) {
-                const tableSchema =
-                  columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
+            const markdownRefs = refsToMarkdown(tableRefs);
 
-                // create context item
-                let prompt = `Db2 for i Table meta data for schema ${tableSchema} table ${table}\n`;
-                prompt += `Column Info: ${JSON.stringify(columnData)}\n\n`;
+            contextItems.push(...createContinueContextItems(markdownRefs));
 
-                contextItems.push({
-                  name: `${job.name}-${tableSchema}-${table}`,
-                  description: `Schema and table information for ${table}`,
-                  content: prompt,
-                });
-              }
-            }
-  
             return contextItems;
         }
       } catch (error) {

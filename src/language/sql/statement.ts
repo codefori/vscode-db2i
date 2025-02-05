@@ -16,12 +16,7 @@ export default class Statement {
 
 		if (tokenIs(first, `word`, `EXEC`) && tokenIs(this.tokens[1], `word`, `SQL`)) {
 			first = this.tokens[2];
-		} else if (tokenIs(first, `word`) && tokenIs(this.tokens[1], `colon`)) {
-			first = this.tokens[2];
-		}
-
-		if (first.value !== undefined && tokenIs(this.tokens[1], `colon`)) {
-			// Possible label?
+		} else if (tokenIs(this.tokens[1], `colon`)) {
 			this.label = first.value;
 			first = this.tokens[2];
 		}
@@ -38,6 +33,10 @@ export default class Statement {
 				this.tokens = SQLTokeniser.findScalars(this.tokens);
 				break;
 		}
+	}
+
+	getLabel(): string|undefined {
+		return this.label;
 	}
 
 	isCompoundStart() {
@@ -303,6 +302,8 @@ export default class Statement {
 
 			for (const parameter of parameters) {
 				// If the first token is the parm type, then the name follows
+				if (tokenIs(parameter[0], `keyword`)) continue;
+				
 				let nameIndex = tokenIs(parameter[0], `parmType`) ? 1 : 0;
 				const name = parameter[nameIndex].value!;
 				// Include parmType if it is provided
@@ -788,7 +789,7 @@ export default class Statement {
     return tokens;
   }
 
-	private static formatSimpleTokens(tokens: Token[]) {
+	public static formatSimpleTokens(tokens: Token[]) {
 		let outString = ``;
 		for (let i = 0; i < tokens.length; i++) {
 			const cT = tokens[i];

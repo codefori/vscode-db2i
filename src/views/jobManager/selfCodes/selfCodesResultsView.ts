@@ -145,7 +145,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
 
     try {
       const result = await selected.job.query<SelfCodeNode>(content).execute(10000);
-      if (result.success) {
+      if (result.success && result.data) {
         const data: SelfCodeNode[] = result.data.map((row) => ({
           ...row,
           INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string)
