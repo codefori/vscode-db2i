@@ -35,7 +35,7 @@ jobs:
         cat $GITHUB_ENV
 
     - name: Upload dist artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test_vsix
         path: ${{env.vsix_name}}
