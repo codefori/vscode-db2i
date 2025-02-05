@@ -1,21 +1,16 @@
-import { env, Hover, languages, MarkdownString, workspace } from "vscode";
+import { languages, workspace } from "vscode";
 import { getSqlDocument } from "./logic/parse";
-import { DbCache, LookupResult, RoutineDetail } from "./logic/cache";
 import { JobManager } from "../../config";
 import Statement from "../../database/statement";
-import { getParmAttributes, prepareParamType } from "./logic/completion";
 import { StatementType } from "../sql/types";
 import { remoteAssistIsEnabled } from "./logic/available";
-import { getPositionData } from "./logic/callable";
-import { CallableSignature } from "../../database/callable";
 import Schemas, { AllSQLTypes, InternalTypes, SQLType } from "../../database/schemas";
 
-const standardObjects: SQLType[] = AllSQLTypes.filter(type => ![`functions`, `procedures`].includes(type));
 
 export const peekProvider = languages.registerDefinitionProvider({ language: `sql` }, {
   async provideDefinition(document, position, token) {
+    const standardObjects: SQLType[] = AllSQLTypes.filter(type => ![`functions`, `procedures`].includes(type));
     if (!remoteAssistIsEnabled()) return;
-    console.log(`peekProvider`);
 
     const defaultSchema = getDefaultSchema();
     const sqlDoc = getSqlDocument(document);
@@ -26,7 +21,6 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
 
     if (statementAt) {
       const refs = statementAt.getObjectReferences();
-      const possibleNames = refs.map(ref => ref.object.name).filter(name => name);
 
       const ref = refs.find(ref => ref.tokens[0].range.start && offset <= ref.tokens[ref.tokens.length - 1].range.end);
 
@@ -50,7 +44,7 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
             const type = InternalTypes[obj.type];
             if (type) {
               const contents = await Schemas.generateSQL(obj.schema, obj.name, type.toUpperCase(), true);
-              lines.push(Statement.format(contents), ``, ``);
+              lines.push(contents, ``, ``);
             }
           }
 
