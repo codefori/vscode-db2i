@@ -160,6 +160,8 @@ export class ServerComponent {
                   return UpdateStatus.FAILED;
                 }
               }
+
+              // TODO: use getContent().uploadFiles
               await connection.uploadFiles([{ local: assetPath, remote: remotePath }]);
 
               const scAuth = await connection.sendCommand({
