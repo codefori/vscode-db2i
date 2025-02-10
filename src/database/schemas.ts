@@ -15,6 +15,22 @@ const typeMap = {
 
 export const AllSQLTypes: SQLType[] = ["tables", "views", "aliases", "constraints", "functions", "variables", "indexes", "procedures", "sequences", "packages", "triggers", "types", "logicals"];
 
+export const InternalTypes: {[t: string]: string} = {
+  "tables": `table`,
+  "views": `view`,
+  "aliases": `alias`,
+  "constraints": `constraint`,
+  "functions": `function`,
+  "variables": `variable`,
+  "indexes": `index`,
+  "procedures": `procedure`,
+  "sequences": `sequence`,
+  "packages": `package`,
+  "triggers": `trigger`,
+  "types": `type`,
+  "logicals": `logical`
+}
+
 export const SQL_ESCAPE_CHAR = `\\`;
 
 type BasicColumnType = string|number;
@@ -212,27 +228,46 @@ export default class Schemas {
         schema: object.BASE_SCHEMA || undefined,
         name: object.BASE_OBJ || undefined
       }
-    }));
+    } as BasicSQLObject));
   }
 
   /**
    * @param schema Not user input
    * @param object Not user input
    */
-  static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
+  static async generateSQL(schema: string, object: string, internalType: string, isBasic?: boolean): Promise<string> {
     const instance = getInstance();
     const connection = instance.getConnection();
 
     const result = await connection.withTempDirectory<string>(async (tempDir) => {
       const tempFilePath = path.posix.join(tempDir, `generatedSql.sql`);
+
+      let options = [
+        `DATABASE_OBJECT_NAME => ?`,
+        `DATABASE_OBJECT_LIBRARY_NAME => ?`,
+        `DATABASE_OBJECT_TYPE => ?`,
+        `DATABASE_SOURCE_FILE_NAME => '*STMF'`,
+        `STATEMENT_FORMATTING_OPTION => '1'`,
+        `SOURCE_STREAM_FILE => '${tempFilePath}'`,
+        `SOURCE_STREAM_FILE_END_OF_LINE => 'LF'`,
+        `SOURCE_STREAM_FILE_CCSID => 1208`
+      ];
+
+      if (isBasic) {
+        options.push(
+          `CREATE_OR_REPLACE_OPTION => '0'`,
+          `PRIVILEGES_OPTION => '0'`,
+          `COMMENT_OPTION => '0'`,
+          `LABEL_OPTION => '0'`,
+          `HEADER_OPTION => '0'`,
+          `TRIGGER_OPTION => '0'`,
+          `CONSTRAINT_OPTION => '0'`,
+          `MASK_AND_PERMISSION_OPTION => '0'`,
+        );
+      }
+
       await JobManager.runSQL<{ SRCDTA: string }>([
-        `CALL QSYS2.GENERATE_SQL( DATABASE_OBJECT_NAME => ?, DATABASE_OBJECT_LIBRARY_NAME => ?, DATABASE_OBJECT_TYPE => ?
-                                , CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0'
-                                , DATABASE_SOURCE_FILE_NAME => '*STMF'
-                                , STATEMENT_FORMATTING_OPTION => '0'
-                                , SOURCE_STREAM_FILE => '${tempFilePath}'
-                                , SOURCE_STREAM_FILE_END_OF_LINE => 'LF'
-                                , SOURCE_STREAM_FILE_CCSID => 1208 )`
+        `CALL QSYS2.GENERATE_SQL( ${options.join(`, `)} )`,
       ].join(` `), { parameters: [object, schema, internalType] });
 
       // TODO: eventually .content -> .getContent(), it's not available yet
