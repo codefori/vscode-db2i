@@ -181,7 +181,7 @@ function addSymbol(base: MarkdownString, symbol: LookupResult) {
   else if ('COLUMN_NAME' in symbol) {
     base.appendCodeblock(prepareParamType(symbol) + `\n`, `sql`);
   }
-  else if ('name' in symbol) {
+  else if ('name' in symbol && symbol.text) {
     addList(base, [
       `**Description:** ${symbol.text}`,
     ]);

@@ -302,6 +302,8 @@ export default class Statement {
 
 			for (const parameter of parameters) {
 				// If the first token is the parm type, then the name follows
+				if (tokenIs(parameter[0], `keyword`)) continue;
+				
 				let nameIndex = tokenIs(parameter[0], `parmType`) ? 1 : 0;
 				const name = parameter[nameIndex].value!;
 				// Include parmType if it is provided

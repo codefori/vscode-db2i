@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.8.0",
+  "version": "1.8.3",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -970,7 +970,7 @@
         },
         {
           "command": "vscode-db2i.getObjectLocks",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
           "group": "db2workWith@5"
         },
         {
@@ -1322,7 +1322,7 @@
   },
   "devDependencies": {
     "@continuedev/core": "^1.0.13",
-    "@halcyontech/vscode-ibmi-types": "^2.14.0",
+    "@halcyontech/vscode-ibmi-types": "^2.14.5",
     "@types/glob": "^7.1.3",
     "@types/node": "18.x",
     "@types/vscode": "^1.95.0",

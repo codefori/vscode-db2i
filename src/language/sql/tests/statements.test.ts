@@ -945,6 +945,96 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(refs[1].object.schema).toBe(`LIB`);
   });
 
+  test('CREATE TABLE: routine parametes with primary key', () => {
+    const content = [
+      `--  Employee Master`,
+      `--  Generated on:               11/03/21 14:32:20`,
+      `CREATE OR REPLACE TABLE super_long_dept_name FOR SYSTEM NAME DEPT (`,
+      `--  SQL150B   10   REUSEDLT(*NO) in table EMPMST in PAYROLL1 ignored.`,
+      `  COL_B CHAR(1) CCSID 37 NOT NULL DEFAULT '' ,`,
+      `  PRIMARY KEY( COL_B ) );`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(1);
+    expect(parms[0].alias).toBe(`COL_B`);
+  });
+
+  test('CREATE TABLE: simple routine parametes test', () => {
+    const content = [
+      `CREATE TABLE ROSSITER.INVENTORY`,
+      `(PARTNO         SMALLINT     NOT NULL,`,
+      ` DESCR          VARCHAR(24),`,
+      ` QONHAND        INT)`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(3);
+
+    expect(parms[0].alias).toBe(`PARTNO`);
+    expect(parms[0].createType).toBe(`SMALLINT NOT NULL`);
+    
+    expect(parms[1].alias).toBe(`DESCR`);
+    expect(parms[1].createType).toBe(`VARCHAR(24)`);
+
+    expect(parms[2].alias).toBe(`QONHAND`);
+    expect(parms[2].createType).toBe(`INT`);
+  });
+
+  test('CREATE TABLE: generated types', () => {
+    const content = [
+      `CREATE TABLE policy_info`,
+      `  (policy_id CHAR(10) NOT NULL,`,
+      `  coverage INT NOT NULL,`,
+      `  sys_start TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,`,
+      `  sys_end TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,`,
+      `  create_id TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID,`,
+      `  PERIOD SYSTEM_TIME(sys_start,sys_end));`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+    const groups = document.getStatementGroups();
+    
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(5);
+
+    expect(parms[0].alias).toBe(`policy_id`);
+    expect(parms[0].createType).toBe(`CHAR(10) NOT NULL`);
+
+    expect(parms[1].alias).toBe(`coverage`);
+    expect(parms[1].createType).toBe(`INT NOT NULL`);
+
+    expect(parms[2].alias).toBe(`sys_start`);
+    expect(parms[2].createType).toBe(`TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN`);
+
+    expect(parms[3].alias).toBe(`sys_end`);
+    expect(parms[3].createType).toBe(`TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END`);
+
+    expect(parms[4].alias).toBe(`create_id`);
+    expect(parms[4].createType).toBe(`TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID`);
+  })
+
   test(`DECLARE VARIABLE`, () => {
     const document = newDoc(`declare watsonx_response   Varchar(10000) CCSID 1208;`);
     const groups = document.getStatementGroups();
