@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
-import { canTalkToDb, createContinueContextItems, findPossibleTables, refsToMarkdown } from "../context";
+import { buildSchemaSemantic, canTalkToDb, createContinueContextItems, findPossibleTables, generateTableDefinition, refsToMarkdown } from "../context";
 import {
   ContextItem,
   ContextProviderDescription,
@@ -12,6 +12,7 @@ import {
   LoadSubmenuItemsArgs,
 } from "@continuedev/core";
 import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "./prompts";
+import { table } from "console";
 
 export let isContinueActive = false;
 
@@ -111,10 +112,11 @@ export class db2ContextProvider implements IContextProvider {
       const job: JobInfo = this.getCurrentJob();
       const schema = this.getDefaultSchema();
       const fullInput = extras.fullInput;
+      const schemaSemantic = await buildSchemaSemantic(schema);
       contextItems.push({
-        name: `SYSTEM PROMPT`,
-        description: `system prompt context`,
-        content: DB2_SYSTEM_PROMPT,
+        name: `SCHEMA Semantic`,
+        description: `${schema} definition`,
+        content: JSON.stringify(schemaSemantic),
       });
       try {
         switch (true) {
@@ -139,14 +141,23 @@ export class db2ContextProvider implements IContextProvider {
             return contextItems;
           default:
             // const contextItems: ContextItem[] = [];
-            const tableRefs = await findPossibleTables(
-              null,
-              schema,
-              fullInput.split(` `)
-            );
-            const markdownRefs = refsToMarkdown(tableRefs);
+            // const tableRefs = await findPossibleTables(
+            //   null,
+            //   schema,
+            //   fullInput.split(` `)
+            // );
+            // const markdownRefs = refsToMarkdown(tableRefs);
 
-            contextItems.push(...createContinueContextItems(markdownRefs));
+            // contextItems.push(...createContinueContextItems(markdownRefs));
+
+            const tablesRefs = await generateTableDefinition(schema, fullInput.split(` `));
+            for (const table in tablesRefs) {
+              contextItems.push({
+                name: `table definition for ${table}`,
+                content: tablesRefs[table],
+                description: `Table definition`
+              })
+            }
 
             return contextItems;
         }

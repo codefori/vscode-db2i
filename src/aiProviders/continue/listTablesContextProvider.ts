@@ -20,12 +20,18 @@ import {
 
 const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",
-  displayTitle: "Db2i-tables",
+  displayTitle: `Db2i-{tables}`,
   description: "Add Db2i Table info to Context",
   type: "submenu",
+  dependsOnIndexing: true
 };
 
-export let provider: ListDb2iTables = undefined;
+interface SchemaContextProvider {
+  schema: string;
+  provider: IContextProvider,
+}
+
+let providers: SchemaContextProvider[] = []
 
 class ListDb2iTables implements IContextProvider {
   constructor(private schema: string) {
@@ -33,7 +39,13 @@ class ListDb2iTables implements IContextProvider {
   }
 
   get description(): ContextProviderDescription {
-    return listDb2Table;
+    return {
+      title: `Db2i-${this.schema}`,
+      displayTitle: `Db2i-${this.schema}`,
+      description: "Add Db2i Table info to Context",
+      type: "submenu",
+      dependsOnIndexing: true
+    };
   }
 
   setCurrentSchema(schema: string) {
@@ -123,21 +135,14 @@ export async function registerDb2iTablesProvider(schema?: string) {
       await continueEx.activate();
     }
 
-    if (provider) {
-      provider.setCurrentSchema(schema);
-      // save continue config file to trigger a config reload to update list tables provider
-      const configFile = path.join(os.homedir(), `.continue`, `config.json`);
-      const now = new Date();
-      fs.utimes(configFile, now, now, (err) => {
-        if (err) {
-          console.error("Error saving Continue config file:", err);
-          return;
-        }
-      });
+    const existingProvider: SchemaContextProvider = providers.find(p => p.schema === schema);
+    if (existingProvider !== undefined) {
+      return;
     } else {
       const continueAPI = continueEx?.exports;
-      provider = new ListDb2iTables(schema);
+      let provider = new ListDb2iTables(schema);
       continueAPI?.registerCustomContextProvider(provider);
+      providers.push({provider: provider, schema: schema});
     }
   }
 }

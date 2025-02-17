@@ -2,6 +2,8 @@ import { JobManager } from "../config";
 import * as vscode from "vscode";
 import Statement from "../database/statement";
 import { ContextItem } from "@continuedev/core";
+import { DB2_SYSTEM_PROMPT } from "./continue/prompts";
+import Schemas, { AllSQLTypes } from "../database/schemas";
 
 export function canTalkToDb() {
   return JobManager.getSelection() !== undefined;
@@ -19,6 +21,130 @@ interface MarkdownRef {
   TABLE_NAME: string,
   COLUMN_INFO?: string,
   SCHMEA?: string,
+}
+
+export async function buildSchemaSemantic(schema: string) {
+  /**
+ * Cleans an object by removing properties with undefined, null, or empty string values.
+ * If the value is an object (but not an array), it cleans that object as well.
+ * This function is meant for properties other than the top-level `schema` and `system`.
+ *
+ * @param obj - The object to clean.
+ * @returns A new object with only non-empty properties.
+ */
+  const allInfo: BasicSQLObject[] = await Schemas.getObjects(schema, AllSQLTypes);
+  function cleanObject(obj: any): any {
+    const cleaned: any = {};
+  
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const value = obj[key];
+  
+        // Skip undefined, null or empty string values.
+        if (
+          value === undefined ||
+          value === null ||
+          (typeof value === "string" && value.trim() === "")
+        ) {
+          continue;
+        }
+  
+        // If the property is a plain object (and not an array), clean it recursively.
+        if (typeof value === "object" && !Array.isArray(value)) {
+          const nested = cleanObject(value);
+          if (Object.keys(nested).length > 0) {
+            cleaned[key] = nested;
+          }
+        } else {
+          cleaned[key] = value;
+        }
+      }
+    }
+  
+    return cleaned;
+  }
+  
+  /**
+   * Filters a single BasicSQLObject by:
+   * - Removing the top-level `schema` and `system` properties.
+   * - Removing any property (or nested property) that is undefined, null, or an empty string.
+   *
+   * @param obj - The BasicSQLObject to filter.
+   * @returns A new object with filtered properties.
+   */
+  function filterBasicSQLObject(obj: BasicSQLObject): Partial<BasicSQLObject> {
+    // Remove the top-level `schema` and `system` properties.
+    const { schema, system, ...rest } = obj;
+  
+    // Clean the remaining properties.
+    return cleanObject(rest);
+  }
+  
+  /**
+   * Processes an array of BasicSQLObject items.
+   *
+   * @param data - The array of BasicSQLObject items.
+   * @returns A new array of filtered objects.
+   */
+  function filterBasicSQLObjects(
+    data: BasicSQLObject[]
+  ): Partial<BasicSQLObject>[] {
+    return data.map(filterBasicSQLObject);
+  }
+  
+  
+  const compressedData = filterBasicSQLObjects(allInfo);
+  return compressedData;
+}
+
+
+export async function generateTableDefinition(schema: string, input: string[]) {
+  let tables: {[key: string]: string|undefined} = {}
+  // Parse all SCHEMA.TABLE references first
+  const schemaTableRefs = input.filter(word => word.includes('.'));
+  const justWords = input.map(word => word.replace(/[,\/#!?$%\^&\*;:{}=\-_`~()]/g, ""));
+
+  // Remove plurals from words
+  justWords.push(...justWords.filter(word => word.endsWith('s')).map(word => word.slice(0, -1)));
+
+  // Filter prompt for possible refs to tables
+  const validWords = justWords
+    .filter(word => word.length > 2 && !word.endsWith('s') && !word.includes(`'`))
+    .map(word => `${Statement.delimName(word, true)}`);
+
+  const allTables: BasicSQLObject[] = await Schemas.getObjects(schema, [
+    `tables`,
+  ]);
+
+  const filteredTables = validWords.filter((word) =>
+    allTables.some((table) => table.name == word)
+  );
+
+  await Promise.all(filteredTables.map(async (token) => {
+    try {
+      const content = await Schemas.generateSQL(schema, token, `TABLE`);
+      if (content) {
+        tables[token] = content;
+      }
+    } catch (e) {
+      // ignore 
+    }
+  }));
+
+  // check for QSYS2 
+  // for (const item of schemaTableRefs) {
+  //   const [curSchema, table] = item.split(`.`);
+  //   if (curSchema.toUpperCase() === `QSYS2`) {
+  //     try {
+  //       const content = await Schemas.getObjects
+  //     } catch (e) {
+  //       continue
+  //     }
+  //   }
+  // }
+
+  return tables;
+
 }
 
 export async function findPossibleTables(stream: vscode.ChatResponseStream, schema: string, words: string[]) {
@@ -126,15 +252,23 @@ export function refsToMarkdown(refs: TableRefs): MarkdownRef[] {
 export function createContinueContextItems(refs: MarkdownRef[]) {
   const contextItems: ContextItem[] = [];
   const job = JobManager.getSelection();
-  for (const tableRef of refs) {
-    let prompt = `Table: ${tableRef.TABLE_NAME} (Schema: ${tableRef.SCHMEA}) Column Information:\n`;
-    prompt += `Format: column_name (column_text) type(length:precision) is_identity is_nullable\n`
-    prompt += `${tableRef.COLUMN_INFO}`;
+  if (refs.length === 0) {
     contextItems.push({
-      name: `${job.name}-${tableRef.SCHMEA}-${tableRef.TABLE_NAME}`,
-      description: `Column information for ${tableRef.TABLE_NAME}`,
-      content: prompt,
+      name: `SYSTEM PROMPT`,
+      description: `system prompt context`,
+      content: DB2_SYSTEM_PROMPT + `\n\nNo references found`,
     });
+  } else {
+    for (const tableRef of refs) {
+      let prompt = `Table: ${tableRef.TABLE_NAME} (Schema: ${tableRef.SCHMEA}) Column Information:\n`;
+      prompt += `Format: column_name (column_text) type(length:precision) is_identity is_nullable\n`
+      prompt += `${tableRef.COLUMN_INFO}`;
+      contextItems.push({
+        name: `${job.name}-${tableRef.SCHMEA}-${tableRef.TABLE_NAME}`,
+        description: `Column information for ${tableRef.TABLE_NAME}`,
+        content: DB2_SYSTEM_PROMPT + prompt,
+      });
+    }
   }
 
   return contextItems;
