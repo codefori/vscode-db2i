@@ -5,6 +5,7 @@ import { SQLJob } from "@ibm/mapepire-js";
 import { ConnectionResult, JobStatus, QueryResult, ServerRequest, ServerResponse } from "@ibm/mapepire-js/dist/src/types";
 import { JobLogEntry } from "./types";
 import Statement from "../database/statement";
+import JSONbig from "json-bigint";
 
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
@@ -73,7 +74,7 @@ export class OldSQLJob extends SQLJob {
               outString = ``;
               if (this.isTracingChannelData) ServerComponent.writeOutput(thisMsg);
               try {
-                let response: ServerResponse = JSON.parse(thisMsg);
+                let response: ServerResponse = JSONbig.parse(thisMsg);
                 this.responseEmitter.emit(response.id, response);
               } catch (e: any) {
                 console.log(`Error: ` + e);
