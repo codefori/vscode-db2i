@@ -145,7 +145,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
 
     try {
       const result = await selected.job.query<SelfCodeNode>(content).execute(10000);
-      if (result.success) {
+      if (result.success && result.data) {
         const data: SelfCodeNode[] = result.data.map((row) => ({
           ...row,
           INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string)
@@ -231,7 +231,10 @@ class SelfCodeItems extends ExtendedTreeItem {
 
   async getChildren(): Promise<ExtendedTreeItem[]> {
     const selfCodes = await this.selfView.getSelfCodes(this.selected, true);
-    return selfCodes.map((error) => new SelfCodeTreeItem(error));
+
+    if (selfCodes) {
+      return selfCodes.map((error) => new SelfCodeTreeItem(error));
+    }
   }
 }
 

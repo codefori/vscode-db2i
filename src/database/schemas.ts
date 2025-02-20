@@ -1,6 +1,6 @@
 
+import path from "path";
 import { getInstance } from "../base";
-
 import { JobManager } from "../config";
 
 export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types" | "logicals";
@@ -220,13 +220,27 @@ export default class Schemas {
    * @param object Not user input
    */
   static async generateSQL(schema: string, object: string, internalType: string): Promise<string> {
-    const lines = await JobManager.runSQL<{ SRCDTA: string }>([
-      `CALL QSYS2.GENERATE_SQL(?, ?, ?, CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0')`
-    ].join(` `), { parameters: [object, schema, internalType] });
+    const instance = getInstance();
+    const connection = instance.getConnection();
 
-    const generatedStatement = lines.map(line => line.SRCDTA).join(`\n`);
+    const result = await connection.withTempDirectory<string>(async (tempDir) => {
+      const tempFilePath = path.posix.join(tempDir, `generatedSql.sql`);
+      await JobManager.runSQL<{ SRCDTA: string }>([
+        `CALL QSYS2.GENERATE_SQL( DATABASE_OBJECT_NAME => ?, DATABASE_OBJECT_LIBRARY_NAME => ?, DATABASE_OBJECT_TYPE => ?
+                                , CREATE_OR_REPLACE_OPTION => '1', PRIVILEGES_OPTION => '0'
+                                , DATABASE_SOURCE_FILE_NAME => '*STMF'
+                                , STATEMENT_FORMATTING_OPTION => '0'
+                                , SOURCE_STREAM_FILE => '${tempFilePath}'
+                                , SOURCE_STREAM_FILE_END_OF_LINE => 'LF'
+                                , SOURCE_STREAM_FILE_CCSID => 1208 )`
+      ].join(` `), { parameters: [object, schema, internalType] });
 
-    return generatedStatement;
+      // TODO: eventually .content -> .getContent(), it's not available yet
+      const contents = (await connection.content.downloadStreamfileRaw(tempFilePath)).toString();
+      return contents;
+    })
+
+    return result;
   }
 
   static async deleteObject(schema: string, name: string, type: string): Promise<void> {
