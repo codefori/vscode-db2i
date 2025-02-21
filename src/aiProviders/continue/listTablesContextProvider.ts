@@ -6,16 +6,12 @@ import {
   IContextProvider,
   LoadSubmenuItemsArgs,
 } from "@continuedev/core";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
 import * as vscode from "vscode";
 import Schemas from "../../database/schemas";
 import Table from "../../database/table";
 import {
-  createContinueContextItems,
-  findPossibleTables,
-  refsToMarkdown,
+  buildSchemaDefinition,
+  generateTableDefinition
 } from "../context";
 
 const listDb2Table: ContextProviderDescription = {
@@ -73,30 +69,24 @@ class ListDb2iTables implements IContextProvider {
   ): Promise<ContextItem[]> {
     let contextItems: ContextItem[] = [];
     if (query.toUpperCase() === this.schema.toUpperCase()) {
-      const tableInfo = await this.getColumnInfoForAllTables(this.schema);
+      const schemaSemantic = await buildSchemaDefinition(this.schema);
       contextItems.push({
-        name: `Info for all tables in ${this.schema}`,
-        content: `Db2 for i table Assistant: The following table and column information is from the ${query} schema. Utilize the provided schema and table metadata to assist the user:\n${JSON.stringify(
-          tableInfo
-        )}`,
-        description: "table metadata",
+        name: `SCHEMA Definition`,
+        description: `${this.schema} definition`,
+        content: JSON.stringify(schemaSemantic),
       });
     } else {
-      const tableInfo = await findPossibleTables(
-        null,
+      const tablesRefs = await generateTableDefinition(
         this.schema,
-        query.split(` `)
+        extras.fullInput.split(` `)
       );
-      const markdownRefs = refsToMarkdown(tableInfo);
-
-      // add additional context for working with Db2 for i tables
-      contextItems.push({
-        name: `Instructions`,
-        content: `Db2 for i table Assistant: The following information is based on the ${query} table within the ${this.schema} schema. Utilize the provided schema and table metadata to assist the user. Only use valid Db2 for i SQL syntax and conventions. If input is unclear ask user to clarify`,
-        description: "instructions for working with Db2 for i tables",
-      });
-
-      contextItems.push(...createContinueContextItems(markdownRefs));
+      for (const table of tablesRefs) {
+        contextItems.push({
+          name: `table definition for ${table.id}`,
+          content: table.content,
+          description: `${table.type} definition`,
+        });
+      }
     }
     return contextItems;
   }
@@ -146,3 +136,4 @@ export async function registerDb2iTablesProvider(schema?: string) {
     }
   }
 }
+

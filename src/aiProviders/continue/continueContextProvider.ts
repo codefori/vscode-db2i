@@ -1,8 +1,3 @@
-import * as vscode from "vscode";
-import { JobManager } from "../../config";
-import { JobInfo } from "../../connection/manager";
-import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
-import { buildSchemaSemantic, canTalkToDb, createContinueContextItems, findPossibleTables, generateTableDefinition, refsToMarkdown } from "../context";
 import {
   ContextItem,
   ContextProviderDescription,
@@ -11,8 +6,16 @@ import {
   IContextProvider,
   LoadSubmenuItemsArgs,
 } from "@continuedev/core";
+import * as vscode from "vscode";
+import { JobManager } from "../../config";
+import { JobInfo } from "../../connection/manager";
+import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
+import {
+  buildSchemaDefinition,
+  canTalkToDb,
+  generateTableDefinition
+} from "../context";
 import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "./prompts";
-import { table } from "console";
 
 export let isContinueActive = false;
 
@@ -103,6 +106,31 @@ export class db2ContextProvider implements IContextProvider {
     }
   }
 
+  /**
+   * Retrieves context items based on the provided query and additional context.
+   *
+   * @param query - The query string used to determine the context items.
+   * @param extras - Additional context provider extras, including the full input.
+   * @returns A promise that resolves to an array of context items.
+   * @throws An error if unable to connect to the database or if the query fails.
+   *
+   * The function performs the following steps:
+   * 1. Initializes an empty array of context items.
+   * 2. Checks if the database connection is available.
+   * 3. Retrieves the current job and default schema.
+   * 4. Builds the schema semantic and adds it to the context items.
+   * 5. Depending on the query, it either:
+   *    - Retrieves self code errors for the current job and adds them to the context items.
+   *    - Generates table definitions based on the schema and full input, and adds them to the context items.
+   * 6. Handles any errors that occur during the query process and displays an error message.
+   * 7. Adds Db2i guidelines to the context items in the finally block.
+   *
+   * PROMPT FORMAT:
+   *  - 1. SCHEMA Definiton (semantic)
+   *  - 2. TABLE References
+   *  - 3. DB2 Guidelines
+   *  - 4. user prompt - handled by Continue extension
+   */
   async getContextItems(
     query: string,
     extras: ContextProviderExtras
@@ -112,9 +140,11 @@ export class db2ContextProvider implements IContextProvider {
       const job: JobInfo = this.getCurrentJob();
       const schema = this.getDefaultSchema();
       const fullInput = extras.fullInput;
-      const schemaSemantic = await buildSchemaSemantic(schema);
+
+      // 1. SCHEMA Definiton (semantic)
+      const schemaSemantic = await buildSchemaDefinition(schema);
       contextItems.push({
-        name: `SCHEMA Semantic`,
+        name: `SCHEMA Definition`,
         description: `${schema} definition`,
         content: JSON.stringify(schemaSemantic),
       });
@@ -124,13 +154,13 @@ export class db2ContextProvider implements IContextProvider {
             // get current self code errors in job
             // build promt with error information
             // add to contextItems
-  
+
             if (job) {
               const selfCodes = await this.getSelfCodes(job);
-  
+
               let prompt = DB2_SELF_PROMPT.join(" ");
               prompt += JSON.stringify(selfCodes, null, 2);
-  
+
               contextItems.push({
                 name: `${job.name}-self`,
                 description: `SELF code errors for ${job.name}`,
@@ -138,41 +168,43 @@ export class db2ContextProvider implements IContextProvider {
               });
             }
 
-            return contextItems;
+            break;
           default:
-            // const contextItems: ContextItem[] = [];
-            // const tableRefs = await findPossibleTables(
-            //   null,
-            //   schema,
-            //   fullInput.split(` `)
-            // );
-            // const markdownRefs = refsToMarkdown(tableRefs);
-
-            // contextItems.push(...createContinueContextItems(markdownRefs));
-
-            const tablesRefs = await generateTableDefinition(schema, fullInput.split(` `));
-            for (const table in tablesRefs) {
+            // 2. TABLE References
+            const tablesRefs = await generateTableDefinition(
+              schema,
+              fullInput.split(` `)
+            );
+            for (const table of tablesRefs) {
               contextItems.push({
-                name: `table definition for ${table}`,
-                content: tablesRefs[table],
-                description: `Table definition`
-              })
+                name: `table definition for ${table.id}`,
+                content: table.content,
+                description: `${table.type} definition`,
+              });
             }
 
-            return contextItems;
+            break;
         }
       } catch (error) {
-        vscode.window.showErrorMessage(`Failed to query Db2i database: ${error}`);
+        vscode.window.showErrorMessage(
+          `Failed to query Db2i database: ${error}`
+        );
         throw new Error(`Failed to query Db2i database: ${error}`);
       } finally {
+        // 3. DB2 Guidelines
+        contextItems.push({
+          name: `Db2i Guidelines`,
+          content: DB2_SYSTEM_PROMPT,
+          description: `Guidelines for Db2i Context provider`,
+        });
       }
-      
     } else {
       throw new Error(
         `Not connected to the database. Please check your configuration.`
       );
     }
-    
+
+    return contextItems;
   }
   async loadSubmenuItems(
     args: LoadSubmenuItemsArgs
@@ -189,10 +221,14 @@ export async function registerContinueProvider() {
     if (!continueEx.isActive) {
       await continueEx.activate();
     }
-  
+
     isContinueActive = true;
     const continueAPI = continueEx?.exports;
     continueAPI?.registerCustomContextProvider(provider);
-    vscode.commands.executeCommand('setContext', 'vscode-db2i:continueExtensionActive', true);
+    vscode.commands.executeCommand(
+      "setContext",
+      "vscode-db2i:continueExtensionActive",
+      true
+    );
   }
 }
