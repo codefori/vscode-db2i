@@ -143,11 +143,13 @@ export class db2ContextProvider implements IContextProvider {
 
       // 1. SCHEMA Definiton (semantic)
       const schemaSemantic = await buildSchemaDefinition(schema);
-      contextItems.push({
-        name: `SCHEMA Definition`,
-        description: `${schema} definition`,
-        content: JSON.stringify(schemaSemantic),
-      });
+      if (schemaSemantic) {
+        contextItems.push({
+          name: `SCHEMA Definition`,
+          description: `${schema} definition`,
+          content: JSON.stringify(schemaSemantic),
+        });
+      }
       try {
         switch (true) {
           case fullInput.includes(`*SELF`) || query?.includes(`*SELF`):

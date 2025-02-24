@@ -70,11 +70,13 @@ class ListDb2iTables implements IContextProvider {
     let contextItems: ContextItem[] = [];
     if (query.toUpperCase() === this.schema.toUpperCase()) {
       const schemaSemantic = await buildSchemaDefinition(this.schema);
-      contextItems.push({
-        name: `SCHEMA Definition`,
-        description: `${this.schema} definition`,
-        content: JSON.stringify(schemaSemantic),
-      });
+      if (schemaSemantic) {
+        contextItems.push({
+          name: `SCHEMA Definition`,
+          description: `${this.schema} definition`,
+          content: JSON.stringify(schemaSemantic),
+        });
+      }
     } else {
       const tablesRefs = await generateTableDefinition(
         this.schema,

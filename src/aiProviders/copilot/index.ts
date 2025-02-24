@@ -63,11 +63,13 @@ export function activateChat(context: vscode.ExtensionContext) {
       // 1. SCHEMA Definiton (semantic)
       let usingSchema = getCurrentSchema();
       const schemaSemantic = await buildSchemaDefinition(usingSchema);
-      messages.push(
-        vscode.LanguageModelChatMessage.Assistant(
-          JSON.stringify(schemaSemantic)
-        )
-      );
+      if (schemaSemantic) {
+        messages.push(
+          vscode.LanguageModelChatMessage.Assistant(
+            JSON.stringify(schemaSemantic)
+          )
+        );
+      }
 
       switch (request.command) {
         case `activity`:

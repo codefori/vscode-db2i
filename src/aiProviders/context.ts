@@ -4,6 +4,7 @@ import { JobManager } from "../config";
 import Schemas, { AllSQLTypes, SQLType } from "../database/schemas";
 import Statement from "../database/statement";
 import { DB2_SYSTEM_PROMPT } from "./continue/prompts";
+import Configuration from "../configuration";
 
 export function canTalkToDb() {
   return JobManager.getSelection() !== undefined;
@@ -36,7 +37,7 @@ interface ContextDefinition {
  * @param schema - The name of the database schema to process.
  * @returns A promise that resolves to an array of filtered objects representing the schema.
  */
-export async function buildSchemaDefinition(schema: string) {
+export async function buildSchemaDefinition(schema: string): Promise<Partial<BasicSQLObject>[] | undefined> {
   /**
    * Cleans an object by removing properties with undefined, null, or empty string values.
    * If the value is an object (but not an array), it cleans that object as well.
@@ -108,8 +109,14 @@ export async function buildSchemaDefinition(schema: string) {
     return data.map(filterBasicSQLObject);
   }
 
-  const compressedData = filterBasicSQLObjects(allInfo);
-  return compressedData;
+  const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
+  if (useSchemaDef) {
+    const compressedData = filterBasicSQLObjects(allInfo);
+    return compressedData;
+  }
+
+  return undefined;
+
 }
 
 /**
@@ -150,8 +157,10 @@ export async function generateTableDefinition(schema: string, input: string[]) {
     `tables`,
   ]);
 
-  const filteredTables = validWords.filter((word) =>
-    allTables.some((table) => table.name == word)
+  const filteredTables = Array.from(
+    new Set(
+      validWords.filter((word) => allTables.some((table) => table.name == word))
+    )
   );
 
   await Promise.all(
