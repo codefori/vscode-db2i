@@ -102,6 +102,17 @@
         }
       },
       {
+        "id": "vscode-db2i.ai",
+        "title": "AI integrations",
+        "properties": {
+          "vscode-db2i.ai.useSchemaDefinition": {
+            "type": "boolean",
+            "description": "Provide Schema definition as additional context in Continue and Copilot",
+            "default": true
+          }
+        }
+      },
+      {
         "id": "vscode-db2i.resultsets",
         "title": "Viewing Data",
         "properties": {
