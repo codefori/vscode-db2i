@@ -13,6 +13,7 @@ import {
   buildSchemaDefinition,
   generateTableDefinition
 } from "../context";
+import Configuration from "../../configuration";
 
 const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",
@@ -69,14 +70,19 @@ class ListDb2iTables implements IContextProvider {
   ): Promise<ContextItem[]> {
     let contextItems: ContextItem[] = [];
     if (query.toUpperCase() === this.schema.toUpperCase()) {
-      const schemaSemantic = await buildSchemaDefinition(this.schema);
-      if (schemaSemantic) {
-        contextItems.push({
-          name: `SCHEMA Definition`,
-          description: `${this.schema} definition`,
-          content: JSON.stringify(schemaSemantic),
-        });
+
+      const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
+        if (useSchemaDef) {
+        const schemaSemantic = await buildSchemaDefinition(this.schema);
+        if (schemaSemantic) {
+          contextItems.push({
+            name: `SCHEMA Definition`,
+            description: `${this.schema} definition`,
+            content: JSON.stringify(schemaSemantic),
+          });
+        }
       }
+      
     } else {
       const tablesRefs = await generateTableDefinition(
         this.schema,

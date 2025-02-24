@@ -16,6 +16,7 @@ import {
   generateTableDefinition
 } from "../context";
 import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "./prompts";
+import Configuration from "../../configuration";
 
 export let isContinueActive = false;
 
@@ -142,14 +143,19 @@ export class db2ContextProvider implements IContextProvider {
       const fullInput = extras.fullInput;
 
       // 1. SCHEMA Definiton (semantic)
-      const schemaSemantic = await buildSchemaDefinition(schema);
-      if (schemaSemantic) {
-        contextItems.push({
-          name: `SCHEMA Definition`,
-          description: `${schema} definition`,
-          content: JSON.stringify(schemaSemantic),
-        });
+      const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
+
+      if (useSchemaDef) {
+        const schemaSemantic = await buildSchemaDefinition(schema);
+        if (schemaSemantic) {
+          contextItems.push({
+            name: `SCHEMA Definition`,
+            description: `${schema} definition`,
+            content: JSON.stringify(schemaSemantic),
+          });
+        }
       }
+      
       try {
         switch (true) {
           case fullInput.includes(`*SELF`) || query?.includes(`*SELF`):

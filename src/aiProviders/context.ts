@@ -4,7 +4,6 @@ import { JobManager } from "../config";
 import Schemas, { AllSQLTypes, SQLType } from "../database/schemas";
 import Statement from "../database/statement";
 import { DB2_SYSTEM_PROMPT } from "./continue/prompts";
-import Configuration from "../configuration";
 
 export function canTalkToDb() {
   return JobManager.getSelection() !== undefined;
@@ -109,14 +108,8 @@ export async function buildSchemaDefinition(schema: string): Promise<Partial<Bas
     return data.map(filterBasicSQLObject);
   }
 
-  const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
-  if (useSchemaDef) {
-    const compressedData = filterBasicSQLObjects(allInfo);
-    return compressedData;
-  }
-
-  return undefined;
-
+  const compressedData = filterBasicSQLObjects(allInfo);
+  return compressedData;
 }
 
 /**

@@ -11,6 +11,7 @@ import {
 } from "../context";
 import { JobManager } from "../../config";
 import { DB2_SYSTEM_PROMPT } from "../continue/prompts";
+import Configuration from "../../configuration";
 
 const CHAT_ID = `vscode-db2i.chat`;
 
@@ -62,13 +63,17 @@ export function activateChat(context: vscode.ExtensionContext) {
     if (canTalkToDb()) {
       // 1. SCHEMA Definiton (semantic)
       let usingSchema = getCurrentSchema();
-      const schemaSemantic = await buildSchemaDefinition(usingSchema);
-      if (schemaSemantic) {
-        messages.push(
-          vscode.LanguageModelChatMessage.Assistant(
-            JSON.stringify(schemaSemantic)
-          )
-        );
+      
+      const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
+      if (useSchemaDef) {
+        const schemaSemantic = await buildSchemaDefinition(usingSchema);
+        if (schemaSemantic) {
+          messages.push(
+            vscode.LanguageModelChatMessage.Assistant(
+              JSON.stringify(schemaSemantic)
+            )
+          );
+        }
       }
 
       switch (request.command) {
