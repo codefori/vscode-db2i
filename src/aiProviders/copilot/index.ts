@@ -1,16 +1,7 @@
 import * as vscode from "vscode";
-import Statement from "../../database/statement";
 import {
-  buildSchemaDefinition,
   canTalkToDb,
-  findPossibleTables,
-  generateTableDefinition,
-  getCurrentSchema,
-  getSystemStatus,
-  refsToMarkdown,
 } from "../context";
-import { JobManager } from "../../config";
-import { DB2_SYSTEM_PROMPT } from "../prompts";
 import { buildPrompt, Db2ContextItems } from "../prompt";
 
 const CHAT_ID = `vscode-db2i.chat`;
