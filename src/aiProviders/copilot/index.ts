@@ -57,45 +57,8 @@ export function activateChat(context: vscode.ExtensionContext) {
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken
   ): Promise<IDB2ChatResult> => {
-    const copilotFamily = request.model.family;
-
     if (canTalkToDb()) {
       switch (request.command) {
-        // case `activity`: //TODO: remove
-        //   stream.progress(`Grabbing Information about IBM i system`);
-        //   const data = await getSystemStatus();
-        //   console.log(
-        //     `summarize the following data in a readable paragraph: ${data}`
-        //   );
-        //   messages = [
-        //     vscode.LanguageModelChatMessage.User(
-        //       `You are a an IBM i savant speciallizing in database features in Db2 for i. Please provide a summary of the current IBM i system state based on the developer requirement.`
-        //     ),
-        //     vscode.LanguageModelChatMessage.User(
-        //       `Here is the current IBM i state: ${data}`
-        //     ),
-        //     vscode.LanguageModelChatMessage.User(request.prompt),
-        //   ];
-
-        //   await copilotRequest(copilotFamily, messages, {}, token, stream);
-
-        //   return { metadata: { command: "activity" } };
-
-        // case `set-schema`:
-        //   stream.progress(`Setting Current Schema for SQL Job`);
-        //   const newSchema = request.prompt.split(" ")[0];
-        //   if (newSchema) {
-        //     const curJob = JobManager.getSelection();
-        //     if (curJob) {
-        //       const result = await curJob.job.setCurrentSchema(newSchema);
-        //       if (result) {
-        //         stream.progress(`Set Current Schema: ${newSchema}✅`);
-        //         usingSchema = newSchema;
-        //       }
-        //     }
-        //     return;
-        //   }
-
         default:
           stream.progress(`Building response...`);
 
