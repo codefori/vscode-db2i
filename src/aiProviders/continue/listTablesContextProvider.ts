@@ -19,8 +19,7 @@ const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",
   displayTitle: `Db2i-{tables}`,
   description: "Add Db2i Table info to Context",
-  type: "submenu",
-  dependsOnIndexing: true
+  type: "submenu"
 };
 
 interface SchemaContextProvider {
@@ -40,8 +39,7 @@ class ListDb2iTables implements IContextProvider {
       title: `Db2i-${this.schema}`,
       displayTitle: `Db2i-${this.schema}`,
       description: "Add Db2i Table info to Context",
-      type: "submenu",
-      dependsOnIndexing: true
+      type: "submenu"
     };
   }
 
@@ -82,7 +80,7 @@ class ListDb2iTables implements IContextProvider {
           });
         }
       }
-      
+
     } else {
       const tablesRefs = await generateTableDefinition(
         this.schema,
