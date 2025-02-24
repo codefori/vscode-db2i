@@ -231,7 +231,10 @@ class SelfCodeItems extends ExtendedTreeItem {
 
   async getChildren(): Promise<ExtendedTreeItem[]> {
     const selfCodes = await this.selfView.getSelfCodes(this.selected, true);
-    return selfCodes.map((error) => new SelfCodeTreeItem(error));
+
+    if (selfCodes) {
+      return selfCodes.map((error) => new SelfCodeTreeItem(error));
+    }
   }
 }
 
