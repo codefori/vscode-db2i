@@ -10,8 +10,8 @@ import {
   refsToMarkdown,
 } from "../context";
 import { JobManager } from "../../config";
-import { DB2_SYSTEM_PROMPT } from "../continue/prompts";
-import Configuration from "../../configuration";
+import { DB2_SYSTEM_PROMPT } from "../prompts";
+import { buildPrompt, Db2ContextItems } from "../prompt";
 
 const CHAT_ID = `vscode-db2i.chat`;
 
@@ -58,107 +58,85 @@ export function activateChat(context: vscode.ExtensionContext) {
     token: vscode.CancellationToken
   ): Promise<IDB2ChatResult> => {
     const copilotFamily = request.model.family;
-    let messages: vscode.LanguageModelChatMessage[] = [];
 
     if (canTalkToDb()) {
-      // 1. SCHEMA Definiton (semantic)
-      let usingSchema = getCurrentSchema();
-      
-      const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
-      if (useSchemaDef) {
-        const schemaSemantic = await buildSchemaDefinition(usingSchema);
-        if (schemaSemantic) {
-          messages.push(
-            vscode.LanguageModelChatMessage.Assistant(
-              JSON.stringify(schemaSemantic)
-            )
-          );
-        }
-      }
-
       switch (request.command) {
-        case `activity`:
-          stream.progress(`Grabbing Information about IBM i system`);
-          const data = await getSystemStatus();
-          console.log(
-            `summarize the following data in a readable paragraph: ${data}`
-          );
-          messages = [
-            vscode.LanguageModelChatMessage.User(
-              `You are a an IBM i savant speciallizing in database features in Db2 for i. Please provide a summary of the current IBM i system state based on the developer requirement.`
-            ),
-            vscode.LanguageModelChatMessage.User(
-              `Here is the current IBM i state: ${data}`
-            ),
-            vscode.LanguageModelChatMessage.User(request.prompt),
-          ];
+        // case `activity`: //TODO: remove
+        //   stream.progress(`Grabbing Information about IBM i system`);
+        //   const data = await getSystemStatus();
+        //   console.log(
+        //     `summarize the following data in a readable paragraph: ${data}`
+        //   );
+        //   messages = [
+        //     vscode.LanguageModelChatMessage.User(
+        //       `You are a an IBM i savant speciallizing in database features in Db2 for i. Please provide a summary of the current IBM i system state based on the developer requirement.`
+        //     ),
+        //     vscode.LanguageModelChatMessage.User(
+        //       `Here is the current IBM i state: ${data}`
+        //     ),
+        //     vscode.LanguageModelChatMessage.User(request.prompt),
+        //   ];
 
-          await copilotRequest(copilotFamily, messages, {}, token, stream);
+        //   await copilotRequest(copilotFamily, messages, {}, token, stream);
 
-          return { metadata: { command: "activity" } };
+        //   return { metadata: { command: "activity" } };
 
-        case `set-schema`:
-          stream.progress(`Setting Current Schema for SQL Job`);
-          const newSchema = request.prompt.split(" ")[0];
-          if (newSchema) {
-            const curJob = JobManager.getSelection();
-            if (curJob) {
-              const result = await curJob.job.setCurrentSchema(newSchema);
-              if (result) {
-                stream.progress(`Set Current Schema: ${newSchema}✅`);
-                usingSchema = newSchema;
-              }
-            }
-            return;
-          }
+        // case `set-schema`:
+        //   stream.progress(`Setting Current Schema for SQL Job`);
+        //   const newSchema = request.prompt.split(" ")[0];
+        //   if (newSchema) {
+        //     const curJob = JobManager.getSelection();
+        //     if (curJob) {
+        //       const result = await curJob.job.setCurrentSchema(newSchema);
+        //       if (result) {
+        //         stream.progress(`Set Current Schema: ${newSchema}✅`);
+        //         usingSchema = newSchema;
+        //       }
+        //     }
+        //     return;
+        //   }
 
         default:
-          stream.progress(
-            `Getting information from ${Statement.prettyName(usingSchema)}...`
-          );
-
-          // 2. TABLE References
-          let refs = await generateTableDefinition(
-            usingSchema,
-            request.prompt.split(` `)
-          );
+          stream.progress(`Building response...`);
 
           // get history
+          let history: Db2ContextItems[]|undefined;
           if (context.history.length > 0) {
-            const historyMessages = context.history.map((h) => {
+            history = context.history.map((h) => {
               if ("prompt" in h) {
-                return vscode.LanguageModelChatMessage.Assistant(h.prompt);
+                return {
+                  name: `reply`,
+                  description: `reply from Copilot`,
+                  content: h.prompt,
+                  type: `assistant`,
+                };
               } else {
                 const responseContent = h.response
                   .filter((r) => r.value instanceof vscode.MarkdownString)
                   .map((r) => (r.value as vscode.MarkdownString).value)
                   .join("\n\n");
-                return vscode.LanguageModelChatMessage.Assistant(
-                  responseContent
-                );
+                return {
+                  name: `message`,
+                  description: `message from user`,
+                  content: responseContent,
+                  type: `assistant`,
+                };
               }
             });
-            messages.push(...historyMessages);
           }
 
-          // add table refs to messages
-          if (Object.keys(refs).length > 0) {
-            for (const tableRef of refs) {
-              messages.push(
-                vscode.LanguageModelChatMessage.Assistant(tableRef.content)
-              );
+          const contextItems = await buildPrompt(request.prompt, {
+            history,
+            progress: stream.progress
+          });
+
+          const messages = contextItems.map(c => {
+            if (c.type === `user`) {
+              return vscode.LanguageModelChatMessage.User(c.content);
+            } else {
+              return vscode.LanguageModelChatMessage.Assistant(c.content);
             }
-          }
-
-          // 3. DB2 Guidelines
-          messages.push(
-            vscode.LanguageModelChatMessage.Assistant(DB2_SYSTEM_PROMPT)
-          );
-
-          stream.progress(`Building response...`);
-
-          // 4. user prompt
-          messages.push(vscode.LanguageModelChatMessage.User(request.prompt));
+          });
 
           await copilotRequest(
             request.model.family,

@@ -15,7 +15,7 @@ import {
   canTalkToDb,
   generateTableDefinition
 } from "../context";
-import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "./prompts";
+import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "../prompts";
 import Configuration from "../../configuration";
 
 export let isContinueActive = false;

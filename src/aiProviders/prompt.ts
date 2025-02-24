@@ -2,8 +2,14 @@ import { JobManager } from "../config";
 import Configuration from "../configuration";
 import { JobInfo } from "../connection/manager";
 import { buildSchemaDefinition, canTalkToDb, generateTableDefinition } from "./context";
+import { DB2_SYSTEM_PROMPT } from "./prompts";
 
-interface Db2ContextItems {
+export interface PromptOptions {
+  history?: Db2ContextItems[];
+  progress?: (text: string) => void;
+}
+
+export interface Db2ContextItems {
   name: string;
   description: string;
   content: string;
@@ -11,22 +17,28 @@ interface Db2ContextItems {
   specific?: "copilot"|"continue";
 }
 
-export async function buildPrompt(input: string, history?: Db2ContextItems[]): Promise<Db2ContextItems[]> {
+export async function buildPrompt(input: string, options: PromptOptions = {}): Promise<Db2ContextItems[]> {
   const currentJob: JobInfo = JobManager.getSelection();
   let contextItems: Db2ContextItems[] = [];
 
+  const progress = (message: string) => {
+    if (options.progress) {
+      options.progress(message);
+    }
+  };
+
   if (currentJob) {
     const currentSchema = currentJob?.job.options.libraries[0] || "QGPL";
-    const schema = this.getDefaultSchema();
 
     const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
 
     if (useSchemaDef) {
-      const schemaSemantic = await buildSchemaDefinition(schema);
+      progress(`Building schema definition for ${currentSchema}...`);
+      const schemaSemantic = await buildSchemaDefinition(currentSchema);
       if (schemaSemantic) {
         contextItems.push({
           name: `SCHEMA Definition`,
-          description: `${schema} definition`,
+          description: `${currentSchema} definition`,
           content: JSON.stringify(schemaSemantic),
           type: "user"
         });
@@ -35,13 +47,14 @@ export async function buildPrompt(input: string, history?: Db2ContextItems[]): P
 
     // TODO: self?
 
+    progress(`Building table definition for ${currentSchema}...`);
     const refs = await generateTableDefinition(
       currentSchema,
       input.split(` `)
     );
 
-    if (history) {
-      contextItems.push(...history);
+    if (options.history) {
+      contextItems.push(...options.history);
     }
 
     for (const table of refs) {
@@ -52,6 +65,22 @@ export async function buildPrompt(input: string, history?: Db2ContextItems[]): P
         type: `assistant`
       });
     }
+
+    if (!options.history) {
+      contextItems.push({
+        name: `system prompt`,
+        content: DB2_SYSTEM_PROMPT,
+        description: `system prompt`,
+        type: `system`
+      });
+    }
+
+    contextItems.push({
+      name: `user prompt`,
+      content: input,
+      description: `user prompt`,
+      type: `user`
+    });
   }
 
   return contextItems;
