@@ -47,7 +47,7 @@ export async function buildPrompt(input: string, options: PromptOptions = {}): P
 
     // TODO: self?
 
-    progress(`Building table definition for ${currentSchema}...`);
+    progress(`Finding objects to work with...`);
     const refs = await getSqlContextItems(input);
 
     if (options.history) {
