@@ -204,13 +204,20 @@ export async function getSqlContextItems(input: string): Promise<ContextDefiniti
   const contextItems = (await Promise.all(
     allObjects.map(async (o) => {
       try {
-        const content = await Schemas.generateSQL(o.schema, o.name, o.sqlType);
+        if (o.sqlType === `SCHEMA`) {
+          // TODO: maybe we want to include info about a schema here?
+          return undefined;
+          
+        } else {
+          const content = await Schemas.generateSQL(o.schema, o.name, o.sqlType);
 
-        return {
-          id: o.name,
-          type: o.sqlType,
-          content: content,
+          return {
+            id: o.name,
+            type: o.sqlType,
+            content: content,
+          }
         }
+
       } catch (e) {
         return undefined;
       }

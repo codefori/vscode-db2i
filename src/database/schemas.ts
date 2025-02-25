@@ -46,9 +46,19 @@ function getFilterClause(againstColumn: string, filter: string, noAnd?: boolean)
   };
 }
 
+const BASE_RESOLVE_SELECT = [
+  `select `,
+  `OBJLONGNAME as name, `,
+  `OBJLONGSCHEMA as schema, `,
+  `case `,
+  `  when objtype = '*LIB' then 'SCHEMA'`,
+  `  else SQL_OBJECT_TYPE`,
+  `end as sqlType`,
+].join(` `);
+
 export default class Schemas {
   /**
-   * Resolves to the following SQL types: TABLE, VIEW, ALIAS, INDEX, FUNCTION and PROCEDURE
+   * Resolves to the following SQL types: SCHEMA, TABLE, VIEW, ALIAS, INDEX, FUNCTION and PROCEDURE
    */
   static async resolveObjects(sqlObjects: {name: string, schema?: string}[]): Promise<ResolvedSqlObject[]> {
     let statements: string[] = [];
@@ -59,12 +69,12 @@ export default class Schemas {
     for (const obj of sqlObjects) {
       if (obj.schema) {
         statements.push(
-          `select OBJLONGNAME as name, OBJLONGSCHEMA as schema, SQL_OBJECT_TYPE as sqlType from table(qsys2.object_statistics(?, '*ALL', object_name => ?)) where SQL_OBJECT_TYPE IS NOT NULL`
+          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics(?, '*ALL', object_name => ?)) where SQL_OBJECT_TYPE IS NOT NULL`
         );
         parameters.push(obj.schema, obj.name);
       } else {
         statements.push(
-          `select OBJLONGNAME as name, OBJLONGSCHEMA as schema, SQL_OBJECT_TYPE as sqlType from table(qsys2.object_statistics('*LIBL', '*ALL', object_name => ?)) where SQL_OBJECT_TYPE IS NOT NULL`
+          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics('*LIBL', '*ALL', object_name => ?)) where SQL_OBJECT_TYPE IS NOT NULL`
         );
         parameters.push(obj.name);
       }
