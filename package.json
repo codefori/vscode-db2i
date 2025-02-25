@@ -1296,14 +1296,6 @@
           {
             "name": "build",
             "description": "Build an SQL statement"
-          },
-          {
-            "name": "activity",
-            "description": "Summarize the activity on the system"
-          },
-          {
-            "name": "set-schema",
-            "description": "Set the current schema"
           }
         ]
       }

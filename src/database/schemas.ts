@@ -48,6 +48,69 @@ function getFilterClause(againstColumn: string, filter: string, noAnd?: boolean)
 
 export default class Schemas {
   /**
+   * Resolves to the following SQL types: TABLE, VIEW, ALIAS, INDEX, FUNCTION and PROCEDURE
+   */
+  static async resolveObjects(sqlObjects: {name: string, schema?: string}[]): Promise<ResolvedSqlObject[]> {
+    let statements: string[] = [];
+    let parameters: BasicColumnType[] = [];
+
+    // First, we use OBJECT_STATISTICS to resolve the object based on the library list.
+    // But, if the object is qualified with a schema, we need to use that schema to get the correct object.
+    for (const obj of sqlObjects) {
+      if (obj.schema) {
+        statements.push(
+          `select OBJLONGNAME as name, OBJLONGSCHEMA as schema, SQL_OBJECT_TYPE as sqlType from table(qsys2.object_statistics(?, '*ALL', object_name => ?)) where SQL_OBJECT_TYPE IS NOT NULL`
+        );
+        parameters.push(obj.schema, obj.name);
+      } else {
+        statements.push(
+          `select OBJLONGNAME as name, OBJLONGSCHEMA as schema, SQL_OBJECT_TYPE as sqlType from table(qsys2.object_statistics('*LIBL', '*ALL', object_name => ?)) where SQL_OBJECT_TYPE IS NOT NULL`
+        );
+        parameters.push(obj.name);
+      }
+    }
+
+    // We have to do a little bit more logic for routines, because they are not included properly in OBJECT_STATISTICS.
+    // So we do a join against the library list view and SYSROUTINES (which has a list of all routines in a given schema)
+    // to get the correct schema and name.
+    const unqualified = sqlObjects.filter(obj => !obj.schema).map(obj => obj.name);
+    const qualified = sqlObjects.filter(obj => obj.schema);
+    const qualifiedClause = qualified.map(obj => `(s.routine_name = ? AND s.routine_schema = ?)`).join(` OR `);
+
+    let baseStatement = [
+      `select s.routine_name as name, l.schema_name as schema, s.ROUTINE_TYPE as sqlType`,
+      `from qsys2.library_list_info as l`,
+      `right join qsys2.sysroutines as s on l.schema_name = s.routine_schema`,
+      `where `,
+      `  l.schema_name is not null and`,
+      `  s.routine_name in (${sqlObjects.map(() => `?`).join(`, `)})`,
+    ].join(` `);
+    parameters.push(...unqualified);
+
+    if (qualified.length > 0) {
+      baseStatement += ` and (${qualifiedClause})`;
+      parameters.push(...qualified.flatMap(obj => [obj.name, obj.schema]));
+    }
+
+    statements.push(baseStatement);
+
+    if (statements.length === 0) {
+      return [];
+    }
+
+    const query = `${statements.join(" UNION ALL ")}`;
+    const objects: any[] = await JobManager.runSQL(query, { parameters });
+    
+    const resolvedObjects: ResolvedSqlObject[] = objects.map(object => ({
+      name: object.NAME,
+      schema: object.SCHEMA,
+      sqlType: object.SQLTYPE
+    }));
+
+    return resolvedObjects;
+  }
+
+  /**
    * @param schema Not user input
    */
   static async getObjects(schema: string, types: SQLType[], details: PageData = {}): Promise<BasicSQLObject[]> {

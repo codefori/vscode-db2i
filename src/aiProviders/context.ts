@@ -25,7 +25,7 @@ interface MarkdownRef {
 
 interface ContextDefinition {
   id: string;
-  type: SQLType;
+  type: string;
   content: any;
 }
 
@@ -112,58 +112,106 @@ export async function buildSchemaDefinition(schema: string): Promise<Partial<Bas
   return compressedData;
 }
 
+// hello my.world how/are you? -> [hello, my, ., world, how, /, are, you]
+function splitUpUserInput(input: string): string[] {
+  input = input.replace(/[,!?$%\^&\*;:{}=\-`~()]/g, "")
+
+  let parts: string[] = [];
+
+  // Split the input string by spaces, dots and forward slash
+
+  let cPart = ``;
+  let char: string;
+
+  const addPart = () => {
+    if (cPart) {
+      parts.push(cPart);
+      cPart = ``;
+    }
+  }
+
+  for (let i = 0; i < input.length; i++) {
+    char = input[i];
+
+    switch (char) {
+      case ` `:
+        addPart();
+        break;
+
+      case `/`:
+      case `.`:
+        addPart();
+        parts.push(char);
+        break;
+
+      default:
+        if ([`/`, `.`].includes(cPart)) {
+          addPart();
+        }
+
+        cPart += char;
+        break;
+    }
+  }
+  
+  addPart();
+
+  return parts;
+}
+
 /**
- * Generates the SQL table definitions for the given schema and input words.
+ * Generates the SQL object definitions for the given input string.
  *
- * This function parses the input words to identify potential table references,
- * filters them based on the schema's available tables, and generates the SQL
- * definitions for the identified tables.
+ * This function parses the input words to identify potential SQL object references,
+ * and generates the SQL definitions for the identified objects based on the library list.
  *
- * @param {string} schema - The schema name to search for tables.
- * @param {string[]} input - An array of words that may contain table references.
- * @returns {Promise<{[key: string]: string | undefined}>} A promise that resolves to an object
- * where the keys are table names and the values are their corresponding SQL definitions.
+ * @param {string} input - A string that may contain table references.
  */
-export async function generateTableDefinition(schema: string, input: string[]) {
-  let tables: ContextDefinition[] = [];
+export async function getSqlContextItems(input: string): Promise<ContextDefinition[]> {
+  let contextItems: ContextDefinition[] = [];
+
   // Parse all SCHEMA.TABLE references first
-  const schemaTableRefs = input.filter((word) => word.includes("."));
-  const justWords = input.map((word) =>
-    word.replace(/[,\/#!?$%\^&\*;:{}=\-_`~()]/g, "")
-  );
+  const tokens = splitUpUserInput(input);
 
   // Remove plurals from words
-  justWords.push(
-    ...justWords
+  tokens.push(
+    ...tokens
       .filter((word) => word.endsWith("s"))
       .map((word) => word.slice(0, -1))
   );
 
-  // Filter prompt for possible refs to tables
-  const validWords = justWords
-    .filter(
-      (word) => word.length > 2 && !word.endsWith("s") && !word.includes(`'`)
-    )
-    .map((word) => `${Statement.delimName(word, true)}`);
+  let possibleRefs: {name: string, schema?: string}[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    
+    if (token[i+1] && [`.`, `/`].includes(token[i+1]) && tokens[i + 2]) {
+      const nextToken = tokens[i + 2];
 
-  const allTables: BasicSQLObject[] = await Schemas.getObjects(schema, [
-    `tables`,
-  ]);
+      possibleRefs.push({
+        name: Statement.delimName(nextToken, true),
+        schema: Statement.delimName(token, true),
+      });
 
-  const filteredTables = Array.from(
-    new Set(
-      validWords.filter((word) => allTables.some((table) => table.name == word))
-    )
-  );
+      i += 2; // Skip the next token as it's already processed
+
+    } else {
+      possibleRefs.push({
+        name: Statement.delimName(token, true),
+      });
+    }
+  }
+
+  const allObjects = await Schemas.resolveObjects(possibleRefs);
 
   await Promise.all(
-    filteredTables.map(async (token) => {
+    allObjects.map(async (o) => {
       try {
-        const content = await Schemas.generateSQL(schema, token, `TABLE`);
+        const content = await Schemas.generateSQL(o.schema, o.name, o.sqlType);
+
         if (content) {
-          tables.push({
-            id: token,
-            type: `tables`,
+          contextItems.push({
+            id: o.name,
+            type: o.sqlType,
             content: content,
           });
         }
@@ -173,19 +221,7 @@ export async function generateTableDefinition(schema: string, input: string[]) {
     })
   );
 
-  // check for QSYS2
-  // for (const item of schemaTableRefs) {
-  //   const [curSchema, table] = item.split(`.`);
-  //   if (curSchema.toUpperCase() === `QSYS2`) {
-  //     try {
-  //       const content = await Schemas.getObjects
-  //     } catch (e) {
-  //       continue
-  //     }
-  //   }
-  // }
-
-  return tables;
+  return contextItems;
 }
 
 /**

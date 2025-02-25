@@ -13,7 +13,7 @@ import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
 import {
   buildSchemaDefinition,
   canTalkToDb,
-  generateTableDefinition
+  getSqlContextItems
 } from "../context";
 import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "../prompts";
 import Configuration from "../../configuration";
@@ -179,10 +179,7 @@ export class db2ContextProvider implements IContextProvider {
             break;
           default:
             // 2. TABLE References
-            const tablesRefs = await generateTableDefinition(
-              schema,
-              fullInput.split(` `)
-            );
+            const tablesRefs = await getSqlContextItems(fullInput);
             for (const table of tablesRefs) {
               contextItems.push({
                 name: `table definition for ${table.id}`,

@@ -33,6 +33,12 @@ interface SQLParm {
   ROW_TYPE: "P" | "R",
 }
 
+interface ResolvedSqlObject {
+  schema: string;
+  name: string;
+  sqlType: string;
+}
+
 interface BasicSQLObject {
   type: string;
   tableType: string;

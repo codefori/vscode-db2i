@@ -1,7 +1,7 @@
 import { JobManager } from "../config";
 import Configuration from "../configuration";
 import { JobInfo } from "../connection/manager";
-import { buildSchemaDefinition, canTalkToDb, generateTableDefinition } from "./context";
+import { buildSchemaDefinition, canTalkToDb, getSqlContextItems } from "./context";
 import { DB2_SYSTEM_PROMPT } from "./prompts";
 
 export interface PromptOptions {
@@ -48,10 +48,7 @@ export async function buildPrompt(input: string, options: PromptOptions = {}): P
     // TODO: self?
 
     progress(`Building table definition for ${currentSchema}...`);
-    const refs = await generateTableDefinition(
-      currentSchema,
-      input.split(` `)
-    );
+    const refs = await getSqlContextItems(input);
 
     if (options.history) {
       contextItems.push(...options.history);
