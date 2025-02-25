@@ -168,8 +168,6 @@ function splitUpUserInput(input: string): string[] {
  * @param {string} input - A string that may contain table references.
  */
 export async function getSqlContextItems(input: string): Promise<ContextDefinition[]> {
-  let contextItems: ContextDefinition[] = [];
-
   // Parse all SCHEMA.TABLE references first
   const tokens = splitUpUserInput(input);
 
@@ -203,23 +201,21 @@ export async function getSqlContextItems(input: string): Promise<ContextDefiniti
 
   const allObjects = await Schemas.resolveObjects(possibleRefs);
 
-  await Promise.all(
+  const contextItems = (await Promise.all(
     allObjects.map(async (o) => {
       try {
         const content = await Schemas.generateSQL(o.schema, o.name, o.sqlType);
 
-        if (content) {
-          contextItems.push({
-            id: o.name,
-            type: o.sqlType,
-            content: content,
-          });
+        return {
+          id: o.name,
+          type: o.sqlType,
+          content: content,
         }
       } catch (e) {
-        // ignore
+        return undefined;
       }
     })
-  );
+  )).filter((item) => item !== undefined);
 
   return contextItems;
 }
