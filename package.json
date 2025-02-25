@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -98,6 +98,17 @@
               "Format reserved SQL keywords in lowercase",
               "Format reserved SQL keywords in uppercase"
             ]
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.ai",
+        "title": "AI integrations",
+        "properties": {
+          "vscode-db2i.ai.useSchemaDefinition": {
+            "type": "boolean",
+            "description": "Provide Schema definition as additional context in Continue and Copilot",
+            "default": true
           }
         }
       },
