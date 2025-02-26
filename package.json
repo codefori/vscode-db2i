@@ -1300,6 +1300,31 @@
         ]
       }
     ],
+    "languageModelTools": [
+      {
+        "name": "vscode-db2i-chat-sqlRunnerTool",
+        "tags": [
+          "sql"
+        ],
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "result",
+        "displayName": "Run SQL statement",
+        "icon": "$(play)",
+        "modelDescription": "Run an SQL statement and return the result",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "statement": {
+              "type": "string",
+              "description": "The statement to execute"
+            }
+          },
+          "required": [
+            "statement"
+          ]
+        }
+      }
+    ],
     "snippets": [
       {
         "language": "sql",

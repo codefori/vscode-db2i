@@ -3,6 +3,7 @@ import {
   canTalkToDb,
 } from "../context";
 import { buildPrompt, Db2ContextItems } from "../prompt";
+import { registerSqlRunTool, RUN_SQL_TOOL_ID } from "./sqlTool";
 
 const CHAT_ID = `vscode-db2i.chat`;
 
@@ -56,7 +57,7 @@ export function activateChat(context: vscode.ExtensionContext) {
           stream.progress(`Building response...`);
 
           // get history
-          let history: Db2ContextItems[]|undefined;
+          let history: Db2ContextItems[] | undefined;
           if (context.history.length > 0) {
             history = context.history.map((h) => {
               if ("prompt" in h) {
@@ -86,7 +87,7 @@ export function activateChat(context: vscode.ExtensionContext) {
             progress: stream.progress
           });
 
-          const messages = contextItems.context.map(c => {
+          let messages = contextItems.context.map(c => {
             if (c.type === `user`) {
               return vscode.LanguageModelChatMessage.User(c.content);
             } else {
@@ -94,13 +95,41 @@ export function activateChat(context: vscode.ExtensionContext) {
             }
           });
 
-          const result = await copilotRequest(
-            request.model.family,
-            messages,
-            {},
-            token,
-            stream
-          );
+          const tools = vscode.lm.tools.filter(t => request.toolReferences.some(r => r.name === t.name));
+
+          const doRequest = (tools: vscode.LanguageModelToolInformation[] = []) => {
+            return copilotRequest(
+              request.model.family,
+              messages,
+              {
+                tools,
+                toolMode: vscode.LanguageModelChatToolMode.Required
+              },
+              token,
+              stream
+            );
+          }
+
+          let result = await doRequest(tools);
+
+          if (result.toolCalls.length > 0) {
+            for (const toolcall of result.toolCalls) {
+              if (toolcall.name === RUN_SQL_TOOL_ID) {
+                const result = await vscode.lm.invokeTool(toolcall.name, {toolInvocationToken: request.toolInvocationToken, input: toolcall.input});
+                const resultOut = result.content.map(c => {
+                  if (c instanceof vscode.LanguageModelTextPart) {
+                    return c.value;
+                  }
+                }).filter(c => c !== undefined).join("\n\n");
+
+                messages = [
+                  vscode.LanguageModelChatMessage.User(`Please review and summarize the following result set:\n\n${resultOut}\n\nThe original user request was: ${request}`)
+                ];
+              }
+            }
+
+            result = await doRequest();
+          }
 
           return { metadata: { command: "build", followUps: contextItems.followUps, statement: result.sqlCodeBlock } };
       }
@@ -131,10 +160,12 @@ export function activateChat(context: vscode.ExtensionContext) {
   }
 
   context.subscriptions.push(chat);
+  registerSqlRunTool(context);
 }
 
 interface Result {
   output: string;
+  toolCalls: vscode.LanguageModelToolCallPart[];
   sqlCodeBlock?: string;
 }
 
@@ -144,18 +175,25 @@ async function copilotRequest(
   options: vscode.LanguageModelChatRequestOptions,
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream
-): Promise<Result|undefined> {
+): Promise<Result | undefined> {
   const models = await vscode.lm.selectChatModels({ family: model });
   if (models.length > 0) {
     const [first] = models;
+    options.justification = `Doing cool stuff`
     const response = await first.sendRequest(messages, options, token);
-    let result: Result = {
-      output: "",
-    }
 
-    for await (const fragment of response.text) {
-      stream.markdown(fragment);
-      result.output += fragment;
+    const result: Result = {
+      output: "",
+      toolCalls: []
+    };
+
+    for await (const fragment of response.stream) {
+      if (fragment instanceof vscode.LanguageModelTextPart) {
+        stream.markdown(fragment.value);
+        result.output += fragment.value;
+      } else if (fragment instanceof vscode.LanguageModelToolCallPart) {
+        result.toolCalls.push(fragment);
+      }
     }
 
     const codeBlockStart = result.output.indexOf("```sql");
