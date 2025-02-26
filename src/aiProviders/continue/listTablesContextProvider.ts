@@ -83,12 +83,8 @@ class ListDb2iTables implements IContextProvider {
 
     } else {
       const tablesRefs = await getSqlContextItems(extras.fullInput);
-      for (const table of tablesRefs) {
-        contextItems.push({
-          name: `table definition for ${table.id}`,
-          content: table.content,
-          description: `${table.type} definition`,
-        });
+      for (const table of tablesRefs.items) {
+        contextItems.push(table);
       }
     }
     return contextItems;
