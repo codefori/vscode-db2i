@@ -7,6 +7,7 @@ import { buildSchemaDefinition, canTalkToDb, getContentItemsForRefs, getSqlConte
 import { DB2_SYSTEM_PROMPT } from "./prompts";
 
 export interface PromptOptions {
+  userInputNotContext?: boolean
   history?: Db2ContextItems[];
   progress?: (text: string) => void;
 }
@@ -24,7 +25,7 @@ export interface BuildResult {
   followUps: string[];
 }
 
-export async function buildPrompt(input: string, options: PromptOptions = {}): Promise<BuildResult> {
+export async function getContextItems(input: string, options: PromptOptions = {}): Promise<BuildResult> {
   const currentJob: JobInfo = JobManager.getSelection();
   
   let contextItems: Db2ContextItems[] = [];
@@ -123,12 +124,14 @@ export async function buildPrompt(input: string, options: PromptOptions = {}): P
       });
     }
 
-    contextItems.push({
-      name: `user prompt`,
-      content: input,
-      description: `user prompt`,
-      type: `user`
-    });
+    if (!options.userInputNotContext) {
+      contextItems.push({
+        name: `user prompt`,
+        content: input,
+        description: `user prompt`,
+        type: `user`
+      });
+    }
   }
 
   return {

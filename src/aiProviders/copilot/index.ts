@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import {
   canTalkToDb,
 } from "../context";
-import { buildPrompt, Db2ContextItems } from "../prompt";
+import { getContextItems, Db2ContextItems } from "../prompt";
 import { registerSqlRunTool, RUN_SQL_TOOL_ID } from "./sqlTool";
 
 const CHAT_ID = `vscode-db2i.chat`;
@@ -82,7 +82,7 @@ export function activateChat(context: vscode.ExtensionContext) {
             });
           }
 
-          const contextItems = await buildPrompt(request.prompt, {
+          const contextItems = await getContextItems(request.prompt, {
             history,
             progress: stream.progress
           });
