@@ -46,6 +46,8 @@ function getFilterClause(againstColumn: string, filter: string, noAnd?: boolean)
   };
 }
 
+export interface ObjectReference {name: string, schema?: string};
+
 const BASE_RESOLVE_SELECT = [
   `select `,
   `OBJLONGNAME as name, `,
@@ -60,7 +62,7 @@ export default class Schemas {
   /**
    * Resolves to the following SQL types: SCHEMA, TABLE, VIEW, ALIAS, INDEX, FUNCTION and PROCEDURE
    */
-  static async resolveObjects(sqlObjects: {name: string, schema?: string}[]): Promise<ResolvedSqlObject[]> {
+  static async resolveObjects(sqlObjects: ObjectReference[]): Promise<ResolvedSqlObject[]> {
     let statements: string[] = [];
     let parameters: BasicColumnType[] = [];
 
@@ -111,13 +113,34 @@ export default class Schemas {
     const query = `${statements.join(" UNION ALL ")}`;
     const objects: any[] = await JobManager.runSQL(query, { parameters });
     
-    const resolvedObjects: ResolvedSqlObject[] = objects.map(object => ({
+    let resolvedObjects: ResolvedSqlObject[] = objects.map(object => ({
       name: object.NAME,
       schema: object.SCHEMA,
       sqlType: object.SQLTYPE
     }));
 
     return resolvedObjects;
+  }
+
+  static async getRelatedObjects(object: ResolvedSqlObject): Promise<ResolvedSqlObject[]> {
+    const sql = [
+      `with refs as (`,
+      `  SELECT `,
+      `    schema_name as schema, `,
+      `    sql_name as name, `,
+      `    case when sql_object_type = 'FOREIGN KEY' then 'TABLE' else sql_object_type end as type`,
+      `  FROM TABLE(SYSTOOLS.RELATED_OBJECTS(?, ?))`,
+      `)`,
+      `select * from refs `,
+      `where type in ('TABLE', 'FUNCTION', 'PROCEDURE')`,
+    ].join(` `);
+
+    const related: any[] = await JobManager.runSQL(sql, { parameters: [object.schema, object.name] });
+    return related.map(item => ({
+      name: item.NAME,
+      schema: item.SCHEMA,
+      sqlType: item.TYPE
+    }));
   }
 
   /**

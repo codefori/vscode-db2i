@@ -167,7 +167,7 @@ function splitUpUserInput(input: string): string[] {
  *
  * @param {string} input - A string that may contain table references.
  */
-export async function getSqlContextItems(input: string): Promise<ContextDefinition[]> {
+export async function getSqlContextItems(input: string): Promise<{items: ContextDefinition[], refs: ResolvedSqlObject[]}> {
   // Parse all SCHEMA.TABLE references first
   const tokens = splitUpUserInput(input);
 
@@ -201,13 +201,22 @@ export async function getSqlContextItems(input: string): Promise<ContextDefiniti
 
   const allObjects = await Schemas.resolveObjects(possibleRefs);
 
-  const contextItems = (await Promise.all(
+  const contextItems = await getContentItemsForRefs(allObjects);
+
+  return {
+    items: contextItems,
+    refs: allObjects,
+  };
+}
+
+export async function getContentItemsForRefs(allObjects: ResolvedSqlObject[]): Promise<ContextDefinition[]> {
+  const items: (ContextDefinition|undefined)[] = await Promise.all(
     allObjects.map(async (o) => {
       try {
         if (o.sqlType === `SCHEMA`) {
           // TODO: maybe we want to include info about a schema here?
           return undefined;
-          
+
         } else {
           const content = await Schemas.generateSQL(o.schema, o.name, o.sqlType);
 
@@ -215,16 +224,16 @@ export async function getSqlContextItems(input: string): Promise<ContextDefiniti
             id: o.name,
             type: o.sqlType,
             content: content,
-          }
+          };
         }
 
       } catch (e) {
         return undefined;
       }
     })
-  )).filter((item) => item !== undefined);
+  );
 
-  return contextItems;
+  return items.filter((item) => item !== undefined);
 }
 
 /**

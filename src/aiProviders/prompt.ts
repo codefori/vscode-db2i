@@ -1,7 +1,9 @@
 import { JobManager } from "../config";
 import Configuration from "../configuration";
 import { JobInfo } from "../connection/manager";
-import { buildSchemaDefinition, canTalkToDb, getSqlContextItems } from "./context";
+import Schemas from "../database/schemas";
+import Statement from "../database/statement";
+import { buildSchemaDefinition, canTalkToDb, getContentItemsForRefs, getSqlContextItems } from "./context";
 import { DB2_SYSTEM_PROMPT } from "./prompts";
 
 export interface PromptOptions {
@@ -48,19 +50,37 @@ export async function buildPrompt(input: string, options: PromptOptions = {}): P
     // TODO: self?
 
     progress(`Finding objects to work with...`);
-    const refs = await getSqlContextItems(input);
+    const context = await getSqlContextItems(input);
 
     if (options.history) {
       contextItems.push(...options.history);
     }
 
-    for (const table of refs) {
+    for (const sqlObj of context.items) {
       contextItems.push({
-        name: `table definition for ${table.id}`,
-        content: table.content,
-        description: `${table.type} definition`,
+        name: `${sqlObj.type.toLowerCase()} definition for ${sqlObj.id}`,
+        content: sqlObj.content,
+        description: `${sqlObj.type} definition`,
         type: `assistant`
       });
+    }
+
+    // If the user only requests one reference, then let's find related objects
+    if (context.refs.length === 1) {
+      const ref = context.refs[0];
+      progress(`Finding objects related to ${Statement.prettyName(ref.name)}...`);
+
+      const relatedObjects = await Schemas.getRelatedObjects(ref);
+      const contentItems = await getContentItemsForRefs(relatedObjects);
+
+      for (const sqlObj of contentItems) {
+        contextItems.push({
+          name: `${sqlObj.type.toLowerCase()} definition for ${sqlObj.id}`,
+          content: sqlObj.content,
+          description: `${sqlObj.type} definition`,
+          type: `assistant`
+        });
+      }
     }
 
     if (!options.history) {
