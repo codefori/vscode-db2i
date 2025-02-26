@@ -14,6 +14,7 @@ import {
   getSqlContextItems
 } from "../context";
 import Configuration from "../../configuration";
+import { Db2ContextItems, getContextItems } from "../prompt";
 
 const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",
@@ -82,9 +83,9 @@ class ListDb2iTables implements IContextProvider {
       }
 
     } else {
-      const tablesRefs = await getSqlContextItems(extras.fullInput);
-      for (const table of tablesRefs.items) {
-        contextItems.push(table);
+      const tablesRefs = await getContextItems(query);
+      for (const tableData of tablesRefs.context) {
+        contextItems.push(tableData);
       }
     }
     return contextItems;
