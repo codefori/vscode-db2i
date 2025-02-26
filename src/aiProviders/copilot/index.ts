@@ -9,6 +9,7 @@ const CHAT_ID = `vscode-db2i.chat`;
 interface IDB2ChatResult extends vscode.ChatResult {
   metadata: {
     command: string;
+    followUps: string[];
   };
 }
 
@@ -84,7 +85,7 @@ export function activateChat(context: vscode.ExtensionContext) {
             progress: stream.progress
           });
 
-          const messages = contextItems.map(c => {
+          const messages = contextItems.context.map(c => {
             if (c.type === `user`) {
               return vscode.LanguageModelChatMessage.User(c.content);
             } else {
@@ -100,7 +101,7 @@ export function activateChat(context: vscode.ExtensionContext) {
             stream
           );
 
-          return { metadata: { command: "build" } };
+          return { metadata: { command: "build", followUps: contextItems.followUps } };
       }
     } else {
       throw new Error(
@@ -111,6 +112,22 @@ export function activateChat(context: vscode.ExtensionContext) {
 
   const chat = vscode.chat.createChatParticipant(CHAT_ID, chatHandler);
   chat.iconPath = new vscode.ThemeIcon(`database`);
+  chat.followupProvider = {
+    provideFollowups(result, context, token) {
+      const followups: vscode.ChatFollowup[] = [];
+
+      if (result.metadata) {
+        for (const followup of result.metadata.followUps) {
+          followups.push({
+            prompt: followup,
+            participant: CHAT_ID,
+          });
+        }
+      }
+
+      return followups;
+    },
+  }
 
   context.subscriptions.push(chat);
 }

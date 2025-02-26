@@ -19,9 +19,16 @@ export interface Db2ContextItems {
   specific?: "copilot"|"continue";
 }
 
-export async function buildPrompt(input: string, options: PromptOptions = {}): Promise<Db2ContextItems[]> {
+export interface BuildResult {
+  context: Db2ContextItems[];
+  followUps: string[];
+}
+
+export async function buildPrompt(input: string, options: PromptOptions = {}): Promise<BuildResult> {
   const currentJob: JobInfo = JobManager.getSelection();
+  
   let contextItems: Db2ContextItems[] = [];
+  let followUps = [];
 
   const progress = (message: string) => {
     if (options.progress) {
@@ -65,13 +72,31 @@ export async function buildPrompt(input: string, options: PromptOptions = {}): P
       });
     }
 
+    if (context.refs.filter(r => r.sqlType === `TABLE`).length >= 2) {
+      const randomIndexA = Math.floor(Math.random() * context.refs.length);
+      const randomIndexB = Math.floor(Math.random() * context.refs.length);
+      const tableA = context.refs[randomIndexA].name;
+      const tableB = context.refs[randomIndexB].name;
+
+      if (tableA !== tableB) {
+        followUps.push(`How can I join ${tableA} and ${tableB}?`);
+      }
+    }
+
     // If the user only requests one reference, then let's find related objects
     if (context.refs.length === 1) {
       const ref = context.refs[0];
-      progress(`Finding objects related to ${Statement.prettyName(ref.name)}...`);
+      const prettyNameRef = Statement.prettyName(ref.name);
+      progress(`Finding objects related to ${prettyNameRef}...`);
 
       const relatedObjects = await Schemas.getRelatedObjects(ref);
       const contentItems = await getContentItemsForRefs(relatedObjects);
+
+      if (relatedObjects.length === 1) {
+        followUps.push(`How is ${prettyNameRef} related to ${Statement.prettyName(relatedObjects[0].name)}?`);
+      } else if (ref.sqlType === `TABLE`) {
+        followUps.push(`What are some objects related to that table?`);
+      }
 
       for (const sqlObj of contentItems) {
         contextItems.push({
@@ -81,6 +106,12 @@ export async function buildPrompt(input: string, options: PromptOptions = {}): P
           type: `assistant`
         });
       }
+
+    } else if (context.refs.length > 1) {
+      const randomRef = context.refs[Math.floor(Math.random() * context.refs.length)];
+      const prettyNameRef = Statement.prettyName(randomRef.name);
+      
+      followUps.push(`What are some objects related to ${prettyNameRef}?`);
     }
 
     if (!options.history) {
@@ -100,5 +131,8 @@ export async function buildPrompt(input: string, options: PromptOptions = {}): P
     });
   }
 
-  return contextItems;
+  return {
+    context: contextItems,
+    followUps
+  };
 }
