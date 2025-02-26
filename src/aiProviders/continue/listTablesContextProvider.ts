@@ -14,7 +14,7 @@ import {
   getSqlContextItems
 } from "../context";
 import Configuration from "../../configuration";
-import { getContextItems } from "../prompt";
+import { Db2ContextItems, getContextItems } from "../prompt";
 
 const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",
@@ -29,7 +29,6 @@ interface SchemaContextProvider {
 }
 
 let providers: SchemaContextProvider[] = []
-let refCache: Set<string> = new Set<string>();
 
 class ListDb2iTables implements IContextProvider {
   constructor(private schema: string) {
@@ -84,13 +83,9 @@ class ListDb2iTables implements IContextProvider {
       }
 
     } else {
-      const tablesRefs = await getContextItems(extras.fullInput);
+      const tablesRefs = await getContextItems(query);
       for (const tableData of tablesRefs.context) {
-        if (refCache.has(tableData.name)) {
-          continue;
-        } 
         contextItems.push(tableData);
-        refCache.add(tableData.name);
       }
     }
     return contextItems;
