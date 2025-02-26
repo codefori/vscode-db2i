@@ -79,6 +79,7 @@ export function activateChat(context: vscode.ExtensionContext) {
           });
 
           messages.push(...contextItems.context.map(c => {
+            // Passing in the same breaks the request?
             return vscode.LanguageModelChatMessage.Assistant(c.content);
           }));
 

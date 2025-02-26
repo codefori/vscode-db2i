@@ -15,7 +15,6 @@ export interface Db2ContextItems {
   name: string;
   description: string;
   content: string;
-  specific?: "copilot"|"continue";
 }
 
 export interface BuildResult {
@@ -57,13 +56,7 @@ export async function getContextItems(input: string, options: PromptOptions = {}
     progress(`Finding objects to work with...`);
     const context = await getSqlContextItems(input);
 
-    for (const sqlObj of context.items) {
-      contextItems.push({
-        name: `${sqlObj.type.toLowerCase()} definition for ${sqlObj.id}`,
-        content: sqlObj.content,
-        description: `${sqlObj.type} definition`,
-      });
-    }
+    contextItems.push(...context.items);
 
     if (context.refs.filter(r => r.sqlType === `TABLE`).length >= 2) {
       const randomIndexA = Math.floor(Math.random() * context.refs.length);
@@ -85,18 +78,12 @@ export async function getContextItems(input: string, options: PromptOptions = {}
       const relatedObjects = await Schemas.getRelatedObjects(ref);
       const contentItems = await getContentItemsForRefs(relatedObjects);
 
+      contextItems.push(...contentItems);
+
       if (relatedObjects.length === 1) {
         followUps.push(`How is ${prettyNameRef} related to ${Statement.prettyName(relatedObjects[0].name)}?`);
       } else if (ref.sqlType === `TABLE`) {
         followUps.push(`What are some objects related to that table?`);
-      }
-
-      for (const sqlObj of contentItems) {
-        contextItems.push({
-          name: `${sqlObj.type.toLowerCase()} definition for ${sqlObj.id}`,
-          content: sqlObj.content,
-          description: `${sqlObj.type} definition`,
-        });
       }
 
     } else if (context.refs.length > 1) {

@@ -4,6 +4,7 @@ import { JobManager } from "../config";
 import Schemas, { AllSQLTypes, SQLType } from "../database/schemas";
 import Statement from "../database/statement";
 import { DB2_SYSTEM_PROMPT } from "./prompts";
+import { Db2ContextItems } from "./prompt";
 
 export function canTalkToDb() {
   return JobManager.getSelection() !== undefined;
@@ -21,12 +22,6 @@ interface MarkdownRef {
   TABLE_NAME: string;
   COLUMN_INFO?: string;
   SCHMEA?: string;
-}
-
-interface ContextDefinition {
-  id: string;
-  type: string;
-  content: any;
 }
 
 /**
@@ -167,7 +162,7 @@ function splitUpUserInput(input: string): string[] {
  *
  * @param {string} input - A string that may contain table references.
  */
-export async function getSqlContextItems(input: string): Promise<{items: ContextDefinition[], refs: ResolvedSqlObject[]}> {
+export async function getSqlContextItems(input: string): Promise<{items: Db2ContextItems[], refs: ResolvedSqlObject[]}> {
   // Parse all SCHEMA.TABLE references first
   const tokens = splitUpUserInput(input);
 
@@ -209,8 +204,8 @@ export async function getSqlContextItems(input: string): Promise<{items: Context
   };
 }
 
-export async function getContentItemsForRefs(allObjects: ResolvedSqlObject[]): Promise<ContextDefinition[]> {
-  const items: (ContextDefinition|undefined)[] = await Promise.all(
+export async function getContentItemsForRefs(allObjects: ResolvedSqlObject[]): Promise<Db2ContextItems[]> {
+  const items: (Db2ContextItems|undefined)[] = await Promise.all(
     allObjects.map(async (o) => {
       try {
         if (o.sqlType === `SCHEMA`) {
@@ -221,9 +216,9 @@ export async function getContentItemsForRefs(allObjects: ResolvedSqlObject[]): P
           const content = await Schemas.generateSQL(o.schema, o.name, o.sqlType);
 
           return {
-            id: o.name,
-            type: o.sqlType,
-            content: content,
+            name: `${o.sqlType.toLowerCase()} definition for ${o.name}`,
+            description: `${o.sqlType} definition`,
+            content: content
           };
         }
 
