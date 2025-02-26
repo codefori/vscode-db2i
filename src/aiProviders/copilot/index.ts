@@ -56,46 +56,36 @@ export function activateChat(context: vscode.ExtensionContext) {
         default:
           stream.progress(`Building response...`);
 
+          let messages: vscode.LanguageModelChatMessage[] = [];
+
           // get history
-          let history: Db2ContextItems[] | undefined;
           if (context.history.length > 0) {
-            history = context.history.map((h) => {
+            messages = context.history.map((h) => {
               if ("prompt" in h) {
-                return {
-                  name: `reply`,
-                  description: `reply from Copilot`,
-                  content: h.prompt,
-                  type: `assistant`,
-                };
+                return vscode.LanguageModelChatMessage.Assistant(h.prompt);
               } else {
                 const responseContent = h.response
                   .filter((r) => r.value instanceof vscode.MarkdownString)
                   .map((r) => (r.value as vscode.MarkdownString).value)
                   .join("\n\n");
-                return {
-                  name: `message`,
-                  description: `message from user`,
-                  content: responseContent,
-                  type: `assistant`,
-                };
+                return vscode.LanguageModelChatMessage.Assistant(responseContent);
               }
             });
           }
 
           const contextItems = await getContextItems(request.prompt, {
-            history,
-            progress: stream.progress
+            progress: stream.progress,
+            withDb2Prompt: true
           });
 
-          let messages = contextItems.context.map(c => {
-            if (c.type === `user`) {
-              return vscode.LanguageModelChatMessage.User(c.content);
-            } else {
-              return vscode.LanguageModelChatMessage.Assistant(c.content);
-            }
-          });
+          messages.push(...contextItems.context.map(c => {
+            return vscode.LanguageModelChatMessage.Assistant(c.content);
+          }));
 
-          const tools = vscode.lm.tools.filter(t => request.toolReferences.some(r => r.name === t.name));
+          messages.push(
+            vscode.LanguageModelChatMessage.User(request.prompt)
+          );
+
 
           const doRequest = (tools: vscode.LanguageModelToolInformation[] = []) => {
             return copilotRequest(
@@ -110,12 +100,15 @@ export function activateChat(context: vscode.ExtensionContext) {
             );
           }
 
+          // The first request we do can do two things: return either a stream OR return a tool request
+          const tools = vscode.lm.tools.filter(t => request.toolReferences.some(r => r.name === t.name));
           let result = await doRequest(tools);
 
+          // Then, if there is a tool request, we do the logic to invoke the tool
           if (result.toolCalls.length > 0) {
             for (const toolcall of result.toolCalls) {
               if (toolcall.name === RUN_SQL_TOOL_ID) {
-                const result = await vscode.lm.invokeTool(toolcall.name, {toolInvocationToken: request.toolInvocationToken, input: toolcall.input});
+                const result = await vscode.lm.invokeTool(toolcall.name, { toolInvocationToken: request.toolInvocationToken, input: toolcall.input });
                 const resultOut = result.content.map(c => {
                   if (c instanceof vscode.LanguageModelTextPart) {
                     return c.value;

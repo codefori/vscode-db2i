@@ -7,16 +7,14 @@ import { buildSchemaDefinition, canTalkToDb, getContentItemsForRefs, getSqlConte
 import { DB2_SYSTEM_PROMPT } from "./prompts";
 
 export interface PromptOptions {
-  userInputNotContext?: boolean
-  history?: Db2ContextItems[];
   progress?: (text: string) => void;
+  withDb2Prompt?: boolean;
 }
 
 export interface Db2ContextItems {
   name: string;
   description: string;
   content: string;
-  type: "user"|"assistant"|"system";
   specific?: "copilot"|"continue";
 }
 
@@ -49,8 +47,7 @@ export async function getContextItems(input: string, options: PromptOptions = {}
         contextItems.push({
           name: `SCHEMA Definition`,
           description: `${currentSchema} definition`,
-          content: JSON.stringify(schemaSemantic),
-          type: "user"
+          content: JSON.stringify(schemaSemantic)
         });
       }
     }
@@ -60,16 +57,11 @@ export async function getContextItems(input: string, options: PromptOptions = {}
     progress(`Finding objects to work with...`);
     const context = await getSqlContextItems(input);
 
-    if (options.history) {
-      contextItems.push(...options.history);
-    }
-
     for (const sqlObj of context.items) {
       contextItems.push({
         name: `${sqlObj.type.toLowerCase()} definition for ${sqlObj.id}`,
         content: sqlObj.content,
         description: `${sqlObj.type} definition`,
-        type: `assistant`
       });
     }
 
@@ -104,7 +96,6 @@ export async function getContextItems(input: string, options: PromptOptions = {}
           name: `${sqlObj.type.toLowerCase()} definition for ${sqlObj.id}`,
           content: sqlObj.content,
           description: `${sqlObj.type} definition`,
-          type: `assistant`
         });
       }
 
@@ -115,21 +106,11 @@ export async function getContextItems(input: string, options: PromptOptions = {}
       followUps.push(`What are some objects related to ${prettyNameRef}?`);
     }
 
-    if (!options.history) {
+    if (options.withDb2Prompt) {
       contextItems.push({
         name: `system prompt`,
         content: DB2_SYSTEM_PROMPT,
         description: `system prompt`,
-        type: `system`
-      });
-    }
-
-    if (!options.userInputNotContext) {
-      contextItems.push({
-        name: `user prompt`,
-        content: input,
-        description: `user prompt`,
-        type: `user`
       });
     }
   }
