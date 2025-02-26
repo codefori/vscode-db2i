@@ -10,6 +10,7 @@ interface IDB2ChatResult extends vscode.ChatResult {
   metadata: {
     command: string;
     followUps: string[];
+    statement?: string;
   };
 }
 
@@ -93,7 +94,7 @@ export function activateChat(context: vscode.ExtensionContext) {
             }
           });
 
-          await copilotRequest(
+          const result = await copilotRequest(
             request.model.family,
             messages,
             {},
@@ -101,7 +102,7 @@ export function activateChat(context: vscode.ExtensionContext) {
             stream
           );
 
-          return { metadata: { command: "build", followUps: contextItems.followUps } };
+          return { metadata: { command: "build", followUps: contextItems.followUps, statement: result.sqlCodeBlock } };
       }
     } else {
       throw new Error(
@@ -132,20 +133,37 @@ export function activateChat(context: vscode.ExtensionContext) {
   context.subscriptions.push(chat);
 }
 
+interface Result {
+  output: string;
+  sqlCodeBlock?: string;
+}
+
 async function copilotRequest(
   model: string,
   messages: vscode.LanguageModelChatMessage[],
   options: vscode.LanguageModelChatRequestOptions,
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream
-): Promise<void> {
+): Promise<Result|undefined> {
   const models = await vscode.lm.selectChatModels({ family: model });
   if (models.length > 0) {
     const [first] = models;
     const response = await first.sendRequest(messages, options, token);
+    let result: Result = {
+      output: "",
+    }
 
     for await (const fragment of response.text) {
       stream.markdown(fragment);
+      result.output += fragment;
     }
+
+    const codeBlockStart = result.output.indexOf("```sql");
+    const codeBlockEnd = result.output.indexOf("```", codeBlockStart + 6);
+    if (codeBlockStart !== -1 && codeBlockEnd !== -1) {
+      result.sqlCodeBlock = result.output.substring(codeBlockStart + 6, codeBlockEnd);
+    }
+
+    return result;
   }
 }
