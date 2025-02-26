@@ -36,20 +36,7 @@ export async function getContextItems(input: string, options: PromptOptions = {}
 
   if (currentJob) {
     const currentSchema = currentJob?.job.options.libraries[0] || "QGPL";
-
     const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
-
-    if (useSchemaDef) {
-      progress(`Building schema definition for ${currentSchema}...`);
-      const schemaSemantic = await buildSchemaDefinition(currentSchema);
-      if (schemaSemantic) {
-        contextItems.push({
-          name: `SCHEMA Definition`,
-          description: `${currentSchema} definition`,
-          content: JSON.stringify(schemaSemantic)
-        });
-      }
-    }
 
     // TODO: self?
 
@@ -73,17 +60,25 @@ export async function getContextItems(input: string, options: PromptOptions = {}
     if (context.refs.length === 1) {
       const ref = context.refs[0];
       const prettyNameRef = Statement.prettyName(ref.name);
-      progress(`Finding objects related to ${prettyNameRef}...`);
 
-      const relatedObjects = await Schemas.getRelatedObjects(ref);
-      const contentItems = await getContentItemsForRefs(relatedObjects);
+      if (ref.sqlType === `SCHEMA`) {
+        followUps.push(
+          `What are some objects in that schema?`,
+          `What is the difference between a schema and a library?`,
+        );
+      } else {
+        progress(`Finding objects related to ${prettyNameRef}...`);
 
-      contextItems.push(...contentItems);
+        const relatedObjects = await Schemas.getRelatedObjects(ref);
+        const contentItems = await getContentItemsForRefs(relatedObjects);
 
-      if (relatedObjects.length === 1) {
-        followUps.push(`How is ${prettyNameRef} related to ${Statement.prettyName(relatedObjects[0].name)}?`);
-      } else if (ref.sqlType === `TABLE`) {
-        followUps.push(`What are some objects related to that table?`);
+        contextItems.push(...contentItems);
+
+        if (relatedObjects.length === 1) {
+          followUps.push(`How is ${prettyNameRef} related to ${Statement.prettyName(relatedObjects[0].name)}?`);
+        } else if (ref.sqlType === `TABLE`) {
+          followUps.push(`What are some objects related to that table?`);
+        }
       }
 
     } else if (context.refs.length > 1) {
@@ -91,6 +86,16 @@ export async function getContextItems(input: string, options: PromptOptions = {}
       const prettyNameRef = Statement.prettyName(randomRef.name);
       
       followUps.push(`What are some objects related to ${prettyNameRef}?`);
+    } else if (useSchemaDef) {
+      progress(`Getting info for schema ${currentSchema}...`);
+      const schemaSemantic = await buildSchemaDefinition(currentSchema);
+      if (schemaSemantic) {
+        contextItems.push({
+          name: `SCHEMA Definition`,
+          description: `${currentSchema} definition`,
+          content: JSON.stringify(schemaSemantic)
+        });
+      }
     }
 
     if (options.withDb2Prompt) {

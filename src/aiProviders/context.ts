@@ -209,7 +209,15 @@ export async function getContentItemsForRefs(allObjects: ResolvedSqlObject[]): P
     allObjects.map(async (o) => {
       try {
         if (o.sqlType === `SCHEMA`) {
-          // TODO: maybe we want to include info about a schema here?
+          const schemaSemantic = await buildSchemaDefinition(o.name);
+          if (schemaSemantic) {
+            return {
+              name: `SCHEMA Definition`,
+              description: `${o.name} definition`,
+              content: JSON.stringify(schemaSemantic)
+            };
+          }
+
           return undefined;
 
         } else {

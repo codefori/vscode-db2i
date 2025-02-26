@@ -71,12 +71,12 @@ export default class Schemas {
     for (const obj of sqlObjects) {
       if (obj.schema) {
         statements.push(
-          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics(?, '*ALL', object_name => ?)) where SQL_OBJECT_TYPE IS NOT NULL`
+          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics(?, '*ALL', object_name => ?))`
         );
         parameters.push(obj.schema, obj.name);
       } else {
         statements.push(
-          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics('*LIBL', '*ALL', object_name => ?)) where SQL_OBJECT_TYPE IS NOT NULL`
+          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics('*LIBL', '*ALL', object_name => ?))`
         );
         parameters.push(obj.name);
       }
@@ -117,7 +117,7 @@ export default class Schemas {
       name: object.NAME,
       schema: object.SCHEMA,
       sqlType: object.SQLTYPE
-    }));
+    })).filter(o => o.sqlType);
 
     return resolvedObjects;
   }
