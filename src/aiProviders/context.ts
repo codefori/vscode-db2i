@@ -195,7 +195,6 @@ export async function getSqlContextItems(input: string): Promise<{items: Db2Cont
   }
 
   const allObjects = await Schemas.resolveObjects(possibleRefs);
-
   const contextItems = await getContentItemsForRefs(allObjects);
 
   return {

@@ -41,32 +41,40 @@ export async function getContextItems(input: string, options: PromptOptions = {}
     // TODO: self?
 
     progress(`Finding objects to work with...`);
-    const context = await getSqlContextItems(input);
 
-    contextItems.push(...context.items);
+    // First, let's take the user input and see if contains any references to SQL objects.
+    // This returns a list of references to SQL objects, such as tables, views, schemas, etc,
+    // and the context items that are related to those references.
+    const userInput = await getSqlContextItems(input);
 
-    if (context.refs.filter(r => r.sqlType === `TABLE`).length >= 2) {
-      const randomIndexA = Math.floor(Math.random() * context.refs.length);
-      const randomIndexB = Math.floor(Math.random() * context.refs.length);
-      const tableA = context.refs[randomIndexA].name;
-      const tableB = context.refs[randomIndexB].name;
+    contextItems.push(...userInput.items);
+
+    // If the user referenced 2 or more tables, let's add a follow up
+    if (userInput.refs.filter(r => r.sqlType === `TABLE`).length >= 2) {
+      const randomIndexA = Math.floor(Math.random() * userInput.refs.length);
+      const randomIndexB = Math.floor(Math.random() * userInput.refs.length);
+      const tableA = userInput.refs[randomIndexA].name;
+      const tableB = userInput.refs[randomIndexB].name;
 
       if (tableA !== tableB) {
         followUps.push(`How can I join ${tableA} and ${tableB}?`);
       }
     }
 
-    // If the user only requests one reference, then let's find related objects
-    if (context.refs.length === 1) {
-      const ref = context.refs[0];
+    // If the user only requests one reference, then let's do something
+    if (userInput.refs.length === 1) {
+      const ref = userInput.refs[0];
       const prettyNameRef = Statement.prettyName(ref.name);
 
       if (ref.sqlType === `SCHEMA`) {
+        // If the only reference is a schema, let's just add follow ups
         followUps.push(
           `What are some objects in that schema?`,
           `What is the difference between a schema and a library?`,
         );
+
       } else {
+        // If the user referenced a table, view, or other object, let's fetch related objects
         progress(`Finding objects related to ${prettyNameRef}...`);
 
         const relatedObjects = await Schemas.getRelatedObjects(ref);
@@ -74,6 +82,7 @@ export async function getContextItems(input: string, options: PromptOptions = {}
 
         contextItems.push(...contentItems);
 
+        // Then also add some follow ups
         if (relatedObjects.length === 1) {
           followUps.push(`How is ${prettyNameRef} related to ${Statement.prettyName(relatedObjects[0].name)}?`);
         } else if (ref.sqlType === `TABLE`) {
@@ -81,12 +90,15 @@ export async function getContextItems(input: string, options: PromptOptions = {}
         }
       }
 
-    } else if (context.refs.length > 1) {
-      const randomRef = context.refs[Math.floor(Math.random() * context.refs.length)];
+    } else if (userInput.refs.length > 1) {
+      // If there are multiple references, let's just add a follow up
+      const randomRef = userInput.refs[Math.floor(Math.random() * userInput.refs.length)];
       const prettyNameRef = Statement.prettyName(randomRef.name);
       
       followUps.push(`What are some objects related to ${prettyNameRef}?`);
+
     } else if (useSchemaDef) {
+      // If the user didn't reference any objects, but we are using schema definitions, let's just add the schema definition
       progress(`Getting info for schema ${currentSchema}...`);
       const schemaSemantic = await buildSchemaDefinition(currentSchema);
       if (schemaSemantic) {
