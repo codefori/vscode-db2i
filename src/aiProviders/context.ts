@@ -3,7 +3,8 @@ import * as vscode from "vscode";
 import { JobManager } from "../config";
 import Schemas, { AllSQLTypes, SQLType } from "../database/schemas";
 import Statement from "../database/statement";
-import { DB2_SYSTEM_PROMPT } from "./continue/prompts";
+import { DB2_SYSTEM_PROMPT } from "./prompts";
+import { Db2ContextItems } from "./prompt";
 
 export function canTalkToDb() {
   return JobManager.getSelection() !== undefined;
@@ -21,12 +22,6 @@ interface MarkdownRef {
   TABLE_NAME: string;
   COLUMN_INFO?: string;
   SCHMEA?: string;
-}
-
-interface ContextDefinition {
-  id: string;
-  type: SQLType;
-  content: any;
 }
 
 /**
@@ -112,165 +107,135 @@ export async function buildSchemaDefinition(schema: string): Promise<Partial<Bas
   return compressedData;
 }
 
+// hello my.world how/are you? -> [hello, my, ., world, how, /, are, you]
+function splitUpUserInput(input: string): string[] {
+  input = input.replace(/[,!?$%\^&\*;:{}=\-`~()]/g, "")
+
+  let parts: string[] = [];
+
+  // Split the input string by spaces, dots and forward slash
+
+  let cPart = ``;
+  let char: string;
+
+  const addPart = () => {
+    if (cPart) {
+      parts.push(cPart);
+      cPart = ``;
+    }
+  }
+
+  for (let i = 0; i < input.length; i++) {
+    char = input[i];
+
+    switch (char) {
+      case ` `:
+        addPart();
+        break;
+
+      case `/`:
+      case `.`:
+        addPart();
+        parts.push(char);
+        break;
+
+      default:
+        if ([`/`, `.`].includes(cPart)) {
+          addPart();
+        }
+
+        cPart += char;
+        break;
+    }
+  }
+  
+  addPart();
+
+  return parts;
+}
+
 /**
- * Generates the SQL table definitions for the given schema and input words.
+ * Generates the SQL object definitions for the given input string.
  *
- * This function parses the input words to identify potential table references,
- * filters them based on the schema's available tables, and generates the SQL
- * definitions for the identified tables.
+ * This function parses the input words to identify potential SQL object references,
+ * and generates the SQL definitions for the identified objects based on the library list.
  *
- * @param {string} schema - The schema name to search for tables.
- * @param {string[]} input - An array of words that may contain table references.
- * @returns {Promise<{[key: string]: string | undefined}>} A promise that resolves to an object
- * where the keys are table names and the values are their corresponding SQL definitions.
+ * @param {string} input - A string that may contain table references.
  */
-export async function generateTableDefinition(schema: string, input: string[]) {
-  let tables: ContextDefinition[] = [];
+export async function getSqlContextItems(input: string): Promise<{items: Db2ContextItems[], refs: ResolvedSqlObject[]}> {
   // Parse all SCHEMA.TABLE references first
-  const schemaTableRefs = input.filter((word) => word.includes("."));
-  const justWords = input.map((word) =>
-    word.replace(/[,\/#!?$%\^&\*;:{}=\-_`~()]/g, "")
-  );
+  const tokens = splitUpUserInput(input);
 
   // Remove plurals from words
-  justWords.push(
-    ...justWords
+  tokens.push(
+    ...tokens
       .filter((word) => word.endsWith("s"))
       .map((word) => word.slice(0, -1))
   );
 
-  // Filter prompt for possible refs to tables
-  const validWords = justWords
-    .filter(
-      (word) => word.length > 2 && !word.endsWith("s") && !word.includes(`'`)
-    )
-    .map((word) => `${Statement.delimName(word, true)}`);
+  let possibleRefs: {name: string, schema?: string}[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    
+    if (token[i+1] && [`.`, `/`].includes(token[i+1]) && tokens[i + 2]) {
+      const nextToken = tokens[i + 2];
 
-  const allTables: BasicSQLObject[] = await Schemas.getObjects(schema, [
-    `tables`,
-  ]);
+      possibleRefs.push({
+        name: Statement.delimName(nextToken, true),
+        schema: Statement.delimName(token, true),
+      });
 
-  const filteredTables = Array.from(
-    new Set(
-      validWords.filter((word) => allTables.some((table) => table.name == word))
-    )
-  );
+      i += 2; // Skip the next token as it's already processed
 
-  await Promise.all(
-    filteredTables.map(async (token) => {
+    } else {
+      possibleRefs.push({
+        name: Statement.delimName(token, true),
+      });
+    }
+  }
+
+  const allObjects = await Schemas.resolveObjects(possibleRefs);
+  const contextItems = await getContentItemsForRefs(allObjects);
+
+  return {
+    items: contextItems,
+    refs: allObjects,
+  };
+}
+
+export async function getContentItemsForRefs(allObjects: ResolvedSqlObject[]): Promise<Db2ContextItems[]> {
+  const items: (Db2ContextItems|undefined)[] = await Promise.all(
+    allObjects.map(async (o) => {
       try {
-        const content = await Schemas.generateSQL(schema, token, `TABLE`);
-        if (content) {
-          tables.push({
-            id: token,
-            type: `tables`,
-            content: content,
-          });
+        if (o.sqlType === `SCHEMA`) {
+          const schemaSemantic = await buildSchemaDefinition(o.name);
+          if (schemaSemantic) {
+            return {
+              name: `SCHEMA Definition`,
+              description: `${o.name} definition`,
+              content: JSON.stringify(schemaSemantic)
+            };
+          }
+
+          return undefined;
+
+        } else {
+          const content = await Schemas.generateSQL(o.schema, o.name, o.sqlType);
+
+          return {
+            name: `${o.sqlType.toLowerCase()} definition for ${o.name}`,
+            description: `${o.sqlType} definition`,
+            content: content
+          };
         }
+
       } catch (e) {
-        // ignore
+        return undefined;
       }
     })
   );
 
-  // check for QSYS2
-  // for (const item of schemaTableRefs) {
-  //   const [curSchema, table] = item.split(`.`);
-  //   if (curSchema.toUpperCase() === `QSYS2`) {
-  //     try {
-  //       const content = await Schemas.getObjects
-  //     } catch (e) {
-  //       continue
-  //     }
-  //   }
-  // }
-
-  return tables;
-}
-
-// depreciated
-export async function findPossibleTables(
-  stream: vscode.ChatResponseStream,
-  schema: string,
-  words: string[]
-) {
-  let tables: TableRefs = {};
-
-  // Parse all SCHEMA.TABLE references first
-  const schemaTableRefs = words.filter((word) => word.includes("."));
-  const justWords = words.map((word) =>
-    word.replace(/[,\/#!?$%\^&\*;:{}=\-_`~()]/g, "")
-  );
-
-  // Remove plurals from words
-  justWords.push(
-    ...justWords
-      .filter((word) => word.endsWith("s"))
-      .map((word) => word.slice(0, -1))
-  );
-
-  // Filter prompt for possible refs to tables
-  const validWords = justWords
-    .filter(
-      (word) => word.length > 2 && !word.endsWith("s") && !word.includes(`'`)
-    )
-    .map((word) => `'${Statement.delimName(word, true)}'`);
-
-  const objectFindStatement = [
-    `SELECT `,
-    `  column.TABLE_SCHEMA,`,
-    `  column.TABLE_NAME,`,
-    `  column.COLUMN_NAME,`,
-    `  key.CONSTRAINT_NAME,`,
-    `  column.DATA_TYPE, `,
-    `  column.CHARACTER_MAXIMUM_LENGTH,`,
-    `  column.NUMERIC_SCALE, `,
-    `  column.NUMERIC_PRECISION,`,
-    `  column.IS_NULLABLE, `,
-    // `  column.HAS_DEFAULT, `,
-    // `  column.COLUMN_DEFAULT, `,
-    `  column.COLUMN_TEXT, `,
-    `  column.IS_IDENTITY`,
-    `FROM QSYS2.SYSCOLUMNS2 as column`,
-    `LEFT JOIN QSYS2.syskeycst as key`,
-    `  on `,
-    `    column.table_schema = key.table_schema and`,
-    `    column.table_name = key.table_name and`,
-    `    column.column_name = key.column_name`,
-    `WHERE column.TABLE_SCHEMA = '${Statement.delimName(schema, true)}'`,
-    ...[
-      schemaTableRefs.length > 0
-        ? `AND (column.TABLE_NAME in (${validWords.join(
-            `, `
-          )}) OR (${schemaTableRefs
-            .map((ref) => {
-              const [schema, table] = ref.split(".");
-              const cleanedTable = table.replace(
-                /[,\/#!?$%\^&\*;:{}=\-_`~()]/g,
-                ""
-              );
-              return `(column.TABLE_SCHEMA = '${Statement.delimName(
-                schema,
-                true
-              )}' AND column.TABLE_NAME = '${Statement.delimName(
-                cleanedTable,
-                true
-              )}')`;
-            })
-            .join(" OR ")}))`
-        : `AND column.TABLE_NAME in (${validWords.join(`, `)})`,
-    ],
-    `ORDER BY column.ORDINAL_POSITION`,
-  ].join(` `);
-  // TODO
-  const result: TableColumn[] = await JobManager.runSQL(objectFindStatement);
-
-  result.forEach((row) => {
-    const tableName = row.TABLE_NAME.toLowerCase();
-    if (!tables[tableName]) tables[tableName] = [];
-    tables[tableName].push(row);
-  });
-  return tables;
+  return items.filter((item) => item !== undefined);
 }
 
 /**
