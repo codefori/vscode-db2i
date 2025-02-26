@@ -77,17 +77,23 @@ export async function getContextItems(input: string, options: PromptOptions = {}
         // If the user referenced a table, view, or other object, let's fetch related objects
         progress(`Finding objects related to ${prettyNameRef}...`);
 
-        const relatedObjects = await Schemas.getRelatedObjects(ref);
-        const contentItems = await getContentItemsForRefs(relatedObjects);
+        try {
+          const relatedObjects = await Schemas.getRelatedObjects(ref);
+          const contentItems = await getContentItemsForRefs(relatedObjects);
 
-        contextItems.push(...contentItems);
+          contextItems.push(...contentItems);
 
-        // Then also add some follow ups
-        if (relatedObjects.length === 1) {
-          followUps.push(`How is ${prettyNameRef} related to ${Statement.prettyName(relatedObjects[0].name)}?`);
-        } else if (ref.sqlType === `TABLE`) {
-          followUps.push(`What are some objects related to that table?`);
+          // Then also add some follow ups
+          if (relatedObjects.length === 1) {
+            followUps.push(`How is ${prettyNameRef} related to ${Statement.prettyName(relatedObjects[0].name)}?`);
+          } else if (ref.sqlType === `TABLE`) {
+            followUps.push(`What are some objects related to that table?`);
+          }
+        } catch (e) {
+          followUps.push(`What objects are in ${Statement.prettyName(ref.schema)}?`);
+          console.log(e);
         }
+
       }
 
     } else if (userInput.refs.length > 1) {
