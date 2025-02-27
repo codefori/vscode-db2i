@@ -1,10 +1,6 @@
 name: NodeJS with Webpack
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: pull_request
 
 jobs:
   build:
@@ -22,9 +18,14 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Type check
+      run: npm run typings
+
     - name: Build and package
       run: |
-        npm install
         npx webpack
         npm install -g vsce
         vsce package
@@ -49,6 +50,7 @@ jobs:
         body-includes: new build is available
 
     - name: Post comment
+      continue-on-error: true
       if: steps.fc.outputs.comment-id == ''
       uses: actions/github-script@v5
       with:
@@ -61,6 +63,7 @@ jobs:
           })
 
     - name: Update comment
+      continue-on-error: true
       if: steps.fc.outputs.comment-id != ''
       uses: peter-evans/create-or-update-comment@v1
       with:
