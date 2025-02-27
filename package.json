@@ -40,7 +40,7 @@
     "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
     "webpack": "vscd --clean && webpack --mode development",
     "webpack-dev": "vscd --clean && webpack --mode development",
-    "typings": "npx -p typescript tsc ./src/extension.ts --declaration --allowJs --emitDeclarationOnly --outDir types --esModuleInterop -t es2019 --moduleResolution node"
+    "typings": "npx -p typescript tsc ./src/extension.ts --allowJs --outDir types --esModuleInterop -t es2019 --moduleResolution node"
   },
   "contributes": {
     "configuration": [
