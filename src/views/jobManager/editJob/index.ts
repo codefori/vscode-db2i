@@ -1,5 +1,5 @@
 import { loadBase } from "../../../base";
-import { JDBCOptions } from "../../../connection/types";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import { ComplexTab } from "@halcyontech/vscode-ibmi-types/api/CustomUI";
 
 import getPerfTab from "./perfTab";

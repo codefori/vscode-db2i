@@ -1,6 +1,6 @@
 import { formatDescription } from ".";
 import { loadBase } from "../../../base";
-import { JDBCOptions } from "../../../connection/types";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 
 const dataTruncationText = `
 Specifies whether truncation of character data generates warnings and exceptions. When this property is "true", the following apply:

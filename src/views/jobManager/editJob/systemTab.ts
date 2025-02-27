@@ -1,5 +1,5 @@
-import { JDBCOptions } from "../../../connection/types";
-import { getInstance, loadBase } from "../../../base";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { getBase, getInstance, loadBase } from "../../../base";
 import { formatDescription } from ".";
 
 const autoCommitText = `
@@ -24,7 +24,7 @@ an independent ASP or the system default database. The following criteria determ
 `;
 
 export default function getSystemTab(options: JDBCOptions) {
-  const base = loadBase();
+  const base = getBase();
   const tab = base.customUI();
   const connection = getInstance().getConnection()
 

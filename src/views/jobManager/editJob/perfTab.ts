@@ -1,5 +1,5 @@
 import { loadBase } from "../../../base";
-import { JDBCOptions } from "../../../connection/types";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 
 export default function getPerfTab(options: JDBCOptions) {
   const base = loadBase();
