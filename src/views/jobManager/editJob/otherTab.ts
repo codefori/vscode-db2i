@@ -1,5 +1,5 @@
 import { formatDescription } from ".";
-import { loadBase } from "../../../base";
+import { getBase } from "../../../base";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 
 const dataTruncationText = `
@@ -33,7 +33,7 @@ forces the driver to get the correct data from the system.
 `;
 
 export default function getOtherTab(options: JDBCOptions) {
-  const base = loadBase();
+  const base = getBase();
   const tab = base.customUI();
 
   tab

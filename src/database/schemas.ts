@@ -2,6 +2,7 @@
 import path from "path";
 import { getInstance } from "../base";
 import { JobManager } from "../config";
+import { ResolvedSqlObject, BasicSQLObject } from "../types";
 
 export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types" | "logicals";
 export type PageData = { filter?: string, offset?: number, limit?: number };

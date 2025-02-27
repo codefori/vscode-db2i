@@ -1,7 +1,6 @@
 
-import vscode from "vscode"
 import { JobManager } from "../config";
-import Statement from "./statement";
+import { TableColumn } from "../types";
 
 export default class View {
   static getColumns(schema: string, name: string): Promise<TableColumn[]> {

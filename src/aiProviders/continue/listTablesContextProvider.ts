@@ -10,11 +10,10 @@ import * as vscode from "vscode";
 import Schemas from "../../database/schemas";
 import Table from "../../database/table";
 import {
-  buildSchemaDefinition,
-  getSqlContextItems
-} from "../context";
+  buildSchemaDefinition} from "../context";
 import Configuration from "../../configuration";
-import { Db2ContextItems, getContextItems } from "../prompt";
+import { getContextItems } from "../prompt";
+import { TableColumn, BasicSQLObject } from "../../types";
 
 const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",

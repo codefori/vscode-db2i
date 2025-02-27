@@ -1,8 +1,6 @@
 
-import vscode from "vscode"
 import { JobManager } from "../config";
-import { QueryOptions } from "@ibm/mapepire-js/dist/src/types";
-const {instance} = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
+import { SQLParm } from "../types";
 
 export type CallableType = "PROCEDURE"|"FUNCTION";
 export interface CallableRoutine {
@@ -46,7 +44,7 @@ export default class Callable {
     const results = await JobManager.runSQL<SQLParm>(
       [
         `SELECT * FROM QSYS2.SYSPARMS`,
-        `WHERE SPECIFIC_SCHEMA = ? AND ROW_TYPE in ('P', 'R') AND SPECIFIC_NAME in (${specificNames.map(n => `?`).join(`, `)})`,
+        `WHERE SPECIFIC_SCHEMA = ? AND ROW_TYPE in ('P', 'R') AND SPECIFIC_NAME in (${specificNames.map(() => `?`).join(`, `)})`,
         `ORDER BY ORDINAL_POSITION`
       ].join(` `),
       {
