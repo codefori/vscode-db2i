@@ -5,6 +5,7 @@ import Schemas, { AllSQLTypes, SQLType } from "../database/schemas";
 import Statement from "../database/statement";
 import { DB2_SYSTEM_PROMPT } from "./prompts";
 import { Db2ContextItems } from "./prompt";
+import { TableColumn, BasicSQLObject, ResolvedSqlObject } from "../types";
 
 export function canTalkToDb() {
   return JobManager.getSelection() !== undefined;

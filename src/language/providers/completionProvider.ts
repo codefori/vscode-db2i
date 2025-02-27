@@ -1,7 +1,6 @@
 import { CompletionItem, CompletionItemKind, languages } from "vscode";
 import { JobManager } from "../../config";
 import {
-  default as Database,
   SQLType,
 } from "../../database/schemas";
 import Statement from "../../database/statement";
@@ -14,6 +13,7 @@ import { isCallableType, getCallableParameters } from "./logic/callable";
 import { localAssistIsEnabled, remoteAssistIsEnabled } from "./logic/available";
 import { DbCache } from "./logic/cache";
 import { getSqlDocument } from "./logic/parse";
+import { TableColumn, BasicSQLObject } from "../../types";
 
 export interface CompletionType {
   order: string;

@@ -1,5 +1,5 @@
-import { loadBase } from "../../../base";
-import { JDBCOptions } from "../../../connection/types";
+import { getBase } from "../../../base";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import { ComplexTab } from "@halcyontech/vscode-ibmi-types/api/CustomUI";
 
 import getPerfTab from "./perfTab";
@@ -19,7 +19,7 @@ export async function editJobUi(
   options: JDBCOptions,
   jobName?: string
 ): Promise<JDBCOptions | undefined> {
-  const base = loadBase();
+  const base = getBase();
   const ui = base.customUI();
 
   const syspropsTab = getSystemTab(options);

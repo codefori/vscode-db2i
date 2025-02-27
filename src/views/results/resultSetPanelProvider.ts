@@ -9,6 +9,7 @@ import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { ObjectRef } from "../../language/sql/types";
 import Table from "../../database/table";
 import Statement from "../../database/statement";
+import { TableColumn } from "../../types";
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel;
