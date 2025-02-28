@@ -178,7 +178,7 @@ export async function getSqlContextItems(input: string): Promise<{items: Db2Cont
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     
-    if (token[i+1] && [`.`, `/`].includes(token[i+1]) && tokens[i + 2]) {
+    if (tokens[i+1] && [`.`, `/`].includes(tokens[i+1]) && tokens[i + 2]) {
       const nextToken = tokens[i + 2];
 
       possibleRefs.push({
