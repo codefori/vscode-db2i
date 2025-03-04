@@ -1,6 +1,6 @@
 import { getBase } from "../../../base";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
-import { ComplexTab } from "@halcyontech/vscode-ibmi-types/api/CustomUI";
+import { ComplexTab } from "@halcyontech/vscode-ibmi-types/webviews/CustomUI";
 
 import getPerfTab from "./perfTab";
 import getFormatTab from "./formatTab";
