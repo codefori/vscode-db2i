@@ -1,5 +1,5 @@
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
-import { ComponentIdentification, ComponentState, IBMiComponent } from "@halcyontech/vscode-ibmi-types/components/component";
+import { ComponentIdentification, ComponentState, IBMiComponent } from "@halcyontech/vscode-ibmi-types/api/components/component";
 import { posix } from "path";
 import { getValidatorSource, VALIDATOR_NAME, WRAPPER_NAME } from "./checker";
 import { JobManager } from "../../config";
