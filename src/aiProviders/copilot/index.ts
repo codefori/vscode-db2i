@@ -73,6 +73,7 @@ export function activateChat(context: vscode.ExtensionContext) {
             });
           }
 
+          // always include system message in Copilot
           const contextItems = await getContextItems(request.prompt, {
             progress: stream.progress,
             withDb2Prompt: true
