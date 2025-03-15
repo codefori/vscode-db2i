@@ -28,24 +28,13 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
         const name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
         const schema = Statement.noQuotes(Statement.delimName(ref.object.schema || defaultSchema, true));
 
-        let types: SQLType[] = standardObjects;
-
-        if (ref.isUDTF) {
-          types = [`functions`];
-        } else if (statementAt.type === StatementType.Call) {
-          types = [`procedures`];
-        }
-
-        const possibleObjects = await Schemas.getObjects(schema, types, {filter: name});
+        const possibleObjects = await Schemas.resolveObjects([{name, schema}]);
 
         if (possibleObjects.length) {
           const lines: string[] = [`-- Condensed version of the object definition`];
           for (const obj of possibleObjects) {
-            const type = InternalTypes[obj.type];
-            if (type) {
-              const contents = await Schemas.generateSQL(obj.schema, obj.name, type.toUpperCase(), true);
-              lines.push(contents, ``, ``);
-            }
+            const contents = await Schemas.generateSQL(obj.schema, obj.name, obj.sqlType, true);
+            lines.push(contents);
           }
 
           const document = await workspace.openTextDocument({ content: lines.join(`\n`), language: `sql` });

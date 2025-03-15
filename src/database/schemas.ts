@@ -16,7 +16,7 @@ const typeMap = {
 
 export const AllSQLTypes: SQLType[] = ["tables", "views", "aliases", "constraints", "functions", "variables", "indexes", "procedures", "sequences", "packages", "triggers", "types", "logicals"];
 
-export const InternalTypes: {[t: string]: string} = {
+export const InternalTypes: { [t: string]: string } = {
   "tables": `table`,
   "views": `view`,
   "aliases": `alias`,
@@ -34,12 +34,12 @@ export const InternalTypes: {[t: string]: string} = {
 
 export const SQL_ESCAPE_CHAR = `\\`;
 
-type BasicColumnType = string|number;
-interface PartStatementInfo {clause: string, parameters: BasicColumnType[]};
+type BasicColumnType = string | number;
+interface PartStatementInfo { clause: string, parameters: BasicColumnType[] };
 
 function getFilterClause(againstColumn: string, filter: string, noAnd?: boolean): PartStatementInfo {
   if (!filter) {
-    return {clause: ``, parameters: []};
+    return { clause: ``, parameters: [] };
   }
 
   let clause = `${noAnd ? '' : 'AND'} UPPER(${againstColumn})`;
@@ -63,7 +63,7 @@ function getFilterClause(againstColumn: string, filter: string, noAnd?: boolean)
   };
 }
 
-export interface ObjectReference {name: string, schema?: string};
+export interface ObjectReference { name: string, schema?: string };
 
 const BASE_RESOLVE_SELECT = [
   `select `,
@@ -91,14 +91,7 @@ export default class Schemas {
     let resolvedObjects: ResolvedSqlObject[] = [];
 
     // We need to remove any duplicates from the list of objects to resolve
-    const uniqueObjects = new Set<string>();
-    sqlObjects = sqlObjects.filter((obj) => {
-      if (!uniqueObjects.has(obj.name)) {
-        uniqueObjects.add(obj.name);
-        return true;
-      }
-      return false;
-    });
+    sqlObjects = sqlObjects.filter(o => sqlObjects.indexOf(o) === sqlObjects.findIndex(obj => obj.name === o.name && obj.schema === o.schema));
 
     // First, we use OBJECT_STATISTICS to resolve the object based on the library list.
     // But, if the object is qualified with a schema, we need to use that schema to get the correct object.
@@ -130,52 +123,64 @@ export default class Schemas {
       .map((obj) => obj.name);
     const qualified = sqlObjects.filter((obj) => obj.schema);
 
-    let baseStatement = [
-      `select s.routine_name as name, l.schema_name as schema, s.ROUTINE_TYPE as sqlType`,
-      `from qsys2.library_list_info as l`,
-      `right join qsys2.sysroutines as s on l.schema_name = s.routine_schema`,
-      `where `,
-      `  l.schema_name is not null and`,
-      `  s.routine_name in (${unqualified.map(() => `?`).join(`, `)})`,
-    ].join(` `);
-    parameters.push(...unqualified);
+    if (qualified.length && unqualified.length) {
+      let baseStatement = [
+        `select s.routine_name as name, l.schema_name as schema, s.ROUTINE_TYPE as sqlType`,
+        `from qsys2.library_list_info as l`,
+        `right join qsys2.sysroutines as s on l.schema_name = s.routine_schema`,
+        `where `,
+        `  l.schema_name is not null`,
+      ].join(` `);
 
-    if (qualified.length > 0) {
-      const qualifiedClause = qualified
-        .map((obj) => `(s.routine_name = ? AND s.routine_schema = ?)`)
-        .join(` OR `);
-      baseStatement += ` and (${qualifiedClause})`;
-      parameters.push(...qualified.flatMap((obj) => [obj.name, obj.schema]));
+      if (unqualified.length > 0) {
+        baseStatement += ` and s.routine_name in (${unqualified.map(() => `?`).join(`, `)})`;
+        parameters.push(...unqualified);
+      }
+
+      if (qualified.length > 0) {
+        const qualifiedClause = qualified
+          .map((obj) => `(s.routine_name = ? AND s.routine_schema = ?)`)
+          .join(` OR `);
+        baseStatement += ` and (${qualifiedClause})`;
+        parameters.push(...qualified.flatMap((obj) => [obj.name, obj.schema]));
+      }
+
+      statements.push(baseStatement);
     }
 
-    statements.push(baseStatement);
-
     if (statements.length === 0) {
-      return [];
+      return resolvedObjects;
     }
 
     const query = `${statements.join(" UNION ALL ")}`;
-    const objects: any[] = await JobManager.runSQL(query, { parameters });
 
-    resolvedObjects.push(
-      ...objects
-        .map((object) => ({
-          name: object.NAME,
-          schema: object.SCHEMA,
-          sqlType: object.SQLTYPE,
-        }))
-        .filter((o) => o.sqlType)
-    );
+    try {
+      const objects: any[] = await JobManager.runSQL(query, { parameters });
 
-    // add reslved objects to to ReferenceCache
-    resolvedObjects.forEach((obj) => {
-      const key = this.buildReferenceCacheKey(obj);
-      if (!ReferenceCache.has(key)) {
-        ReferenceCache.set(key, obj);
-      }
-    });
+      resolvedObjects.push(
+        ...objects
+          .map((object) => ({
+            name: object.NAME,
+            schema: object.SCHEMA,
+            sqlType: object.SQLTYPE,
+          }))
+          .filter((o) => o.sqlType)
+      );
 
-    return resolvedObjects;
+      // add reslved objects to to ReferenceCache
+      resolvedObjects.forEach((obj) => {
+        const key = this.buildReferenceCacheKey(obj);
+        if (!ReferenceCache.has(key)) {
+          ReferenceCache.set(key, obj);
+        }
+      });
+
+      return resolvedObjects;
+    } catch (e) {
+      console.warn(`Error resolving objects: ${JSON.stringify(sqlObjects)}`);
+      console.warn(e);
+      return [];
+    }
   }
 
   static async getRelatedObjects(
@@ -376,8 +381,7 @@ export default class Schemas {
     const objects: any[] = await JobManager.runSQL(
       [
         query,
-        `${details.limit ? `limit ${details.limit}` : ``} ${
-          details.offset ? `offset ${details.offset}` : ``
+        `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``
         }`,
       ].join(` `),
       {
@@ -442,12 +446,12 @@ export default class Schemas {
         `CALL QSYS2.GENERATE_SQL( ${options.join(`, `)} )`,
       ].join(` `), { parameters: [object, schema, internalType] });
 
-        // TODO: eventually .content -> .getContent(), it's not available yet
-        const contents = (
-          await connection.content.downloadStreamfileRaw(tempFilePath)
-        ).toString();
-        return contents;
-      }
+      // TODO: eventually .content -> .getContent(), it's not available yet
+      const contents = (
+        await connection.content.downloadStreamfileRaw(tempFilePath)
+      ).toString();
+      return contents;
+    }
     );
 
     return result;
@@ -458,9 +462,8 @@ export default class Schemas {
     name: string,
     type: string
   ): Promise<void> {
-    const query = `DROP ${
-      (this.isRoutineType(type) ? "SPECIFIC " : "") + type
-    } IF EXISTS ${schema}.${name}`;
+    const query = `DROP ${(this.isRoutineType(type) ? "SPECIFIC " : "") + type
+      } IF EXISTS ${schema}.${name}`;
     await getInstance().getContent().runSQL(query);
   }
 
@@ -470,9 +473,8 @@ export default class Schemas {
     newName: string,
     type: string
   ): Promise<void> {
-    const query = `RENAME ${
-      type === "view" ? "table" : type
-    } ${schema}.${oldName} TO ${newName}`;
+    const query = `RENAME ${type === "view" ? "table" : type
+      } ${schema}.${oldName} TO ${newName}`;
     await getInstance().getContent().runSQL(query);
   }
 
