@@ -2,6 +2,7 @@
 import path from "path";
 import { getInstance } from "../base";
 import { JobManager } from "../config";
+import { ResolvedSqlObject, BasicSQLObject } from "../types";
 
 export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types" | "logicals";
 export type PageData = { filter?: string, offset?: number, limit?: number };
@@ -62,13 +63,156 @@ function getFilterClause(againstColumn: string, filter: string, noAnd?: boolean)
   };
 }
 
+export interface ObjectReference {name: string, schema?: string};
+
+const BASE_RESOLVE_SELECT = [
+  `select `,
+  `OBJLONGNAME as name, `,
+  `OBJLONGSCHEMA as schema, `,
+  `case `,
+  `  when objtype = '*LIB' then 'SCHEMA'`,
+  `  else SQL_OBJECT_TYPE`,
+  `end as sqlType`,
+].join(` `);
+
+let ReferenceCache: Map<string, ResolvedSqlObject> = new Map<string, ResolvedSqlObject>();
 export default class Schemas {
+  private static buildReferenceCacheKey(obj: ObjectReference): string {
+    return `${obj.schema}.${obj.name}`;
+  }
+  /**
+   * Resolves to the following SQL types: SCHEMA, TABLE, VIEW, ALIAS, INDEX, FUNCTION and PROCEDURE
+   */
+  static async resolveObjects(
+    sqlObjects: ObjectReference[]
+  ): Promise<ResolvedSqlObject[]> {
+    let statements: string[] = [];
+    let parameters: BasicColumnType[] = [];
+    let resolvedObjects: ResolvedSqlObject[] = [];
+
+    // We need to remove any duplicates from the list of objects to resolve
+    const uniqueObjects = new Set<string>();
+    sqlObjects = sqlObjects.filter((obj) => {
+      if (!uniqueObjects.has(obj.name)) {
+        uniqueObjects.add(obj.name);
+        return true;
+      }
+      return false;
+    });
+
+    // First, we use OBJECT_STATISTICS to resolve the object based on the library list.
+    // But, if the object is qualified with a schema, we need to use that schema to get the correct object.
+    for (const obj of sqlObjects) {
+      const key = this.buildReferenceCacheKey(obj);
+      // check if we have already resolved this object
+      if (ReferenceCache.has(key)) {
+        resolvedObjects.push(ReferenceCache.get(key!));
+        continue;
+      }
+      if (obj.schema) {
+        statements.push(
+          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics(?, '*ALL', object_name => ?))`
+        );
+        parameters.push(obj.schema, obj.name);
+      } else {
+        statements.push(
+          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics('*LIBL', '*ALL', object_name => ?))`
+        );
+        parameters.push(obj.name);
+      }
+    }
+
+    // We have to do a little bit more logic for routines, because they are not included properly in OBJECT_STATISTICS.
+    // So we do a join against the library list view and SYSROUTINES (which has a list of all routines in a given schema)
+    // to get the correct schema and name.
+    const unqualified = sqlObjects
+      .filter((obj) => !obj.schema)
+      .map((obj) => obj.name);
+    const qualified = sqlObjects.filter((obj) => obj.schema);
+
+    let baseStatement = [
+      `select s.routine_name as name, l.schema_name as schema, s.ROUTINE_TYPE as sqlType`,
+      `from qsys2.library_list_info as l`,
+      `right join qsys2.sysroutines as s on l.schema_name = s.routine_schema`,
+      `where `,
+      `  l.schema_name is not null and`,
+      `  s.routine_name in (${unqualified.map(() => `?`).join(`, `)})`,
+    ].join(` `);
+    parameters.push(...unqualified);
+
+    if (qualified.length > 0) {
+      const qualifiedClause = qualified
+        .map((obj) => `(s.routine_name = ? AND s.routine_schema = ?)`)
+        .join(` OR `);
+      baseStatement += ` and (${qualifiedClause})`;
+      parameters.push(...qualified.flatMap((obj) => [obj.name, obj.schema]));
+    }
+
+    statements.push(baseStatement);
+
+    if (statements.length === 0) {
+      return [];
+    }
+
+    const query = `${statements.join(" UNION ALL ")}`;
+    const objects: any[] = await JobManager.runSQL(query, { parameters });
+
+    resolvedObjects.push(
+      ...objects
+        .map((object) => ({
+          name: object.NAME,
+          schema: object.SCHEMA,
+          sqlType: object.SQLTYPE,
+        }))
+        .filter((o) => o.sqlType)
+    );
+
+    // add reslved objects to to ReferenceCache
+    resolvedObjects.forEach((obj) => {
+      const key = this.buildReferenceCacheKey(obj);
+      if (!ReferenceCache.has(key)) {
+        ReferenceCache.set(key, obj);
+      }
+    });
+
+    return resolvedObjects;
+  }
+
+  static async getRelatedObjects(
+    object: ResolvedSqlObject
+  ): Promise<ResolvedSqlObject[]> {
+    const sql = [
+      `with refs as (`,
+      `  SELECT `,
+      `    schema_name as schema, `,
+      `    sql_name as name, `,
+      `    case when sql_object_type = 'FOREIGN KEY' then 'TABLE' else sql_object_type end as type`,
+      `  FROM TABLE(SYSTOOLS.RELATED_OBJECTS(?, ?))`,
+      `)`,
+      `select * from refs `,
+      `where type in ('TABLE', 'FUNCTION', 'PROCEDURE')`,
+    ].join(` `);
+
+    const related: any[] = await JobManager.runSQL(sql, {
+      parameters: [object.schema, object.name],
+    });
+    return related.map((item) => ({
+      name: item.NAME,
+      schema: item.SCHEMA,
+      sqlType: item.TYPE,
+    }));
+  }
+
   /**
    * @param schema Not user input
    */
-  static async getObjects(schema: string, types: SQLType[], details: PageData = {}): Promise<BasicSQLObject[]> {
+  static async getObjects(
+    schema: string,
+    types: SQLType[],
+    details: PageData = {}
+  ): Promise<BasicSQLObject[]> {
     const selects: string[] = [];
-    let parameters: (string|number)[] = [];
+    let parameters: (string | number)[] = [];
     let filter: PartStatementInfo;
 
     // If there are multiple types, we build a union. It's important that the ordering of the columns in the selects are consistant:
@@ -77,11 +221,15 @@ export default class Schemas {
     for (const type of types) {
       switch (type) {
         case `schemas`:
-          selects.push([
-            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, SCHEMA_NAME as NAME, SCHEMA_TEXT as TEXT, SYSTEM_SCHEMA_NAME as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
-            `from QSYS2.SYSSCHEMAS`,
-            details.filter ? `where UPPER(SCHEMA_NAME) = ? or UPPER(SYSTEM_SCHEMA_NAME) = ?` : ``,
-          ].join(` `));
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, SCHEMA_NAME as NAME, SCHEMA_TEXT as TEXT, SYSTEM_SCHEMA_NAME as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `from QSYS2.SYSSCHEMAS`,
+              details.filter
+                ? `where UPPER(SCHEMA_NAME) = ? or UPPER(SYSTEM_SCHEMA_NAME) = ?`
+                : ``,
+            ].join(` `)
+          );
 
           if (details.filter) {
             parameters.push(details.filter, details.filter);
@@ -93,77 +241,93 @@ export default class Schemas {
         case `aliases`:
         case `logicals`:
           filter = getFilterClause(`TABLE_NAME`, details.filter);
-          selects.push([
-            `select '${type}' as OBJ_TYPE, TABLE_TYPE as TABLE_TYPE, TABLE_NAME as NAME, TABLE_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, BASE_TABLE_SCHEMA as BASE_SCHEMA, BASE_TABLE_NAME as BASE_OBJ`,
-            `from QSYS2.SYSTABLES`,
-            `where TABLE_SCHEMA = ? and TABLE_TYPE in (${typeMap[type].map(item => `'${item}'`).join(`, `)}) ${filter.clause}`,
-          ].join(` `));
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, TABLE_TYPE as TABLE_TYPE, TABLE_NAME as NAME, TABLE_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, BASE_TABLE_SCHEMA as BASE_SCHEMA, BASE_TABLE_NAME as BASE_OBJ`,
+              `from QSYS2.SYSTABLES`,
+              `where TABLE_SCHEMA = ? and TABLE_TYPE in (${typeMap[type]
+                .map((item) => `'${item}'`)
+                .join(`, `)}) ${filter.clause}`,
+            ].join(` `)
+          );
 
           parameters.push(schema, ...filter.parameters);
           break;
 
         case `constraints`:
           filter = getFilterClause(`CONSTRAINT_NAME`, details.filter);
-          selects.push([
-            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
-            `from QSYS2.SYSCST`,
-            `where CONSTRAINT_SCHEMA = ? ${filter.clause}`,
-          ].join(` `));
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+              `from QSYS2.SYSCST`,
+              `where CONSTRAINT_SCHEMA = ? ${filter.clause}`,
+            ].join(` `)
+          );
 
           parameters.push(schema, ...filter.parameters);
           break;
 
         case `functions`:
           filter = getFilterClause(`ROUTINE_NAME`, details.filter);
-          selects.push([
-            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
-            `from QSYS2.SYSFUNCS`,
-            `where ROUTINE_SCHEMA = ? ${filter.clause} and FUNCTION_ORIGIN in ('E','U')`,
-          ].join(` `));
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `from QSYS2.SYSFUNCS`,
+              `where ROUTINE_SCHEMA = ? ${filter.clause} and FUNCTION_ORIGIN in ('E','U')`,
+            ].join(` `)
+          );
 
           parameters.push(schema, ...filter.parameters);
           break;
 
         case `variables`:
           filter = getFilterClause(`VARIABLE_NAME`, details.filter);
-          selects.push([
-            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, VARIABLE_NAME as NAME, VARIABLE_TEXT as TEXT, SYSTEM_VAR_NAME as SYS_NAME, SYSTEM_VAR_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
-            `from QSYS2.SYSVARIABLES`,
-            `where VARIABLE_SCHEMA = ? ${filter.clause}`,
-          ].join(` `));
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, VARIABLE_NAME as NAME, VARIABLE_TEXT as TEXT, SYSTEM_VAR_NAME as SYS_NAME, SYSTEM_VAR_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `from QSYS2.SYSVARIABLES`,
+              `where VARIABLE_SCHEMA = ? ${filter.clause}`,
+            ].join(` `)
+          );
 
           parameters.push(schema, ...filter.parameters);
           break;
 
         case `indexes`:
           filter = getFilterClause(`INDEX_NAME`, details.filter);
-          selects.push([
-            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, INDEX_NAME as NAME, INDEX_TEXT as TEXT, SYSTEM_INDEX_NAME as SYS_NAME, SYSTEM_INDEX_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
-            `from QSYS2.SYSINDEXES`,
-            `where INDEX_SCHEMA = ? ${filter.clause}`,
-          ].join(` `));
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, INDEX_NAME as NAME, INDEX_TEXT as TEXT, SYSTEM_INDEX_NAME as SYS_NAME, SYSTEM_INDEX_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+              `from QSYS2.SYSINDEXES`,
+              `where INDEX_SCHEMA = ? ${filter.clause}`,
+            ].join(` `)
+          );
 
           parameters.push(schema, ...filter.parameters);
           break;
 
         case `procedures`:
           filter = getFilterClause(`ROUTINE_NAME`, details.filter);
-          selects.push([
-            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, ROUTINE_NAME as NAME, ROUTINE_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
-            `from QSYS2.SYSPROCS`,
-            `where ROUTINE_SCHEMA = ? ${filter.clause}`,
-          ].join(` `));
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, ROUTINE_NAME as NAME, ROUTINE_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `from QSYS2.SYSPROCS`,
+              `where ROUTINE_SCHEMA = ? ${filter.clause}`,
+            ].join(` `)
+          );
 
           parameters.push(schema, ...filter.parameters);
           break;
 
         case `sequences`:
           filter = getFilterClause(`SEQUENCE_NAME`, details.filter);
-          selects.push([
-            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, SEQUENCE_NAME as NAME, SEQUENCE_TEXT as TEXT, SYSTEM_SEQ_NAME as SYS_NAME, SYSTEM_SEQ_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
-            `from QSYS2.SYSSEQUENCES`,
-            `where SEQUENCE_SCHEMA = ? ${filter.clause}`,
-          ].join(` `));
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, SEQUENCE_NAME as NAME, SEQUENCE_TEXT as TEXT, SYSTEM_SEQ_NAME as SYS_NAME, SYSTEM_SEQ_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `from QSYS2.SYSSEQUENCES`,
+              `where SEQUENCE_SCHEMA = ? ${filter.clause}`,
+            ].join(` `)
+          );
 
           parameters.push(schema, ...filter.parameters);
           break;
@@ -179,41 +343,49 @@ export default class Schemas {
 
         case `triggers`:
           filter = getFilterClause(`TRIGGER_NAME`, details.filter);
-          selects.push([
-            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, TRIGGER_NAME as NAME, TRIGGER_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, EVENT_OBJECT_SCHEMA as BASE_SCHEMA, EVENT_OBJECT_TABLE as BASE_OBJ`,
-            `from QSYS2.SYSTRIGGERS`,
-            `where TRIGGER_SCHEMA = ? ${filter.clause}`,
-          ].join(` `));
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, TRIGGER_NAME as NAME, TRIGGER_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, EVENT_OBJECT_SCHEMA as BASE_SCHEMA, EVENT_OBJECT_TABLE as BASE_OBJ`,
+              `from QSYS2.SYSTRIGGERS`,
+              `where TRIGGER_SCHEMA = ? ${filter.clause}`,
+            ].join(` `)
+          );
 
           parameters.push(schema, ...filter.parameters);
           break;
 
         case `types`:
           filter = getFilterClause(`USER_DEFINED_TYPE_NAME`, details.filter);
-          selects.push([
-            `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, USER_DEFINED_TYPE_NAME as NAME, TYPE_TEXT as TEXT, SYSTEM_TYPE_NAME as SYS_NAME, SYSTEM_TYPE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
-            `from QSYS2.SYSTYPES`,
-            `where USER_DEFINED_TYPE_SCHEMA = ? ${filter.clause}`,
-          ].join(` `));
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, USER_DEFINED_TYPE_NAME as NAME, TYPE_TEXT as TEXT, SYSTEM_TYPE_NAME as SYS_NAME, SYSTEM_TYPE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `from QSYS2.SYSTYPES`,
+              `where USER_DEFINED_TYPE_SCHEMA = ? ${filter.clause}`,
+            ].join(` `)
+          );
 
           parameters.push(schema, ...filter.parameters);
           break;
       }
     }
 
-    const query = `with results as (${selects.join(" UNION ALL ")}) select * from results Order by QSYS2.DELIMIT_NAME(NAME) asc`;
+    const query = `with results as (${selects.join(
+      " UNION ALL "
+    )}) select * from results Order by QSYS2.DELIMIT_NAME(NAME) asc`;
 
     const objects: any[] = await JobManager.runSQL(
       [
-      query,
-      `${details.limit ? `limit ${details.limit}` : ``} ${details.offset ? `offset ${details.offset}` : ``}`
+        query,
+        `${details.limit ? `limit ${details.limit}` : ``} ${
+          details.offset ? `offset ${details.offset}` : ``
+        }`,
       ].join(` `),
       {
-        parameters
+        parameters,
       }
     );
 
-    return objects.map(object => ({
+    return objects.map((object) => ({
       type: object.OBJ_TYPE,
       tableType: object.TABLE_TYPE,
       schema,
@@ -226,9 +398,9 @@ export default class Schemas {
       },
       basedOn: {
         schema: object.BASE_SCHEMA || undefined,
-        name: object.BASE_OBJ || undefined
-      }
-    } as BasicSQLObject));
+        name: object.BASE_OBJ || undefined,
+      },
+    }));
   }
 
   /**
@@ -270,21 +442,37 @@ export default class Schemas {
         `CALL QSYS2.GENERATE_SQL( ${options.join(`, `)} )`,
       ].join(` `), { parameters: [object, schema, internalType] });
 
-      // TODO: eventually .content -> .getContent(), it's not available yet
-      const contents = (await connection.content.downloadStreamfileRaw(tempFilePath)).toString();
-      return contents;
-    })
+        // TODO: eventually .content -> .getContent(), it's not available yet
+        const contents = (
+          await connection.content.downloadStreamfileRaw(tempFilePath)
+        ).toString();
+        return contents;
+      }
+    );
 
     return result;
   }
 
-  static async deleteObject(schema: string, name: string, type: string): Promise<void> {
-    const query = `DROP ${(this.isRoutineType(type) ? 'SPECIFIC ' : '') + type} IF EXISTS ${schema}.${name}`;
+  static async deleteObject(
+    schema: string,
+    name: string,
+    type: string
+  ): Promise<void> {
+    const query = `DROP ${
+      (this.isRoutineType(type) ? "SPECIFIC " : "") + type
+    } IF EXISTS ${schema}.${name}`;
     await getInstance().getContent().runSQL(query);
   }
 
-  static async renameObject(schema: string, oldName: string, newName: string, type: string): Promise<void> {
-    const query = `RENAME ${type === 'view' ? 'table' : type} ${schema}.${oldName} TO ${newName}`;
+  static async renameObject(
+    schema: string,
+    oldName: string,
+    newName: string,
+    type: string
+  ): Promise<void> {
+    const query = `RENAME ${
+      type === "view" ? "table" : type
+    } ${schema}.${oldName} TO ${newName}`;
     await getInstance().getContent().runSQL(query);
   }
 

@@ -11,6 +11,7 @@ import Types from "../types";
 import Statement from "../../database/statement";
 import { getCopyUi } from "./copyUI";
 import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement } from "./statements";
+import { BasicSQLObject } from "../../types";
 
 const itemIcons = {
   "table": `split-horizontal`,

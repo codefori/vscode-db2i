@@ -1,6 +1,7 @@
 import Callable, { CallableRoutine, CallableSignature, CallableType } from "../../../database/callable";
 import Schemas, { PageData, SQLType } from "../../../database/schemas";
 import Table from "../../../database/table";
+import { SQLParm, BasicSQLObject, TableColumn } from "../../../types";
 
 export interface RoutineDetail {
   routine: CallableRoutine;

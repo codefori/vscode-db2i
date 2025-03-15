@@ -1,6 +1,5 @@
 import { CodeForIBMi } from "@halcyontech/vscode-ibmi-types";
-import Instance from "@halcyontech/vscode-ibmi-types/api/Instance";
-import {CustomUI} from "@halcyontech/vscode-ibmi-types/api/CustomUI";
+import Instance from "@halcyontech/vscode-ibmi-types/Instance";
 import { Extension, ExtensionContext, extensions } from "vscode";
 import { SQLStatementChecker } from "./connection/syntaxChecker";
 

@@ -1,8 +1,9 @@
-import { JDBCOptions } from "../../../connection/types";
-import { loadBase } from "../../../base";
+
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { getBase } from "../../../base";
 
 export default function getFormatTab(options: JDBCOptions) {
-  const base = loadBase();
+  const base = getBase();
   const tab = base.customUI();
 
   tab

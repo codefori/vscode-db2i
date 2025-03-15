@@ -1,34 +1,47 @@
 import * as vscode from "vscode";
-import Statement from "../../database/statement";
 import {
   canTalkToDb,
-  findPossibleTables,
-  getCurrentSchema,
-  getSystemStatus,
-  refsToMarkdown,
 } from "../context";
-import { JobManager } from "../../config";
+import { getContextItems, Db2ContextItems } from "../prompt";
+import { registerSqlRunTool, RUN_SQL_TOOL_ID } from "./sqlTool";
 
 const CHAT_ID = `vscode-db2i.chat`;
 
 interface IDB2ChatResult extends vscode.ChatResult {
   metadata: {
     command: string;
+    followUps: string[];
+    statement?: string;
   };
 }
 
-export async function registerCopilotProvider(context: vscode.ExtensionContext) {
+export async function registerCopilotProvider(
+  context: vscode.ExtensionContext
+) {
   const copilot = vscode.extensions.getExtension(`github.copilot-chat`);
 
   if (copilot) {
     if (!copilot.isActive) {
-      await copilot.activate()
+      await copilot.activate();
     }
 
     activateChat(context);
   }
 }
 
+/**
+ * Activates the chat functionality for the extension.
+ *
+ * @param context - The extension context provided by VS Code.
+ *
+ * PROMPT FORMAT:
+ *  - 1. SCHEMA Definiton (semantic)
+ *  - 2. TABLE References
+ *  - 3. DB2 Guidelines
+ *  - 4. user prompt
+ *
+ * The chat participant is created with the chatHandler and added to the extension's subscriptions.
+ */
 export function activateChat(context: vscode.ExtensionContext) {
   // chatHandler deals with the input from the chat windows,
   // and uses streamModelResponse to send the response back to the chat window
@@ -38,106 +51,81 @@ export function activateChat(context: vscode.ExtensionContext) {
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken
   ): Promise<IDB2ChatResult> => {
-    const copilotFamily = request.model.family;
-    let messages: vscode.LanguageModelChatMessage[];
-
     if (canTalkToDb()) {
-      let usingSchema = getCurrentSchema();
-
       switch (request.command) {
-        case `activity`:
-          stream.progress(`Grabbing Information about IBM i system`);
-          const data = await getSystemStatus();
-          console.log(
-            `summarize the following data in a readable paragraph: ${data}`
-          );
-          messages = [
-            vscode.LanguageModelChatMessage.User(
-              `You are a an IBM i savant speciallizing in database features in Db2 for i. Please provide a summary of the current IBM i system state based on the developer requirement.`
-            ),
-            vscode.LanguageModelChatMessage.User(
-              `Here is the current IBM i state: ${data}`
-            ),
-            vscode.LanguageModelChatMessage.User(request.prompt),
-          ];
-
-          await copilotRequest(copilotFamily, messages, {}, token, stream);
-
-          return { metadata: { command: "activity" } };
-
-        case `set-schema`:
-          stream.progress(`Setting Current Schema for SQL Job`);
-          const newSchema = request.prompt.split(' ')[0];
-          if (newSchema) {
-            const curJob = JobManager.getSelection();
-            if (curJob) {
-              const result = await curJob.job.setCurrentSchema(newSchema);
-              if (result) {
-                stream.progress(`Set Current Schema: ${newSchema}✅`);
-                usingSchema = newSchema;
-              }
-            }
-            return;
-          } 
-
         default:
-          stream.progress(
-            `Getting information from ${Statement.prettyName(usingSchema)}...`
-          );
-          let refs = await findPossibleTables(
-            stream,
-            usingSchema,
-            request.prompt.split(` `)
-          );
-
-          const markdownRefs = refsToMarkdown(refs);
-
-          messages = [
-            vscode.LanguageModelChatMessage.Assistant(
-              `You are a an IBM i savant speciallizing in database features in Db2 for i. Your job is to help developers write and debug their SQL along with offering SQL programming advice.`
-            ),
-            vscode.LanguageModelChatMessage.Assistant(
-              `The developers current schema is ${usingSchema}.`
-            ),
-            vscode.LanguageModelChatMessage.Assistant(
-              `Provide the developer with SQL statements or relevant information based on the user's prompt and referenced table structures. Always include practical code examples where applicable. Ensure all suggestions are directly applicable to the structures and data provided and avoid making suggestions outside the scope of the available information.`
-            ),
-          ];
-
-          if (context.history.length > 0) {
-            const historyMessages = context.history.map(h => {
-                if ('prompt' in h) {
-                    return vscode.LanguageModelChatMessage.Assistant(h.prompt);
-                } else {
-                    const responseContent = h.response
-                        .filter(r => r.value instanceof vscode.MarkdownString)
-                        .map(r => (r.value as vscode.MarkdownString).value)
-                        .join('\n\n');
-                    return vscode.LanguageModelChatMessage.Assistant(responseContent);
-                }
-            });
-        
-            messages.push(...historyMessages);
-        }
-
-          if (Object.keys(refs).length > 0) {
-            for (const tableRef of markdownRefs) {
-              messages.push(
-                vscode.LanguageModelChatMessage.Assistant(
-                  `Here are new table references for ${tableRef.TABLE_NAME} (Schema: ${tableRef.SCHMEA})\nFormat: column_name (column_text) type(length:precision) is_identity is_nullable\n${tableRef.COLUMN_INFO}`
-                ),
-              );
-
-            }
-          }
-
           stream.progress(`Building response...`);
 
-          messages.push(vscode.LanguageModelChatMessage.User(request.prompt))
+          let messages: vscode.LanguageModelChatMessage[] = [];
 
-          await copilotRequest(request.model.family, messages, {}, token, stream);
+          // get history
+          if (context.history.length > 0) {
+            messages = context.history.map((h) => {
+              if ("prompt" in h) {
+                return vscode.LanguageModelChatMessage.Assistant(h.prompt);
+              } else {
+                const responseContent = h.response
+                  .filter((r) => r.value instanceof vscode.MarkdownString)
+                  .map((r) => (r.value as vscode.MarkdownString).value)
+                  .join("\n\n");
+                return vscode.LanguageModelChatMessage.Assistant(responseContent);
+              }
+            });
+          }
 
-          return { metadata: { command: "build" } };
+          const contextItems = await getContextItems(request.prompt, {
+            progress: stream.progress,
+            withDb2Prompt: true
+          });
+
+          messages.push(...contextItems.context.map(c => {
+            // Passing in the same breaks the request?
+            return vscode.LanguageModelChatMessage.Assistant(c.content);
+          }));
+
+          messages.push(
+            vscode.LanguageModelChatMessage.User(request.prompt)
+          );
+
+
+          const doRequest = (tools: vscode.LanguageModelToolInformation[] = []) => {
+            return copilotRequest(
+              request.model.family,
+              messages,
+              {
+                tools,
+                toolMode: vscode.LanguageModelChatToolMode.Required
+              },
+              token,
+              stream
+            );
+          }
+
+          // The first request we do can do two things: return either a stream OR return a tool request
+          const tools = vscode.lm.tools.filter(t => request.toolReferences.some(r => r.name === t.name));
+          let result = await doRequest(tools);
+
+          // Then, if there is a tool request, we do the logic to invoke the tool
+          if (result.toolCalls.length > 0) {
+            for (const toolcall of result.toolCalls) {
+              if (toolcall.name === RUN_SQL_TOOL_ID) {
+                const result = await vscode.lm.invokeTool(toolcall.name, { toolInvocationToken: request.toolInvocationToken, input: toolcall.input });
+                const resultOut = result.content.map(c => {
+                  if (c instanceof vscode.LanguageModelTextPart) {
+                    return c.value;
+                  }
+                }).filter(c => c !== undefined).join("\n\n");
+
+                messages = [
+                  vscode.LanguageModelChatMessage.User(`Please review and summarize the following result set:\n\n${resultOut}\n\nThe original user request was: ${request}`)
+                ];
+              }
+            }
+
+            result = await doRequest();
+          }
+
+          return { metadata: { command: "build", followUps: contextItems.followUps, statement: result.sqlCodeBlock } };
       }
     } else {
       throw new Error(
@@ -148,8 +136,31 @@ export function activateChat(context: vscode.ExtensionContext) {
 
   const chat = vscode.chat.createChatParticipant(CHAT_ID, chatHandler);
   chat.iconPath = new vscode.ThemeIcon(`database`);
+  chat.followupProvider = {
+    provideFollowups(result, context, token) {
+      const followups: vscode.ChatFollowup[] = [];
+
+      if (result.metadata) {
+        for (const followup of result.metadata.followUps) {
+          followups.push({
+            prompt: followup,
+            participant: CHAT_ID,
+          });
+        }
+      }
+
+      return followups;
+    },
+  }
 
   context.subscriptions.push(chat);
+  registerSqlRunTool(context);
+}
+
+interface Result {
+  output: string;
+  toolCalls: vscode.LanguageModelToolCallPart[];
+  sqlCodeBlock?: string;
 }
 
 async function copilotRequest(
@@ -158,14 +169,33 @@ async function copilotRequest(
   options: vscode.LanguageModelChatRequestOptions,
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream
-): Promise<void> {
+): Promise<Result | undefined> {
   const models = await vscode.lm.selectChatModels({ family: model });
   if (models.length > 0) {
     const [first] = models;
+    options.justification = `Doing cool stuff`
     const response = await first.sendRequest(messages, options, token);
 
-    for await (const fragment of response.text) {
-      stream.markdown(fragment);
+    const result: Result = {
+      output: "",
+      toolCalls: []
+    };
+
+    for await (const fragment of response.stream) {
+      if (fragment instanceof vscode.LanguageModelTextPart) {
+        stream.markdown(fragment.value);
+        result.output += fragment.value;
+      } else if (fragment instanceof vscode.LanguageModelToolCallPart) {
+        result.toolCalls.push(fragment);
+      }
     }
+
+    const codeBlockStart = result.output.indexOf("```sql");
+    const codeBlockEnd = result.output.indexOf("```", codeBlockStart + 6);
+    if (codeBlockStart !== -1 && codeBlockEnd !== -1) {
+      result.sqlCodeBlock = result.output.substring(codeBlockStart + 6, codeBlockEnd);
+    }
+
+    return result;
   }
 }

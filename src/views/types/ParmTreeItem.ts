@@ -1,6 +1,7 @@
 
 import vscode from "vscode";
 import Statement from "../../database/statement";
+import { SQLParm } from "../../types";
 
 const icons = {
   IN: `arrow-right`,
@@ -33,7 +34,7 @@ export default class ParmTreeItem extends vscode.TreeItem {
     const descriptionParts = [
       data.PARAMETER_MODE,
       detail,
-      data.IS_NULLABLE === `Y` ? `nullable` : ``,
+      data.IS_NULLABLE === `YES` ? `nullable` : ``,
       data.DEFAULT,
       data.LONG_COMMENT,
     ]

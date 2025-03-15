@@ -1,4 +1,5 @@
 import { CompletionItemKind, CompletionItem } from "vscode";
+import { SQLParm, TableColumn } from "../../../types";
 
 export function createCompletionItem(
   name: string,

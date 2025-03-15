@@ -1,9 +1,9 @@
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
-import { ComponentIdentification, ComponentState, IBMiComponent } from "@halcyontech/vscode-ibmi-types/components/component";
+import { ComponentIdentification, ComponentState, IBMiComponent } from "@halcyontech/vscode-ibmi-types/api/components/component";
 import { posix } from "path";
 import { getValidatorSource, VALIDATOR_NAME, WRAPPER_NAME } from "./checker";
 import { JobManager } from "../../config";
-import { getInstance } from "../../base";
+import { getBase, getInstance } from "../../base";
 
 interface SqlCheckError {
   CURSTMTLENGTH: number;
@@ -42,14 +42,23 @@ export class SQLStatementChecker implements IBMiComponent {
   private readonly functionName = VALIDATOR_NAME;
   private readonly currentVersion = 5;
 
-  private library = "";
+  private library: string|undefined;
+
+  private getLibrary(connection: IBMi) {
+    if (!this.library) {
+      this.library = connection?.config?.tempLibrary.toUpperCase() || `ILEDITOR`;
+    }
+
+    return this.library;
+  }
 
   static get(): SQLStatementChecker|undefined {
     return getInstance()?.getConnection()?.getComponent<SQLStatementChecker>(SQLStatementChecker.ID);
   }
 
   reset() {
-    this.library = "";
+    // This is called when connecting to a new system.
+    this.library = undefined;
   }
 
   getIdentification(): ComponentIdentification {
@@ -70,14 +79,14 @@ export class SQLStatementChecker implements IBMiComponent {
   }
 
   async getRemoteState(connection: IBMi) {
-    this.library = connection.config?.tempLibrary.toUpperCase() || "ILEDITOR";
+    const lib = this.getLibrary(connection);
 
-    const wrapperVersion = await SQLStatementChecker.getVersionOf(connection, this.library, WRAPPER_NAME);
+    const wrapperVersion = await SQLStatementChecker.getVersionOf(connection, lib, WRAPPER_NAME);
     if (wrapperVersion < this.currentVersion) {
       return `NeedsUpdate`;
     }
 
-    const installedVersion = await SQLStatementChecker.getVersionOf(connection, this.library, this.functionName);
+    const installedVersion = await SQLStatementChecker.getVersionOf(connection, lib, this.functionName);
     if (installedVersion < this.currentVersion) {
       return `NeedsUpdate`;
     }
@@ -88,7 +97,7 @@ export class SQLStatementChecker implements IBMiComponent {
   update(connection: IBMi): ComponentState | Promise<ComponentState> {
     return connection.withTempDirectory(async tempDir => {
       const tempSourcePath = posix.join(tempDir, `sqlchecker.sql`);
-      await connection.content.writeStreamfileRaw(tempSourcePath, Buffer.from(this.getSource(), "utf-8"));
+      await connection.content.writeStreamfileRaw(tempSourcePath, Buffer.from(this.getSource(connection), "utf-8"));
       const result = await connection.runCommand({
         command: `RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SYS)`,
         noLibList: true
@@ -102,14 +111,19 @@ export class SQLStatementChecker implements IBMiComponent {
     });
   }
 
-  private getSource() {
-    return getValidatorSource(this.library, this.currentVersion);
+  private getSource(connection: IBMi) {
+    return getValidatorSource(this.getLibrary(connection), this.currentVersion);
   }
 
   async call(statement: string): Promise<SqlSyntaxError|undefined> {
+    const connection = getInstance()?.getConnection();
+    if (!connection) return undefined;
+
     const currentJob = JobManager.getSelection();
-    if (currentJob) {
-      const result = await currentJob.job.execute<SqlCheckError>(`select * from table(${this.library}.${this.functionName}(?)) x`, {parameters: [statement]});
+    const library = this.getLibrary(connection);
+
+    if (currentJob && library) {
+      const result = await currentJob.job.execute<SqlCheckError>(`select * from table(${library}.${this.functionName}(?)) x`, {parameters: [statement]});
       
       if (!result.success || result.data.length === 0) return;
 
@@ -121,10 +135,14 @@ export class SQLStatementChecker implements IBMiComponent {
   }
 
   async checkMultipleStatements(statements: string[]): Promise<SqlSyntaxError[]|undefined> {
-    const checks = statements.map(stmt => `select * from table(${this.library}.${this.functionName}(?)) x`).join(` union all `);
-    const currentJob = JobManager.getSelection();
+    const connection = getInstance()?.getConnection();
+    if (!connection) return undefined;
 
-    if (currentJob) {
+    const currentJob = JobManager.getSelection();
+    const library = this.getLibrary(connection);
+
+    if (currentJob && library) {
+      const checks = statements.map(stmt => `select * from table(${library}.${this.functionName}(?)) x`).join(` union all `);
       const stmt = currentJob.job.query<SqlCheckError>(checks, {parameters: statements});
       const result = await stmt.execute(statements.length);
       stmt.close();

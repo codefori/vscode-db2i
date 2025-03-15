@@ -11,17 +11,34 @@
           {
             "name": "build",
             "description": "Build an SQL statement"
-          },
-          {
-            "name": "activity",
-            "description": "Summarize the activity on the system"
-          },
-          {
-            "name": "set-schema",
-            "description": "Set the current schema"
           }
         ]
       }
+    ],
+    "languageModelTools": [
+			{
+				"name": "vscode-db2i-chat-sqlRunnerTool",
+				"tags": [
+					"sql"
+				],
+				"canBeReferencedInPrompt": true,
+        "toolReferenceName": "result",
+				"displayName": "Run SQL statement",
+				"icon": "$(play)",
+				"modelDescription": "Run an SQL statement and return the result",
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"statement": {
+							"type": "string",
+							"description": "The statement to execute"
+						}
+					},
+					"required": [
+						"statement"
+					]
+				}
+			}
     ]
   }
 }

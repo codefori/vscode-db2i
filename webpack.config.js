@@ -78,6 +78,10 @@ const config = {
         test: /\.ts$/,
         exclude
       },
+      {
+        test: /\.ts$/,
+        exclude: path.resolve(__dirname, `src`, `dcs.ts`)
+      },
     ]
   }
 };

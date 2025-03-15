@@ -1,13 +1,6 @@
-import { JDBCOptions } from "../../../connection/types";
-import { getInstance, loadBase } from "../../../base";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { getBase, getInstance, loadBase } from "../../../base";
 import { formatDescription } from ".";
-
-const autoCommitText = `
-Specifies the cursor sensitivity to request from the database. The behavior depends on the resultSetType:
-  - ResultSet.TYPE_FORWARD_ONLY or ResultSet.TYPE_SCROLL_SENSITIVE means that the value of this property 
-    controls what cursor sensitivity the Java program requests from the database.
-  - ResultSet.TYPE_SCROLL_INSENSITIVE causes this property to be ignored.
-`;
 
 const dbNameText = `
 	
@@ -24,7 +17,7 @@ an independent ASP or the system default database. The following criteria determ
 `;
 
 export default function getSystemTab(options: JDBCOptions) {
-  const base = loadBase();
+  const base = getBase();
   const tab = base.customUI();
   const connection = getInstance().getConnection()
 
@@ -129,7 +122,7 @@ export default function getSystemTab(options: JDBCOptions) {
     // )
     .addSelect(`database name`, `Database name`, [
       {text: `System Base`, description: `*SYSBAS`, value: ``, selected: options["database name"] === ``},
-      ...Object.values(connection.aspInfo).map(asp => ({text: asp, description: asp, value: asp, selected: options["database name"] === asp}))
+      ...Object.values(connection.getAllIAsps()).map(asp => ({text: asp.name, description: asp.name, value: asp.rdbName, selected: options["database name"] === asp.rdbName}))
     ], formatDescription(dbNameText))
     .addSelect(
       `decfloat rounding mode`,
