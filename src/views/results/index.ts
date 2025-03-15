@@ -212,7 +212,7 @@ async function runMultipleHandler(mode: `all`|`selected`|`from`) {
           ),
           group: statementsToRun[i],
           qualifier: prefix,
-          noUi: i < statementsToRun.length - 1, // Only the last one should have a UI
+          noUi: true
         });
       }
     }
@@ -221,6 +221,9 @@ async function runMultipleHandler(mode: `all`|`selected`|`from`) {
       vscode.window.showErrorMessage(`No statements to run.`);
       return;
     }
+
+    // Last statement should have UI
+    statementInfos[statementInfos.length - 1].noUi = false;
 
     for (let statementInfo of statementInfos) {
       try {
@@ -302,6 +305,7 @@ async function runHandler(options?: StatementInfo) {
         if (statementDetail.qualifier === `cl`) {
           // TODO: handle noUi
           if (options.noUi) {
+            setCancelButtonVisibility(true);
             const command = statementDetail.content.split(` `)[0].toUpperCase();
 
             chosenView.setLoadingText(`Running CL command... (${command})`, false);
@@ -321,6 +325,7 @@ async function runHandler(options?: StatementInfo) {
         } else if ([`statement`, `update`].includes(statementDetail.qualifier)) {
           // If it's a basic statement, we can let it scroll!
           if (statementDetail.noUi) {
+            setCancelButtonVisibility(true);
             chosenView.setLoadingText(`Running SQL statement... (${possibleTitle})`, false);
             await JobManager.runSQL(statementDetail.content, undefined, 1);
 
@@ -458,6 +463,10 @@ async function runHandler(options?: StatementInfo) {
         if (options.noUi) {
           throw new Error(errorText);
         }
+      }
+
+      if (options.noUi) {
+        setCancelButtonVisibility(false);
       }
 
       updateStatusBar();
