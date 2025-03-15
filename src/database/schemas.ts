@@ -75,11 +75,30 @@ const BASE_RESOLVE_SELECT = [
   `end as sqlType`,
 ].join(` `);
 
-let ReferenceCache: Map<string, ResolvedSqlObject> = new Map<string, ResolvedSqlObject>();
+
 export default class Schemas {
+  private static ReferenceCache: Map<string, ResolvedSqlObject> = new Map<string, ResolvedSqlObject>();
+
   private static buildReferenceCacheKey(obj: ObjectReference): string {
     return `${obj.schema}.${obj.name}`;
   }
+
+
+  static storeCachedReference(obj: ObjectReference, resolvedTo: ResolvedSqlObject): void {
+    if (obj.name && obj.schema) {
+      const key = Schemas.buildReferenceCacheKey(obj);
+      this.ReferenceCache.set(key, resolvedTo);
+    }
+  }
+
+  static getCachedReference(obj: ObjectReference): ResolvedSqlObject | undefined {
+    if (obj.name && obj.schema) {
+      const key = Schemas.buildReferenceCacheKey(obj);
+      return this.ReferenceCache.get(key);
+    }
+    return undefined;
+  }
+
   /**
    * Resolves to the following SQL types: SCHEMA, TABLE, VIEW, ALIAS, INDEX, FUNCTION and PROCEDURE
    */
@@ -96,12 +115,12 @@ export default class Schemas {
     // First, we use OBJECT_STATISTICS to resolve the object based on the library list.
     // But, if the object is qualified with a schema, we need to use that schema to get the correct object.
     for (const obj of sqlObjects) {
-      const key = this.buildReferenceCacheKey(obj);
-      // check if we have already resolved this object
-      if (ReferenceCache.has(key)) {
-        resolvedObjects.push(ReferenceCache.get(key!));
+      const cached = this.getCachedReference(obj);
+      if (cached) {
+        resolvedObjects.push(cached);
         continue;
       }
+
       if (obj.schema) {
         statements.push(
           `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics(?, '*ALL', object_name => ?))`
@@ -169,10 +188,7 @@ export default class Schemas {
 
       // add reslved objects to to ReferenceCache
       resolvedObjects.forEach((obj) => {
-        const key = this.buildReferenceCacheKey(obj);
-        if (!ReferenceCache.has(key)) {
-          ReferenceCache.set(key, obj);
-        }
+        this.storeCachedReference(obj, obj);
       });
 
       return resolvedObjects;
