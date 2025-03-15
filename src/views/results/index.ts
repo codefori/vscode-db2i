@@ -172,7 +172,12 @@ async function runMultipleHandler(mode: `all`|`selected`|`from`) {
     let statementsToRun: StatementGroup[];
 
     switch (mode) {
-      case `selected`: statementsToRun = statementGroups.filter(group => (group.range.start >= startPos && group.range.end <= endPos)); break;
+      case `selected`: 
+        const doc = editor.document;
+        const firstStatement = statementGroups.findIndex(group => (startPos >= group.range.start && startPos <= group.range.end));
+        const lastStatement = statementGroups.findIndex(group => (endPos >= group.range.start && endPos <= group.range.end));
+        statementsToRun = statementGroups.slice(firstStatement, lastStatement + 1);
+        break;
       case `from`: statementsToRun = statementGroups.filter(group => (startPos <= group.range.end)); break;
       default: statementsToRun = statementGroups;
     }
