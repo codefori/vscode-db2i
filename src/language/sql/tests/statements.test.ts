@@ -1900,6 +1900,36 @@ describe(`Parameter statement tests`, () => {
     expect(result.content).toBe(content);
   });
 
+  test('No embedded area on MERGE (issue 348)', () => {
+    const content = [
+      `merge into sample.employee e`,
+      `  using (select *from `,
+      `    (values ('000011', 'PAOLO', 'I', 'SALVATORE', 'A00', 1234, 'OPERATOR', 14)) as `,
+      `newemp (empno, firstnme, midinit, lastname, workdept, phoneno, job , edlevel))  a`,
+      ` on a.empno = e.empno`,
+      `when matched then update  `,
+      `    set e.firstnme = a.firstnme, e.midinit = a.midinit, e.lastname = a.lastname, `,
+      `  e.workdept = a.workdept, e.phoneno = a.phoneno,`,
+      `  e.job = a.job, e.edlevel = a.edlevel`,
+      `when not matched then `,
+      `    insert (empno, firstnme, midinit, lastname, workdept, phoneno, job , edlevel)`,
+      ` values (a.empno, a.firstnme, a.midinit, a.lastname, a.workdept, a.phoneno, `,
+      `  a.job, a.edlevel);`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Merge);
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.parameterCount).toBe(0);
+    expect(result.content + `;`).toBe(content);
+    expect(result.changed).toBe(false);
+  });
+
   test(`Callable blocks`, () => {
     const lines = [
         `call qsys2.create_abcd();`,
