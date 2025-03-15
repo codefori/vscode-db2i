@@ -143,9 +143,13 @@ document.getElementById('resultset').onclick = function(e){
       let bindings = [];
       let updateStatement = 'UPDATE ' + updateTable.table + ' t SET t.' + chosenColumn + ' = ';
 
-      if (newValue === 'null') {
+      if (chosenColumnDetail.maxInputLength >= 4 && newValue === 'null') {
+        // If the column can fit 'null', then set it to null value
         updateStatement += 'NULL';
-
+      } else if (chosenColumnDetail.maxInputLength < 4 && newValue === '-') {
+        // If the column cannot fit 'null', then '-' is the null value
+        updateStatement += 'NULL';
+      
       } else { 
         switch (chosenColumnDetail.jsType) {
           case 'number':
