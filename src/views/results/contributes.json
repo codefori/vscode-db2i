@@ -130,7 +130,7 @@
         },
         {
           "command": "vscode-db2i.runEditorStatement.multiple.all",
-          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true && !editorHasSelection",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
           "group": "navigation_multiple@1"
         },
         {
