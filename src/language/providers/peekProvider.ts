@@ -30,14 +30,11 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
 
         const possibleObjects = await Schemas.resolveObjects([{name, schema}]);
 
-        if (possibleObjects.length) {
-          const lines: string[] = [`-- Condensed version of the object definition`];
-          for (const obj of possibleObjects) {
-            const contents = await Schemas.generateSQL(obj.schema, obj.name, obj.sqlType, true);
-            lines.push(contents);
-          }
+        if (possibleObjects.length === 1) {
+          const obj = possibleObjects[0];
+          const content = await Schemas.generateSQL(obj.schema, obj.name, obj.sqlType, true);
 
-          const document = await workspace.openTextDocument({ content: lines.join(`\n`), language: `sql` });
+          const document = await workspace.openTextDocument({ content, language: `sql` });
 
           return {
             uri: document.uri,
