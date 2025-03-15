@@ -185,7 +185,7 @@ async function runMultipleHandler(mode: `all`|`selected`|`from`) {
       if (group.statements.length >= 1) {
         const statement = group.statements[0];
 
-        if (isStop(statement)) {
+        if (isStop(statement) && i > 0) {
           break;
         }
 
