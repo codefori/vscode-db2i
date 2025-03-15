@@ -52,6 +52,21 @@
         "icon": "$(window)"
       },
       {
+        "command": "vscode-db2i.runEditorStatement.multiple.all",
+        "title": "Run all statements",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.runEditorStatement.multiple.selected",
+        "title": "Run selected statements",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.runEditorStatement.multiple.from",
+        "title": "Run statements from cursor",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.statement.cancel",
         "title": "Cancel",
         "category": "Db2 for i",
@@ -111,22 +126,37 @@
         {
           "command": "vscode-db2i.runEditorStatement.inView",
           "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true",
-          "group": "navigation@1"
+          "group": "navigation@2"
+        },
+        {
+          "command": "vscode-db2i.runEditorStatement.multiple.all",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true && !editorHasSelection",
+          "group": "navigation_multiple@1"
+        },
+        {
+          "command": "vscode-db2i.runEditorStatement.multiple.selected",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true && editorHasSelection",
+          "group": "navigation_multiple@2"
+        },
+        {
+          "command": "vscode-db2i.runEditorStatement.multiple.from",
+          "when": "editorLangId == sql && vscode-db2i:statementCanCancel != true && !editorHasSelection",
+          "group": "navigation_multiple@2"
         },
         {
           "command": "vscode-db2i.editorExplain.withRun",
           "when": "editorLangId == sql",
-          "group": "2_explain@1"
+          "group": "navigation_explain@1"
         },
         {
           "command": "vscode-db2i.editorExplain.withoutRun",
           "when": "editorLangId == sql",
-          "group": "2_explain@2"
+          "group": "navigation_explain@2"
         },
         {
           "command": "vscode-db2i.notebook.fromSqlUri",
           "when": "editorLangId == sql",
-          "group": "3_notebook@1"
+          "group": "navigation_notebook@1"
         }
       ],
       "view/title": [

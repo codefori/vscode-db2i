@@ -1,4 +1,4 @@
-import { commands, CompletionItemKind, Diagnostic, DiagnosticSeverity, languages, ProgressLocation, Range, TextDocument, Uri, window, workspace } from "vscode";
+import { commands, CompletionItemKind, Diagnostic, Disposable, DiagnosticSeverity, languages, ProgressLocation, Range, TextDocument, Uri, window, workspace } from "vscode";
 import {
   SQLType,
 } from "../../database/schemas";
@@ -73,7 +73,9 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
   }
 });
 
-export const problemProvider = [
+export const problemProvider: Disposable[] = [
+  sqlDiagnosticCollection, 
+
   workspace.onDidCloseTextDocument(e => {
     // Only clear errors from unsaved files.
     if (e.isUntitled) {

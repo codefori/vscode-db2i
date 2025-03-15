@@ -23,6 +23,8 @@ export type StatementQualifier = "statement" | "update" | "explain" | "onlyexpla
 export interface StatementInfo {
   content: string,
   qualifier: StatementQualifier,
+  group?: StatementGroup,
+  noUi?: boolean,
   open?: boolean,
   viewColumn?: ViewColumn,
   viewFocus?: boolean,
@@ -140,11 +142,90 @@ export function initialise(context: vscode.ExtensionContext) {
       doveNodeView.close();
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.multiple.all`, () => { runMultipleHandler(`all`) }),
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.multiple.selected`, () => { runMultipleHandler(`selected`) }),
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.multiple.from`, () => { runMultipleHandler(`from`) }),
+
     vscode.commands.registerCommand(`vscode-db2i.editorExplain.withRun`, (options?: StatementInfo) => { runHandler({ qualifier: `explain`, ...options }) }),
     vscode.commands.registerCommand(`vscode-db2i.editorExplain.withoutRun`, (options?: StatementInfo) => { runHandler({ qualifier: `onlyexplain`, ...options }) }),
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.inView`, (options?: StatementInfo) => { runHandler({ viewColumn: ViewColumn.Beside, ...options }) }),
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, (options?: StatementInfo) => { runHandler(options) })
   )
+}
+
+const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] = [`cl`, `json`, `csv`, `sql`, `statement`];
+
+function isStop(statement: Statement) {
+  return (statement.type === StatementType.Unknown && statement.tokens.length === 1 && statement.tokens[0].value.toUpperCase() === `STOP`);
+}
+
+async function runMultipleHandler(mode: `all`|`selected`|`from`) {
+  const editor = vscode.window.activeTextEditor;
+  if (editor && editor.document.languageId === `sql`) {
+    const selection = editor.selection;
+    const startPos = editor.document.offsetAt(selection.start);
+    const endPos = editor.document.offsetAt(selection.end);
+
+    const sqlDocument = new Document(editor.document.getText());
+    const statementGroups = sqlDocument.getStatementGroups();
+
+    let statementsToRun: StatementGroup[];
+
+    switch (mode) {
+      case `selected`: statementsToRun = statementGroups.filter(group => (group.range.start >= startPos && group.range.end <= endPos)); break;
+      case `from`: statementsToRun = statementGroups.filter(group => (startPos <= group.range.end)); break;
+      default: statementsToRun = statementGroups;
+    }
+
+    const statementInfos: StatementInfo[] = [];
+
+    for (let i = 0; i < statementsToRun.length; i++) {
+      let group = statementsToRun[i];
+
+      if (group.statements.length >= 1) {
+        const statement = group.statements[0];
+
+        if (isStop(statement)) {
+          break;
+        }
+
+        const label = statement.getLabel();
+        const prefix = (label as StatementQualifier) || `statement`;
+
+        if (!ALLOWED_PREFIXES_FOR_MULTIPLE.includes(prefix)) {
+          vscode.window.showErrorMessage(`Cannot run multiple statements with prefix ${prefix}.`);
+          editor.selection = new vscode.Selection(
+            editor.document.positionAt(group.range.start),
+            editor.document.positionAt(group.range.start + label.length)
+          );
+          return;
+        }
+        
+        statementInfos.push({
+          content: sqlDocument.content.substring(
+            group.range.start, group.range.end
+          ),
+          group: statementsToRun[i],
+          qualifier: prefix,
+          noUi: i < statementsToRun.length - 1, // Only the last one should have a UI
+        });
+      }
+    }
+
+    if (statementInfos.length === 0) {
+      vscode.window.showErrorMessage(`No statements to run.`);
+      return;
+    }
+
+    for (let statementInfo of statementInfos) {
+      try {
+        await runHandler(statementInfo);
+      } catch (e) {
+        vscode.window.showErrorMessage(`Error running statement: ${e instanceof Error ? e.message : e}`);
+        break;
+      }
+    }
+  }
 }
 
 async function runHandler(options?: StatementInfo) {
@@ -180,7 +261,7 @@ async function runHandler(options?: StatementInfo) {
     }
 
     if (editor) {
-      const group = statementDetail.group;
+      let group = statementDetail.group;
       editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
 
       if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed) {
@@ -214,23 +295,38 @@ async function runHandler(options?: StatementInfo) {
         const inWindow = Boolean(options && options.viewColumn);
 
         if (statementDetail.qualifier === `cl`) {
-          if (inWindow) {
-            useWindow(`CL results`, options.viewColumn);
+          // TODO: handle noUi
+          if (options.noUi) {
+            const command = statementDetail.content.split(` `)[0].toUpperCase();
+
+            chosenView.setLoadingText(`Running CL command... (${command})`, false);
+            await JobManager.runSQLVerbose(statementDetail.content, {isClCommand: true}); // Can throw
+
+          } else {
+            if (inWindow) {
+              useWindow(`CL results`, options.viewColumn);
+            }
+            chosenView.setScrolling(statementDetail.content, true); // Never errors
           }
-          chosenView.setScrolling(statementDetail.content, true); // Never errors
           
         } else if ([`statement`, `update`].includes(statementDetail.qualifier)) {
           // If it's a basic statement, we can let it scroll!
-          if (inWindow) {
-            useWindow(possibleTitle, options.viewColumn);
-          }
+          if (statementDetail.noUi) {
+            chosenView.setLoadingText(`Running SQL statement... (${possibleTitle})`, false);
+            await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
 
-          let updatableTable: ObjectRef | undefined;
-          if (statementDetail.qualifier === `update` && statement.type === StatementType.Select && refs.length === 1) {
-            updatableTable = refs[0];
-          }
+          } else {
+            if (inWindow) {
+              useWindow(possibleTitle, options.viewColumn);
+            }
 
-          chosenView.setScrolling(statementDetail.content, false, undefined, inWindow, updatableTable); // Never errors
+            let updatableTable: ObjectRef | undefined;
+            if (statementDetail.qualifier === `update` && statement.type === StatementType.Select && refs.length === 1) {
+              updatableTable = refs[0];
+            }
+
+            chosenView.setScrolling(statementDetail.content, false, undefined, inWindow, updatableTable); // Never errors
+          }
 
         } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
           // If it's an explain, we need to 
@@ -259,6 +355,7 @@ async function runHandler(options?: StatementInfo) {
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
+        
         } else {
           // Otherwise... it's a bit complicated.
           chosenView.setLoadingText(`Executing SQL statement...`, false);
@@ -348,6 +445,10 @@ async function runHandler(options?: StatementInfo) {
         } else {
           vscode.window.showErrorMessage(errorText);
         }
+
+        if (options.noUi) {
+          throw new Error(errorText);
+        }
       }
 
       updateStatusBar();
@@ -369,14 +470,16 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   if (existingInfo) {
     statementInfo = {
       ...existingInfo,
-      group: undefined,
+      group: existingInfo.group,
       statement: undefined,
       embeddedInfo: undefined
     };
 
-    // Running from existing data
-    sqlDocument = new Document(statementInfo.content);
-    statementInfo.group = sqlDocument.getStatementGroups()[0];
+    if (!existingInfo.group) {
+      // Running from existing data
+      sqlDocument = new Document(statementInfo.content);
+      statementInfo.group = sqlDocument.getStatementGroups()[0];
+    }
 
   } else if (editor) {
     // Is being run from the editor
@@ -386,34 +489,36 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
 
     sqlDocument = new Document(document.getText());
     statementInfo.group = sqlDocument.getGroupByOffset(cursor);
-
-    if (statementInfo.group) {
-      statementInfo.content = sqlDocument.content.substring(
-        statementInfo.group.range.start, statementInfo.group.range.end
-      );
-    }
-
-    if (statementInfo.content) {
-      [`cl`, `json`, `csv`, `sql`, `explain`, `update`].forEach(mode => {
-        if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
-          statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
-
-          //@ts-ignore We know the type.
-          statementInfo.qualifier = mode;
-        }
-      });
-    }
-
-    if (statementInfo.qualifier === `cl`) {
-      const eol = document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
-      statementInfo.content = statementInfo.content.split(eol).map(line => line.trim()).join(` `);
-    }
   }
 
   statementInfo.statement = statementInfo.group.statements[0];
 
-  if (statementInfo.qualifier !== `cl`) {
-    statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, true);
+  if (statementInfo.group && !statementInfo.content) {
+    statementInfo.content = sqlDocument.content.substring(
+      statementInfo.group.range.start, statementInfo.group.range.end
+    );
+  }
+
+  if (statementInfo.content) {
+    [`cl`, `json`, `csv`, `sql`, `explain`, `update`].forEach(mode => {
+      if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
+        statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
+
+        //@ts-ignore We know the type.
+        statementInfo.qualifier = mode;
+      }
+    });
+  }
+
+  if (editor && statementInfo.qualifier === `cl`) {
+    const eol = editor.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+    statementInfo.content = statementInfo.content.split(eol).map(line => line.trim()).join(` `);
+  }
+
+  if (sqlDocument) {
+    if (statementInfo.qualifier !== `cl`) {
+      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, true);
+    }
   }
 
   return statementInfo;
