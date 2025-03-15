@@ -226,7 +226,7 @@ async function runMultipleHandler(mode: `all`|`selected`|`from`) {
       try {
         await runHandler(statementInfo);
       } catch (e) {
-        vscode.window.showErrorMessage(`Error running statement: ${e instanceof Error ? e.message : e}`);
+        // No error needed. runHandler still shows an error.
         break;
       }
     }
@@ -305,7 +305,11 @@ async function runHandler(options?: StatementInfo) {
             const command = statementDetail.content.split(` `)[0].toUpperCase();
 
             chosenView.setLoadingText(`Running CL command... (${command})`, false);
-            await JobManager.runSQLVerbose(statementDetail.content, {isClCommand: true}); // Can throw
+            // CL does not throw
+            const result = await JobManager.runSQLVerbose<{SUMMARY: string}>(statementDetail.content, {isClCommand: true});
+            if (!result.success) {
+              throw new Error(result.data && result.data[0] ? result.data[0].SUMMARY : `CL command ${command} executed successfully.`);
+            }
 
           } else {
             if (inWindow) {
@@ -318,7 +322,7 @@ async function runHandler(options?: StatementInfo) {
           // If it's a basic statement, we can let it scroll!
           if (statementDetail.noUi) {
             chosenView.setLoadingText(`Running SQL statement... (${possibleTitle})`, false);
-            await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
+            await JobManager.runSQL(statementDetail.content, undefined, 1);
 
           } else {
             if (inWindow) {
@@ -445,7 +449,7 @@ async function runHandler(options?: StatementInfo) {
           errorText = e.message || `Error running SQL statement.`;
         }
 
-        if ([`statement`, `explain`, `onlyexplain`].includes(statementDetail.qualifier) && statementDetail.history !== false) {
+        if ([`statement`, `explain`, `onlyexplain`, `cl`].includes(statementDetail.qualifier) && statementDetail.history !== false) {
           chosenView.setError(errorText);
         } else {
           vscode.window.showErrorMessage(errorText);
