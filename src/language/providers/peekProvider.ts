@@ -26,7 +26,7 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
 
       if (ref) {
         const name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
-        const schema = Statement.noQuotes(Statement.delimName(ref.object.schema || defaultSchema, true));
+        const schema = ref.object.schema ? Statement.noQuotes(Statement.delimName(ref.object.schema, true)) : undefined;
 
         const possibleObjects = await Schemas.resolveObjects([{name, schema}]);
 
