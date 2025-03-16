@@ -173,7 +173,6 @@ async function runMultipleHandler(mode: `all`|`selected`|`from`) {
 
     switch (mode) {
       case `selected`: 
-        const doc = editor.document;
         const firstStatement = statementGroups.findIndex(group => (startPos >= group.range.start && startPos <= group.range.end));
         const lastStatement = statementGroups.findIndex(group => (endPos >= group.range.start && endPos <= group.range.end));
         statementsToRun = statementGroups.slice(firstStatement, lastStatement + 1);
@@ -195,7 +194,7 @@ async function runMultipleHandler(mode: `all`|`selected`|`from`) {
         }
 
         const label = statement.getLabel();
-        const prefix = (label as StatementQualifier) || `statement`;
+        const prefix = (label || `statement`).toLowerCase() as StatementQualifier;
 
         if (!ALLOWED_PREFIXES_FOR_MULTIPLE.includes(prefix)) {
           vscode.window.showErrorMessage(`Cannot run multiple statements with prefix ${prefix}.`);
