@@ -9,7 +9,6 @@ import Document from "../../language/sql/document";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import Statement from "../../language/sql/statement";
 import { ExplainNode, ExplainTree } from "./explain/nodes";
-import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider } from "./resultSetPanelProvider";
@@ -42,8 +41,6 @@ export function setCancelButtonVisibility(visible: boolean) {
 
 let resultSetProvider = new ResultSetPanelProvider();
 let explainTree: ExplainTree;
-let doveResultsView = new DoveResultsView();
-let doveResultsTreeView: TreeView<ExplainTreeItem> = doveResultsView.getTreeView();
 let doveNodeView = new DoveNodeView();
 let doveNodeTreeView: TreeView<PropertyNode> = doveNodeView.getTreeView();
 let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration providor
@@ -52,7 +49,6 @@ export function initialise(context: vscode.ExtensionContext) {
   setCancelButtonVisibility(false);
 
   context.subscriptions.push(
-    doveResultsTreeView,
     doveNodeTreeView,
 
     vscode.window.registerWebviewViewProvider(`vscode-db2i.resultset`, resultSetProvider, {
@@ -91,17 +87,6 @@ export function initialise(context: vscode.ExtensionContext) {
       }
     }),
 
-    vscode.commands.registerCommand(`vscode-db2i.dove.close`, () => {
-      doveResultsView.close();
-      doveNodeView.close();
-    }),
-
-    vscode.commands.registerCommand(`vscode-db2i.dove.displayDetails`, (explainTreeItem: ExplainTreeItem) => {
-      // When the user clicks for details of a node in the tree, set the focus to that node as a visual indicator tying it to the details tree
-      doveResultsTreeView.reveal(explainTreeItem, { select: false, focus: true, expand: true });
-      doveNodeView.setNode(explainTreeItem.explainNode);
-    }),
-
     vscode.commands.registerCommand(`vscode-db2i.dove.node.copy`, (propertyNode: PropertyNode) => {
       if (propertyNode.description && typeof propertyNode.description === `string`) {
         vscode.env.clipboard.writeText(propertyNode.description);
@@ -115,15 +100,6 @@ export function initialise(context: vscode.ExtensionContext) {
 
     vscode.commands.registerCommand(`vscode-db2i.dove.editSettings`, () => {
       vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.visualExplain');
-    }),
-
-    vscode.commands.registerCommand(`vscode-db2i.dove.export`, () => {
-      vscode.workspace.openTextDocument({
-        language: `json`,
-        content: JSON.stringify(doveResultsView.getRootExplainNode(), null, 2)
-      }).then(doc => {
-        vscode.window.showTextDocument(doc);
-      });
     }),
 
     vscode.commands.registerCommand(`vscode-db2i.dove.generateSqlForAdvisedIndexes`, () => {
@@ -157,8 +133,6 @@ async function runHandler(options?: StatementInfo) {
   // But that isn't valid here.
   const optionsIsValid = (options?.content !== undefined);
   let editor = vscode.window.activeTextEditor;
-
-  vscode.commands.executeCommand('vscode-db2i.dove.close');
 
   if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
     let chosenView = resultSetProvider;
