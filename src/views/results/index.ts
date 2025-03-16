@@ -325,7 +325,7 @@ async function runHandler(options?: StatementInfo) {
           
         } else if ([`statement`, `update`].includes(statementDetail.qualifier)) {
           // If it's a basic statement, we can let it scroll!
-          if (statementDetail.noUi) {
+          if (options.noUi) {
             setCancelButtonVisibility(true);
             chosenView.setLoadingText(`Running SQL statement... (${possibleTitle})`, false);
             await JobManager.runSQL(statementDetail.content, undefined, 1);
