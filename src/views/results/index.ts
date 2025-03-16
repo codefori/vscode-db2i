@@ -254,16 +254,14 @@ async function runHandler(options?: StatementInfo) {
 
             explainTree = new ExplainTree(explained.vedata);
             const topLevel = explainTree.get();
-            const rootNode = doveResultsView.setRootNode(topLevel);
-            doveNodeView.setNode(rootNode.explainNode);
-            doveTreeDecorationProvider.updateTreeItems(rootNode);
-
+            
             const graph = new CytoscapeGraph();
             
             function addNode(node: ExplainNode, parent?: string) {
               const id = graph.addNode({
                 label: node.title,
                 parent: parent,
+                data: node,
               });
 
               if (node.children) {
@@ -275,7 +273,11 @@ async function runHandler(options?: StatementInfo) {
 
             addNode(topLevel);
 
-            const webview = graph.createView(`Explain Graph`);
+            const webview = graph.createView(`Explain Graph`, (data: ExplainNode) => {
+              if (data) {
+                doveNodeView.setNode(data);
+              }
+            });
 
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);

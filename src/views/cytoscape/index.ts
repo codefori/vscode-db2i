@@ -48,9 +48,16 @@ export class CytoscapeGraph {
     return id;
   }
 
-  createView(title: string) {
+  createView(title: string, onNodeSelected: (data: unknown) => void): any {
     const webview = window.createWebviewPanel(`c`, title, {viewColumn: ViewColumn.One}, {enableScripts: true, retainContextWhenHidden: true});
     webview.webview.html = this.getHtml();
+
+    webview.webview.onDidReceiveMessage((message) => {
+      if (message.command === 'selected') {
+        const data = this.elementData.get(message.nodeId);
+        onNodeSelected(data);
+      }
+    }, undefined, []);
 
     return webview;
   }
@@ -90,6 +97,7 @@ export class CytoscapeGraph {
       <div class="diagram-container" id="diagramContainer"></div>
     
       <script>
+        const vscode = acquireVsCodeApi();
         document.addEventListener("DOMContentLoaded", function () {
           // Initialize Cytoscape
           const cy = cytoscape({
@@ -136,8 +144,11 @@ export class CytoscapeGraph {
     
           // Add click event to show alert for nodes
           cy.on('tap', 'node', function (evt) {
-            const node = evt.target;
-            console.log("You clicked: " + node.data('label'));
+            const id = evt.target.id();
+            vscode.postMessage({
+              command: 'selected',
+              nodeId: id
+            });
           });
         });
       </script>
