@@ -8,7 +8,7 @@ import { JobManager } from "../../config";
 import Document from "../../language/sql/document";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import Statement from "../../language/sql/statement";
-import { ExplainTree } from "./explain/nodes";
+import { ExplainNode, ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
@@ -17,6 +17,7 @@ import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { ExplainType } from "@ibm/mapepire-js/dist/src/types";
 import { DbCache } from "../../language/providers/logic/cache";
+import { CytoscapeGraph } from "../cytoscape";
 
 export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 
@@ -256,6 +257,26 @@ async function runHandler(options?: StatementInfo) {
             const rootNode = doveResultsView.setRootNode(topLevel);
             doveNodeView.setNode(rootNode.explainNode);
             doveTreeDecorationProvider.updateTreeItems(rootNode);
+
+            const graph = new CytoscapeGraph();
+            
+            function addNode(node: ExplainNode, parent?: string) {
+              const id = graph.addNode({
+                label: node.title,
+                parent: parent,
+              });
+
+              if (node.children) {
+                for (const child of node.children) {
+                  addNode(child, id);
+                }
+              }
+            }
+
+            addNode(topLevel);
+
+            const webview = graph.createView(`Explain Graph`);
+
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
