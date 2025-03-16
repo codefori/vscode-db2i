@@ -166,16 +166,22 @@ async function runMultipleHandler(mode: `all`|`selected`|`from`) {
     const startPos = editor.document.offsetAt(selection.start);
     const endPos = editor.document.offsetAt(selection.end);
 
-    const sqlDocument = new Document(editor.document.getText());
+    const sqlDocument = new Document(editor.document.getText(), false);
     const statementGroups = sqlDocument.getStatementGroups();
 
     let statementsToRun: StatementGroup[];
 
+    const isInRange = (group: StatementGroup) => {
+      const groupStart = group.statements[0].tokens[0].range.start;
+      const groupEnd = group.statements[group.statements.length - 1].tokens[group.statements[group.statements.length - 1].tokens.length - 1].range.end;
+
+      return (startPos >= groupStart && startPos <= groupEnd) || (endPos >= groupStart && endPos <= groupEnd) || 
+              (groupStart >= startPos && groupStart <= endPos) || (groupEnd >= startPos && groupEnd <= endPos);
+    }
+
     switch (mode) {
       case `selected`: 
-        const firstStatement = statementGroups.findIndex(group => (startPos >= group.range.start && startPos <= group.range.end));
-        const lastStatement = statementGroups.findIndex(group => (endPos >= group.range.start && endPos <= group.range.end));
-        statementsToRun = statementGroups.slice(firstStatement, lastStatement + 1);
+        statementsToRun = statementGroups.filter(group => isInRange(group) || isInRange(group))
         break;
       case `from`: statementsToRun = statementGroups.filter(group => (startPos <= group.range.end)); break;
       default: statementsToRun = statementGroups;
