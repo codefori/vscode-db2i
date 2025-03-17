@@ -19,7 +19,14 @@ export class OldSQLJob extends SQLJob {
     return this.selfState;
   }
 
-  getCurrentSchema(): string {
+  async getCurrentSchema(): Promise<string> {
+    if (this.getNaming() === `sql`) {
+      const result = await this.execute<{'00001': string}>(`values (current schema)`);
+      if (result.success && result.data.length > 0) {
+        return result.data[0]['00001'];
+      }
+    }
+
     return this.options.libraries[0] || `QGPL`;
   }
 
@@ -176,19 +183,6 @@ export class OldSQLJob extends SQLJob {
       this.selfState = code;
     } catch (e) {
       throw e;
-    }
-  }
-  
-  async setCurrentSchema(schema: string): Promise<QueryResult<any>> {
-    if (schema) {
-      const upperSchema = Statement.delimName(schema, true);
-      const result = await this.execute(`set current schema = ?`, {parameters: [upperSchema]});
-      if (result.success) {
-        this.options.libraries[0] = upperSchema;
-      }
-
-      return result;
-  
     }
   }
 

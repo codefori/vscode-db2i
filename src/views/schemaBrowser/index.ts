@@ -350,22 +350,6 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.setCurrentSchema`, async (node: SchemaItem) => {
-        if (node && node.contextValue === `schema`) {
-          const schema = node.schema.toUpperCase();
-
-          const config = getInstance().getConfig();
-          const currentLibrary = config.currentLibrary.toUpperCase();
-
-          if (schema && schema !== currentLibrary) {
-            config.currentLibrary = schema;
-            await getInstance().setConfig(config);
-          }
-
-          vscode.window.showInformationMessage(`Current schema set to ${schema}.`);
-        }
-      }),
-
       vscode.commands.registerCommand(`vscode-db2i.setSchemaFilter`, async (node: SchemaItem) => {
         if (node) {
           const value = await vscode.window.showInputBox({
