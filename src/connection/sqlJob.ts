@@ -14,16 +14,25 @@ export class OldSQLJob extends SQLJob {
   private selfState: SelfValue = "*NONE";
 
   id: string | undefined;
+  private currentSchemaStore: string | undefined;
 
   getSelfCode(): SelfValue {
     return this.selfState;
   }
 
+  resetCurrentSchemaCache() {
+    this.currentSchemaStore = undefined;
+  }
+
   async getCurrentSchema(): Promise<string> {
     if (this.getNaming() === `sql`) {
+      if (this.currentSchemaStore) 
+        return this.currentSchemaStore;
+
       const result = await this.execute<{'00001': string}>(`values (current schema)`);
       if (result.success && result.data.length > 0) {
-        return result.data[0]['00001'];
+        this.currentSchemaStore = result.data[0]['00001'];
+        return this.currentSchemaStore;
       }
     }
 

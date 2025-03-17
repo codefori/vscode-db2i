@@ -219,6 +219,7 @@ async function getCompletionItemsForTriggerDot(
   offset: number,
   trigger: string
 ): Promise<CompletionItem[]> {
+  const defaultLibrary = await getDefaultSchema();
   let list: CompletionItem[] = [];
 
   const curRef = currentStatement.getReferenceByOffset(offset);
@@ -236,7 +237,7 @@ async function getCompletionItemsForTriggerDot(
   // Set the default schema for all references without one
   for (let ref of objectRefs) {
     if (!ref.object.schema) {
-      ref.object.schema = getDefaultSchema();
+      ref.object.schema = defaultLibrary;
     }
   }
 
@@ -284,7 +285,7 @@ async function getCompletionItemsForTriggerDot(
   } else {
     
     if (currentStatement.type === StatementType.Call) {
-      const procs = await getProcedures([curRef], getDefaultSchema());
+      const procs = await getProcedures([curRef], defaultLibrary);
       list.push(...procs);
 
     } else {
@@ -332,6 +333,7 @@ function createCompletionItemForAlias(ref: ObjectRef) {
 }
 
 async function getCompletionItemsForRefs(currentStatement: LanguageStatement.default, offset: number, cteColumns?: string[]) {
+  const defaultSchema = await getDefaultSchema();
   const objectRefs = currentStatement.getObjectReferences();
   const cteList = currentStatement.getCTEReferences();
 
@@ -350,7 +352,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   // Set the default schema for all references without one
   for (let ref of objectRefs) {
     if (!ref.object.schema) {
-      ref.object.schema = getDefaultSchema();
+      ref.object.schema = defaultSchema;
     }
   }
 
@@ -395,7 +397,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   if (tokenAtOffset === undefined && (emptyObjectRefs || curClause !== ClauseType.Unknown)) {
     // get all the completion items for objects in each referenced schema
     completionItems.push(
-      ...(await getObjectCompletions(getDefaultSchema(), completionTypes))
+      ...(await getObjectCompletions(defaultSchema, completionTypes))
     );
   } else {
     // content assist invoked during incomplete reference
@@ -453,7 +455,7 @@ async function getCompletionItems(
   currentStatement: LanguageStatement.default|undefined,
   offset?: number
 ) {
-
+  const defaultSchema = await getDefaultSchema();
   const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
 
   if (trigger === "." || (s && s.type === `dot`) || trigger === "/") {
@@ -479,7 +481,7 @@ async function getCompletionItems(
   if (currentStatement && currentStatement.type === StatementType.Call) {
     const curClause = currentStatement.getClauseForOffset(offset);
     if (curClause === ClauseType.Unknown) {
-      return getProcedures(currentStatement.getObjectReferences(), getDefaultSchema());
+      return getProcedures(currentStatement.getObjectReferences(), defaultSchema);
     }
   }
 
@@ -623,7 +625,11 @@ export const completionProvider = languages.registerCompletionItemProvider(
   "/"
 );
 
-const getDefaultSchema = (): string => {
+const getDefaultSchema = () => {
   const currentJob = JobManager.getSelection();
-  return currentJob && currentJob.job.options.libraries[0] ? currentJob.job.options.libraries[0] : `QGPL`;
+  if (currentJob) {
+    return currentJob.job.getCurrentSchema()
+  } else {
+    return Promise.resolve(`QGPL`);
+  }
 }

@@ -14,7 +14,7 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
 
     if (!currentJob) return;
 
-    const defaultSchema = currentJob.job.getCurrentSchema();
+    const defaultSchema = await currentJob.job.getCurrentSchema();
     const naming = currentJob.job.getNaming();
 
     const sqlDoc = getSqlDocument(document);
