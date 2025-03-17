@@ -207,10 +207,11 @@ export default class Schemas {
         case `schemas`:
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, SCHEMA_NAME as NAME, SCHEMA_TEXT as TEXT, SYSTEM_SCHEMA_NAME as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
-              `from QSYS2.SYSSCHEMAS`,
+              ``,
+              `SELECT '${type}' as OBJ_TYPE, '' as TABLE_TYPE, OBJLONGNAME AS NAME, '' as TEXT, OBJNAME AS SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `FROM TABLE(QSYS2.OBJECT_STATISTICS('*ALLSIMPLE', 'LIB')) Z`,
               details.filter
-                ? `where UPPER(SCHEMA_NAME) = ? or UPPER(SYSTEM_SCHEMA_NAME) = ?`
+                ? `where UPPER(OBJLONGNAME) = ? or UPPER(OBJNAME) = ?`
                 : ``,
             ].join(` `)
           );

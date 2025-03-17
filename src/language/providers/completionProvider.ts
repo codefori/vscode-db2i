@@ -331,7 +331,11 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
 
   const curClause = currentStatement.getClauseForOffset(offset);
   const tokenAtOffset = currentStatement.getTokenByOffset(offset);
-
+  
+    // Get all the schemas
+    if (objectRefs.length === 0 && cteList.length === 0) {
+      completionItems.push(...(await getCachedSchemas()));
+    }
   // Set the default schema for all references without one
   for (let ref of objectRefs) {
     if (!ref.object.schema) {
@@ -428,12 +432,6 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
         );
       }
     }
-  }
-
-  if (completionItems.length === 0) {
-    // Get all the schemas
-    // TODO: very very slow
-    // completionItems.push(...(await getCachedSchemas()));
   }
 
   return completionItems;

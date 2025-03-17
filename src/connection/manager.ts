@@ -119,9 +119,17 @@ export class SQLJobManager {
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
 
+    // const s = performance.now()
+    // console.log(`Running statement: ${query.padEnd(40).substring(0, 40)}`);
+
     const statement = await this.getPagingStatement<T>(query, opts);
     const results = await statement.execute(rowsToFetch);
     statement.close();
+
+    // const e = performance.now()
+    // console.log(`Statement executed in ${e - s} ms. ${results.data.length} rows returned.`);
+    // console.log(`\t${query.padEnd(40).substring(0, 40)}`)
+
     return results.data;
   }
 
