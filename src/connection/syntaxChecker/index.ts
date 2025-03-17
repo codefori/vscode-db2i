@@ -4,6 +4,7 @@ import { posix } from "path";
 import { getValidatorSource, VALIDATOR_NAME, WRAPPER_NAME } from "./checker";
 import { JobManager } from "../../config";
 import { getBase, getInstance } from "../../base";
+import { JobInfo } from "../manager";
 
 interface SqlCheckError {
   CURSTMTLENGTH: number;
@@ -134,14 +135,13 @@ export class SQLStatementChecker implements IBMiComponent {
     return undefined;
   }
 
-  async checkMultipleStatements(statements: string[]): Promise<SqlSyntaxError[]|undefined> {
+  async checkMultipleStatements(currentJob: JobInfo, statements: string[]): Promise<SqlSyntaxError[]|undefined> {
     const connection = getInstance()?.getConnection();
     if (!connection) return undefined;
 
-    const currentJob = JobManager.getSelection();
     const library = this.getLibrary(connection);
 
-    if (currentJob && library) {
+    if (library) {
       const checks = statements.map(stmt => `select * from table(${library}.${this.functionName}(?)) x`).join(` union all `);
       const stmt = currentJob.job.query<SqlCheckError>(checks, {parameters: statements});
       const result = await stmt.execute(statements.length);

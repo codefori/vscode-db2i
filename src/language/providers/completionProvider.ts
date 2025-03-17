@@ -611,7 +611,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
           allItems.push(...getLocalDefs(sqlDoc, offset))
         }
 
-        if (remoteAssistIsEnabled() && currentStatement) {
+        if (remoteAssistIsEnabled(false) && currentStatement) {
           allItems.push(...await getCompletionItems(trigger, currentStatement, offset))
         }
 
