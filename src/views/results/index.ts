@@ -15,8 +15,8 @@ import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider
 import { ResultSetPanelProvider } from "./resultSetPanelProvider";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
-import { ExplainType } from "@ibm/mapepire-js/dist/src/types";
 import { DbCache } from "../../language/providers/logic/cache";
+import { ExplainType } from "../../connection/types";
 
 export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
 
@@ -355,7 +355,7 @@ async function runHandler(options?: StatementInfo) {
             const onlyExplain = statementDetail.qualifier === `onlyexplain`;
 
             chosenView.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
-            const explainType: ExplainType = onlyExplain ? "doNotRun" : "run";
+            const explainType: ExplainType = onlyExplain ? ExplainType.DO_NOT_RUN : ExplainType.RUN;
 
               setCancelButtonVisibility(true);
               const explained = await selectedJob.job.explain(statementDetail.content, explainType); // Can throw
