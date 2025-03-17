@@ -5,7 +5,7 @@ import { JobManager } from "../config";
 import { ResolvedSqlObject, BasicSQLObject } from "../types";
 
 export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types" | "logicals";
-export type PageData = { filter?: string, offset?: number, limit?: number };
+export type PageData = { filter?: string, offset?: number, limit?: number, sort?: boolean };
 
 const typeMap = {
   'tables': [`T`, `P`, `M`],
@@ -353,9 +353,21 @@ export default class Schemas {
       }
     }
 
-    const query = `with results as (${selects.join(
-      " UNION ALL "
-    )}) select * from results Order by QSYS2.DELIMIT_NAME(NAME) asc`;
+    let query: string;
+
+    if (selects.length > 1) {
+      if (details.sort) {
+        query = `with results as (${selects.join(
+          " UNION ALL "
+        )}) select * from results Order by QSYS2.DELIMIT_NAME(NAME) asc`;
+      } else {
+        query = selects.join(` UNION ALL `);
+      }
+  
+    } else {
+      // TODO: sort single
+      query = selects[0];
+    }
 
     const objects: any[] = await JobManager.runSQL(
       [

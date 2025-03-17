@@ -143,28 +143,19 @@ async function getObjectCompletions(
   forSchema: string,
   sqlTypes: { [index: string]: CompletionType }
 ): Promise<CompletionItem[]> {
-  forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
-  
-  const promises = Object.entries(sqlTypes).map(async ([_, value]) => {
-    const data = await DbCache.getObjects(forSchema, [value.type]);
-    return data.map((table) =>
-      createCompletionItem(
-        Statement.prettyName(table.name),
-        value.icon,
-        value.label,
-        `Schema: ${table.schema}`,
-        value.order
+  const allObjects = await DbCache.getObjects(forSchema, Object.values(sqlTypes).map(k => k.type));
+
+  return allObjects.map((value) => {
+      const completionData = completionTypes[value.type];
+      return createCompletionItem(
+        Statement.prettyName(value.name),
+        completionData.icon,
+        completionData.label,
+        `Schema: ${value.schema}`,
+        completionData.order
       )
-    );
-  });
-
-  const results = await Promise.allSettled(promises);
-  const list = results
-    .filter((result) => result.status == "fulfilled")
-    .map((result) => (result as PromiseFulfilledResult<any>).value)
-    .flat();
-
-  return list;
+    }
+  );
 }
 
 async function getCompletionItemsForSchema(
