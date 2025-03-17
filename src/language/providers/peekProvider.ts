@@ -2,17 +2,21 @@ import { languages, workspace } from "vscode";
 import { getSqlDocument } from "./logic/parse";
 import { JobManager } from "../../config";
 import Statement from "../../database/statement";
-import { StatementType } from "../sql/types";
 import { remoteAssistIsEnabled } from "./logic/available";
-import Schemas, { AllSQLTypes, InternalTypes, SQLType } from "../../database/schemas";
+import Schemas, {  } from "../../database/schemas";
 
 
 export const peekProvider = languages.registerDefinitionProvider({ language: `sql` }, {
   async provideDefinition(document, position, token) {
-    const standardObjects: SQLType[] = AllSQLTypes.filter(type => ![`functions`, `procedures`].includes(type));
     if (!remoteAssistIsEnabled()) return;
 
-    const defaultSchema = getDefaultSchema();
+    const currentJob = JobManager.getSelection();
+
+    if (!currentJob) return;
+
+    const defaultSchema = currentJob.job.getCurrentSchema();
+    const naming = currentJob.job.getNaming();
+
     const sqlDoc = getSqlDocument(document);
     const offset = document.offsetAt(position);
 
@@ -26,7 +30,13 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
 
       if (ref) {
         const name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
-        const schema = ref.object.schema ? Statement.noQuotes(Statement.delimName(ref.object.schema, true)) : undefined;
+
+        // Schema is based on a few things:
+        // If it's a fully qualified path, use the schema path
+        // Otherwise:
+        //  - if SQL naming is in use, then use the default schema
+        //  - if system naming is in use, then don't pass a library and the library list will be used
+        const schema = ref.object.schema ? Statement.noQuotes(Statement.delimName(ref.object.schema, true)) : naming === `sql` ? defaultSchema : undefined;
 
         const possibleObjects = await Schemas.resolveObjects([{name, schema}]);
 
@@ -46,8 +56,3 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
     }
   }
 });
-
-const getDefaultSchema = (): string => {
-  const currentJob = JobManager.getSelection();
-  return currentJob && currentJob.job.options.libraries[0] ? currentJob.job.options.libraries[0] : `QGPL`;
-}

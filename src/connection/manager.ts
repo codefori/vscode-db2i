@@ -13,6 +13,8 @@ export interface JobInfo {
   job: OldSQLJob;
 }
 
+export type NamingFormats = "sql"|"system";
+
 const NO_SELECTED_JOB = -1;
 
 export class SQLJobManager {
@@ -163,7 +165,7 @@ export class SQLJobManager {
     return Configuration.get<SelfValue>(`jobManager.jobSelfDefault`) || `*NONE`;
   }
 
-  static getNamingDefault(): "sql"|"system" {
-    return (Configuration.get<string>(`jobManager.jobNamingDefault`) || `system`) as "system" | "sql";
+  static getNamingDefault(): NamingFormats {
+    return (Configuration.get<string>(`jobManager.jobNamingDefault`) || `system`) as NamingFormats;
   }
 }

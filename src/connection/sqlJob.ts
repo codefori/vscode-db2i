@@ -5,6 +5,7 @@ import { SQLJob } from "@ibm/mapepire-js";
 import { ConnectionResult, JobStatus, QueryResult, ServerRequest, ServerResponse } from "@ibm/mapepire-js/dist/src/types";
 import { JobLogEntry } from "./types";
 import Statement from "../database/statement";
+import { NamingFormats } from "./manager";
 
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
@@ -16,6 +17,14 @@ export class OldSQLJob extends SQLJob {
 
   getSelfCode(): SelfValue {
     return this.selfState;
+  }
+
+  getCurrentSchema(): string {
+    return this.options.libraries[0] || `QGPL`;
+  }
+
+  getNaming(): NamingFormats {
+    return this.options.naming;
   }
 
   public static async useExec() {
