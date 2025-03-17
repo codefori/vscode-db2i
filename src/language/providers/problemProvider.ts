@@ -58,9 +58,7 @@ export function setCheckerAvailableContext(additionalState = true) {
   commands.executeCommand(`setContext`, CHECKER_AVAILABLE_CONTEXT, available);
 }
 
-let checkerRunning = false;
 export function setCheckerRunningContext(isRunning: boolean) {
-  checkerRunning = isRunning;
   commands.executeCommand(`setContext`, CHECKER_RUNNING_CONTEXT, isRunning);
 }
 
@@ -120,7 +118,8 @@ interface SqlDiagnostic extends Diagnostic {
 
 async function validateSqlDocument(document: TextDocument, specificStatement?: number) {
   const checker = SQLStatementChecker.get();
-  if (remoteAssistIsEnabled() && checker && !checkerRunning) {
+  const job = remoteAssistIsEnabled(true);
+  if (checker && job) {
     const basename = document.fileName ? path.basename(document.fileName) : `Untitled`;
     if (isSafeDocument(document)) {
       setCheckerRunningContext(true);
@@ -181,7 +180,7 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
 
               let syntaxChecked: SqlSyntaxError[] | undefined;
               try {
-                syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(sqlStatementContents) });
+                syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(job, sqlStatementContents) });
               } catch (e) {
                 window.showErrorMessage(`${basename}: the SQL syntax checker failed to run. ${e.message}`);
                 syntaxChecked = undefined;
