@@ -143,6 +143,7 @@ async function getObjectCompletions(
   forSchema: string,
   sqlTypes: { [index: string]: CompletionType }
 ): Promise<CompletionItem[]> {
+  forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
   const allObjects = await DbCache.getObjects(forSchema, Object.values(sqlTypes).map(k => k.type));
 
   return allObjects.map((value) => {
@@ -330,13 +331,6 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
 
   const curClause = currentStatement.getClauseForOffset(offset);
   const tokenAtOffset = currentStatement.getTokenByOffset(offset);
-  let emptyObjectRefs: Boolean = false;
-
-  // Get all the schemas
-  if (objectRefs.length === 0 && cteList.length === 0) {
-    emptyObjectRefs = true;
-    completionItems.push(...(await getCachedSchemas()));
-  }
 
   // Set the default schema for all references without one
   for (let ref of objectRefs) {
@@ -383,7 +377,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   completionItems.push(...aliasItems);
 
   // get completions for objects
-  if (tokenAtOffset === undefined && (emptyObjectRefs || curClause !== ClauseType.Unknown)) {
+  if (tokenAtOffset === undefined && (curClause !== ClauseType.Unknown)) {
     // get all the completion items for objects in each referenced schema
     completionItems.push(
       ...(await getObjectCompletions(getDefaultSchema(), completionTypes))
@@ -434,6 +428,12 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
         );
       }
     }
+  }
+
+  if (completionItems.length === 0) {
+    // Get all the schemas
+    // TODO: very very slow
+    // completionItems.push(...(await getCachedSchemas()));
   }
 
   return completionItems;
