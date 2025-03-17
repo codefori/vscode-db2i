@@ -373,7 +373,7 @@ export default class Schemas {
       type: object.OBJ_TYPE,
       tableType: object.TABLE_TYPE,
       schema,
-      name: object.NAME || undefined,
+      name: object.NAME || object.SYS_NAME || undefined,
       specificName: object.SPECNAME || undefined,
       text: object.TEXT || undefined,
       system: {
