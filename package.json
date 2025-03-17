@@ -186,12 +186,22 @@
         }
       },
       {
-        "id": "vscode-db2i.self",
-        "title": "SQL Error Logging Facility (SELF)",
+        "id": "vscode-db2i.jobManager",
+        "title": "SQL Job Manager",
         "properties": {
-          "vscode-db2i.jobSelfDefault": {
+          "vscode-db2i.jobManager.jobNamingDefault": {
             "type": "string",
             "order": 0,
+            "description": "Default naming mode for new jobs",
+            "default": "system",
+            "enum": [
+              "system",
+              "sql"
+            ]
+          },
+          "vscode-db2i.jobManager.jobSelfDefault": {
+            "type": "string",
+            "order": 1,
             "description": "Default SELF setting for new jobs",
             "default": "*NONE",
             "enum": [
@@ -200,7 +210,13 @@
               "*ERROR",
               "*WARNING"
             ]
-          },
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.self",
+        "title": "SQL Error Logging Facility (SELF)",
+        "properties": {
           "vscode-db2i.jobSelfViewAutoRefresh": {
             "type": "boolean",
             "title": "Auto-refresh SELF Codes view",
@@ -558,8 +574,8 @@
         "icon": "$(edit)"
       },
       {
-        "command": "vscode-db2i.jobManager.defaultSelfSettings",
-        "title": "SQL Error Logging Facility (SELF) - Default Setting",
+        "command": "vscode-db2i.jobManager.defaultSettings",
+        "title": "Default Job Settings",
         "category": "Db2 for i",
         "icon": "$(gear)"
       },
@@ -866,7 +882,7 @@
           "when": "view == jobManager"
         },
         {
-          "command": "vscode-db2i.jobManager.defaultSelfSettings",
+          "command": "vscode-db2i.jobManager.defaultSettings",
           "group": "navigation",
           "when": "view == jobManager"
         },
@@ -1268,7 +1284,7 @@
       },
       {
         "view": "vscode-db2i.self.nodes",
-        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSelfSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
+        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
       }
     ],
     "notebooks": [

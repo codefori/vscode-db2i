@@ -27,11 +27,12 @@ export class SQLJobManager {
     if (ServerComponent.isInstalled()) {
 
       const instance = getInstance();
-      const config = instance.getConfig();
+      const connection = instance.getConnection()!;
+      const config = connection.getConfig();
 
       const newJob = predefinedJob || (new OldSQLJob({
         libraries: [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)],
-        naming: `system`,
+        naming: SQLJobManager.getNamingDefault(),
         "full open": false,
         "transaction isolation": "none",
         "query optimize goal": "1",
@@ -159,6 +160,10 @@ export class SQLJobManager {
   }
 
   static getSelfDefault(): SelfValue {
-    return Configuration.get<SelfValue>(`jobSelfDefault`) || `*NONE`;
+    return Configuration.get<SelfValue>(`jobManager.jobSelfDefault`) || `*NONE`;
+  }
+
+  static getNamingDefault(): "sql"|"system" {
+    return (Configuration.get<string>(`jobManager.jobNamingDefault`) || `system`) as "system" | "sql";
   }
 }
