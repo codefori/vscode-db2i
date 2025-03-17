@@ -29,7 +29,7 @@ export default function getSystemTab(options: JDBCOptions) {
     .addInput(
       `libraries`,
       `Library list`,
-      `List of system libraries, separated by commas or spaces`,
+      `List of system libraries, separated by commas or spaces. First entry is the default library / current schema, and the remaining items make up the library list.`,
       { rows: 2, default: options.libraries ? options.libraries.join(`, `) : `QGPL` }
     )
     .addSelect(
