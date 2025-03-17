@@ -48,7 +48,7 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
 
           return {
             uri: document.uri,
-            range: document.lineAt(1).range,
+            range: document.lineAt(0).range,
           };
         }
 
