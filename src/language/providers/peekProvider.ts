@@ -29,16 +29,16 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
       const ref = refs.find(ref => ref.tokens[0].range.start && offset <= ref.tokens[ref.tokens.length - 1].range.end);
 
       if (ref) {
-        const name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
+        const name = Statement.delimName(ref.object.name, true);
 
         // Schema is based on a few things:
         // If it's a fully qualified path, use the schema path
         // Otherwise:
         //  - if SQL naming is in use, then use the default schema
         //  - if system naming is in use, then don't pass a library and the library list will be used
-        const schema = ref.object.schema ? Statement.noQuotes(Statement.delimName(ref.object.schema, true)) : naming === `sql` ? defaultSchema : undefined;
+        const schema = ref.object.schema ? Statement.delimName(ref.object.schema, true) : naming === `sql` ? defaultSchema : undefined;
 
-        const possibleObjects = await Schemas.resolveObjects([{name, schema}]);
+        const possibleObjects = await Schemas.resolveObjects([{name, schema}], [`*LIB`]);
 
         if (possibleObjects.length === 1) {
           const obj = possibleObjects[0];

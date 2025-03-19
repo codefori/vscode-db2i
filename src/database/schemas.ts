@@ -103,7 +103,8 @@ export default class Schemas {
    * Resolves to the following SQL types: SCHEMA, TABLE, VIEW, ALIAS, INDEX, FUNCTION and PROCEDURE
    */
   static async resolveObjects(
-    sqlObjects: ObjectReference[]
+    sqlObjects: ObjectReference[],
+    ignoreSystemTypes: string[] = []
   ): Promise<ResolvedSqlObject[]> {
     let statements: string[] = [];
     let parameters: BasicColumnType[] = [];
@@ -114,6 +115,13 @@ export default class Schemas {
 
     // First, we use OBJECT_STATISTICS to resolve the object based on the library list.
     // But, if the object is qualified with a schema, we need to use that schema to get the correct object.
+
+    let ignoreClause = ``;
+    if (ignoreSystemTypes.length > 0) {
+      ignoreSystemTypes = ignoreSystemTypes.map(i => i.toUpperCase());
+      ignoreClause = `where objtype not in (${ignoreSystemTypes.map((i) => `?`).join(`, `)})`;
+    }
+
     for (const obj of sqlObjects) {
       const cached = this.getCachedReference(obj);
       if (cached) {
@@ -123,14 +131,14 @@ export default class Schemas {
 
       if (obj.schema) {
         statements.push(
-          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics(?, '*ALL', object_name => ?))`
+          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics(?, '*ALL', object_name => ?)) ${ignoreClause}`
         );
-        parameters.push(obj.schema, obj.name);
+        parameters.push(obj.schema, obj.name, ...ignoreSystemTypes);
       } else {
         statements.push(
-          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics('*LIBL', '*ALL', object_name => ?))`
+          `${BASE_RESOLVE_SELECT} from table(qsys2.object_statistics('*LIBL', '*ALL', object_name => ?)) ${ignoreClause}`
         );
-        parameters.push(obj.name);
+        parameters.push(obj.name, ...ignoreSystemTypes);
       }
     }
 
