@@ -1,5 +1,35 @@
 {
   "contributes": {
+    "configuration": [
+      {
+        "id": "vscode-db2i.jobManager",
+        "title": "SQL Job Manager",
+        "properties": {
+          "vscode-db2i.jobManager.jobNamingDefault": {
+            "type": "string",
+            "order": 0,
+            "description": "Default naming mode for new jobs",
+            "default": "system",
+            "enum": [
+              "system",
+              "sql"
+            ]
+          },
+          "vscode-db2i.jobManager.jobSelfDefault": {
+            "type": "string",
+            "order": 1,
+            "description": "Default SELF setting for new jobs",
+            "default": "*NONE",
+            "enum": [
+              "*NONE",
+              "*ALL",
+              "*ERROR",
+              "*WARNING"
+            ]
+          }
+        }
+      }
+    ],
     "views": {
       "db2-explorer": [
         {
@@ -54,8 +84,8 @@
         "icon": "$(edit)"
       },
       {
-        "command": "vscode-db2i.jobManager.defaultSelfSettings",
-        "title": "SQL Error Logging Facility (SELF) - Default Setting",
+        "command": "vscode-db2i.jobManager.defaultSettings",
+        "title": "Default Job Settings",
         "category": "Db2 for i",
         "icon": "$(gear)"
       },
@@ -163,7 +193,7 @@
           "when": "view == jobManager"
         },
         {
-          "command": "vscode-db2i.jobManager.defaultSelfSettings",
+          "command": "vscode-db2i.jobManager.defaultSettings",
           "group": "navigation",
           "when": "view == jobManager"
         },

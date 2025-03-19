@@ -13,6 +13,8 @@ export interface JobInfo {
   job: OldSQLJob;
 }
 
+export type NamingFormats = "sql"|"system";
+
 const NO_SELECTED_JOB = -1;
 
 export class SQLJobManager {
@@ -27,11 +29,12 @@ export class SQLJobManager {
     if (ServerComponent.isInstalled()) {
 
       const instance = getInstance();
-      const config = instance.getConfig();
+      const connection = instance.getConnection()!;
+      const config = connection.getConfig();
 
       const newJob = predefinedJob || (new OldSQLJob({
         libraries: [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)],
-        naming: `system`,
+        naming: SQLJobManager.getNamingDefault(),
         "full open": false,
         "transaction isolation": "none",
         "query optimize goal": "1",
@@ -115,6 +118,16 @@ export class SQLJobManager {
     return this.jobs[jobExists];
   }
 
+  private resetCurrentSchema(query: string, job: OldSQLJob) {
+    if (query.toUpperCase().startsWith(`SET`)) {
+      const newSchema = query.split(` `)[2];
+      if (newSchema) {
+        job.resetCurrentSchemaCache();
+      }
+    }
+    return query;
+  }
+
   async runSQL<T>(query: string, opts?: QueryOptions, rowsToFetch = 2147483647): Promise<T[]> {
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
@@ -122,6 +135,8 @@ export class SQLJobManager {
     const statement = await this.getPagingStatement<T>(query, opts);
     const results = await statement.execute(rowsToFetch);
     statement.close();
+
+    this.resetCurrentSchema(query, this.jobs[this.selectedJob].job);
     return results.data;
   }
 
@@ -133,12 +148,15 @@ export class SQLJobManager {
     const results = await statement.execute(rowsToFetch);
     statement.close();
 
+    this.resetCurrentSchema(query, this.jobs[this.selectedJob].job);
     return results;
   }
 
   async getPagingStatement<T>(query: string, opts?: QueryOptions): Promise<Query<T>> {
-    const selected = this.jobs[this.selectedJob]
+    const selected = this.jobs[this.selectedJob];
     if (ServerComponent.isInstalled() && selected) {
+      this.resetCurrentSchema(query, selected?.job);
+      
       return selected.job.query<T>(query, opts);
 
     } else if (!ServerComponent.isInstalled()) {
@@ -161,6 +179,10 @@ export class SQLJobManager {
   }
 
   static getSelfDefault(): SelfValue {
-    return Configuration.get<SelfValue>(`jobSelfDefault`) || `*NONE`;
+    return Configuration.get<SelfValue>(`jobManager.jobSelfDefault`) || `*NONE`;
+  }
+
+  static getNamingDefault(): NamingFormats {
+    return (Configuration.get<string>(`jobManager.jobNamingDefault`) || `system`) as NamingFormats;
   }
 }
