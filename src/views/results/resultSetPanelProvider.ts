@@ -99,9 +99,17 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
               if (this.currentQuery.getState() !== "RUN_DONE") {
                 setCancelButtonVisibility(true);
-
-                let queryResults = this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE" ? await this.currentQuery.fetchMore() : await this.currentQuery.execute();
-
+                let queryResults = undefined;
+                let startTime = 0;
+                let endTime = 0;
+                if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
+                  queryResults = await this.currentQuery.fetchMore();
+                }
+                else {
+                  startTime = performance.now();
+                  queryResults = await this.currentQuery.execute();
+                  endTime = performance.now();
+                }
                 const jobId = this.currentQuery.getHostJob().id;
 
                 this._view.webview.postMessage({
@@ -112,7 +120,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
                   queryId: this.currentQuery.getId(),
                   update_count: queryResults.update_count,
-                  isDone: queryResults.is_done
+                  isDone: queryResults.is_done,
+                  executionTime: (endTime - startTime).toFixed()
                 });
               }
 
