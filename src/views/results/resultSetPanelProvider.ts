@@ -99,9 +99,17 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
               if (this.currentQuery.getState() !== "RUN_DONE") {
                 setCancelButtonVisibility(true);
-                const startTime = performance.now();
-                let queryResults = this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE" ? await this.currentQuery.fetchMore() : await this.currentQuery.execute();
-                const endTime = performance.now();
+                let queryResults = undefined;
+                let startTime = 0;
+                let endTime = 0;
+                if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
+                  queryResults = await this.currentQuery.fetchMore();
+                }
+                else {
+                  startTime = performance.now();
+                  queryResults = await this.currentQuery.execute();
+                  endTime = performance.now();
+                }
                 const jobId = this.currentQuery.getHostJob().id;
 
                 this._view.webview.postMessage({
