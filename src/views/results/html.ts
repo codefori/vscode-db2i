@@ -379,8 +379,8 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                   if (data.rows === undefined && totalRows === 0) {
                     document.getElementById(messageSpanId).innerText = 'Statement executed with no result set returned. Rows affected: ' + data.update_count;
                   } else {
-                    if (data.executionTime > 0) {
-                      document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + ' rows in ' + data.executionTime + 'ms. End of data.') : ('Loaded ' + totalRows + ' rows in ' + data.executionTime + 'ms. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');
+                    if (data.executionTime) {
+                      document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + ' rows in ' + data.executionTime.toFixed() + 'ms. End of data.') : ('Loaded ' + totalRows + ' rows in ' + data.executionTime.toFixed() + 'ms. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');
                     }
                     else {
                       document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + ' rows. End of data.') : ('Loaded ' + totalRows + ' rows. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');

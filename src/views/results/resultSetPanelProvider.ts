@@ -102,6 +102,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 let queryResults = undefined;
                 let startTime = 0;
                 let endTime = 0;
+                let executionTime: number|undefined;
+
                 if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
                   queryResults = await this.currentQuery.fetchMore();
                 }
@@ -109,6 +111,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   startTime = performance.now();
                   queryResults = await this.currentQuery.execute();
                   endTime = performance.now();
+                  executionTime = (endTime - startTime)
                 }
                 const jobId = this.currentQuery.getHostJob().id;
 
@@ -121,7 +124,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   queryId: this.currentQuery.getId(),
                   update_count: queryResults.update_count,
                   isDone: queryResults.is_done,
-                  executionTime: (endTime - startTime).toFixed()
+                  executionTime
                 });
               }
 
