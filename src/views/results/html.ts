@@ -379,7 +379,12 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                   if (data.rows === undefined && totalRows === 0) {
                     document.getElementById(messageSpanId).innerText = 'Statement executed with no result set returned. Rows affected: ' + data.update_count;
                   } else {
-                    document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + '. End of data.') : ('Loaded ' + totalRows + '. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');
+                    if (data.executionTime) {
+                      document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + ' rows in ' + data.executionTime.toFixed() + 'ms. End of data.') : ('Loaded ' + totalRows + ' rows in ' + data.executionTime.toFixed() + 'ms. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');
+                    }
+                    else {
+                      document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + ' rows. End of data.') : ('Loaded ' + totalRows + ' rows. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');
+                    }
                     document.getElementById(jobId).innerText = data.jobId ? data.jobId : '';
                     document.getElementById(messageSpanId).style.visibility = "hidden";
                   }
