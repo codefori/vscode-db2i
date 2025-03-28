@@ -324,11 +324,16 @@ export default class Statement {
 
 	}
 
+	private static readonly BANNED_NAMES = [`VALUES`];
 	getObjectReferences(): ObjectRef[] {
 		let list: ObjectRef[] = [];
 
 		const doAdd = (ref?: ObjectRef) => {
-			if (ref) list.push(ref);
+			if (ref) {
+				if (ref.object.name && !Statement.BANNED_NAMES.includes(ref.object.name.toUpperCase())) {
+					list.push(ref);
+				}
+			}
 		}
 
 		const basicQueryFinder = (startIndex: number): void => {
@@ -360,6 +365,14 @@ export default class Statement {
 					const sqlObj = this.getRefAtToken(i);
 					if (sqlObj) {
 						doAdd(sqlObj);
+						i += sqlObj.tokens.length;
+						if (sqlObj.isUDTF || sqlObj.fromLateral) {
+							i += 3; //For the brackets
+						}
+					}
+				} else if (currentClause === `from` && tokenIs(this.tokens[i], `function`)) {
+					const sqlObj = this.getRefAtToken(i, {includeParameters: true});
+					if (sqlObj) {
 						i += sqlObj.tokens.length;
 						if (sqlObj.isUDTF || sqlObj.fromLateral) {
 							i += 3; //For the brackets
@@ -538,7 +551,7 @@ export default class Statement {
 		return list;
 	}
 
-	private getRefAtToken(i: number, options: {withSystemName?: boolean} = {}): ObjectRef|undefined {
+	private getRefAtToken(i: number, options: {withSystemName?: boolean, includeParameters?: boolean} = {}): ObjectRef|undefined {
 		let sqlObj: ObjectRef;
 
 		let nextIndex = i;
@@ -546,10 +559,9 @@ export default class Statement {
 
 		let endIndex = i;
 
-		const isUDTF = tokenIs(nextToken, `function`, `TABLE`);
-		const isLateral = tokenIs(nextToken, `function`, `LATERAL`);
+		const isSubSelect = tokenIs(nextToken, `function`, `TABLE`) || tokenIs(nextToken, `function`, `LATERAL`) || (options.includeParameters && tokenIs(nextToken, `function`));
 
-		if (isUDTF) {
+		if (isSubSelect) {
 			sqlObj = this.getRefAtToken(i+2);
 			if (sqlObj) {
 				sqlObj.isUDTF = true;
@@ -563,14 +575,6 @@ export default class Statement {
 				nextIndex = -1;
 				nextToken = undefined;
 			}
-		} else if (isLateral) {
-			const blockTokens = this.getBlockAt(nextToken.range.end+1);
-			const newStatement = new Statement(blockTokens, {start: nextToken.range.start, end: blockTokens[blockTokens.length-1].range.end});
-			[sqlObj] = newStatement.getObjectReferences();
-
-			sqlObj.fromLateral = true;
-			nextIndex = i + 2 + blockTokens.length;
-			nextToken = this.tokens[nextIndex];
 		
 		} else {
 			if (nextToken && NameTypes.includes(nextToken.type)) {
@@ -618,7 +622,7 @@ export default class Statement {
 				}
 			}
 
-			if (!isUDTF) {
+			if (!isSubSelect && !sqlObj.isUDTF) {
 				sqlObj.tokens = this.tokens.slice(i, endIndex+1);
 			}
 

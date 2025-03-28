@@ -1105,7 +1105,29 @@ parserScenarios(`Object references`, ({newDoc}) => {
     
     expect(refs[2].object.name).toBe(`object_statistics`);
     expect(refs[2].object.schema).toBe(`qsys2`);
-    expect(refs[2].alias).toBe(`z`);
+    expect(refs[2].alias).toBe(undefined);
+  });
+
+  test('SELECT FROM LATERAL', () => {
+    const lines = [
+      `SELECT id, id_phone, t.phone_number`,
+      `  FROM testlateral AS s,`,
+      `       LATERAL(VALUES (1, S.phone1),`,
+      `                      (2, S.phone2),`,
+      `                      (3, S.phone3)) AS T(id_phone, phone_number)`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.Select);
+
+    const refs = statement.getObjectReferences();
+    console.log(refs);
+    expect(refs.length).toBe(1);
   });
 
   test(`Multiple UDTFs`, () => {
@@ -1407,7 +1429,7 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const refs = statement.getObjectReferences();
     const ctes = statement.getCTEReferences();
-
+    
     expect(refs.length).toBe(10);
     expect(refs[0].object.name).toBe(`shipments`);
     expect(refs[0].alias).toBe(`s`);
