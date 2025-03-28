@@ -30,8 +30,8 @@ export class JobManagerView implements TreeDataProvider<any> {
 
       ...ConfigManager.initialiseSaveCommands(),
 
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.defaultSelfSettings`, () => {
-        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobSelf');
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.defaultSettings`, () => {
+        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobManager');
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (options?: JDBCOptions, name?: string) => {

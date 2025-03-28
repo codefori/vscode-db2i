@@ -15,11 +15,15 @@ import { CallableSignature } from "../../database/callable";
 
 export const openProvider = workspace.onDidOpenTextDocument(async (document) => {
   if (document.languageId === `sql`) {
-    if (remoteAssistIsEnabled()) {
+    const selected = remoteAssistIsEnabled();
+
+    if (selected) {
       const sqlDoc = getSqlDocument(document);
-      const defaultSchema = getDefaultSchema();
+      const defaultSchema = await selected.job.getCurrentSchema();
 
       if (!sqlDoc) return;
+
+      // TODO: we need to stop hard coding default schema here!!
 
       for (const statement of sqlDoc.statements) {
         const refs = statement.getObjectReferences();
@@ -60,9 +64,10 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
 
 export const hoverProvider = languages.registerHoverProvider({ language: `sql` }, {
   async provideHover(document, position, token) {
-    if (!remoteAssistIsEnabled(true)) return;
+    const selected = remoteAssistIsEnabled(true);
+    if (!selected) return;
     
-    const defaultSchema = getDefaultSchema();
+    const defaultSchema = await selected.job.getCurrentSchema();
     const sqlDoc = getSqlDocument(document);
     const offset = document.offsetAt(position);
 
@@ -193,9 +198,4 @@ function lookupSymbol(name: string, schema: string | undefined, possibleNames: s
   schema = schema ? Statement.noQuotes(Statement.delimName(schema, true)) : undefined
 
   return DbCache.lookupSymbol(name, schema, possibleNames);
-}
-
-const getDefaultSchema = (): string => {
-  const currentJob = JobManager.getSelection();
-  return currentJob && currentJob.job.options.libraries[0] ? currentJob.job.options.libraries[0] : `QGPL`;
 }
