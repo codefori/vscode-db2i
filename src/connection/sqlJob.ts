@@ -2,8 +2,8 @@ import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import { SQLJob } from "@ibm/mapepire-js";
-import { ConnectionResult, JobStatus, QueryResult, ServerRequest, ServerResponse } from "@ibm/mapepire-js/dist/src/types";
-import { JobLogEntry } from "./types";
+import { ConnectionResult, QueryResult, ServerRequest, ServerResponse } from "@ibm/mapepire-js/dist/src/types";
+import { JobLogEntry, JobStatus } from "./types";
 import Statement from "../database/statement";
 
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
@@ -106,7 +106,7 @@ export class OldSQLJob extends SQLJob {
   getStatus(): JobStatus {
     const currentListenerCount = this.responseEmitter.eventNames().length;
 
-    return this.channel && currentListenerCount > 0 ? "busy" : this.status;
+    return this.channel && currentListenerCount > 0 ? JobStatus.BUSY : this.status;
   }
 
   async connect(): Promise<ConnectionResult> {
@@ -116,12 +116,12 @@ export class OldSQLJob extends SQLJob {
 
     this.channel.on(`error`, (err) => {
       ServerComponent.writeOutput(err);
-      this.dispose();
+      this.end();
     })
 
     this.channel.on(`close`, (code: number) => {
       ServerComponent.writeOutput(`Exited with code ${code}.`)
-      this.dispose();
+      this.end();
     })
 
     const props = Object
@@ -147,10 +147,10 @@ export class OldSQLJob extends SQLJob {
     const connectResult = await this.send<ConnectionResult>(connectionObject);
 
     if (connectResult.success === true) {
-      this.status = "ready";
+      this.status = JobStatus.READY;
     } else {
-      this.dispose();
-      this.status = "notStarted";
+      this.end();
+      this.status = JobStatus.NOT_STARTED;
       throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 
@@ -217,13 +217,13 @@ export class OldSQLJob extends SQLJob {
       }));
     });
 
-    this.dispose();
+    this.end();
   }
 
-  dispose() {
+ private end() {
     this.channel.close();
     this.channel = undefined;
-    this.status = "ended";
+    this.status = JobStatus.ENDED;
     this.responseEmitter.removeAllListeners();
   }
 }
