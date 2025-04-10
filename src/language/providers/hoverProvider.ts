@@ -60,7 +60,7 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
 
 export const hoverProvider = languages.registerHoverProvider({ language: `sql` }, {
   async provideHover(document, position, token) {
-    if (!remoteAssistIsEnabled()) return;
+    if (!remoteAssistIsEnabled(true)) return;
     
     const defaultSchema = getDefaultSchema();
     const sqlDoc = getSqlDocument(document);

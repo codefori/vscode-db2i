@@ -1,6 +1,7 @@
 
 import { JobManager } from "../config";
 import { getInstance } from "../base";
+import { TableColumn, CPYFOptions } from "../types";
 
 export default class Table {
   /**

@@ -9,6 +9,7 @@ import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { ObjectRef } from "../../language/sql/types";
 import Table from "../../database/table";
 import Statement from "../../database/statement";
+import { TableColumn } from "../../types";
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel;
@@ -98,9 +99,20 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
               if (this.currentQuery.getState() !== "RUN_DONE") {
                 setCancelButtonVisibility(true);
+                let queryResults = undefined;
+                let startTime = 0;
+                let endTime = 0;
+                let executionTime: number|undefined;
 
-                let queryResults = this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE" ? await this.currentQuery.fetchMore() : await this.currentQuery.execute();
-
+                if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
+                  queryResults = await this.currentQuery.fetchMore();
+                }
+                else {
+                  startTime = performance.now();
+                  queryResults = await this.currentQuery.execute();
+                  endTime = performance.now();
+                  executionTime = (endTime - startTime)
+                }
                 const jobId = this.currentQuery.getHostJob().id;
 
                 this._view.webview.postMessage({
@@ -111,7 +123,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
                   queryId: this.currentQuery.getId(),
                   update_count: queryResults.update_count,
-                  isDone: queryResults.is_done
+                  isDone: queryResults.is_done,
+                  executionTime
                 });
               }
 
@@ -192,71 +205,75 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         const goodSchema = Statement.delimName(schema, true);
         const goodName = Statement.delimName(ref.object.name, true);
 
-        const isPartitioned = await Table.isPartitioned(goodSchema, goodName);
-        if (!isPartitioned) {
-          let tableInfo: TableColumn[] = [];
+        try {
+          const isPartitioned = await Table.isPartitioned(goodSchema, goodName);
+          if (!isPartitioned) {
+            let tableInfo: TableColumn[] = [];
 
-          if ([`SESSION`, `QTEMP`].includes(goodSchema)) {
-            tableInfo = await Table.getSessionItems(goodName);
-          } else {
-            tableInfo = await Table.getItems(
-              goodSchema,
-              goodName
-            );
-          }
-
-          const uneditableTypes = [`VARBIN`, `BINARY`, `ROWID`, `DATALINK`, `DBCLOB`, `BLOB`, `GRAPHIC`]
-
-          if (tableInfo.length > 0) {
-            let currentColumns: html.BasicColumn[] | undefined;
-
-            currentColumns = tableInfo
-              .filter((column) => !uneditableTypes.includes(column.DATA_TYPE))
-              .map((column) => ({
-                name: column.COLUMN_NAME,
-                jsType: column.NUMERIC_PRECISION ? `number` : `asString`,
-                useInWhere: column.IS_IDENTITY === `YES`,
-                maxInputLength: column.CHARACTER_MAXIMUM_LENGTH
-              }));
-
-            if (!currentColumns.some(c => c.useInWhere)) {
-              const cName = ref.alias || `t`;
-
-              // Support for using a custom column list
-              const selectClauseStart = basicSelect.toLowerCase().indexOf(`select `);
-              const fromClauseStart = basicSelect.toLowerCase().indexOf(`from`);
-              let possibleColumnList: string | undefined;
-
-              possibleColumnList = `${cName}.*`;
-              if (fromClauseStart > 0) {
-                possibleColumnList = basicSelect.substring(0, fromClauseStart);
-                if (selectClauseStart >= 0) {
-                  possibleColumnList = possibleColumnList.substring(selectClauseStart + 7);
-
-                  if (possibleColumnList.trim() === `*`) {
-                    possibleColumnList = `${cName}.*`;
-                  }
-                }
-              }
-
-              // We need to override the input statement if they want to do updatable
-              const whereClauseStart = basicSelect.toLowerCase().indexOf(`where`);
-              let fromWhereClause: string | undefined;
-
-              if (whereClauseStart > 0) {
-                fromWhereClause = basicSelect.substring(whereClauseStart);
-              }
-
-
-              basicSelect = `select rrn(${cName}) as RRN, ${possibleColumnList} from ${schema}.${ref.object.name} as ${cName} ${fromWhereClause || ``}`;
-              currentColumns = [{ name: `RRN`, jsType: `number`, useInWhere: true }, ...currentColumns];
+            if ([`SESSION`, `QTEMP`].includes(goodSchema)) {
+              tableInfo = await Table.getSessionItems(goodName);
+            } else {
+              tableInfo = await Table.getItems(
+                goodSchema,
+                goodName
+              );
             }
 
-            updatable = {
-              table: schema + `.` + ref.object.name,
-              columns: currentColumns
-            };
+            const uneditableTypes = [`VARBIN`, `BINARY`, `ROWID`, `DATALINK`, `DBCLOB`, `BLOB`, `GRAPHIC`]
+
+            if (tableInfo.length > 0) {
+              let currentColumns: html.BasicColumn[] | undefined;
+
+              currentColumns = tableInfo
+                .filter((column) => !uneditableTypes.includes(column.DATA_TYPE))
+                .map((column) => ({
+                  name: column.COLUMN_NAME,
+                  jsType: column.NUMERIC_PRECISION ? `number` : `asString`,
+                  useInWhere: column.IS_IDENTITY === `YES`,
+                  maxInputLength: column.CHARACTER_MAXIMUM_LENGTH
+                }));
+
+              if (!currentColumns.some(c => c.useInWhere)) {
+                const cName = ref.alias || `t`;
+
+                // Support for using a custom column list
+                const selectClauseStart = basicSelect.toLowerCase().indexOf(`select `);
+                const fromClauseStart = basicSelect.toLowerCase().indexOf(`from`);
+                let possibleColumnList: string | undefined;
+
+                possibleColumnList = `${cName}.*`;
+                if (fromClauseStart > 0) {
+                  possibleColumnList = basicSelect.substring(0, fromClauseStart);
+                  if (selectClauseStart >= 0) {
+                    possibleColumnList = possibleColumnList.substring(selectClauseStart + 7);
+
+                    if (possibleColumnList.trim() === `*`) {
+                      possibleColumnList = `${cName}.*`;
+                    }
+                  }
+                }
+
+                // We need to override the input statement if they want to do updatable
+                const whereClauseStart = basicSelect.toLowerCase().indexOf(`where`);
+                let fromWhereClause: string | undefined;
+
+                if (whereClauseStart > 0) {
+                  fromWhereClause = basicSelect.substring(whereClauseStart);
+                }
+
+
+                basicSelect = `select rrn(${cName}) as RRN, ${possibleColumnList} from ${schema}.${ref.object.name} as ${cName} ${fromWhereClause || ``}`;
+                currentColumns = [{ name: `RRN`, jsType: `number`, useInWhere: true }, ...currentColumns];
+              }
+
+              updatable = {
+                table: schema + `.` + ref.object.name,
+                columns: currentColumns
+              };
+            }
           }
+        } catch (e) {
+          window.showErrorMessage(`Table may not be updatable. This sometimes happens if you're Db2 for i PTF levels are not up to date: ${e.message}`);
         }
       }
     }

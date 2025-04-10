@@ -3,7 +3,7 @@ import path from "path";
 import { existsSync, mkdirSync } from "fs";
 import { writeFile } from "fs/promises";
 import fetch from "node-fetch";
-import { Octokit } from "octokit";
+import { Octokit } from "@octokit/rest";
 import { SERVER_VERSION_FILE, SERVER_VERSION_TAG } from "./connection/SCVersion";
 
 async function work() {
