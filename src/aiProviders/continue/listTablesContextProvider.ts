@@ -10,10 +10,10 @@ import * as vscode from "vscode";
 import Schemas from "../../database/schemas";
 import Table from "../../database/table";
 import {
-  buildSchemaDefinition,
-  generateTableDefinition
-} from "../context";
+  buildSchemaDefinition} from "../context";
 import Configuration from "../../configuration";
+import { getContextItems } from "../prompt";
+import { TableColumn, BasicSQLObject } from "../../types";
 
 const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",
@@ -82,16 +82,9 @@ class ListDb2iTables implements IContextProvider {
       }
 
     } else {
-      const tablesRefs = await generateTableDefinition(
-        this.schema,
-        extras.fullInput.split(` `)
-      );
-      for (const table of tablesRefs) {
-        contextItems.push({
-          name: `table definition for ${table.id}`,
-          content: table.content,
-          description: `${table.type} definition`,
-        });
+      const tablesRefs = await getContextItems(query);
+      for (const tableData of tablesRefs.context) {
+        contextItems.push(tableData);
       }
     }
     return contextItems;

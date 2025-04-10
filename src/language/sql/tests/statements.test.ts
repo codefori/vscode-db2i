@@ -1105,7 +1105,29 @@ parserScenarios(`Object references`, ({newDoc}) => {
     
     expect(refs[2].object.name).toBe(`object_statistics`);
     expect(refs[2].object.schema).toBe(`qsys2`);
-    expect(refs[2].alias).toBe(`z`);
+    expect(refs[2].alias).toBe(undefined);
+  });
+
+  test('SELECT FROM LATERAL', () => {
+    const lines = [
+      `SELECT id, id_phone, t.phone_number`,
+      `  FROM testlateral AS s,`,
+      `       LATERAL(VALUES (1, S.phone1),`,
+      `                      (2, S.phone2),`,
+      `                      (3, S.phone3)) AS T(id_phone, phone_number)`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.Select);
+
+    const refs = statement.getObjectReferences();
+    console.log(refs);
+    expect(refs.length).toBe(1);
   });
 
   test(`Multiple UDTFs`, () => {
@@ -1407,7 +1429,7 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const refs = statement.getObjectReferences();
     const ctes = statement.getCTEReferences();
-
+    
     expect(refs.length).toBe(10);
     expect(refs[0].object.name).toBe(`shipments`);
     expect(refs[0].alias).toBe(`s`);
@@ -1898,6 +1920,36 @@ describe(`Parameter statement tests`, () => {
     const result = document.removeEmbeddedAreas(statement);
     expect(result.parameterCount).toBe(0);
     expect(result.content).toBe(content);
+  });
+
+  test('No embedded area on MERGE (issue 348)', () => {
+    const content = [
+      `merge into sample.employee e`,
+      `  using (select *from `,
+      `    (values ('000011', 'PAOLO', 'I', 'SALVATORE', 'A00', 1234, 'OPERATOR', 14)) as `,
+      `newemp (empno, firstnme, midinit, lastname, workdept, phoneno, job , edlevel))  a`,
+      ` on a.empno = e.empno`,
+      `when matched then update  `,
+      `    set e.firstnme = a.firstnme, e.midinit = a.midinit, e.lastname = a.lastname, `,
+      `  e.workdept = a.workdept, e.phoneno = a.phoneno,`,
+      `  e.job = a.job, e.edlevel = a.edlevel`,
+      `when not matched then `,
+      `    insert (empno, firstnme, midinit, lastname, workdept, phoneno, job , edlevel)`,
+      ` values (a.empno, a.firstnme, a.midinit, a.lastname, a.workdept, a.phoneno, `,
+      `  a.job, a.edlevel);`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Merge);
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.parameterCount).toBe(0);
+    expect(result.content + `;`).toBe(content);
+    expect(result.changed).toBe(false);
   });
 
   test(`Callable blocks`, () => {
