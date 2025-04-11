@@ -383,9 +383,7 @@ async function runHandler(options?: StatementInfo) {
           updateStatusBar({executing: true});
           const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
           setCancelButtonVisibility(false);
-          //let content = ``;
-          let content = `**free\n\n-- Row data structure\n` 
-          + `dcl-ds row_t qualified template;\n`;
+          let content = `**free\n\n-- Row data structure\ndcl-ds row_t qualified template;\n`;
 
           for (let i = 0; i < result.metadata.column_count; i++) {
             content += `  ${isNaN(+result.metadata.columns[i].label.charAt(0)) ? '' : 'col'}${result.metadata.columns[i].label.toLowerCase()} `;
@@ -484,7 +482,7 @@ async function runHandler(options?: StatementInfo) {
                       ];
                       content += insertStatement.join(`\n`) + `;\n`;
                     }
-                    break;                    
+                    break;
                 }
 
                 const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
