@@ -18,7 +18,7 @@ import { updateStatusBar } from "../jobManager/statusBar";
 import { DbCache } from "../../language/providers/logic/cache";
 import { ExplainType } from "../../connection/types";
 
-export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
+export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
 export interface StatementInfo {
   content: string,
@@ -375,7 +375,65 @@ async function runHandler(options?: StatementInfo) {
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
-        
+
+        } else if ([`rpg`].includes(statementDetail.qualifier)) {
+          chosenView.setLoadingText(`Executing SQL statement...`, false);
+
+          setCancelButtonVisibility(true);
+          updateStatusBar({executing: true});
+          const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
+          setCancelButtonVisibility(false);
+          //let content = ``;
+          let content = `**free\n\n-- Row data structure\n` 
+          + `dcl-ds row_t qualified template;\n`;
+
+          for (let i = 0; i < result.metadata.column_count; i++) {
+            content += `  ${isNaN(+result.metadata.columns[i].label.charAt(0)) ? '' : 'col'}${result.metadata.columns[i].label.toLowerCase()} `;
+            switch (result.metadata.columns[i].type) {
+              case `NUMERIC`:
+                content += `zoned(${result.metadata.columns[i].precision}${result.metadata.columns[i].scale > 0 ? ' : ' + result.metadata.columns[i].scale : ''});\n`;
+                break;
+              case `DECIMAL`:
+                content += `packed(${result.metadata.columns[i].precision}${result.metadata.columns[i].scale > 0 ? ' : ' + result.metadata.columns[i].scale : ''});\n`;
+                break;
+              case `CHAR`:
+                content += `char(${result.metadata.columns[i].precision});\n`;
+                break;
+              case `VARCHAR`:
+                content += `varchar(${result.metadata.columns[i].precision});\n`;
+                break;
+              case `DATE`:
+                content += `date;\n`;
+                break;
+              case `TIME`:
+                content += `time;\n`;
+                break;
+              case `TIMESTAMP`:
+                content += `timestamp;\n`;
+                break;
+              case `SMALLINT`:
+                content += `int(5);\n`;
+                break;
+              case `INTEGER`:
+                content += `int(10);\n`;
+                break;
+              case `BIGINT`:
+                content += `int(20);\n`;
+                break;
+              case `BOOLEAN`:
+                content += `ind;\n`;
+                break;
+              default:
+                content += `// type:${result.metadata.columns[i].type} precision:${result.metadata.columns[i].precision} scale:${result.metadata.columns[i].scale}\n`;
+                break;
+            }
+          }
+          content += `end-ds;\n`;
+          const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
+          await vscode.window.showTextDocument(textDoc);
+          updateStatusBar({executing: false});
+          chosenView.setLoadingText(`RPG data structure generated.`, false);
+
         } else {
           // Otherwise... it's a bit complicated.
           chosenView.setLoadingText(`Executing SQL statement...`, false);
@@ -426,7 +484,7 @@ async function runHandler(options?: StatementInfo) {
                       ];
                       content += insertStatement.join(`\n`) + `;\n`;
                     }
-                    break;
+                    break;                    
                 }
 
                 const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
@@ -524,7 +582,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   }
 
   if (statementInfo.content) {
-    [`cl`, `json`, `csv`, `sql`, `explain`, `update`].forEach(mode => {
+    [`cl`, `json`, `csv`, `sql`, `explain`, `update`, `rpg`].forEach(mode => {
       if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
         statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 
