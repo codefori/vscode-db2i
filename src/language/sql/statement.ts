@@ -117,7 +117,16 @@ export default class Statement {
 			if (tokenInOffset) {
 				if (tokenInOffset.type === `block`) {
 					if (tokenInOffset.block!.length > 0) {
-						return blockContainsOffset(cOffset, tokenInOffset.block!);
+						let blockRange = blockContainsOffset(cOffset, tokenInOffset.block!);
+						if (!blockRange) {
+							blockRange = {
+								start: this.tokens.findIndex(token => token.range.start === tokenInOffset.range.start) + 1,
+								end: this.tokens.findIndex(token => token.range.end === tokenInOffset.range.end)
+							}
+						}
+
+						return blockRange;
+						
 					} else {
 						const rawEnd = this.tokens.findIndex(token => token.range.end === tokenInOffset.range.end);
 						return {

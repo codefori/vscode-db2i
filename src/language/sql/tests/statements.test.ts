@@ -1,7 +1,7 @@
 import { assert, describe, expect, test } from 'vitest'
 import SQLTokeniser from '../tokens'
-import Document from '../document';
-import { ClauseType, StatementType } from '../types';
+import Document, { getPositionData } from '../document';
+import { CallableReference, ClauseType, StatementType } from '../types';
 
 const parserScenarios = describe.each([
   {newDoc: (content: string) => new Document(content)},
@@ -2002,6 +2002,112 @@ describe(`Parameter statement tests`, () => {
     expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
     expect(callableC.parentRef.object.schema).toBe(`qsys2`);
     expect(callableC.parentRef.object.name).toBe(`create_abcd`);
+  });
+
+  test('Partial parameters 1: Position data for procedure call', () => {
+    const sql = `call qsys2.ifs_write('asdasd', )`;
+
+    const document = new Document(sql);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(1);
+
+    const callableReference: CallableReference = statements[0].getCallableDetail(29);
+    expect(callableReference).toBeDefined();
+    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+
+    const positionData = getPositionData(callableReference, 29);
+    expect(positionData).toBeDefined();
+
+    expect(positionData.currentParm).toBe(1);
+    expect(positionData.currentCount).toBe(2);
+  });
+
+  test('Partial parameters 1.2: Position data for procedure call', () => {
+    const sql = `call qsys2.ifs_write('asdasd', )`;
+
+    const document = new Document(sql);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(1);
+
+    const callableReference: CallableReference = statements[0].getCallableDetail(31);
+    expect(callableReference).toBeDefined();
+    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+
+    const positionData = getPositionData(callableReference, 31);
+    expect(positionData).toBeDefined();
+
+    expect(positionData.currentParm).toBe(1);
+    expect(positionData.currentCount).toBe(2);
+  });
+
+  test('Partial parameters 2: Position data for procedure call', () => {
+    const sql = `call qsys2.ifs_write('asdasd', 243)`;
+
+    const document = new Document(sql);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(1);
+
+    const callableReference: CallableReference = statements[0].getCallableDetail(25);
+    expect(callableReference).toBeDefined();
+    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+
+    const positionData = getPositionData(callableReference, 25);
+    expect(positionData).toBeDefined();
+
+    expect(positionData.currentParm).toBe(0);
+    expect(positionData.currentCount).toBe(2);
+  });
+
+  test('Partial parameters 3: Position data for procedure call', () => {
+    const sql = `call qsys2.ifs_write('asdasd', 243, )`;
+
+    const document = new Document(sql);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(1);
+
+    const callableReference: CallableReference = statements[0].getCallableDetail(25);
+    expect(callableReference).toBeDefined();
+    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+
+    const positionDataA = getPositionData(callableReference, 25);
+    expect(positionDataA).toBeDefined();
+
+    expect(positionDataA.currentParm).toBe(0);
+    expect(positionDataA.currentCount).toBe(3);
+
+    const positionDataB = getPositionData(callableReference, 29);
+    expect(positionDataB).toBeDefined();
+
+    expect(positionDataB.currentParm).toBe(1);
+    expect(positionDataB.currentCount).toBe(3);
+  });
+
+  test('Partial parameters 4: Position data for procedure call', () => {
+    const sql = `call qsys2.ifs_write('asdasd', 'asdasd', overwrite => 'asdad')`;
+
+    const document = new Document(sql);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(1);
+
+    const callableReference: CallableReference = statements[0].getCallableDetail(50);
+    expect(callableReference).toBeDefined();
+    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+
+    const positionDataA = getPositionData(callableReference, 50);
+    expect(positionDataA).toBeDefined();
+
+    expect(positionDataA.currentParm).toBe(2);
+    expect(positionDataA.currentCount).toBe(3);
   });
 });
 

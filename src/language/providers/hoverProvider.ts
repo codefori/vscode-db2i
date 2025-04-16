@@ -6,8 +6,8 @@ import Statement from "../../database/statement";
 import { getParmAttributes, prepareParamType } from "./logic/completion";
 import { StatementType } from "../sql/types";
 import { remoteAssistIsEnabled } from "./logic/available";
-import { getPositionData } from "./logic/callable";
 import { CallableSignature } from "../../database/callable";
+import { getPositionData } from "../sql/document";
 
 // =================================
 // We need to open provider to exist so symbols can be cached for hover support when opening files
