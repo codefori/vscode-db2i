@@ -10,15 +10,10 @@ import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types
 import { CallableType } from "../../database/callable";
 import { prepareParamType, createCompletionItem, getParmAttributes } from "./logic/completion";
 import { isCallableType, getCallableParameters } from "./logic/callable";
-import { localAssistIsEnabled, remoteAssistIsEnabled } from "./logic/available";
+import { localAssistIsEnabled, remoteAssistIsEnabled, useSystemNames } from "./logic/available";
 import { DbCache } from "./logic/cache";
 import { getSqlDocument } from "./logic/parse";
 import { TableColumn, BasicSQLObject } from "../../types";
-import Configuration from "../../configuration";
-
-function useSystemNames() {
-  return Configuration.get<boolean>(`syntax.useSystemNames`) || false;
-}
 
 export interface CompletionType {
   order: string;
