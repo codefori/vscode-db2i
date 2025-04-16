@@ -383,6 +383,11 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.getRecordLocks",
+        "title": "Get Record Locks",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.clearData",
         "title": "Clear...",
         "category": "Db2 for i"
@@ -1006,6 +1011,11 @@
           "command": "vscode-db2i.getObjectLocks",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
           "group": "db2workWith@5"
+        },
+        {
+          "command": "vscode-db2i.getRecordLocks",
+          "when": "viewItem == table",
+          "group": "db2workWith@6"
         },
         {
           "command": "vscode-db2i.clearData",
