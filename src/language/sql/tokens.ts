@@ -25,7 +25,7 @@ interface TokenState {
 }
 
 export default class SQLTokeniser {
-  matchers: Matcher[] = [
+  static matchers: Matcher[] = [
     {
       name: `PROCEDURE_PARM_TYPE`,
       match: [{ type: `word`, match: (value: string) => {return [`IN`, `OUT`, `INOUT`].includes(value.toUpperCase())}}],
@@ -82,7 +82,7 @@ export default class SQLTokeniser {
     {
       name: `KEYWORD`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `DO`, `THEN`, `LOOP`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `SPECIFIC`, `EXTERNAL`].includes(value.toUpperCase());
+        return [`AS`, `FOR`, `OR`, `REPLACE`, `BEGIN`, `DO`, `THEN`, `LOOP`, `END`, `CURSOR`, `DEFAULT`, `HANDLER`, `REFERENCES`, `ON`, `UNIQUE`, `PRIMARY`, `CONSTRAINT`, `SPECIFIC`, `PERIOD`, `RCDFMT`, `EXTERNAL`, `ELSE`].includes(value.toUpperCase());
       } }],
       becomes: `keyword`,
     },
@@ -145,6 +145,8 @@ export default class SQLTokeniser {
   readonly startCommentBlock = `/*`;
   readonly endCommentBlock = `*/`;
 
+  storeComments: boolean = false;
+
   constructor() { }
 
   tokenise(content: string) {
@@ -166,6 +168,11 @@ export default class SQLTokeniser {
         // Handle when the end of line is there and we're in a comment
       } else if (state === ReadState.IN_SIMPLE_COMMENT && content[i] === this.endCommentString) {
         const preNewLine = i - 1;
+
+        if (this.storeComments) {
+          result.push({ value: content.substring(commentStart, i), type: `comment`, range: { start: commentStart, end: i } });
+        }
+
         content = content.substring(0, commentStart) + ` `.repeat(preNewLine - commentStart) + content.substring(preNewLine);
         i--; // So we process the newline next
         state = ReadState.NORMAL;
@@ -268,8 +275,8 @@ export default class SQLTokeniser {
     let tokens = state.tokens;
 
     for (let i = 0; i < tokens.length; i++) {
-      for (let y = 0; y < this.matchers.length; y++) {
-        const type = this.matchers[y];
+      for (let y = 0; y < SQLTokeniser.matchers.length; y++) {
+        const type = SQLTokeniser.matchers[y];
         let goodMatch = true;
 
         for (let x = 0; x < type.match.length; x++) {
@@ -294,6 +301,10 @@ export default class SQLTokeniser {
           } else {
             goodMatch = false;
           }
+        }
+
+        if (i > 0 && i < tokens.length - 2 && tokens[i].value.toLowerCase() === 'for' && tokens[i - 1].type === 'closebracket' && tokens[i + 2].value.toLowerCase() === 'data') {
+          goodMatch = false; // data-type with FOR BIT/SBCS/MIXED DATA
         }
 
         if (goodMatch) {

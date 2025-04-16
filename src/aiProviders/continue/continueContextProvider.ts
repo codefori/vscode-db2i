@@ -1,8 +1,3 @@
-import * as vscode from "vscode";
-import { JobManager } from "../../config";
-import { JobInfo } from "../../connection/manager";
-import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
-import { canTalkToDb, findPossibleTables } from "../context";
 import {
   ContextItem,
   ContextProviderDescription,
@@ -11,7 +6,18 @@ import {
   IContextProvider,
   LoadSubmenuItemsArgs,
 } from "@continuedev/core";
-import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "./prompts";
+import * as vscode from "vscode";
+import { JobManager } from "../../config";
+import { JobInfo } from "../../connection/manager";
+import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
+import {
+  buildSchemaDefinition,
+  canTalkToDb,
+  getSqlContextItems
+} from "../context";
+import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "../prompts";
+import Configuration from "../../configuration";
+import { getContextItems } from "../prompt";
 
 export let isContinueActive = false;
 
@@ -87,7 +93,7 @@ export class db2ContextProvider implements IContextProvider {
       const result = await selected.job
         .query<SelfCodeNode>(content)
         .execute(10000);
-      if (result.success) {
+      if (result.success && result.data) {
         const data: SelfCodeNode[] = result.data.map((row) => ({
           ...row,
           INITIAL_STACK: this.tryParseJson(row),
@@ -102,80 +108,71 @@ export class db2ContextProvider implements IContextProvider {
     }
   }
 
+  /**
+   * Retrieves context items based on the provided query and additional context.
+   *
+   * @param query - The query string used to determine the context items.
+   * @param extras - Additional context provider extras, including the full input.
+   * @returns A promise that resolves to an array of context items.
+   * @throws An error if unable to connect to the database or if the query fails.
+   *
+   * The function performs the following steps:
+   * 1. Initializes an empty array of context items.
+   * 2. Checks if the database connection is available.
+   * 3. Retrieves the current job and default schema.
+   * 4. Builds the schema semantic and adds it to the context items.
+   * 5. Depending on the query, it either:
+   *    - Retrieves self code errors for the current job and adds them to the context items.
+   *    - Generates table definitions based on the schema and full input, and adds them to the context items.
+   * 6. Handles any errors that occur during the query process and displays an error message.
+   * 7. Adds Db2i guidelines to the context items in the finally block.
+   *
+   * PROMPT FORMAT:
+   *  - 1. SCHEMA Definiton (semantic)
+   *  - 2. TABLE References
+   *  - 3. DB2 Guidelines
+   *  - 4. user prompt - handled by Continue extension
+   */
   async getContextItems(
     query: string,
     extras: ContextProviderExtras
   ): Promise<ContextItem[]> {
     const contextItems: ContextItem[] = [];
     if (canTalkToDb()) {
-      const job: JobInfo = this.getCurrentJob();
-      const schema = this.getDefaultSchema();
+      const job = this.getCurrentJob();
       const fullInput = extras.fullInput;
-      contextItems.push({
-        name: `SYSTEM PROMPT`,
-        description: `system prompt context`,
-        content: DB2_SYSTEM_PROMPT,
-      });
-      try {
-        switch (true) {
-          case fullInput.includes(`*SELF`) || query?.includes(`*SELF`):
-            // get current self code errors in job
-            // build promt with error information
-            // add to contextItems
-  
-            if (job) {
-              const selfCodes = await this.getSelfCodes(job);
-  
-              let prompt = DB2_SELF_PROMPT.join(" ");
-              prompt += JSON.stringify(selfCodes, null, 2);
-  
-              contextItems.push({
-                name: `${job.name}-self`,
-                description: `SELF code errors for ${job.name}`,
-                content: prompt,
-              });
-            }
-  
-            return contextItems;
-          default:
-            // const contextItems: ContextItem[] = [];
-            const tableRefs = await findPossibleTables(
-              null,
-              schema,
-              fullInput.split(` `)
-            );
-            for (const table of Object.keys(tableRefs)) {
-              const columnData: TableColumn[] = tableRefs[table];
-              if (columnData && columnData.length > 0) {
-                const tableSchema =
-                  columnData.length > 0 ? columnData[0].TABLE_SCHEMA : null;
 
-                // create context item
-                let prompt = `Db2 for i Table meta data for schema ${tableSchema} table ${table}\n`;
-                prompt += `Column Info: ${JSON.stringify(columnData)}\n\n`;
+      if (job && fullInput.includes(`*SELF`) || query?.includes(`*SELF`)) {
+        // get current self code errors in job
+        // build promt with error information
+        // add to contextItems
 
-                contextItems.push({
-                  name: `${job.name}-${tableSchema}-${table}`,
-                  description: `Schema and table information for ${table}`,
-                  content: prompt,
-                });
-              }
-            }
-  
-            return contextItems;
-        }
-      } catch (error) {
-        vscode.window.showErrorMessage(`Failed to query Db2i database: ${error}`);
-        throw new Error(`Failed to query Db2i database: ${error}`);
-      } finally {
+        const selfCodes = await this.getSelfCodes(job);
+
+        let prompt = DB2_SELF_PROMPT.join(" ");
+        prompt += JSON.stringify(selfCodes, null, 2);
+
+        contextItems.push({
+          name: `${job.name}-self`,
+          description: `SELF code errors for ${job.name}`,
+          content: prompt,
+        });
       }
-      
+
+      const newContextItems = await getContextItems(fullInput, {
+        withDb2Prompt: true,
+      })
+
+      contextItems.push(...newContextItems.context);
+
+
     } else {
       throw new Error(
         `Not connected to the database. Please check your configuration.`
       );
     }
-    
+
+    return contextItems;
   }
   async loadSubmenuItems(
     args: LoadSubmenuItemsArgs
@@ -192,10 +189,14 @@ export async function registerContinueProvider() {
     if (!continueEx.isActive) {
       await continueEx.activate();
     }
-  
+
     isContinueActive = true;
     const continueAPI = continueEx?.exports;
     continueAPI?.registerCustomContextProvider(provider);
-    vscode.commands.executeCommand('setContext', 'vscode-db2i:continueExtensionActive', true);
+    vscode.commands.executeCommand(
+      "setContext",
+      "vscode-db2i:continueExtensionActive",
+      true
+    );
   }
 }

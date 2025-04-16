@@ -131,6 +131,22 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(obj.alias).toBe(`a`)
   });
 
+  test('SELECT: one invalid, one valid', () => {
+    const content = [
+      `SELECT * FROM QSYS2.AUTHORITY_COLLECTION_LIBRARIES where;`,
+      `SELECT * FROM QSYS2.AUTHORITY_COLLECTION;`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+
+    expect(document.statements.length).toBe(2);
+    expect(document.statements[0].tokens.length).toBe(7);
+    expect(document.statements[1].tokens.length).toBe(6);
+
+    expect(document.statements[0].type).toBe(StatementType.Select);
+    expect(document.statements[1].type).toBe(StatementType.Select);
+  })
+
   test('SELECT: Simple unqualified object with alias (no AS)', () => {
     const document = newDoc(`select * from sample a;`);
 
@@ -147,6 +163,17 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(obj.object.name).toBe(`sample`);
     expect(obj.object.schema).toBeUndefined();
     expect(obj.alias).toBe(`a`)
+  });
+
+  test('SELECT: for in data-type (issue #315)', () => {
+    const document = newDoc([
+      `select cast(x'01' as char(1) for bit data) as something,`,
+      `case when 1=1 then 'makes sense' else 'what?' end as something_else`,
+      `from sysibm.sysdummy1;`
+    ].join(`\n`));
+  
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Select);
   });
 
   test('SELECT: Simple qualified object with alias (no AS)', () => {
@@ -918,6 +945,96 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(refs[1].object.schema).toBe(`LIB`);
   });
 
+  test('CREATE TABLE: routine parametes with primary key', () => {
+    const content = [
+      `--  Employee Master`,
+      `--  Generated on:               11/03/21 14:32:20`,
+      `CREATE OR REPLACE TABLE super_long_dept_name FOR SYSTEM NAME DEPT (`,
+      `--  SQL150B   10   REUSEDLT(*NO) in table EMPMST in PAYROLL1 ignored.`,
+      `  COL_B CHAR(1) CCSID 37 NOT NULL DEFAULT '' ,`,
+      `  PRIMARY KEY( COL_B ) );`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(1);
+    expect(parms[0].alias).toBe(`COL_B`);
+  });
+
+  test('CREATE TABLE: simple routine parametes test', () => {
+    const content = [
+      `CREATE TABLE ROSSITER.INVENTORY`,
+      `(PARTNO         SMALLINT     NOT NULL,`,
+      ` DESCR          VARCHAR(24),`,
+      ` QONHAND        INT)`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(3);
+
+    expect(parms[0].alias).toBe(`PARTNO`);
+    expect(parms[0].createType).toBe(`SMALLINT NOT NULL`);
+    
+    expect(parms[1].alias).toBe(`DESCR`);
+    expect(parms[1].createType).toBe(`VARCHAR(24)`);
+
+    expect(parms[2].alias).toBe(`QONHAND`);
+    expect(parms[2].createType).toBe(`INT`);
+  });
+
+  test('CREATE TABLE: generated types', () => {
+    const content = [
+      `CREATE TABLE policy_info`,
+      `  (policy_id CHAR(10) NOT NULL,`,
+      `  coverage INT NOT NULL,`,
+      `  sys_start TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,`,
+      `  sys_end TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,`,
+      `  create_id TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID,`,
+      `  PERIOD SYSTEM_TIME(sys_start,sys_end));`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+    const groups = document.getStatementGroups();
+    
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(5);
+
+    expect(parms[0].alias).toBe(`policy_id`);
+    expect(parms[0].createType).toBe(`CHAR(10) NOT NULL`);
+
+    expect(parms[1].alias).toBe(`coverage`);
+    expect(parms[1].createType).toBe(`INT NOT NULL`);
+
+    expect(parms[2].alias).toBe(`sys_start`);
+    expect(parms[2].createType).toBe(`TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN`);
+
+    expect(parms[3].alias).toBe(`sys_end`);
+    expect(parms[3].createType).toBe(`TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END`);
+
+    expect(parms[4].alias).toBe(`create_id`);
+    expect(parms[4].createType).toBe(`TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID`);
+  })
+
   test(`DECLARE VARIABLE`, () => {
     const document = newDoc(`declare watsonx_response   Varchar(10000) CCSID 1208;`);
     const groups = document.getStatementGroups();
@@ -988,7 +1105,29 @@ parserScenarios(`Object references`, ({newDoc}) => {
     
     expect(refs[2].object.name).toBe(`object_statistics`);
     expect(refs[2].object.schema).toBe(`qsys2`);
-    expect(refs[2].alias).toBe(`z`);
+    expect(refs[2].alias).toBe(undefined);
+  });
+
+  test('SELECT FROM LATERAL', () => {
+    const lines = [
+      `SELECT id, id_phone, t.phone_number`,
+      `  FROM testlateral AS s,`,
+      `       LATERAL(VALUES (1, S.phone1),`,
+      `                      (2, S.phone2),`,
+      `                      (3, S.phone3)) AS T(id_phone, phone_number)`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.Select);
+
+    const refs = statement.getObjectReferences();
+    console.log(refs);
+    expect(refs.length).toBe(1);
   });
 
   test(`Multiple UDTFs`, () => {
@@ -1290,7 +1429,7 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const refs = statement.getObjectReferences();
     const ctes = statement.getCTEReferences();
-
+    
     expect(refs.length).toBe(10);
     expect(refs[0].object.name).toBe(`shipments`);
     expect(refs[0].alias).toBe(`s`);
@@ -1781,6 +1920,36 @@ describe(`Parameter statement tests`, () => {
     const result = document.removeEmbeddedAreas(statement);
     expect(result.parameterCount).toBe(0);
     expect(result.content).toBe(content);
+  });
+
+  test('No embedded area on MERGE (issue 348)', () => {
+    const content = [
+      `merge into sample.employee e`,
+      `  using (select *from `,
+      `    (values ('000011', 'PAOLO', 'I', 'SALVATORE', 'A00', 1234, 'OPERATOR', 14)) as `,
+      `newemp (empno, firstnme, midinit, lastname, workdept, phoneno, job , edlevel))  a`,
+      ` on a.empno = e.empno`,
+      `when matched then update  `,
+      `    set e.firstnme = a.firstnme, e.midinit = a.midinit, e.lastname = a.lastname, `,
+      `  e.workdept = a.workdept, e.phoneno = a.phoneno,`,
+      `  e.job = a.job, e.edlevel = a.edlevel`,
+      `when not matched then `,
+      `    insert (empno, firstnme, midinit, lastname, workdept, phoneno, job , edlevel)`,
+      ` values (a.empno, a.firstnme, a.midinit, a.lastname, a.workdept, a.phoneno, `,
+      `  a.job, a.edlevel);`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Merge);
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.parameterCount).toBe(0);
+    expect(result.content + `;`).toBe(content);
+    expect(result.changed).toBe(false);
   });
 
   test(`Callable blocks`, () => {

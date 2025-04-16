@@ -11,12 +11,14 @@ import { getSqlDocument } from "./logic/parse";
 
 export const signatureProvider = languages.registerSignatureHelpProvider({ language: `sql` }, {
   async provideSignatureHelp(document, position, token, context) {
-    const content = document.getText();
     const offset = document.offsetAt(position);
-
+    
     if (remoteAssistIsEnabled()) {
 
       const sqlDoc = getSqlDocument(document);
+
+      if (!sqlDoc) return;
+
       const currentStatement = sqlDoc.getStatementByOffset(offset);
 
       if (currentStatement) {

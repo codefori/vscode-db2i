@@ -5,7 +5,7 @@ import { OldSQLJob } from "./sqlJob";
 import { askAboutNewJob, onConnectOrServerInstall, osDetail } from "../config";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import Configuration from "../configuration";
-import { QueryOptions } from "@ibm/mapepire-js/dist/src/types";
+import { QueryOptions, QueryResult } from "@ibm/mapepire-js/dist/src/types";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
 
 export interface JobInfo {
@@ -30,7 +30,7 @@ export class SQLJobManager {
       const config = instance.getConfig();
 
       const newJob = predefinedJob || (new OldSQLJob({
-        libraries: [config.currentLibrary, ...config.libraryList],
+        libraries: [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)],
         naming: `system`,
         "full open": false,
         "transaction isolation": "none",
@@ -115,23 +115,33 @@ export class SQLJobManager {
     return this.jobs[jobExists];
   }
 
-  /**
-   * Runs SQL
-   * @param query the SQL query
-   * @param parameters the list of parameters (indicated by '?' parameter parkers in the SQL query)
-   * @param isTerseResults whether the returned data is in terse format. When set to true, the data is returned as an array
-   * of arrays. When set to false, data is returned as an array of objects (compatible with legacy API).
-   * @returns 
-   */
-  async runSQL<T>(query: string, opts?: QueryOptions): Promise<T[]> {
+  async runSQL<T>(query: string, opts?: QueryOptions, rowsToFetch = 2147483647): Promise<T[]> {
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
-    const rowsToFetch = 2147483647;
+
+    // const s = performance.now()
+    // console.log(`Running statement: ${query.padEnd(40).substring(0, 40)}`);
 
     const statement = await this.getPagingStatement<T>(query, opts);
     const results = await statement.execute(rowsToFetch);
     statement.close();
+
+    // const e = performance.now()
+    // console.log(`Statement executed in ${e - s} ms. ${results.data.length} rows returned.`);
+    // console.log(`\t${query.padEnd(40).substring(0, 40)}`)
+
     return results.data;
+  }
+
+  async runSQLVerbose<T>(query: string, opts?: QueryOptions, rowsToFetch = 2147483647): Promise<QueryResult<T>> {
+    // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
+    // int. This is the largest number available without overflow (Integer.MAX_VALUE)
+
+    const statement = await this.getPagingStatement<T>(query, opts);
+    const results = await statement.execute(rowsToFetch);
+    statement.close();
+
+    return results;
   }
 
   async getPagingStatement<T>(query: string, opts?: QueryOptions): Promise<Query<T>> {

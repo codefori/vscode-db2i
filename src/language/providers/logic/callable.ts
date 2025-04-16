@@ -4,6 +4,7 @@ import { ObjectRef, CallableReference } from "../../sql/types";
 import Statement from "../../../database/statement";
 import { createCompletionItem, getParmAttributes } from "./completion";
 import { DbCache } from "./cache";
+import { SQLParm } from "../../../types";
 
 /**
  * Checks if the ref exists as a procedure or function. Then,

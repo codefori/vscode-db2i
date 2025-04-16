@@ -1,4 +1,4 @@
-import vscode from "vscode";
+import * as vscode from "vscode";
 import { env } from "process";
 import { TestSuitesTreeProvider } from "./testCasesTree";
 import { getInstance } from "../base";
@@ -30,7 +30,7 @@ export interface TestCase {
 
 let testSuitesTreeProvider: TestSuitesTreeProvider;
 export function initialiseTestSuite(context: vscode.ExtensionContext) {
-  if (env.testing === `true`) {
+  if (env['db2_testing'] === `true`) {
     const instance = getInstance();
 
     vscode.commands.executeCommand(`setContext`, `vscode-db2i:testing`, true);
@@ -55,7 +55,12 @@ export function initialiseTestSuite(context: vscode.ExtensionContext) {
       })
     );
 
-    return runTests;
+    const specificTests = env[`db2_specific`] === "true";
+    if (specificTests) 
+      return async () => {};
+    else
+      return runTests;
+    
   }
 }
 

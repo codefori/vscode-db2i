@@ -235,3 +235,69 @@ export function getMTIStatement(schema: string, table: string = `*ALL`) {
     `order by key_definition`,
   ].join(` `);
 }
+
+export function getAuthoritiesStatement(schema: string, table: string, objectType: string, tableType: string): string {
+  let sql: string = `
+    select 
+      authorization_name "User profile name", 
+      object_authority "Object authority", 
+      owner "Object owner", 
+      authorization_list "Authorization list", 
+      primary_group "Primary group", 
+      authorization_list_management "Authorization list management", 
+      object_owner "User is object owner", 
+      object_operational "Object operational authority", 
+      object_management "Object management authority", 
+      object_existence "Object existence authority", 
+      object_alter "Object alter authority", 
+      object_reference "Object reference authority", 
+      data_read "Data read authority", 
+      data_add "Data add authority", 
+      data_update "Data update authority", 
+      data_delete "Data delete authority", 
+      data_execute "Data execute authority", 
+      text_description "Description"
+    from qsys2.object_privileges
+    where object_schema = '${schema}' 
+      and object_name = '${table}'
+  `;
+  if (objectType === 'TABLE' && tableType != 'T') {
+    sql += ` and object_type = '*FILE'`;
+  } else {
+    sql += ` and sql_object_type = '${objectType}'`;
+  }
+  return sql;
+}
+
+export function getObjectLocksStatement(schema: string, table: string, objectType: string, tableType: string): string {
+    let sql: string = `
+      select
+        system_table_member "Member",
+        member_lock_type "Member Lock Type", 
+        lock_state "Lock State", 
+        lock_status "Lock Status", 
+        lock_scope "Scope", 
+        substr(job_name, locate_in_string(job_name, '/', -1) + 1) "Job Name",
+        substr(job_name, locate_in_string(job_name, '/', 1) + 1, locate_in_string(job_name, '/', -1) - locate_in_string(job_name, '/', 1) - 1) "Job User",
+        substr(job_name, 1, locate_in_string(job_name, '/', 1) - 1) "Job Number",
+        thread_id "Thread", 
+        lock_space_id "Lock Space", 
+        lock_count "Lock Count", 
+        program_library_name "Program Library", 
+        program_name "Program Name", 
+        module_library_name "Module Library", 
+        module_name "Module Name", 
+        procedure_name "Procedure Name", 
+        statement_id "Statement ID", 
+        machine_instruction "Instruction"
+      from qsys2.object_lock_info
+      where object_schema = '${schema}' 
+        and object_name = '${table}'
+    `;
+    if (objectType === 'TABLE' && tableType != 'T') {
+        sql += ` and object_type = '*FILE'`;
+    } else {
+        sql += ` and sql_object_type = '${objectType.toUpperCase()}'`;
+    }
+    return sql;
+}
