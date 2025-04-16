@@ -550,7 +550,7 @@ export default class Statement {
 
 		let endIndex = i;
 
-		const isSubSelect = tokenIs(nextToken, `function`, `TABLE`) || tokenIs(nextToken, `function`, `LATERAL`) || (options.includeParameters && tokenIs(nextToken, `function`));
+		const isSubSelect = (tokenIs(nextToken, `function`, `TABLE`) || tokenIs(nextToken, `function`, `LATERAL`) || (options.includeParameters && tokenIs(nextToken, `function`)) && this.type !== StatementType.Call);
 
 		if (isSubSelect) {
 			sqlObj = this.getRefAtToken(i+2);
@@ -598,7 +598,6 @@ export default class Statement {
 		}
 			
 		if (sqlObj) {
-
 			if (options.withSystemName !== true) {
 				// If the next token is not a clause.. we might have the alias
 				if (nextToken && this.tokens[nextIndex+1]) {

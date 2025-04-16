@@ -480,9 +480,13 @@ parserScenarios(`Object references`, ({newDoc}) => {
 
     const refsA = talksStatement.getObjectReferences();
     expect(refsA.length).toBe(1);
-    expect(refsA[0].tokens.length).toBe(1);
+
     expect(refsA[0].object.name).toBe(`create_Sql_sample`);
     expect(refsA[0].object.schema).toBeUndefined();
+
+    const tokens = refsA[0].tokens;
+    expect(tokens.length).toBe(4); // Includes the parameter tokens since it's a call
+    expect(tokens[tokens.length-1].type).toBe(`closebracket`);
   });
 
   test(`CALL: simple qualified`, () => {
@@ -498,9 +502,13 @@ parserScenarios(`Object references`, ({newDoc}) => {
 
     const refsA = talksStatement.getObjectReferences();
     expect(refsA.length).toBe(1);
-    expect(refsA[0].tokens.length).toBe(3);
+
     expect(refsA[0].object.name).toBe(`create_Sql_sample`);
     expect(refsA[0].object.schema).toBe(`"QSYS"`);
+
+    const tokens = refsA[0].tokens;
+    expect(tokens.length).toBe(6); // Includes the parameter tokens since it's a call
+    expect(tokens[tokens.length-1].type).toBe(`closebracket`);
   });
 
   test(`ALTER: with reference`, () => {
