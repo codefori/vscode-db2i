@@ -14,6 +14,11 @@ import { localAssistIsEnabled, remoteAssistIsEnabled } from "./logic/available";
 import { DbCache } from "./logic/cache";
 import { getSqlDocument } from "./logic/parse";
 import { TableColumn, BasicSQLObject } from "../../types";
+import Configuration from "../../configuration";
+
+function useSystemNames() {
+  return Configuration.get<boolean>(`syntax.useSystemNames`) || false;
+}
 
 export interface CompletionType {
   order: string;
@@ -57,9 +62,9 @@ const completionTypes: { [index: string]: CompletionType } = {
 
 
 
-function getColumnAttributes(column: TableColumn): string {
+function getColumnAttributes(column: TableColumn, useSystemName: boolean): string {
   const lines: string[] = [
-    `Column: ${column.COLUMN_NAME}`,
+    `Column: ${useSystemName ? column.SYSTEM_COLUMN_NAME : column.COLUMN_NAME}`,
     `Type: ${prepareParamType(column)}`,
     `HAS_DEFAULT: ${column.HAS_DEFAULT}`,
     `IS_IDENTITY: ${column.IS_IDENTITY}`,
@@ -85,7 +90,8 @@ function getAllColumns(name: string, schema: string, items: CompletionItem[]) {
 async function getObjectColumns(
   schema: string,
   name: string,
-  isUDTF = false
+  isUDTF: boolean,
+  useSystemNamesInColumn: boolean,
 ): Promise<CompletionItem[]> {
 
   let completionItems: CompletionItem[];
@@ -121,9 +127,9 @@ async function getObjectColumns(
 
     completionItems = columns.map((i) =>
       createCompletionItem(
-        Statement.prettyName(i.COLUMN_NAME),
+        Statement.prettyName(useSystemNamesInColumn ? i.SYSTEM_COLUMN_NAME : i.COLUMN_NAME),
         CompletionItemKind.Field,
-        getColumnAttributes(i),
+        getColumnAttributes(i, useSystemNamesInColumn),
         `Schema: ${schema}\nTable: ${name}\n`,
         `a@objectcolumn`
       )
@@ -268,7 +274,8 @@ async function getCompletionItemsForTriggerDot(
       const completionItems = await getObjectColumns(
         curRefIdentifier.object.schema,
         curRefIdentifier.object.name,
-        curRefIdentifier.isUDTF
+        curRefIdentifier.isUDTF,
+        useSystemNames()
       );
 
       list.push(...completionItems);
@@ -346,7 +353,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   // Fetch all the columns for tables that have references in the statement
   const tableItemPromises = objectRefs.map((ref) =>
     ref.object.name && ref.object.schema
-      ? getObjectColumns(ref.object.schema, ref.object.name, ref.isUDTF)
+      ? getObjectColumns(ref.object.schema, ref.object.name, ref.isUDTF, useSystemNames())
       : Promise.resolve([])
   );
   const results = await Promise.allSettled(tableItemPromises);

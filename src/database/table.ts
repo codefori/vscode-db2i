@@ -15,6 +15,7 @@ export default class Table {
       `SELECT `,
       `  column.TABLE_SCHEMA,`,
       `  column.TABLE_NAME,`,
+      `  column.SYSTEM_COLUMN_NAME,`,
       `  column.COLUMN_NAME,`,
       `  key.CONSTRAINT_NAME,`,
       `  column.DATA_TYPE, `,
