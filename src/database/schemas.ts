@@ -356,18 +356,12 @@ export default class Schemas {
 
     let query: string;
 
-    if (selects.length > 1) {
-      if (details.sort) {
-        query = `with results as (${selects.join(
-          " UNION ALL "
-        )}) select * from results Order by QSYS2.DELIMIT_NAME(NAME) asc`;
-      } else {
-        query = selects.join(` UNION ALL `);
-      }
-  
+    if (details.sort) {
+      query = `with results as (${selects.join(
+        " UNION ALL "
+      )}) select * from results Order by QSYS2.DELIMIT_NAME(NAME) asc`;
     } else {
-      // TODO: sort single
-      query = selects[0];
+      query = selects.join(` UNION ALL `);
     }
 
     const objects: any[] = await JobManager.runSQL(

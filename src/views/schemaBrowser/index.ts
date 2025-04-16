@@ -508,7 +508,7 @@ export default class schemaBrowser {
         let filterValue = this.filters[element.schema];
         if (filterValue) {
           const validSchemaName = Statement.noQuotes(element.schema);
-          const filteredObjects = await Schemas.getObjects(validSchemaName, AllSQLTypes, { filter: filterValue });
+          const filteredObjects = await Schemas.getObjects(validSchemaName, AllSQLTypes, { filter: filterValue, sort: true });
           items = filteredObjects.map(obj => new SQLObject(obj));
 
         } else {
