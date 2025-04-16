@@ -1,6 +1,6 @@
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-import { Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
+import { CallableReference, Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
 
 export default class Document {
   content: string;
@@ -259,6 +259,30 @@ export default class Document {
       parameterCount
     };
   }
+}
+
+
+export function getPositionData(ref: CallableReference, offset: number) {
+  const paramCommas = ref.tokens.filter(token => token.type === `comma`);
+
+  let currentParm = paramCommas.findIndex(t => offset < t.range.start);
+
+  if (currentParm === -1) {
+    currentParm = paramCommas.length;
+  }
+
+  const firstNamedPipe = ref.tokens.find((token, i) => token.type === `rightpipe`);
+  let firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : undefined;
+
+  if (firstNamedParameter === -1) {
+    firstNamedParameter = undefined;
+  }
+
+  return {
+    currentParm,
+    currentCount: paramCommas.length + 1,
+    firstNamedParameter
+  };
 }
 
 function getSymbolsForStatements(statements: Statement[]) {
