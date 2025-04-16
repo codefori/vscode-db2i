@@ -87,7 +87,7 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
 
           if (result) {
             if ('routine' in result) {
-              const routineOffset = ref.tokens[ref.tokens.length-1].range.end+1;
+              const routineOffset = ref.tokens[ref.tokens.length-1].range.end-1;
               const callableRef = statementAt.getCallableDetail(routineOffset, false);
               if (callableRef) {
                 const { currentCount } = getPositionData(callableRef, routineOffset);
