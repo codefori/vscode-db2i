@@ -165,6 +165,22 @@ export default class schemaBrowser {
         }
       }),
 
+      vscode.commands.registerCommand(`vscode-db2i.viewPermissions`, async (object: SQLObject) => {
+        if (object) {
+          const content = `SELECT AUTHORIZATION_NAME, OBJECT_AUTHORITY,
+          OWNER, OBJECT_OPERATIONAL, OBJECT_MANAGEMENT, OBJECT_EXISTENCE, OBJECT_ALTER, OBJECT_REFERENCE,
+          DATA_READ, DATA_ADD, DATA_UPDATE, DATA_DELETE, DATA_EXECUTE FROM QSYS2.OBJECT_PRIVILEGES 
+          WHERE OBJECT_SCHEMA='${object.schema}' AND OBJECT_NAME='${object.name}' AND 
+          SQL_OBJECT_TYPE='${object.type.toUpperCase()}'`;
+
+          vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
+            content,
+            qualifier: `statement`,
+            open: false,
+          });
+        }
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.getMTIs`, async (object: SQLObject | SchemaItem) => {
         if (object) {
           const content = getMTIStatement(object.schema, (`name` in object ? object.name : undefined));
@@ -503,7 +519,7 @@ export default class schemaBrowser {
         let filterValue = this.filters[element.schema];
         if (filterValue) {
           const validSchemaName = Statement.noQuotes(element.schema);
-          const filteredObjects = await Schemas.getObjects(validSchemaName, AllSQLTypes, { filter: filterValue });
+          const filteredObjects = await Schemas.getObjects(validSchemaName, AllSQLTypes, { filter: filterValue, sort: true });
           items = filteredObjects.map(obj => new SQLObject(obj));
 
         } else {
