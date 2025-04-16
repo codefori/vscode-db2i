@@ -378,7 +378,7 @@ export default class Statement {
 		switch (this.type) {
 			case StatementType.Call:
 				// CALL X()
-				doAdd(this.getRefAtToken(1));
+				doAdd(this.getRefAtToken(1, {includeParameters: true}));
 				break;
 
 			case StatementType.Alter:
@@ -615,6 +615,18 @@ export default class Statement {
 
 			if (!isSubSelect && !sqlObj.isUDTF) {
 				sqlObj.tokens = this.tokens.slice(i, endIndex+1);
+
+				if (options.includeParameters && tokenIs(this.tokens[endIndex+1], `openbracket`)) {
+					const blockTokens = this.getBlockAt(this.tokens[endIndex+1].range.end+1);
+
+					if (blockTokens.length > 0) {
+						sqlObj.tokens = sqlObj.tokens.concat([
+							{type: `openbracket`, value: `(`, range: {start: this.tokens[endIndex+1].range.start, end: this.tokens[endIndex+1].range.end}},
+							...blockTokens,
+							{type: `closebracket`, value: `)`, range: {start: blockTokens[blockTokens.length-1].range.end, end: blockTokens[blockTokens.length-1].range.end}}
+						]);
+					}
+				}
 			}
 
 			if (options.withSystemName) {

@@ -87,16 +87,29 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
 
           if (result) {
             if ('routine' in result) {
-              const routineOffset = ref.tokens[ref.tokens.length-1].range.end-1;
-              const callableRef = statementAt.getCallableDetail(routineOffset, false);
-              if (callableRef) {
-                const { currentCount } = getPositionData(callableRef, routineOffset);
-                const signatures = await DbCache.getCachedSignatures(callableRef.parentRef.object.schema, callableRef.parentRef.object.name);
-                const possibleSignatures = signatures.filter((s) => s.parms.length >= currentCount).sort((a, b) => a.parms.length - b.parms.length);
-                const signature = possibleSignatures.find((signature) => currentCount <= signature.parms.length);
-                if (signature) {
-                  addRoutineMd(md, signature, result);
-                }
+              let signatures: CallableSignature[];
+              let signature: CallableSignature | undefined;
+
+              const lastToken = ref.tokens[ref.tokens.length-1];
+
+              if (lastToken.type === `closebracket`) {
+                let routineOffset: number = lastToken.range.start-1;
+                const callableRef = statementAt.getCallableDetail(routineOffset, false);
+                if (callableRef) {
+                  const { currentCount } = getPositionData(callableRef, routineOffset);
+                  signatures = await DbCache.getCachedSignatures(callableRef.parentRef.object.schema, callableRef.parentRef.object.name);
+                  const possibleSignatures = signatures.filter((s) => s.parms.length >= currentCount).sort((a, b) => a.parms.length - b.parms.length);
+                  signature = possibleSignatures.find((signature) => currentCount <= signature.parms.length);
+                } 
+              }
+              
+              if (!signature) {
+                signatures = await DbCache.getCachedSignatures(result.routine.schema, result.routine.name);
+                signature = signatures[0];
+              }
+
+              if (signature) {
+                addRoutineMd(md, signature, result);
               }
             } else {
               addSymbol(md, result);
