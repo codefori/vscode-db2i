@@ -17,7 +17,7 @@ import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { DbCache } from "../../language/providers/logic/cache";
 import { ExplainType } from "../../connection/types";
-import { ColumnMetaData } from "@ibm/mapepire-js";
+import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
 
 export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
@@ -382,7 +382,11 @@ async function runHandler(options?: StatementInfo) {
             vscode.window.showErrorMessage('RPG qualifier only supported for select statements');
           } else {
             chosenView.setLoadingText(`Executing SQL statement...`, false);
-            let content: string = await statementToRpgDs(statementDetail);
+            setCancelButtonVisibility(true);
+            updateStatusBar({executing: true});
+            const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
+            setCancelButtonVisibility(false);
+            let content: string = await statementToRpgDs(result, statementDetail.content);
             const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
             await vscode.window.showTextDocument(textDoc);
             updateStatusBar({executing: false});
@@ -493,14 +497,10 @@ async function runHandler(options?: StatementInfo) {
   }
 }
 
-async function statementToRpgDs(statement: ParsedStatementInfo) : Promise<string> {
-  setCancelButtonVisibility(true);
-  updateStatusBar({executing: true});
-  const result = await JobManager.runSQLVerbose(statement.content, undefined, 1);
-  setCancelButtonVisibility(false);
+function statementToRpgDs(result: QueryResult<any>, statement: string) : string {
 
   let content = `**free\n\n`
-    + `// statement: ${statement.content}\n\n`
+    + `// statement: ${statement}\n\n`
     + `// Row data structure\ndcl-ds row_t qualified template;\n`;
 
   for (let i = 0; i < result.metadata.column_count; i++) {
