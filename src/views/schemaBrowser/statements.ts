@@ -306,7 +306,7 @@ export function getRecordLocksStatement(schema: string, table: string): string {
     return `
       select
         relative_record_number "RRN",
-        table_partition "Member",
+        qsys2.delimit_name(table_partition) "Member",
         lock_status "Lock Status",
         lock_state "Lock Request Type",
         substr(job_name,locate_in_string(job_name,'/',-1)+1) "Job Name",
