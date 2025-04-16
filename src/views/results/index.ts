@@ -17,6 +17,7 @@ import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { DbCache } from "../../language/providers/logic/cache";
 import { ExplainType } from "../../connection/types";
+import { ColumnMetaData } from "@ibm/mapepire-js";
 
 export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
@@ -376,62 +377,12 @@ async function runHandler(options?: StatementInfo) {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
 
-        } else if ([`rpg`].includes(statementDetail.qualifier)) {
+        } else if (statementDetail.qualifier === `rpg`) {
           if (statementDetail.statement.type !== StatementType.Select) {
             vscode.window.showErrorMessage('RPG qualifier only supported for select statements');
           } else {
             chosenView.setLoadingText(`Executing SQL statement...`, false);
-
-            setCancelButtonVisibility(true);
-            updateStatusBar({executing: true});
-            const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
-            setCancelButtonVisibility(false);
-            let content = `**free\n\n`
-              + `// statement: ${statementDetail.content}\n\n`
-              + `// Row data structure\ndcl-ds row_t qualified template;\n`;
-  
-            for (let i = 0; i < result.metadata.column_count; i++) {
-              content += `  ${isNaN(+result.metadata.columns[i].label.charAt(0)) ? '' : 'col'}${result.metadata.columns[i].label.toLowerCase()} `;
-              switch (result.metadata.columns[i].type) {
-                case `NUMERIC`:
-                  content += `zoned(${result.metadata.columns[i].precision}${result.metadata.columns[i].scale > 0 ? ' : ' + result.metadata.columns[i].scale : ''});\n`;
-                  break;
-                case `DECIMAL`:
-                  content += `packed(${result.metadata.columns[i].precision}${result.metadata.columns[i].scale > 0 ? ' : ' + result.metadata.columns[i].scale : ''});\n`;
-                  break;
-                case `CHAR`:
-                  content += `char(${result.metadata.columns[i].precision});\n`;
-                  break;
-                case `VARCHAR`:
-                  content += `varchar(${result.metadata.columns[i].precision});\n`;
-                  break;
-                case `DATE`:
-                  content += `date;\n`;
-                  break;
-                case `TIME`:
-                  content += `time;\n`;
-                  break;
-                case `TIMESTAMP`:
-                  content += `timestamp;\n`;
-                  break;
-                case `SMALLINT`:
-                  content += `int(5);\n`;
-                  break;
-                case `INTEGER`:
-                  content += `int(10);\n`;
-                  break;
-                case `BIGINT`:
-                  content += `int(20);\n`;
-                  break;
-                case `BOOLEAN`:
-                  content += `ind;\n`;
-                  break;
-                default:
-                  content += `// type:${result.metadata.columns[i].type} precision:${result.metadata.columns[i].precision} scale:${result.metadata.columns[i].scale}\n`;
-                  break;
-              }
-            }
-            content += `end-ds;\n`;
+            let content: string = await statementToRpgDs(statementDetail);
             const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
             await vscode.window.showTextDocument(textDoc);
             updateStatusBar({executing: false});
@@ -539,6 +490,53 @@ async function runHandler(options?: StatementInfo) {
 
       updateStatusBar();
     }
+  }
+}
+
+async function statementToRpgDs(statement: ParsedStatementInfo) : Promise<string> {
+  setCancelButtonVisibility(true);
+  updateStatusBar({executing: true});
+  const result = await JobManager.runSQLVerbose(statement.content, undefined, 1);
+  setCancelButtonVisibility(false);
+
+  let content = `**free\n\n`
+    + `// statement: ${statement.content}\n\n`
+    + `// Row data structure\ndcl-ds row_t qualified template;\n`;
+
+  for (let i = 0; i < result.metadata.column_count; i++) {
+    content += `  ${isNaN(+result.metadata.columns[i].label.charAt(0)) ? '' : 'col'}${result.metadata.columns[i].label.toLowerCase()} `;
+    content += columnToRpgDefinition(result.metadata.columns[i]);
+  }
+  content += `end-ds;\n`;
+  return content;
+}
+
+function columnToRpgDefinition(column: ColumnMetaData) : string {
+  switch (column.type) {
+    case `NUMERIC`:
+      return `zoned(${column.precision}${column.scale > 0 ? ' : ' + column.scale : ''});\n`;
+    case `DECIMAL`:
+      return `packed(${column.precision}${column.scale > 0 ? ' : ' + column.scale : ''});\n`;
+    case `CHAR`:
+      return `char(${column.precision});\n`;
+    case `VARCHAR`:
+      return `varchar(${column.precision});\n`;
+    case `DATE`:
+      return `date;\n`;
+    case `TIME`:
+      return `time;\n`;
+    case `TIMESTAMP`:
+      return `timestamp;\n`;
+    case `SMALLINT`:
+      return `int(5);\n`;
+    case `INTEGER`:
+      return `int(10);\n`;
+    case `BIGINT`:
+      return `int(20);\n`;
+    case `BOOLEAN`:
+      return `ind;\n`;
+    default:
+      return `// type:${column.type} precision:${column.precision} scale:${column.scale}\n`;
   }
 }
 
