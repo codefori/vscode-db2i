@@ -167,7 +167,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.viewPermissions`, async (object: SQLObject) => {
         if (object) {
-          const content = `SELECT AUTHORIZATION_NAME, OBJECT_AUTHORITY,
+          const content = `SELECT AUTHORIZATION_NAME as USER_NAME, OBJECT_AUTHORITY,
           OWNER, OBJECT_OPERATIONAL, OBJECT_MANAGEMENT, OBJECT_EXISTENCE, OBJECT_ALTER, OBJECT_REFERENCE,
           DATA_READ, DATA_ADD, DATA_UPDATE, DATA_DELETE, DATA_EXECUTE FROM QSYS2.OBJECT_PRIVILEGES 
           WHERE OBJECT_SCHEMA='${object.schema}' AND OBJECT_NAME='${object.name}' AND 
@@ -467,7 +467,8 @@ export default class schemaBrowser {
 
       const data = await Schemas.getObjects(schema, [type], {
         limit: pageSize,
-        offset
+        offset,
+        sort: true
       });
 
       if (data.length > 0) {
