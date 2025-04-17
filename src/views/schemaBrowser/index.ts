@@ -467,7 +467,8 @@ export default class schemaBrowser {
 
       const data = await Schemas.getObjects(schema, [type], {
         limit: pageSize,
-        offset
+        offset,
+        sort: true
       });
 
       if (data.length > 0) {
