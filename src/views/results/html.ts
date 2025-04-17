@@ -449,13 +449,12 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                 case 'NCLOB':
                 case 'FLOAT':
                 case 'DECFLOAT':
-                case 'TIMESTAMP':
                 case 'DATALINK':
-                  cell.title = column.type + ' (' + column.precision + ')';
+                  cell.title = column.type + '(' + column.precision + ')';
                   break;
                 case 'DECIMAL':
                 case 'NUMERIC':
-                  cell.title = column.type + ' (' + column.precision + ',' + column.scale + ')';
+                  cell.title = column.type + '(' + column.precision + ', ' + column.scale + ')';
                   break;
                 default:
                   cell.title = column.type;
