@@ -17,7 +17,7 @@ import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { DbCache } from "../../language/providers/logic/cache";
 import { ExplainType } from "../../connection/types";
-import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
+import { queryResultToRpgDs } from "./codegen";
 
 export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
@@ -386,10 +386,13 @@ async function runHandler(options?: StatementInfo) {
             updateStatusBar({executing: true});
             const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
             setCancelButtonVisibility(false);
-            let content: string = await statementToRpgDs(result, statementDetail.content);
+            updateStatusBar({executing: false});
+            let content = `**free\n\n`
+              + `// statement: ${statementDetail.content}\n\n`
+              + `// Row data structure\n`
+              + queryResultToRpgDs(result);
             const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
             await vscode.window.showTextDocument(textDoc);
-            updateStatusBar({executing: false});
             chosenView.setLoadingText(`RPG data structure generated.`, false);
           }
 
@@ -494,49 +497,6 @@ async function runHandler(options?: StatementInfo) {
 
       updateStatusBar();
     }
-  }
-}
-
-function statementToRpgDs(result: QueryResult<any>, statement: string) : string {
-
-  let content = `**free\n\n`
-    + `// statement: ${statement}\n\n`
-    + `// Row data structure\ndcl-ds row_t qualified template;\n`;
-
-  for (let i = 0; i < result.metadata.column_count; i++) {
-    const name = `${isNaN(+result.metadata.columns[i].label.charAt(0)) ? '' : 'col'}${result.metadata.columns[i].label.toLowerCase()}`
-    content += `  ${name} ${columnToRpgDefinition(result.metadata.columns[i])};\n`;
-  }
-  content += `end-ds;\n`;
-  return content;
-}
-
-function columnToRpgDefinition(column: ColumnMetaData) : string {
-  switch (column.type) {
-    case `NUMERIC`:
-      return `zoned(${column.precision}${column.scale > 0 ? ' : ' + column.scale : ''})`;
-    case `DECIMAL`:
-      return `packed(${column.precision}${column.scale > 0 ? ' : ' + column.scale : ''})`;
-    case `CHAR`:
-      return `char(${column.precision})`;
-    case `VARCHAR`:
-      return `varchar(${column.precision})`;
-    case `DATE`:
-      return `date`;
-    case `TIME`:
-      return `time`;
-    case `TIMESTAMP`:
-      return `timestamp`;
-    case `SMALLINT`:
-      return `int(5)`;
-    case `INTEGER`:
-      return `int(10)`;
-    case `BIGINT`:
-      return `int(20)`;
-    case `BOOLEAN`:
-      return `ind`;
-    default:
-      return `// type:${column.type} precision:${column.precision} scale:${column.scale}`;
   }
 }
 
