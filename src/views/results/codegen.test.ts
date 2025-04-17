@@ -87,6 +87,9 @@ test('QueryResult to RPG data structure', () => {
     const lines = ds.split('\n').filter(l => l !== '');
     expect(lines.length).toBe(5);
     expect(lines.at(0)).toBe('dcl-ds row_t qualified template;');
+    expect(lines.at(1).trim()).toBe('id int(10);');
+    expect(lines.at(2).trim()).toBe('name varchar(80);');
+    expect(lines.at(3).trim()).toBe('salary packed(13 : 2);');
     expect(lines.at(4)).toBe('end-ds;');
 });
 
