@@ -32,7 +32,7 @@
   ],
   "main": "./dist/extension.js",
   "scripts": {
-    "language:test": "vitest",
+    "test": "vitest",
     "dsc": "npx tsx src/dsc",
     "package": "vsce package",
     "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
