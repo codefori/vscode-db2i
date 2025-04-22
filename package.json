@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.10.1",
+  "version": "1.11.0",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -211,7 +211,7 @@
       },
       {
         "id": "vscode-db2i.syntax",
-        "title": "SQL Syntax Checking",
+        "title": "SQL Syntax Options",
         "properties": {
           "vscode-db2i.syntax.checkOnOpen": {
             "type": "boolean",
@@ -231,6 +231,11 @@
           "vscode-db2i.syntax.showWarnings": {
             "type": "boolean",
             "description": "Whether SQL syntax warnings should show in the editor",
+            "default": false
+          },
+          "vscode-db2i.syntax.useSystemNames": {
+            "type": "boolean",
+            "description": "Whether to use system names for columns in the content assist",
             "default": false
           }
         }
@@ -378,6 +383,11 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.getRecordLocks",
+        "title": "Get Record Locks",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.clearData",
         "title": "Clear...",
         "category": "Db2 for i"
@@ -423,6 +433,11 @@
         "title": "Set filter",
         "category": "Db2 for i",
         "icon": "$(search)"
+      },
+      {
+        "command": "vscode-db2i.viewPermissions",
+        "title": "View permissions",
+        "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.runEditorStatement",
@@ -998,6 +1013,11 @@
           "group": "db2workWith@5"
         },
         {
+          "command": "vscode-db2i.getRecordLocks",
+          "when": "viewItem == table",
+          "group": "db2workWith@6"
+        },
+        {
           "command": "vscode-db2i.clearData",
           "when": "viewItem == table",
           "group": "db2data@1"
@@ -1016,6 +1036,11 @@
           "command": "vscode-db2i.renameObject",
           "when": "viewItem == table || viewItem == view || viewItem == index",
           "group": "db2data@4"
+        },
+        {
+          "command": "vscode-db2i.viewPermissions",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "group": "db2data@5"
         },
         {
           "command": "vscode-db2i.advisedIndexes",

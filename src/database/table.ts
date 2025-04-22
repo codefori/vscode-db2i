@@ -15,6 +15,7 @@ export default class Table {
       `SELECT `,
       `  column.TABLE_SCHEMA,`,
       `  column.TABLE_NAME,`,
+      `  column.SYSTEM_COLUMN_NAME,`,
       `  column.COLUMN_NAME,`,
       `  key.CONSTRAINT_NAME,`,
       `  column.DATA_TYPE, `,
@@ -70,8 +71,8 @@ export default class Table {
   }
 
   static async isPartitioned(schema: string, name: string): Promise<boolean> {
-    const sql = `select table_name, partitioned_table from qsys2.sysfiles where table_schema = ? and table_name = ? and partitioned_table is not null and partitioned_table = 'YES'`;
-    const parameters = [schema, name];
+    const sql = `select table_name, partitioned_table from qsys2.sysfiles where ((table_schema = ? and table_name = ?) or (system_table_schema = ? and system_table_name = ?)) and partitioned_table is not null and partitioned_table = 'YES'`;
+    const parameters = [schema, name, schema, name];
 
     const result = await JobManager.runSQL(sql, {parameters});
     return result.length > 0;

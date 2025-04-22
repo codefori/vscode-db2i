@@ -301,3 +301,22 @@ export function getObjectLocksStatement(schema: string, table: string, objectTyp
     }
     return sql;
 }
+
+export function getRecordLocksStatement(schema: string, table: string): string {
+    return `
+      select
+        relative_record_number "RRN",
+        qsys2.delimit_name(table_partition) "Member",
+        lock_status "Lock Status",
+        lock_state "Lock Request Type",
+        substr(job_name,locate_in_string(job_name,'/',-1)+1) "Job Name",
+        substr(job_name,locate_in_string(job_name,'/',1)+1, locate_in_string(job_name,'/',-1)-locate_in_string(job_name,'/',1)-1) "Job User",
+        substr(job_name,1, locate_in_string(job_name,'/',1)-1) "Job Number",
+        thread_id "Thread",
+        lock_space_id "Lock Space",
+        lock_scope "Scope" 
+      from qsys2.record_lock_info
+      where table_schema = '${schema}' 
+        and table_name = '${table}'
+    `;
+}

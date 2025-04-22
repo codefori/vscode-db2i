@@ -431,7 +431,35 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
             var header = document.getElementById(htmlTableId).getElementsByTagName('thead')[0];
             header.innerHTML = '';
             var headerRow = header.insertRow();
-            columnMetaData.map(col => columnHeadings === 'Label' ? col.label : col.name).forEach(colName => headerRow.insertCell().appendChild(document.createTextNode(colName)));
+            columnMetaData.map(column => {
+              var cell = headerRow.insertCell();
+              cell.appendChild(document.createTextNode(columnHeadings === 'Label' ? column.label : column.name));
+              switch (column.type) {
+                case 'CHAR':
+                case 'VARCHAR':
+                case 'CLOB':
+                case 'BINARY':
+                case 'VARBINARY':
+                case 'BLOB':
+                case 'GRAPHIC':
+                case 'VARGRAPHIC':
+                case 'DBCLOB':
+                case 'NCHAR':
+                case 'NVARCHAR':
+                case 'NCLOB':
+                case 'FLOAT':
+                case 'DECFLOAT':
+                case 'DATALINK':
+                  cell.title = column.type + '(' + column.precision + ')';
+                  break;
+                case 'DECIMAL':
+                case 'NUMERIC':
+                  cell.title = column.type + '(' + column.precision + ', ' + column.scale + ')';
+                  break;
+                default:
+                  cell.title = column.type;
+              }
+            });
 
             // Initialize the footer
             var footer = document.getElementById(htmlTableId).getElementsByTagName('tfoot')[0];

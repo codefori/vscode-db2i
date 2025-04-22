@@ -37,7 +37,7 @@ test('Comment token test', () => {
   ].join(`\n`));
 
   expect(tokens.length).toBe(12);
-  expect(tokens.some(t => t.value === `--hello: world!!!: coolness`));
+  expect(tokens.some(t => t.value === `--hello: world!!!: coolness`)).toBeTruthy();
 });
 
 test('New line (\\n) and comments test', () => {
@@ -49,7 +49,7 @@ test('New line (\\n) and comments test', () => {
   ].join(`\n`));
 
   expect(tokens.length).toBe(5);
-  expect (tokens[3].type === `newline`);
+  expect(tokens[2].type).toBe(`newline`);
 });
 
 test('New line (\\r\\n) and comments test', () => {
@@ -61,7 +61,7 @@ test('New line (\\r\\n) and comments test', () => {
   ].join(`\r\n`));
 
   expect(tokens.length).toBe(5);
-  expect (tokens[3].type === `newline`);
+  expect (tokens[2].type).toBe(`newline`);
 });
 
 test(`Delimited names`, () => {
@@ -72,13 +72,13 @@ test(`Delimited names`, () => {
 
   expect(tokens.length).toBe(22);
 
-  expect (tokens[2].type === `sqlName`);
-  expect (tokens[2].value === `"TestDelimiters"`);
+  expect (tokens[2].type).toBe(`sqlName`);
+  expect (tokens[2].value).toBe(`"TestDelimiters"`);
 
-  expect (tokens[3].type === `dot`);
+  expect (tokens[3].type).toBe(`dot`);
 
-  expect (tokens[4].type === `sqlName`);
-  expect (tokens[4].value === `"Delimited Table"`);
+  expect (tokens[4].type).toBe(`sqlName`);
+  expect (tokens[4].value).toBe(`"Delimited Table"`);
 });
 
 test(`Block comments`, () => {
