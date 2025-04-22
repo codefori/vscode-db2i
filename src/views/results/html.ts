@@ -459,6 +459,8 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                 default:
                   cell.title = column.type;
               }
+              cell.title += \`\\n\`;
+              cell.title += columnHeadings === 'Label' ? column.name : column.label;
             });
 
             // Initialize the footer
