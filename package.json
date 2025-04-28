@@ -750,6 +750,58 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.generateSQL",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getRelatedObjects",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getMTIs",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getIndexes",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getAuthorities",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getObjectLocks",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getRecordLocks",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.clearData",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.copyData",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.deleteObject",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.renameObject",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.clearAdvisedIndexes",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.resultset.settings",
           "when": "never"
         },
