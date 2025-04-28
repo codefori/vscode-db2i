@@ -36,7 +36,8 @@ export class SQLJobManager {
         "transaction isolation": "none",
         "query optimize goal": "1",
         "block size": "512",
-        "date format": "iso"
+        "date format": "iso",
+        "extended metadata": true,
       }));
 
       try {
