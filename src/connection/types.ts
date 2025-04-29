@@ -1,4 +1,23 @@
-import { QueryMetaData, QueryResult } from "@ibm/mapepire-js/dist/src/types";
+
+// Redefined from mapepire-js
+export enum JobStatus {
+  NOT_STARTED = "notStarted",
+  CONNECTING = "connecting",
+  READY = "ready",
+  BUSY = "busy",
+  ENDED = "ended"
+}
+
+export enum TransactionEndType {
+  COMMIT = "COMMIT",
+  ROLLBACK = "ROLLBACK"
+}
+
+export enum ExplainType {
+  RUN = "run",
+  DO_NOT_RUN = "doNotRun"
+}
+// End
 
 export interface JobLogEntry {
   MESSAGE_ID: string;

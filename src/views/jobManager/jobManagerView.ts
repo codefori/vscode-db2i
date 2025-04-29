@@ -14,6 +14,7 @@ import { setCancelButtonVisibility } from "../results";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import { registerDb2iTablesProvider } from "../../aiProviders/continue/listTablesContextProvider";
 import { sqlLanguageStatus } from "../../language/providers";
+import { TransactionEndType } from "../../connection/types";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -71,10 +72,10 @@ export class JobManagerView implements TreeDataProvider<any> {
 
                 switch (decision) {
                   case `Commit and end`:
-                    await selected.job.endTransaction("commit");
+                    await selected.job.endTransaction(TransactionEndType.COMMIT);
                     break;
                   case `Rollback and end`:
-                    await selected.job.endTransaction("rollback");
+                    await selected.job.endTransaction(TransactionEndType.ROLLBACK);
                     break;
                   default:
                     // Actually... don't end the job
@@ -245,7 +246,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
           if (selected.job.underCommitControl()) {
-            const result = await selected.job.endTransaction("commit");
+            const result = await selected.job.endTransaction(TransactionEndType.ROLLBACK);
             if (!result.success) {
               vscode.window.showErrorMessage(`Failed to commit.` + result.error);
             }
@@ -261,7 +262,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         if (selected) {
           if (selected.job.underCommitControl()) {
             try {
-              const result = await selected.job.endTransaction("rollback");
+              const result = await selected.job.endTransaction(TransactionEndType.ROLLBACK);
               if (!result.success) {
                 vscode.window.showErrorMessage(`Failed to rollback. ` + result.error);
               }

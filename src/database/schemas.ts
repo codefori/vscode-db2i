@@ -5,7 +5,7 @@ import { JobManager } from "../config";
 import { ResolvedSqlObject, BasicSQLObject } from "../types";
 
 export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types" | "logicals";
-export type PageData = { filter?: string, offset?: number, limit?: number };
+export type PageData = { filter?: string, offset?: number, limit?: number, sort?: boolean };
 
 const typeMap = {
   'tables': [`T`, `P`, `M`],
@@ -252,10 +252,11 @@ export default class Schemas {
         case `schemas`:
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, SCHEMA_NAME as NAME, SCHEMA_TEXT as TEXT, SYSTEM_SCHEMA_NAME as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
-              `from QSYS2.SYSSCHEMAS`,
+              ``,
+              `SELECT '${type}' as OBJ_TYPE, '' as TABLE_TYPE, OBJLONGNAME AS NAME, '' as TEXT, OBJNAME AS SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `FROM TABLE(QSYS2.OBJECT_STATISTICS('*ALLSIMPLE', 'LIB')) Z`,
               details.filter
-                ? `where UPPER(SCHEMA_NAME) = ? or UPPER(SYSTEM_SCHEMA_NAME) = ?`
+                ? `where UPPER(OBJLONGNAME) = ? or UPPER(OBJNAME) = ?`
                 : ``,
             ].join(` `)
           );
@@ -398,9 +399,15 @@ export default class Schemas {
       }
     }
 
-    const query = `with results as (${selects.join(
-      " UNION ALL "
-    )}) select * from results Order by QSYS2.DELIMIT_NAME(NAME) asc`;
+    let query: string;
+
+    if (details.sort) {
+      query = `with results as (${selects.join(
+        " UNION ALL "
+      )}) select * from results Order by QSYS2.DELIMIT_NAME(NAME) asc`;
+    } else {
+      query = selects.join(` UNION ALL `);
+    }
 
     const objects: any[] = await JobManager.runSQL(
       [
@@ -417,7 +424,7 @@ export default class Schemas {
       type: object.OBJ_TYPE,
       tableType: object.TABLE_TYPE,
       schema,
-      name: object.NAME || undefined,
+      name: object.NAME || object.SYS_NAME || undefined,
       specificName: object.SPECNAME || undefined,
       text: object.TEXT || undefined,
       system: {

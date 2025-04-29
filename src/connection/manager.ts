@@ -38,7 +38,9 @@ export class SQLJobManager {
         "full open": false,
         "transaction isolation": "none",
         "query optimize goal": "1",
-        "block size": "512"
+        "block size": "512",
+        "date format": "iso",
+        "extended metadata": true,
       }));
 
       try {
@@ -131,6 +133,9 @@ export class SQLJobManager {
   async runSQL<T>(query: string, opts?: QueryOptions, rowsToFetch = 2147483647): Promise<T[]> {
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
+
+    // const s = performance.now()
+    // console.log(`Running statement: ${query.padEnd(40).substring(0, 40)}`);
 
     const statement = await this.getPagingStatement<T>(query, opts);
     const results = await statement.execute(rowsToFetch);
