@@ -34,10 +34,12 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
       const job = selected.job;
 
       if (job.getNaming() === `sql`) {
-        toolTipItems.push(`SQL Naming. Current schema: \`${await job.getCurrentSchema()}\``);
+        toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${await job.getCurrentSchema()}\``);
       } else {
         toolTipItems.push([
-          `System Naming. Library list:`,
+          `System Naming.`,
+          ``,
+          `Configured user library list for job:`,
           ``,
           ...job.options.libraries.map((lib, i) => `${i+1}. \`${lib}\``)
         ].join(`\n`));
