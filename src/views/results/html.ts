@@ -497,7 +497,12 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
 
                 if (!isJson) {
                   // Append a text node to the cell
+                  newDiv.style.whiteSpace = "pre";
+                  newDiv.style["font-family"] = "monospace";
                   newDiv.appendChild(document.createTextNode(cell === undefined ? 'null' : cell));
+                  if(cell === undefined || cell === null) {
+                    newDiv.style["font-style"] = "italic";
+                  }
                 }
                 
                 newCell.column = columnName;
