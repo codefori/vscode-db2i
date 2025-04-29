@@ -14,7 +14,7 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
 
     let text;
     let backgroundColour: ThemeColor|undefined = undefined;
-    let toolTipItems = [];
+    let toolTipItems: string[] = [];
 
     if (options.executing) {
       text = `$(sync~spin) Executing...`;
@@ -30,6 +30,18 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
     } else
     if (selected) {
       text = `$(database) ${selected.name}`;
+
+      const job = selected.job;
+
+      if (job.getNaming() === `sql`) {
+        toolTipItems.push(`SQL Naming. Current schema: \`${await job.getCurrentSchema()}\``);
+      } else {
+        toolTipItems.push([
+          `System Naming. Library list:`,
+          ``,
+          ...job.options.libraries.map((lib, i) => `${i+1}. \`${lib}\``)
+        ].join(`\n`));
+      }
 
       if (selected.job.underCommitControl()) {
         const pendingsTracts = await selected.job.getPendingTransactions();
