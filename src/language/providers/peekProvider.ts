@@ -40,11 +40,21 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
 
         const possibleObjects = await Schemas.resolveObjects([{name, schema}], [`*LIB`]);
 
-        if (possibleObjects.length === 1) {
-          const obj = possibleObjects[0];
-          const content = await Schemas.generateSQL(obj.schema, obj.name, obj.sqlType, true);
+        let totalBlocks: string[] = [];
 
-          const document = await workspace.openTextDocument({ content, language: `sql` });
+        if (possibleObjects.length > 0) {
+          if (possibleObjects.length > 1) {
+            totalBlocks.push(
+              `-- Multiple objects found with the same name.`
+            );
+          }
+
+          for (const posObj of possibleObjects) {
+            const newContent = await Schemas.generateSQL(posObj.schema, posObj.name, posObj.sqlType, true);
+            totalBlocks.push(newContent);
+          }
+
+          const document = await workspace.openTextDocument({ content: totalBlocks.join(`\n\n`), language: `sql` });
 
           return {
             uri: document.uri,
