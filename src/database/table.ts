@@ -1,20 +1,21 @@
 
-import vscode from "vscode"
 import { JobManager } from "../config";
 import { getInstance } from "../base";
-import Statement from "./statement";
+import { TableColumn, CPYFOptions } from "../types";
 
 export default class Table {
   /**
    * @param {string} schema Not user input
-   * @param {string} name Not user input
+   * @param {string} table Not user input
    * @returns {Promise<TableColumn[]>}
    */
-  static async getItems(schema: string, name: string): Promise<TableColumn[]> {
+  static async getItems(schema: string, table?: string): Promise<TableColumn[]> {
+    const params = table ? [schema, table] : [schema];
     const sql = [
       `SELECT `,
       `  column.TABLE_SCHEMA,`,
       `  column.TABLE_NAME,`,
+      `  column.SYSTEM_COLUMN_NAME,`,
       `  column.COLUMN_NAME,`,
       `  key.CONSTRAINT_NAME,`,
       `  column.DATA_TYPE, `,
@@ -32,11 +33,49 @@ export default class Table {
       `    column.table_schema = key.table_schema and`,
       `    column.table_name = key.table_name and`,
       `    column.column_name = key.column_name`,
-      `WHERE column.TABLE_SCHEMA = '${schema}' AND column.TABLE_NAME = '${name}'`,
+      `WHERE column.TABLE_SCHEMA = ?`,
+      ...[
+        table ? `AND column.TABLE_NAME = ?` : ``,
+      ],
       `ORDER BY column.ORDINAL_POSITION`,
     ].join(` `);
 
-    return JobManager.runSQL(sql);
+    return JobManager.runSQL(sql, {parameters: params});
+  }
+
+  /**
+   * This is to be used instead of getItems when the table is in session/QTEMP
+   */
+  static async getSessionItems(name: string): Promise<TableColumn[]> {
+    const sql = [
+      `SELECT `,
+      `  column.TABLE_SCHEMA,`,
+      `  column.TABLE_NAME,`,
+      `  column.COLUMN_NAME,`,
+      `  '' as CONSTRAINT_NAME,`,
+      `  column.DATA_TYPE, `,
+      `  column.CHARACTER_MAXIMUM_LENGTH,`,
+      `  column.NUMERIC_SCALE, `,
+      `  column.NUMERIC_PRECISION,`,
+      `  column.IS_NULLABLE, `,
+      `  column.HAS_DEFAULT, `,
+      `  column.COLUMN_DEFAULT, `,
+      `  column.COLUMN_TEXT, `,
+      `  column.IS_IDENTITY`,
+      `FROM QSYS2.SYSCOLUMNS2_SESSION as column`,
+      `WHERE column.TABLE_NAME = ?`,
+      `ORDER BY column.ORDINAL_POSITION`,
+    ].join(` `);
+
+    return JobManager.runSQL(sql, {parameters: [name]});
+  }
+
+  static async isPartitioned(schema: string, name: string): Promise<boolean> {
+    const sql = `select table_name, partitioned_table from qsys2.sysfiles where ((table_schema = ? and table_name = ?) or (system_table_schema = ? and system_table_name = ?)) and partitioned_table is not null and partitioned_table = 'YES'`;
+    const parameters = [schema, name, schema, name];
+
+    const result = await JobManager.runSQL(sql, {parameters});
+    return result.length > 0;
   }
 
   static async clearFile(library: string, objectName: string): Promise<void> {

@@ -3,4 +3,3 @@ node_modules
 *.vsix
 .DS_Store
 dist
-types

@@ -16,6 +16,7 @@ import { SQLExample } from "../../examples";
 import { JobInfo } from "../../../connection/manager";
 import { OldSQLJob } from "../../../connection/sqlJob";
 import { JobLogEntry } from "../../../connection/types";
+import { isContinueActive } from "../../../aiProviders/continue/continueContextProvider";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -69,6 +70,33 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
           await vscode.window.showTextDocument(document, { preview: false });
         }
       }),
+      vscode.commands.registerCommand(`vscode-db2i.self.explainSelf`, async (item: SelfCodeTreeItem) => {
+        if (item && item.error && isContinueActive) {
+          const jsonData = JSON.stringify(item.error, null, 2);
+          const document = await vscode.workspace.openTextDocument({
+            content: jsonData,
+            language: `json`
+          });
+          await vscode.window.showTextDocument(document, { preview: false });
+          // Assume 'document' is the currently open text document
+          const firstLine = document.lineAt(0);
+          const lastLine = document.lineAt(document.lineCount - 1);
+
+          // Create a range from the start of the first line to the end of the last line
+          const range = new vscode.Range(
+            firstLine.range.start, // Start of the first line
+            lastLine.range.end // End of the last line
+          );
+
+          // Now you can use this range to highlight the whole document or for other purposes
+          await vscode.window.showTextDocument(document, {
+            selection: range
+          });
+          
+          vscode.commands.executeCommand(`continue.focusContinueInput`);
+        }
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.self.help`, async () => {
         await vscode.commands.executeCommand(`vscode.open`, `https://www.ibm.com/docs/en/i/7.5?topic=tools-sql-error-logging-facility-self`)
       }),
@@ -117,7 +145,7 @@ export class selfCodesResultsView implements TreeDataProvider<any> {
 
     try {
       const result = await selected.job.query<SelfCodeNode>(content).execute(10000);
-      if (result.success) {
+      if (result.success && result.data) {
         const data: SelfCodeNode[] = result.data.map((row) => ({
           ...row,
           INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string)
@@ -203,7 +231,10 @@ class SelfCodeItems extends ExtendedTreeItem {
 
   async getChildren(): Promise<ExtendedTreeItem[]> {
     const selfCodes = await this.selfView.getSelfCodes(this.selected, true);
-    return selfCodes.map((error) => new SelfCodeTreeItem(error));
+
+    if (selfCodes) {
+      return selfCodes.map((error) => new SelfCodeTreeItem(error));
+    }
   }
 }
 

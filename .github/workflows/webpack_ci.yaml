@@ -1,10 +1,6 @@
 name: NodeJS with Webpack
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: pull_request
 
 jobs:
   build:
@@ -22,9 +18,14 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Type check
+      run: npm run typings
+
     - name: Build and package
       run: |
-        npm install
         npx webpack
         npm install -g vsce
         vsce package
@@ -35,12 +36,22 @@ jobs:
         cat $GITHUB_ENV
 
     - name: Upload dist artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test_vsix
         path: ${{env.vsix_name}}
           
+    - name: Find Comment
+      uses: peter-evans/find-comment@v1
+      id: fc
+      with:
+        issue-number: ${{ github.event.pull_request.number }}
+        comment-author: 'github-actions[bot]'
+        body-includes: new build is available
+
     - name: Post comment
+      continue-on-error: true
+      if: steps.fc.outputs.comment-id == ''
       uses: actions/github-script@v5
       with:
         script: |
@@ -48,5 +59,18 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: '👋  A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.\n * [Download here.](https://github.com/halcyon-tech/vscode-db2i/actions/runs/${{ github.run_id }})\n'
+            body: '👋 A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.\n * [Download here.](https://github.com/codefori/vscode-db2i/actions/runs/${{ github.run_id }})\n* [Read more about how to test](https://github.com/codefori/vscode-db2i/blob/master/.github/pr_testing_template.md)'
           })
+
+    - name: Update comment
+      continue-on-error: true
+      if: steps.fc.outputs.comment-id != ''
+      uses: peter-evans/create-or-update-comment@v1
+      with:
+        edit-mode: replace
+        comment-id: ${{ steps.fc.outputs.comment-id }}
+        body: |
+          👋 A new build is available for this PR based on ${{ github.event.pull_request.head.sha }}.
+
+          * [Download here.](https://github.com/codefori/vscode-db2i/actions/runs/${{ github.run_id }})
+          * [Read more about how to test](https://github.com/codefori/vscode-db2i/blob/master/.github/pr_testing_template.md)

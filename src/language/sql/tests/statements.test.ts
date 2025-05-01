@@ -1,7 +1,6 @@
-import { assert, describe, expect, test } from 'vitest'
-import SQLTokeniser from '../tokens'
-import Document from '../document';
-import { ClauseType, StatementType } from '../types';
+import { describe, expect, test } from 'vitest'
+import Document, { getPositionData } from '../document';
+import { CallableReference, ClauseType, StatementType } from '../types';
 import { formatSql } from '../formatter';
 
 const parserScenarios = describe.each([
@@ -133,6 +132,22 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(obj.alias).toBe(`a`)
   });
 
+  test('SELECT: one invalid, one valid', () => {
+    const content = [
+      `SELECT * FROM QSYS2.AUTHORITY_COLLECTION_LIBRARIES where;`,
+      `SELECT * FROM QSYS2.AUTHORITY_COLLECTION;`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+
+    expect(document.statements.length).toBe(2);
+    expect(document.statements[0].tokens.length).toBe(7);
+    expect(document.statements[1].tokens.length).toBe(6);
+
+    expect(document.statements[0].type).toBe(StatementType.Select);
+    expect(document.statements[1].type).toBe(StatementType.Select);
+  })
+
   test('SELECT: Simple unqualified object with alias (no AS)', () => {
     const document = newDoc(`select * from sample a;`);
 
@@ -149,6 +164,17 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(obj.object.name).toBe(`sample`);
     expect(obj.object.schema).toBeUndefined();
     expect(obj.alias).toBe(`a`)
+  });
+
+  test('SELECT: for in data-type (issue #315)', () => {
+    const document = newDoc([
+      `select cast(x'01' as char(1) for bit data) as something,`,
+      `case when 1=1 then 'makes sense' else 'what?' end as something_else`,
+      `from sysibm.sysdummy1;`
+    ].join(`\n`));
+  
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Select);
   });
 
   test('SELECT: Simple qualified object with alias (no AS)', () => {
@@ -455,9 +481,13 @@ parserScenarios(`Object references`, ({newDoc}) => {
 
     const refsA = talksStatement.getObjectReferences();
     expect(refsA.length).toBe(1);
-    expect(refsA[0].tokens.length).toBe(1);
+
     expect(refsA[0].object.name).toBe(`create_Sql_sample`);
     expect(refsA[0].object.schema).toBeUndefined();
+
+    const tokens = refsA[0].tokens;
+    expect(tokens.length).toBe(4); // Includes the parameter tokens since it's a call
+    expect(tokens[tokens.length-1].type).toBe(`closebracket`);
   });
 
   test(`CALL: simple qualified`, () => {
@@ -473,9 +503,13 @@ parserScenarios(`Object references`, ({newDoc}) => {
 
     const refsA = talksStatement.getObjectReferences();
     expect(refsA.length).toBe(1);
-    expect(refsA[0].tokens.length).toBe(3);
+
     expect(refsA[0].object.name).toBe(`create_Sql_sample`);
     expect(refsA[0].object.schema).toBe(`"QSYS"`);
+
+    const tokens = refsA[0].tokens;
+    expect(tokens.length).toBe(6); // Includes the parameter tokens since it's a call
+    expect(tokens[tokens.length-1].type).toBe(`closebracket`);
   });
 
   test(`ALTER: with reference`, () => {
@@ -920,6 +954,96 @@ parserScenarios(`Object references`, ({newDoc}) => {
     expect(refs[1].object.schema).toBe(`LIB`);
   });
 
+  test('CREATE TABLE: routine parametes with primary key', () => {
+    const content = [
+      `--  Employee Master`,
+      `--  Generated on:               11/03/21 14:32:20`,
+      `CREATE OR REPLACE TABLE super_long_dept_name FOR SYSTEM NAME DEPT (`,
+      `--  SQL150B   10   REUSEDLT(*NO) in table EMPMST in PAYROLL1 ignored.`,
+      `  COL_B CHAR(1) CCSID 37 NOT NULL DEFAULT '' ,`,
+      `  PRIMARY KEY( COL_B ) );`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(1);
+    expect(parms[0].alias).toBe(`COL_B`);
+  });
+
+  test('CREATE TABLE: simple routine parametes test', () => {
+    const content = [
+      `CREATE TABLE ROSSITER.INVENTORY`,
+      `(PARTNO         SMALLINT     NOT NULL,`,
+      ` DESCR          VARCHAR(24),`,
+      ` QONHAND        INT)`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+    const groups = document.getStatementGroups();
+
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(3);
+
+    expect(parms[0].alias).toBe(`PARTNO`);
+    expect(parms[0].createType).toBe(`SMALLINT NOT NULL`);
+    
+    expect(parms[1].alias).toBe(`DESCR`);
+    expect(parms[1].createType).toBe(`VARCHAR(24)`);
+
+    expect(parms[2].alias).toBe(`QONHAND`);
+    expect(parms[2].createType).toBe(`INT`);
+  });
+
+  test('CREATE TABLE: generated types', () => {
+    const content = [
+      `CREATE TABLE policy_info`,
+      `  (policy_id CHAR(10) NOT NULL,`,
+      `  coverage INT NOT NULL,`,
+      `  sys_start TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,`,
+      `  sys_end TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,`,
+      `  create_id TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID,`,
+      `  PERIOD SYSTEM_TIME(sys_start,sys_end));`,
+    ].join(`\n`);
+
+    const document = newDoc(content);
+    const groups = document.getStatementGroups();
+    
+    expect(groups.length).toBe(1);
+    const createStatement = groups[0].statements[0];
+
+    expect(createStatement.type).toBe(StatementType.Create);
+
+    const parms = createStatement.getRoutineParameters();
+    expect(parms.length).toBe(5);
+
+    expect(parms[0].alias).toBe(`policy_id`);
+    expect(parms[0].createType).toBe(`CHAR(10) NOT NULL`);
+
+    expect(parms[1].alias).toBe(`coverage`);
+    expect(parms[1].createType).toBe(`INT NOT NULL`);
+
+    expect(parms[2].alias).toBe(`sys_start`);
+    expect(parms[2].createType).toBe(`TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN`);
+
+    expect(parms[3].alias).toBe(`sys_end`);
+    expect(parms[3].createType).toBe(`TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END`);
+
+    expect(parms[4].alias).toBe(`create_id`);
+    expect(parms[4].createType).toBe(`TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID`);
+  })
+
   test(`DECLARE VARIABLE`, () => {
     const document = newDoc(`declare watsonx_response   Varchar(10000) CCSID 1208;`);
     const groups = document.getStatementGroups();
@@ -990,7 +1114,29 @@ parserScenarios(`Object references`, ({newDoc}) => {
     
     expect(refs[2].object.name).toBe(`object_statistics`);
     expect(refs[2].object.schema).toBe(`qsys2`);
-    expect(refs[2].alias).toBe(`z`);
+    expect(refs[2].alias).toBe(undefined);
+  });
+
+  test('SELECT FROM LATERAL', () => {
+    const lines = [
+      `SELECT id, id_phone, t.phone_number`,
+      `  FROM testlateral AS s,`,
+      `       LATERAL(VALUES (1, S.phone1),`,
+      `                      (2, S.phone2),`,
+      `                      (3, S.phone3)) AS T(id_phone, phone_number)`,
+    ].join(`\n`);
+
+    const document = new Document(lines);
+
+    expect(document.statements.length).toBe(1);
+
+    const statement = document.statements[0];
+
+    expect(statement.type).toBe(StatementType.Select);
+
+    const refs = statement.getObjectReferences();
+    console.log(refs);
+    expect(refs.length).toBe(1);
   });
 
   test(`Multiple UDTFs`, () => {
@@ -1292,7 +1438,7 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const refs = statement.getObjectReferences();
     const ctes = statement.getCTEReferences();
-
+    
     expect(refs.length).toBe(10);
     expect(refs[0].object.name).toBe(`shipments`);
     expect(refs[0].alias).toBe(`s`);
@@ -1785,6 +1931,36 @@ describe(`Parameter statement tests`, () => {
     expect(result.content).toBe(content);
   });
 
+  test('No embedded area on MERGE (issue 348)', () => {
+    const content = [
+      `merge into sample.employee e`,
+      `  using (select *from `,
+      `    (values ('000011', 'PAOLO', 'I', 'SALVATORE', 'A00', 1234, 'OPERATOR', 14)) as `,
+      `newemp (empno, firstnme, midinit, lastname, workdept, phoneno, job , edlevel))  a`,
+      ` on a.empno = e.empno`,
+      `when matched then update  `,
+      `    set e.firstnme = a.firstnme, e.midinit = a.midinit, e.lastname = a.lastname, `,
+      `  e.workdept = a.workdept, e.phoneno = a.phoneno,`,
+      `  e.job = a.job, e.edlevel = a.edlevel`,
+      `when not matched then `,
+      `    insert (empno, firstnme, midinit, lastname, workdept, phoneno, job , edlevel)`,
+      ` values (a.empno, a.firstnme, a.midinit, a.lastname, a.workdept, a.phoneno, `,
+      `  a.job, a.edlevel);`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+    expect(statement.type).toBe(StatementType.Merge);
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.parameterCount).toBe(0);
+    expect(result.content + `;`).toBe(content);
+    expect(result.changed).toBe(false);
+  });
+
   test(`Callable blocks`, () => {
     const lines = [
         `call qsys2.create_abcd();`,
@@ -1827,6 +2003,112 @@ describe(`Parameter statement tests`, () => {
     expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
     expect(callableC.parentRef.object.schema).toBe(`qsys2`);
     expect(callableC.parentRef.object.name).toBe(`create_abcd`);
+  });
+
+  test('Partial parameters 1: Position data for procedure call', () => {
+    const sql = `call qsys2.ifs_write('asdasd', )`;
+
+    const document = new Document(sql);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(1);
+
+    const callableReference: CallableReference = statements[0].getCallableDetail(29);
+    expect(callableReference).toBeDefined();
+    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+
+    const positionData = getPositionData(callableReference, 29);
+    expect(positionData).toBeDefined();
+
+    expect(positionData.currentParm).toBe(1);
+    expect(positionData.currentCount).toBe(2);
+  });
+
+  test('Partial parameters 1.2: Position data for procedure call', () => {
+    const sql = `call qsys2.ifs_write('asdasd', )`;
+
+    const document = new Document(sql);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(1);
+
+    const callableReference: CallableReference = statements[0].getCallableDetail(31);
+    expect(callableReference).toBeDefined();
+    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+
+    const positionData = getPositionData(callableReference, 31);
+    expect(positionData).toBeDefined();
+
+    expect(positionData.currentParm).toBe(1);
+    expect(positionData.currentCount).toBe(2);
+  });
+
+  test('Partial parameters 2: Position data for procedure call', () => {
+    const sql = `call qsys2.ifs_write('asdasd', 243)`;
+
+    const document = new Document(sql);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(1);
+
+    const callableReference: CallableReference = statements[0].getCallableDetail(25);
+    expect(callableReference).toBeDefined();
+    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+
+    const positionData = getPositionData(callableReference, 25);
+    expect(positionData).toBeDefined();
+
+    expect(positionData.currentParm).toBe(0);
+    expect(positionData.currentCount).toBe(2);
+  });
+
+  test('Partial parameters 3: Position data for procedure call', () => {
+    const sql = `call qsys2.ifs_write('asdasd', 243, )`;
+
+    const document = new Document(sql);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(1);
+
+    const callableReference: CallableReference = statements[0].getCallableDetail(25);
+    expect(callableReference).toBeDefined();
+    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+
+    const positionDataA = getPositionData(callableReference, 25);
+    expect(positionDataA).toBeDefined();
+
+    expect(positionDataA.currentParm).toBe(0);
+    expect(positionDataA.currentCount).toBe(3);
+
+    const positionDataB = getPositionData(callableReference, 29);
+    expect(positionDataB).toBeDefined();
+
+    expect(positionDataB.currentParm).toBe(1);
+    expect(positionDataB.currentCount).toBe(3);
+  });
+
+  test('Partial parameters 4: Position data for procedure call', () => {
+    const sql = `call qsys2.ifs_write('asdasd', 'asdasd', overwrite => 'asdad')`;
+
+    const document = new Document(sql);
+    const statements = document.statements;
+  
+    expect(statements.length).toBe(1);
+
+    const callableReference: CallableReference = statements[0].getCallableDetail(50);
+    expect(callableReference).toBeDefined();
+    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+
+    const positionDataA = getPositionData(callableReference, 50);
+    expect(positionDataA).toBeDefined();
+
+    expect(positionDataA.currentParm).toBe(2);
+    expect(positionDataA.currentCount).toBe(3);
   });
 });
 

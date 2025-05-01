@@ -1,4 +1,5 @@
-import vscode, { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
+import * as vscode from "vscode";
+import { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
 import { JobManager } from "../../config";
 import { JobInfo, SQLJobManager } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";
@@ -9,9 +10,11 @@ import { displayJobLog } from "./jobLog";
 import { SelfValue, selfCodesMap } from "./selfCodes/nodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
-import { selfCodesResultsView } from "./selfCodes/selfCodesResultsView";
 import { setCancelButtonVisibility } from "../results";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { registerDb2iTablesProvider } from "../../aiProviders/continue/listTablesContextProvider";
+import { sqlLanguageStatus } from "../../language/providers";
+import { TransactionEndType } from "../../connection/types";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -28,8 +31,8 @@ export class JobManagerView implements TreeDataProvider<any> {
 
       ...ConfigManager.initialiseSaveCommands(),
 
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.defaultSelfSettings`, () => {
-        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobSelf');
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.defaultSettings`, () => {
+        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobManager');
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (options?: JDBCOptions, name?: string) => {
@@ -69,10 +72,10 @@ export class JobManagerView implements TreeDataProvider<any> {
 
                 switch (decision) {
                   case `Commit and end`:
-                    await selected.job.endTransaction("commit");
+                    await selected.job.endTransaction(TransactionEndType.COMMIT);
                     break;
                   case `Rollback and end`:
-                    await selected.job.endTransaction("rollback");
+                    await selected.job.endTransaction(TransactionEndType.ROLLBACK);
                     break;
                   default:
                     // Actually... don't end the job
@@ -243,7 +246,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
           if (selected.job.underCommitControl()) {
-            const result = await selected.job.endTransaction("commit");
+            const result = await selected.job.endTransaction(TransactionEndType.ROLLBACK);
             if (!result.success) {
               vscode.window.showErrorMessage(`Failed to commit.` + result.error);
             }
@@ -259,7 +262,7 @@ export class JobManagerView implements TreeDataProvider<any> {
         if (selected) {
           if (selected.job.underCommitControl()) {
             try {
-              const result = await selected.job.endTransaction("rollback");
+              const result = await selected.job.endTransaction(TransactionEndType.ROLLBACK);
               if (!result.success) {
                 vscode.window.showErrorMessage(`Failed to rollback. ` + result.error);
               }
@@ -283,6 +286,9 @@ export class JobManagerView implements TreeDataProvider<any> {
         await JobManager.endAll();
         this.refresh();
       }),
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.focusContinue`, async () => {
+        vscode.commands.executeCommand(`continue.focusContinueInput`);
+      })
     )
   }
 
@@ -299,9 +305,25 @@ export class JobManagerView implements TreeDataProvider<any> {
     updateStatusBar();
 
     const selectedJob = JobManager.getSelection();
+    
+    // re-register db2i tables context provider with current schema
+    const selectedSchema = selectedJob?.job.options.libraries[0];
+    if (
+      selectedJob &&
+      selectedSchema
+    ) {
+      registerDb2iTablesProvider(selectedSchema);
+    }
 
-    setCancelButtonVisibility(selectedJob && selectedJob.job.getStatus() === "busy");
-    commands.executeCommand(`setContext`, `vscode-db2i:jobManager.hasJob`, selectedJob !== undefined);
+    setCancelButtonVisibility(
+      selectedJob && selectedJob.job.getStatus() === "busy"
+    );
+    sqlLanguageStatus.setState(selectedJob !== undefined);
+    commands.executeCommand(
+      `setContext`,
+      `vscode-db2i:jobManager.hasJob`,
+      selectedJob !== undefined
+    );
   }
 
   getTreeItem(element: vscode.TreeItem) {

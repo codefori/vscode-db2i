@@ -5,18 +5,6 @@
         "id": "vscode-db2i.self",
         "title": "SQL Error Logging Facility (SELF)",
         "properties": {
-          "vscode-db2i.jobSelfDefault": {
-            "type": "string",
-            "order": 0,
-            "description": "Default SELF setting for new jobs",
-            "default": "*NONE",
-            "enum": [
-              "*NONE",
-              "*ALL",
-              "*ERROR",
-              "*WARNING"
-            ]
-          },
           "vscode-db2i.jobSelfViewAutoRefresh": {
             "type": "boolean",
             "title": "Auto-refresh SELF Codes view",
@@ -40,7 +28,7 @@
     "viewsWelcome": [
       {
         "view": "vscode-db2i.self.nodes",
-        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSelfSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
+        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
       }
     ],
     "commands": [
@@ -91,6 +79,13 @@
         "title": "Display SELF Code Details",
         "category": "Db2 for i",
         "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.self.explainSelf",
+        "title": "Explain SELF Code with continue",
+        "category": "Db2 for i",
+        "icon": "$(debug-alt)",
+        "enablement": "vscode-db2i:continueExtensionActive"
       },
       {
         "command": "vscode-db2i.self.help",
@@ -146,6 +141,11 @@
         {
           "command": "vscode-db2i.self.displayDetails",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.self.explainSelf",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && vscode-db2i:continueExtensionActive",
           "group": "navigation"
         }
       ]

@@ -6,8 +6,8 @@ import Statement from "../../database/statement";
 import { getParmAttributes, prepareParamType } from "./logic/completion";
 import { StatementType } from "../sql/types";
 import { remoteAssistIsEnabled } from "./logic/available";
-import { getPositionData } from "./logic/callable";
 import { CallableSignature } from "../../database/callable";
+import { getPositionData } from "../sql/document";
 
 // =================================
 // We need to open provider to exist so symbols can be cached for hover support when opening files
@@ -15,9 +15,15 @@ import { CallableSignature } from "../../database/callable";
 
 export const openProvider = workspace.onDidOpenTextDocument(async (document) => {
   if (document.languageId === `sql`) {
-    if (remoteAssistIsEnabled()) {
+    const selected = remoteAssistIsEnabled();
+
+    if (selected) {
       const sqlDoc = getSqlDocument(document);
-      const defaultSchema = getDefaultSchema();
+      const defaultSchema = await selected.job.getCurrentSchema();
+
+      if (!sqlDoc) return;
+
+      // TODO: we need to stop hard coding default schema here!!
 
       for (const statement of sqlDoc.statements) {
         const refs = statement.getObjectReferences();
@@ -58,11 +64,14 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
 
 export const hoverProvider = languages.registerHoverProvider({ language: `sql` }, {
   async provideHover(document, position, token) {
-    if (!remoteAssistIsEnabled()) return;
+    const selected = remoteAssistIsEnabled(true);
+    if (!selected) return;
     
-    const defaultSchema = getDefaultSchema();
+    const defaultSchema = await selected.job.getCurrentSchema();
     const sqlDoc = getSqlDocument(document);
     const offset = document.offsetAt(position);
+
+    if (!sqlDoc) return;
 
     const tokAt = sqlDoc.getTokenByOffset(offset);
     const statementAt = sqlDoc.getStatementByOffset(offset);
@@ -83,23 +92,29 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
 
           if (result) {
             if ('routine' in result) {
-              const routineOffset = ref.tokens[ref.tokens.length-1].range.end+1;
-              const callableRef = statementAt.getCallableDetail(routineOffset, false)
-              const signatures = await DbCache.getCachedSignatures(schema, ref.object.name);
+              let signatures: CallableSignature[];
+              let signature: CallableSignature | undefined;
 
-              if (signatures.length > 0) {
-                let chosenSignature: CallableSignature | undefined;
+              const lastToken = ref.tokens[ref.tokens.length-1];
+
+              if (lastToken.type === `closebracket`) {
+                let routineOffset: number = lastToken.range.start-1;
+                const callableRef = statementAt.getCallableDetail(routineOffset, false);
                 if (callableRef) {
                   const { currentCount } = getPositionData(callableRef, routineOffset);
+                  signatures = await DbCache.getCachedSignatures(callableRef.parentRef.object.schema, callableRef.parentRef.object.name);
                   const possibleSignatures = signatures.filter((s) => s.parms.length >= currentCount).sort((a, b) => a.parms.length - b.parms.length);
-                  chosenSignature = possibleSignatures.find((signature) => currentCount <= signature.parms.length);
-                } else {
-                  chosenSignature = signatures[0];
-                }
+                  signature = possibleSignatures.find((signature) => currentCount <= signature.parms.length);
+                } 
+              }
+              
+              if (!signature) {
+                signatures = await DbCache.getCachedSignatures(result.routine.schema, result.routine.name);
+                signature = signatures[0];
+              }
 
-                if (chosenSignature) {
-                  addRoutineMd(md, chosenSignature, result);
-                }
+              if (signature) {
+                addRoutineMd(md, signature, result);
               }
             } else {
               addSymbol(md, result);
@@ -184,7 +199,7 @@ function addSymbol(base: MarkdownString, symbol: LookupResult) {
   else if ('COLUMN_NAME' in symbol) {
     base.appendCodeblock(prepareParamType(symbol) + `\n`, `sql`);
   }
-  else if ('name' in symbol) {
+  else if ('name' in symbol && symbol.text) {
     addList(base, [
       `**Description:** ${symbol.text}`,
     ]);
@@ -196,9 +211,4 @@ function lookupSymbol(name: string, schema: string | undefined, possibleNames: s
   schema = schema ? Statement.noQuotes(Statement.delimName(schema, true)) : undefined
 
   return DbCache.lookupSymbol(name, schema, possibleNames);
-}
-
-const getDefaultSchema = (): string => {
-  const currentJob = JobManager.getSelection();
-  return currentJob && currentJob.job.options.libraries[0] ? currentJob.job.options.libraries[0] : `QGPL`;
 }

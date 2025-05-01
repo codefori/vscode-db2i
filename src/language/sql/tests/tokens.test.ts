@@ -27,6 +27,19 @@ test('Comment test', () => {
   expect(tokens.length).toBe(10);
 });
 
+test('Comment token test', () => {
+  const tokeniser = new SQLTokeniser();
+  tokeniser.storeComments = true;
+
+  const tokens = tokeniser.tokenise([
+    `--hello: world!!!: coolness`,
+    `select * from table(func()) x`
+  ].join(`\n`));
+
+  expect(tokens.length).toBe(12);
+  expect(tokens.some(t => t.value === `--hello: world!!!: coolness`)).toBeTruthy();
+});
+
 test('New line (\\n) and comments test', () => {
   const tokeniser = new SQLTokeniser();
 
@@ -36,7 +49,7 @@ test('New line (\\n) and comments test', () => {
   ].join(`\n`));
 
   expect(tokens.length).toBe(5);
-  expect (tokens[3].type === `newline`);
+  expect(tokens[2].type).toBe(`newline`);
 });
 
 test('New line (\\r\\n) and comments test', () => {
@@ -48,7 +61,7 @@ test('New line (\\r\\n) and comments test', () => {
   ].join(`\r\n`));
 
   expect(tokens.length).toBe(5);
-  expect (tokens[3].type === `newline`);
+  expect (tokens[2].type).toBe(`newline`);
 });
 
 test(`Delimited names`, () => {
@@ -59,13 +72,13 @@ test(`Delimited names`, () => {
 
   expect(tokens.length).toBe(22);
 
-  expect (tokens[2].type === `sqlName`);
-  expect (tokens[2].value === `"TestDelimiters"`);
+  expect (tokens[2].type).toBe(`sqlName`);
+  expect (tokens[2].value).toBe(`"TestDelimiters"`);
 
-  expect (tokens[3].type === `dot`);
+  expect (tokens[3].type).toBe(`dot`);
 
-  expect (tokens[4].type === `sqlName`);
-  expect (tokens[4].value === `"Delimited Table"`);
+  expect (tokens[4].type).toBe(`sqlName`);
+  expect (tokens[4].value).toBe(`"Delimited Table"`);
 });
 
 test(`Block comments`, () => {
@@ -94,4 +107,18 @@ test(`Block comments`, () => {
   expect(tokens[0].type).toBe(`statementType`)
   expect(tokens[0].value).toBe(`Create`)
   expect(lines.substring(tokens[0].range.start, tokens[0].range.end)).toBe(`Create`)
+});
+
+test('For in data-type (issue #315)', () => {
+  const tokeniser = new SQLTokeniser();
+
+  const tokens = tokeniser.tokenise([
+    `select cast(x'01' as char(1) for bit data) as something,`,
+    `case when 1=1 then 'makes sense' else 'what?' end as something_else`,
+    `from sysibm.sysdummy1;`
+  ].join(`\n`));
+
+  expect(tokens.length).toBe(35);
+  expect(tokens[9].type).toBe(`word`);
+  expect(tokens[9].value.toLowerCase()).toBe(`for`);
 });

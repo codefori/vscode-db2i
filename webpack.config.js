@@ -66,13 +66,21 @@ const config = {
         exclude: /node_modules/,
         use: [
           {
-            loader: `esbuild-loader`
+            loader: `esbuild-loader`,
+            options: {
+              // JavaScript version to transpile to
+              target: 'node18'
+            }
           }
         ]
       },
       {
         test: /\.ts$/,
         exclude
+      },
+      {
+        test: /\.ts$/,
+        exclude: path.resolve(__dirname, `src`, `dcs.ts`)
       },
     ]
   }

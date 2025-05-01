@@ -1,5 +1,5 @@
 // https://www.ibm.com/docs/en/i/7.4?topic=views-syscolumns2
-interface TableColumn {
+export interface TableColumn {
   TABLE_SCHEMA: string,
   TABLE_NAME: string,
   COLUMN_NAME: string,
@@ -17,7 +17,7 @@ interface TableColumn {
 }
 
 // https://www.ibm.com/docs/en/i/7.4?topic=views-sysparms
-interface SQLParm {
+export interface SQLParm {
   SPECIFIC_SCHEMA: string,
   SPECIFIC_NAME: string,
   PARAMETER_NAME: string,
@@ -33,8 +33,15 @@ interface SQLParm {
   ROW_TYPE: "P" | "R",
 }
 
-interface BasicSQLObject {
+export interface ResolvedSqlObject {
+  schema: string;
+  name: string;
+  sqlType: string;
+}
+
+export interface BasicSQLObject {
   type: string;
+  tableType: string;
   schema: string;
   name: string;
   specificName: string;
@@ -49,7 +56,7 @@ interface BasicSQLObject {
   }
 }
 
-interface CPYFOptions {
+export interface CPYFOptions {
   toLib: string;
   toFile: string;
   fromMbr: string;

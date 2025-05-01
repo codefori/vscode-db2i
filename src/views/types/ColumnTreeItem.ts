@@ -1,6 +1,7 @@
 
 import vscode from "vscode";
 import Statement from "../../database/statement";
+import { TableColumn } from "../../types";
 
 export default class ColumnTreeItem extends vscode.TreeItem {
   schema: string;

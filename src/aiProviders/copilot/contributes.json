@@ -1,0 +1,44 @@
+{
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "vscode-db2i.chat",
+        "name": "db2i",
+        "fullName": "Db2 for i",
+        "description": "Chat with the Db2 for i AI assistant",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "build",
+            "description": "Build an SQL statement"
+          }
+        ]
+      }
+    ],
+    "languageModelTools": [
+			{
+				"name": "vscode-db2i-chat-sqlRunnerTool",
+				"tags": [
+					"sql"
+				],
+				"canBeReferencedInPrompt": true,
+        "toolReferenceName": "result",
+				"displayName": "Run SQL statement",
+				"icon": "$(play)",
+				"modelDescription": "Run an SQL statement and return the result",
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"statement": {
+							"type": "string",
+							"description": "The statement to execute"
+						}
+					},
+					"required": [
+						"statement"
+					]
+				}
+			}
+    ]
+  }
+}

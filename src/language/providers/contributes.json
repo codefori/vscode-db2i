@@ -1,0 +1,55 @@
+{
+  "contributes": {
+    "configuration": [
+      {
+        "id": "vscode-db2i.syntax",
+        "title": "SQL Syntax Options",
+        "properties": {
+          "vscode-db2i.syntax.checkOnOpen": {
+            "type": "boolean",
+            "description": "If enabled, will check the syntax of the SQL file when it is opened",
+            "default": false
+          },
+          "vscode-db2i.syntax.checkOnEdit": {
+            "type": "boolean",
+            "description": "Whether the syntax checker should run automatically when the document is edited",
+            "default": true
+          },
+          "vscode-db2i.syntax.checkInterval": {
+            "type": "number",
+            "description": "Time between editing (ms) and sending a request to syntax check on the server",
+            "default": 1500
+          },
+          "vscode-db2i.syntax.showWarnings": {
+            "type": "boolean",
+            "description": "Whether SQL syntax warnings should show in the editor",
+            "default": false
+          },
+          "vscode-db2i.syntax.useSystemNames": {
+            "type": "boolean",
+            "description": "Whether to use system names for columns in the content assist",
+            "default": false
+          }
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "vscode-db2i.syntax.checkDocument",
+        "title": "Check SQL syntax",
+        "category": "Db2 for IBM i",
+        "enablement": "code-for-ibmi:connected == true && vscode-db2i:jobManager.hasJob && vscode-db2i:statementCanCancel != true && vscode-db2i.syntax.checkerAvailable == true && vscode-db2i.syntax.checkerRunning != true",
+        "icon": "$(check-all)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "vscode-db2i.syntax.checkDocument",
+          "when": "editorLangId == sql && code-for-ibmi:connected == true",
+          "group": "navigation"
+        }
+      ]
+    }
+  }
+}

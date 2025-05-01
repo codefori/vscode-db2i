@@ -1,17 +1,16 @@
-import vscode, { MarkdownString, ThemeIcon, TreeItem, window, workspace } from "vscode";
+import { commands, EventEmitter, ExtensionContext, MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState, window, workspace, Event } from "vscode";
 import { TreeDataProvider } from "vscode";
 import { Config } from "../../config";
-import { QueryHistoryItem } from "../../Storage";
 
 const openSqlDocumentCommand = `vscode-db2i.openSqlDocument`;
 
 export class queryHistory implements TreeDataProvider<any> {
-  private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | null | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | null | void>();
-  readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
+  readonly onDidChangeTreeData: Event<TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor(context: ExtensionContext) {
     context.subscriptions.push(
-      vscode.commands.registerCommand(openSqlDocumentCommand, (query: string = ``) => {
+      commands.registerCommand(openSqlDocumentCommand, (query: string = ``) => {
         workspace.openTextDocument({
           language: `sql`,
           content: (typeof query === `string` ? query : ``)
@@ -20,7 +19,7 @@ export class queryHistory implements TreeDataProvider<any> {
         });
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.queryHistory.prepend`, async (newQuery?: string) => {
+      commands.registerCommand(`vscode-db2i.queryHistory.prepend`, async (newQuery?: string) => {
         if (newQuery && Config.ready) {
           let currentList = Config.getPastQueries();
           const existingQuery = currentList.findIndex(queryItem => queryItem.query.trim() === newQuery.trim());
@@ -44,7 +43,7 @@ export class queryHistory implements TreeDataProvider<any> {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.queryHistory.remove`, async (node: PastQueryNode) => {
+      commands.registerCommand(`vscode-db2i.queryHistory.remove`, async (node: PastQueryNode) => {
         if (node && Config.ready) {
           let currentList = Config.getPastQueries();
           const chosenQuery = node.query;
@@ -61,7 +60,7 @@ export class queryHistory implements TreeDataProvider<any> {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.queryHistory.clear`, async () => {
+      commands.registerCommand(`vscode-db2i.queryHistory.clear`, async () => {
         if (Config.ready) {
           await Config.setPastQueries([]);
           this.refresh();
@@ -74,11 +73,11 @@ export class queryHistory implements TreeDataProvider<any> {
     this._onDidChangeTreeData.fire();
   }
 
-  getTreeItem(element: vscode.TreeItem) {
+  getTreeItem(element: TreeItem) {
     return element;
   }
 
-  async getChildren(timePeriod?: TimePeriodNode): Promise<vscode.TreeItem[]> {
+  async getChildren(timePeriod?: TimePeriodNode): Promise<TreeItem[]> {
     if (Config.ready) {
       if (timePeriod) {
         return timePeriod.getChildren();
@@ -137,10 +136,9 @@ export class queryHistory implements TreeDataProvider<any> {
   }
 }
 
-class TimePeriodNode extends vscode.TreeItem {
+class TimePeriodNode extends TreeItem {
   constructor(public period: string, private nodes: PastQueryNode[], expanded = false) {
-    super(period, expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
-
+    super(period, expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
     this.contextValue = `timePeriod`;
 
     this.iconPath = new ThemeIcon(`calendar`);
@@ -151,7 +149,7 @@ class TimePeriodNode extends vscode.TreeItem {
   }
 }
 
-class PastQueryNode extends vscode.TreeItem {
+class PastQueryNode extends TreeItem {
   constructor(public query: string) {
     super(query.length > 63 ? query.substring(0, 60) + `...` : query);
 

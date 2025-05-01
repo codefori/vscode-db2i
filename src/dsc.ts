@@ -1,8 +1,9 @@
 import path from "path";
 
-import fetch from "node-fetch";
-import { Octokit } from "octokit";
+import { existsSync, mkdirSync } from "fs";
 import { writeFile } from "fs/promises";
+import fetch from "node-fetch";
+import { Octokit } from "@octokit/rest";
 import { SERVER_VERSION_FILE, SERVER_VERSION_TAG } from "./connection/SCVersion";
 
 async function work() {
@@ -26,12 +27,15 @@ async function work() {
       console.log(`Asset found: ${newAsset.name}`);
 
       const url = newAsset.browser_download_url;
+      const distDirectory = path.join(`.`, `dist`);
+      if (!existsSync(distDirectory)) {
+        mkdirSync(distDirectory);
+      }
 
-      const dist = path.join(`.`, `dist`, SERVER_VERSION_FILE);
+      const serverFile = path.join(distDirectory, SERVER_VERSION_FILE);
+      await downloadFile(url, serverFile);
 
-      await downloadFile(url, dist);
-
-      console.log(`Asset downloaded.`);
+      console.log(`Asset downloaded: ${serverFile}`);
 
     } else {
       console.log(`Release found but no asset found.`);
@@ -45,8 +49,8 @@ async function work() {
 
 function downloadFile(url, outputPath) {
   return fetch(url)
-      .then(x => x.arrayBuffer())
-      .then(x => writeFile(outputPath, Buffer.from(x)));
+    .then(x => x.arrayBuffer())
+    .then(x => writeFile(outputPath, Buffer.from(x)));
 }
 
 work();

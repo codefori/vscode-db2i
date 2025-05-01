@@ -1,17 +1,26 @@
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-import { Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
+import { CallableReference, Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
 
 export default class Document {
   content: string;
   statements: Statement[];
+  debug: boolean = false;
 
-  constructor(content: string) {
+  constructor(content: string, keepComments = false) {
     this.content = content;
     this.statements = [];
 
     const tokeniser = new SQLTokeniser();
+    tokeniser.storeComments = keepComments;
+
     this.parseStatements(tokeniser.tokenise(content));
+  }
+
+  log(content: string) {
+    if (this.debug) {
+      console.log(content);
+    }
   }
 
   private addStatement(tokens: Token[]) {
@@ -33,10 +42,17 @@ export default class Document {
   private parseStatements(tokens: Token[]) {
     let currentStatementType: StatementType = StatementType.Unknown;
     let statementStart = 0;
+    let bracketDepth = 0;
 
     for (let i = 0; i < tokens.length; i++) {
       const upperValue = tokens[i].value?.toUpperCase();
       switch (tokens[i].type) {
+        case `openbracket`:
+          bracketDepth++;
+          break;
+        case `closebracket`:
+          bracketDepth--;
+          break;
         case `semicolon`:
           const statementTokens = tokens.slice(statementStart, i);
 
@@ -50,33 +66,44 @@ export default class Document {
           break;
 
         case `keyword`:
-          switch (upperValue) {
-            case `LOOP`:
-            case `THEN`:
-            case `BEGIN`:
-            case `DO`:
-              // This handles the case that 'END LOOP' is supported.
-              if (upperValue === `LOOP` && currentStatementType === StatementType.End) {
-                break;
-              }
+          if (bracketDepth === 0) {
+            switch (upperValue) {
+              case `LOOP`:
+              case `THEN`:
+              case `BEGIN`:
+              case `ELSE`:
+              case `DO`:
+                // This handles the case that 'END LOOP' is supported.
+                if (upperValue === `LOOP` && currentStatementType === StatementType.End) {
+                  break;
+                }
 
-              // Support for THEN in conditionals
-              if (upperValue === `THEN` && !Statement.typeIsConditional(currentStatementType)) {
-                break;
-              }
+                // Support for THEN in conditionals
+                if (upperValue === `THEN` && !Statement.typeIsConditional(currentStatementType)) {
+                  break;
+                }
 
-              // We include BEGIN in the current statement
-              // then the next statement beings
-              const statementTokens = tokens.slice(statementStart, i+1);
-              this.addStatement(statementTokens);
-              statementStart = i + 1;
-              break;
-            case `END`:
-              // We ignore the END statement keyword when it's solo.
-              if (statementStart === i && (tokens[i] === undefined || tokens[i].type === `semicolon`)) {
+                if (upperValue === `ELSE` && !Statement.typeIsConditional(currentStatementType)) {
+                  break;
+                }
+
+                if (upperValue === `BEGIN` && currentStatementType === StatementType.Alter) {
+                  break;
+                }
+
+                // We include BEGIN in the current statement
+                // then the next statement beings
+                const statementTokens = tokens.slice(statementStart, i+1);
+                this.addStatement(statementTokens);
                 statementStart = i + 1;
-              }
-              break;
+                break;
+              case `END`:
+                // We ignore the END statement keyword when it's solo.
+                if (statementStart === i && (tokens[i] === undefined || tokens[i].type === `semicolon`)) {
+                  statementStart = i + 1;
+                }
+                break;
+            }
           }
           break;
       }
@@ -114,18 +141,23 @@ export default class Document {
             currentGroup.push(statement);
               
             depth--;
+
+            this.log(`<` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           }
 
           if (depth === 0) {
-            groups.push({
-              range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
-              statements: currentGroup
-            });
+            if (currentGroup.length > 0) {
+              groups.push({
+                range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
+                statements: currentGroup
+              });
 
-            currentGroup = [];
+              currentGroup = [];
+            }
           }
         } else
         if (statement.isCompoundStart()) {
+          this.log(`>` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           if (depth > 0) {
             currentGroup.push(statement);
           } else {
@@ -135,6 +167,7 @@ export default class Document {
           depth++;
 
         } else {
+          this.log(` ` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           if (depth > 0) {
             currentGroup.push(statement);
           } else {
@@ -226,6 +259,30 @@ export default class Document {
       parameterCount
     };
   }
+}
+
+
+export function getPositionData(ref: CallableReference, offset: number) {
+  const paramCommas = ref.tokens.filter(token => token.type === `comma`);
+
+  let currentParm = paramCommas.findIndex(t => offset < t.range.start);
+
+  if (currentParm === -1) {
+    currentParm = paramCommas.length;
+  }
+
+  const firstNamedPipe = ref.tokens.find((token, i) => token.type === `rightpipe`);
+  let firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : undefined;
+
+  if (firstNamedParameter === -1) {
+    firstNamedParameter = undefined;
+  }
+
+  return {
+    currentParm,
+    currentCount: paramCommas.length + 1,
+    firstNamedParameter
+  };
 }
 
 function getSymbolsForStatements(statements: Statement[]) {

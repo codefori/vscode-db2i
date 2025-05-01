@@ -4,6 +4,8 @@ import { ObjectRef, CallableReference } from "../../sql/types";
 import Statement from "../../../database/statement";
 import { createCompletionItem, getParmAttributes } from "./completion";
 import { DbCache } from "./cache";
+import { SQLParm } from "../../../types";
+import { getPositionData } from "../../sql/document";
 
 /**
  * Checks if the ref exists as a procedure or function. Then,
@@ -116,27 +118,4 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
     });
   }
   return [];
-}
-
-export function getPositionData(ref: CallableReference, offset: number) {
-  const paramCommas = ref.tokens.filter(token => token.type === `comma`);
-
-  let currentParm = paramCommas.findIndex(t => offset < t.range.end);
-
-  if (currentParm === -1) {
-    currentParm = paramCommas.length;
-  }
-
-  const firstNamedPipe = ref.tokens.find((token, i) => token.type === `rightpipe`);
-  let firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : undefined;
-
-  if (firstNamedParameter === -1) {
-    firstNamedParameter = undefined;
-  }
-
-  return {
-    currentParm,
-    currentCount: paramCommas.length + 1,
-    firstNamedParameter
-  };
 }
