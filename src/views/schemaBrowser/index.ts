@@ -1,7 +1,7 @@
 
 import { ThemeIcon, TreeItem } from "vscode"
 import * as vscode from "vscode"
-import Schemas, { AllSQLTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
+import Schemas, { AllSQLTypes, InternalTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 import { getInstance, loadBase } from "../../base";
 
@@ -12,22 +12,6 @@ import Statement from "../../database/statement";
 import { getCopyUi } from "./copyUI";
 import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement } from "./statements";
 import { BasicSQLObject } from "../../types";
-
-const viewItem = {
-  "tables": `table`,
-  "views": `view`,
-  "aliases": `alias`,
-  "constraints": `constraint`,
-  "functions": `function`,
-  "variables": `variable`,
-  "indexes": `index`,
-  "procedures": `procedure`,
-  "sequences": `sequence`,
-  "packages": `package`,
-  "triggers": `trigger`,
-  "types": `type`,
-  "logicals": `logical`
-}
 
 const itemIcons = {
   "table": `split-horizontal`,
@@ -393,22 +377,6 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.setCurrentSchema`, async (node: SchemaItem) => {
-        if (node && node.contextValue === `schema`) {
-          const schema = node.schema.toUpperCase();
-
-          const config = getInstance().getConfig();
-          const currentLibrary = config.currentLibrary.toUpperCase();
-
-          if (schema && schema !== currentLibrary) {
-            config.currentLibrary = schema;
-            await getInstance().setConfig(config);
-          }
-
-          vscode.window.showInformationMessage(`Current schema set to ${schema}.`);
-        }
-      }),
-
       vscode.commands.registerCommand(`vscode-db2i.setSchemaFilter`, async (node: SchemaItem) => {
         if (node) {
           const value = await vscode.window.showInputBox({
@@ -606,7 +574,7 @@ class SQLObject extends vscode.TreeItem {
   }
 
   constructor(item: BasicSQLObject) {
-    const type = viewItem[item.type];
+    const type = InternalTypes[item.type];
     super(Statement.prettyName(item.name), Types[type] ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 
     this.contextValue = type;

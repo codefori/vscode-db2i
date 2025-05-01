@@ -101,11 +101,6 @@
         "icon": "$(output)"
       },
       {
-        "command": "vscode-db2i.setCurrentSchema",
-        "title": "Set current schema",
-        "category": "Db2 for i"
-      },
-      {
         "command": "vscode-db2i.setSchemaFilter",
         "title": "Set filter",
         "category": "Db2 for i",
@@ -189,11 +184,6 @@
         }
       ],
       "view/item/context": [
-        {
-          "command": "vscode-db2i.setCurrentSchema",
-          "when": "viewItem == schema",
-          "group": "db2@1"
-        },
         {
           "command": "vscode-db2i.setSchemaFilter",
           "when": "viewItem == schema",

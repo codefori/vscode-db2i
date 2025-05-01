@@ -5,6 +5,7 @@ import { SQLJob } from "@ibm/mapepire-js";
 import { ConnectionResult, QueryResult, ServerRequest, ServerResponse } from "@ibm/mapepire-js/dist/src/types";
 import { JobLogEntry, JobStatus } from "./types";
 import Statement from "../database/statement";
+import { NamingFormats } from "./manager";
 
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
@@ -13,9 +14,33 @@ export class OldSQLJob extends SQLJob {
   private selfState: SelfValue = "*NONE";
 
   id: string | undefined;
+  private currentSchemaStore: string | undefined;
 
   getSelfCode(): SelfValue {
     return this.selfState;
+  }
+
+  resetCurrentSchemaCache() {
+    this.currentSchemaStore = undefined;
+  }
+
+  async getCurrentSchema(): Promise<string> {
+    if (this.getNaming() === `sql`) {
+      if (this.currentSchemaStore) 
+        return this.currentSchemaStore;
+
+      const result = await this.execute<{'00001': string}>(`values (current schema)`);
+      if (result.success && result.data.length > 0) {
+        this.currentSchemaStore = result.data[0]['00001'];
+        return this.currentSchemaStore;
+      }
+    }
+
+    return this.options.libraries[0] || `QGPL`;
+  }
+
+  getNaming(): NamingFormats {
+    return this.options.naming;
   }
 
   public static async useExec() {
@@ -167,19 +192,6 @@ export class OldSQLJob extends SQLJob {
       this.selfState = code;
     } catch (e) {
       throw e;
-    }
-  }
-  
-  async setCurrentSchema(schema: string): Promise<QueryResult<any>> {
-    if (schema) {
-      const upperSchema = Statement.delimName(schema, true);
-      const result = await this.execute(`set current schema = ?`, {parameters: [upperSchema]});
-      if (result.success) {
-        this.options.libraries[0] = upperSchema;
-      }
-
-      return result;
-  
     }
   }
 
