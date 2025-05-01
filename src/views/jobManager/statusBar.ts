@@ -2,6 +2,7 @@ import { MarkdownString, StatusBarAlignment, ThemeColor, languages, window } fro
 import { ServerComponent } from "../../connection/serverComponent";
 import { JobManager } from "../../config";
 import { getInstance } from "../../base";
+import Statement from "../../database/statement";
 
 const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Left);
 
@@ -34,7 +35,7 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
       const job = selected.job;
 
       if (job.getNaming() === `sql`) {
-        toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${await job.getCurrentSchema()}\``);
+        toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${Statement.delimName(await job.getCurrentSchema())}\``);
       } else {
         toolTipItems.push([
           `System Naming.`,
