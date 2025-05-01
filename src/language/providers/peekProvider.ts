@@ -36,7 +36,7 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
         // Otherwise:
         //  - if SQL naming is in use, then use the default schema
         //  - if system naming is in use, then don't pass a library and the library list will be used
-        const schema = ref.object.schema ? Statement.delimName(ref.object.schema, true) : naming === `sql` ? defaultSchema : undefined;
+        const schema = ref.object.schema ? Statement.delimName(ref.object.schema, true) : naming === `sql` ? Statement.delimName(defaultSchema) : undefined;
 
         const possibleObjects = await Schemas.resolveObjects([{name, schema}], [`*LIB`]);
 
