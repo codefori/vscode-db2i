@@ -1,6 +1,19 @@
 import { assert, expect, test } from 'vitest'
-import { columnToRpgDefinition, queryResultToRpgDs } from './codegen';
+import { columnToRpgDefinition, columnToRpgFieldName, queryResultToRpgDs } from './codegen';
 import { QueryResult } from '@ibm/mapepire-js';
+
+test('Column to RPG symbol', () => {
+    let name;
+    
+    name = columnToRpgFieldName({display_size: 0, label: 'änderungs-          benutzer             ', name: 'ANDBEN', type: 'CHAR', precision: 10, scale: 0}, 'Label');
+    expect(name).toBe('anderungs_benutzer');
+
+    name = columnToRpgFieldName({display_size: 0, label: 'änderungs-          benutzer             ', name: 'ANDBEN', type: 'CHAR', precision: 10, scale: 0}, 'Name');
+    expect(name).toBe('andben');
+
+    name = columnToRpgFieldName({display_size: 0, label: '', name: '0001', type: 'INTEGER', precision: 0, scale: 0}, 'Name');
+    expect(name).toBe('col0001');
+});
 
 test('Column to RPG definition', () => {
     let rpgdef;
