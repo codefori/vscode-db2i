@@ -12,11 +12,18 @@ export function queryResultToRpgDs(result: QueryResult<any>, source: string = 'N
 
 export function columnToRpgFieldName(column: ColumnMetaData, source: string = 'Name') : string {
   let name = source === 'Label' ? column.label.toLowerCase().trim() : column.name.toLowerCase().trim();
-  name = name.replace(/\u00fc/g, "u");  // ü
-  name = name.replace(/\u00e4/g, "a");  // ä
-  name = name.replace(/\u00e4/g, "o");  // ö
-  name = name.replace(/\u00df/g, "s");  // sharp s/Eszett
-  name = name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, '').trim();  // space to underscore and remove non-alphanumeric chars
+  name = name.replace(/\u00fc/g, "u")  // ü -> u
+    .replace(/\u00e4/g, "a")  // ä -> a
+    .replace(/\u00e4/g, "o")  // ö -> o
+    .replace(/\u00df/g, "s")  // sharp s/Eszett -> s
+    .replace(/\u00e6/g, "ae")  // æ -> ae
+    .replace(/\u00f8/g, "oe")  // ø -> oe
+    .replace(/\u00e5/g, "aa")  // å -> aa
+    .replace(/[.:]+$/g, "")  // remove trailing "." and ":"
+    .replace(/[.]/g, "_")  // "." between words to underscore
+    .replace(/\s+/g, "_")  // remaining whitespaces to underscore
+    .replace(/[^a-zA-Z0-9_]/g, '')  // remove non-alphanumeric chars
+    .trim();  
   if (!isNaN(+name.charAt(0))) {
     name = `col` + name;
   }
