@@ -14,7 +14,7 @@ export function columnToRpgFieldName(column: ColumnMetaData, source: string = 'N
   let name = source === 'Label' ? column.label.toLowerCase().trim() : column.name.toLowerCase().trim();
   name = name.replace(/\u00fc/g, "u")  // ü -> u
     .replace(/\u00e4/g, "a")  // ä -> a
-    .replace(/\u00e4/g, "o")  // ö -> o
+    .replace(/\u00f6/g, "o")  // ö -> o
     .replace(/\u00df/g, "s")  // sharp s/Eszett -> s
     .replace(/\u00e6/g, "ae")  // æ -> ae
     .replace(/\u00f8/g, "oe")  // ø -> oe
