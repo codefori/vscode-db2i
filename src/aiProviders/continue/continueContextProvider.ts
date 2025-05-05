@@ -159,9 +159,7 @@ export class db2ContextProvider implements IContextProvider {
         });
       }
 
-      const newContextItems = await getContextItems(fullInput, {
-        withDb2Prompt: true,
-      })
+      const newContextItems = await getContextItems(fullInput)
 
       contextItems.push(...newContextItems.context);
 
