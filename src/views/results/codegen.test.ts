@@ -11,8 +11,11 @@ test('Column to RPG symbol', () => {
     name = columnToRpgFieldName({display_size: 0, label: 'änderungs-          benutzer             ', name: 'ANDBEN', type: 'CHAR', precision: 10, scale: 0}, 'Name');
     expect(name).toBe('andben');
 
-    name = columnToRpgFieldName({display_size: 0, label: 'Cust.number....:', name: 'ANDBEN', type: 'CHAR', precision: 10, scale: 0}, 'Label');
+    name = columnToRpgFieldName({display_size: 0, label: 'Cust.number....:', name: 'CUSNUM', type: 'CHAR', precision: 10, scale: 0}, 'Label');
     expect(name).toBe('cust_number');
+
+    name = columnToRpgFieldName({display_size: 0, label: 'Cust.  name....  : ', name: 'CUSNAM', type: 'CHAR', precision: 10, scale: 0}, 'Label');
+    expect(name).toBe('cust_name');
 
     name = columnToRpgFieldName({display_size: 0, label: 'Country:', name: 'C1', type: 'CHAR', precision: 10, scale: 0}, 'Label');
     expect(name).toBe('country');

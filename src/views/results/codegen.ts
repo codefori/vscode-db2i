@@ -19,10 +19,11 @@ export function columnToRpgFieldName(column: ColumnMetaData, source: string = 'N
     .replace(/\u00e6/g, "ae")  // æ -> ae
     .replace(/\u00f8/g, "oe")  // ø -> oe
     .replace(/\u00e5/g, "aa")  // å -> aa
-    .replace(/[.:]+$/g, "")  // remove trailing "." and ":"
+    .replace(/[ .:]+$/g, "")  // remove trailing space, "." and ":"
     .replace(/[.]/g, "_")  // "." between words to underscore
     .replace(/\s+/g, "_")  // remaining whitespaces to underscore
-    .replace(/[^a-zA-Z0-9_]/g, '')  // remove non-alphanumeric chars
+    .replace(/[^a-zA-Z0-9_]/g, "")  // remove non-alphanumeric chars
+    .replace(/\_+/i, "_")  // replace multiple underscores with single underscore
     .trim();  
   if (!isNaN(+name.charAt(0))) {
     name = `col` + name;
