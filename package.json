@@ -136,6 +136,26 @@
         }
       },
       {
+        "id": "vscode-db2i.codegen",
+        "title": "Code generation",
+        "properties": {
+          "vscode-db2i.codegen.rpgSymbolicNameSource": {
+            "type": "string",
+            "order": 0,
+            "description": "Descriptor to use for RPG symbolic names in data structure",
+            "default": "Name",
+            "enum": [
+              "Name",
+              "Label"
+            ],
+            "enumDescriptions": [
+              "Use the column name",
+              "Use the column label\n'Extended metadata' must be set to true in the JDBC configuration"
+            ]
+          }
+        }
+      },
+      {
         "id": "vscode-db2i.visualExplain",
         "title": "Visual Explain",
         "properties": {

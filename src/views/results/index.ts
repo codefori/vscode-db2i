@@ -18,6 +18,7 @@ import { updateStatusBar } from "../jobManager/statusBar";
 import { DbCache } from "../../language/providers/logic/cache";
 import { ExplainType } from "../../connection/types";
 import { queryResultToRpgDs } from "./codegen";
+import Configuration from "../../configuration";
 
 export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
@@ -390,7 +391,7 @@ async function runHandler(options?: StatementInfo) {
             let content = `**free\n\n`
               + `// statement: ${statementDetail.content}\n\n`
               + `// Row data structure\n`
-              + queryResultToRpgDs(result);
+              + queryResultToRpgDs(result, Configuration.get(`codegen.rpgSymbolicNameSource`));
             const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
             await vscode.window.showTextDocument(textDoc);
             chosenView.setLoadingText(`RPG data structure generated.`, false);
