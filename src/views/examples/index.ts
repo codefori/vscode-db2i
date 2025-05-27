@@ -23,9 +23,9 @@ export const Examples: SQLExamplesList = {
       name: "IBM i History",
       content: [
         `## `.concat([
-          `This notebook utilizes the ENDED_JOB_INFO SQL service, which extracts details about jobs that have started and ended within a specific time period.`,
-          `If no parameter values are passed to ENDED_JOB_INFO, it will use today and yesterday for the historical analysis.`,
-          `Documentation: https://www.ibm.com/docs/en/i/7.5.0?topic=services-ended-job-info-table-function`,
+          `This notebook utilizes the \`ENDED_JOB_INFO\` SQL service, which extracts details about jobs that have started and ended within a specific time period.`,
+          `If no parameter values are passed to \`ENDED_JOB_INFO\`, it will use today and yesterday for the historical analysis.`,
+          `[Click here for documentation](https://www.ibm.com/docs/en/i/7.5.0?topic=services-ended-job-info-table-function).`,
         ].join('\n\n')),
 
         `## Top 10 jobs that used the most temporary storage (where the job ended, today or yesterday)`,
