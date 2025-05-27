@@ -27,7 +27,7 @@ export function notebookFromStatements(statements?: string[]) {
     workspace.openNotebookDocument(
       `db2i-notebook`,
       {cells: statements.map(s => {
-        if (s.startsWith(`--`)) {
+        if (s.startsWith(`##`)) {
           return new NotebookCellData(NotebookCellKind.Markup, s.substring(2).trim(), `markdown`)
         } else {
           return new NotebookCellData(NotebookCellKind.Code, s, `sql`)
