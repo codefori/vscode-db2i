@@ -1497,7 +1497,7 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
-    "@ibm/mapepire-js": "^0.5.0",
+    "@ibm/mapepire-js": "^0.6.0",
     "@octokit/rest": "^21.1.1",
     "chart.js": "^4.4.2",
     "csv": "^6.1.3",
