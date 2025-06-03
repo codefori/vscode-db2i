@@ -152,6 +152,11 @@
               "Use the column name",
               "Use the column label\n'Extended metadata' must be set to true in the JDBC configuration"
             ]
+          },
+          "vscode-db2i.codegen.sqlIncludeGeneratedColumns": {
+            "type": "boolean",
+            "description": "Include generated columns in SQL insert statements",
+            "default": true
           }
         }
       },

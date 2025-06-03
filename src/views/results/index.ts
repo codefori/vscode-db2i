@@ -403,7 +403,8 @@ async function runHandler(options?: StatementInfo) {
 
           setCancelButtonVisibility(true);
           updateStatusBar({executing: true});
-          const data = await JobManager.runSQL(statementDetail.content);
+          const result = await JobManager.runSQLVerbose(statementDetail.content);
+          const data = result.data;
           setCancelButtonVisibility(false);
 
           if (data.length > 0) {
@@ -421,7 +422,12 @@ async function runHandler(options?: StatementInfo) {
                   case `json`: content = JSON.stringify(data, null, 2); break;
 
                   case `sql`:
-                    const keys = Object.keys(data[0]);
+                    const generated = result.metadata.columns.filter(col => col.autoIncrement).map(col => col.name);
+                    let keys = Object.keys(data[0]);
+
+                    if (!Configuration.get(`codegen.sqlIncludeGeneratedColumns`)) {
+                      keys = keys.filter(col => !generated.includes(col));
+                    }
 
                     // split array into groups of 1k
                     const insertLimit = 1000;
