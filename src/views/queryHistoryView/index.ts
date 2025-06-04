@@ -18,6 +18,10 @@ export class queryHistory implements TreeDataProvider<any> {
           window.showTextDocument(doc);
         });
       }),
+      commands.registerCommand(`vscode-db2i.queryHistory.find`, async () => {
+        commands.executeCommand('queryHistory.focus');
+        commands.executeCommand('list.find');
+      }),
 
       commands.registerCommand(`vscode-db2i.queryHistory.prepend`, async (newQuery?: string) => {
         if (newQuery && Config.ready) {
@@ -61,10 +65,14 @@ export class queryHistory implements TreeDataProvider<any> {
       }),
 
       commands.registerCommand(`vscode-db2i.queryHistory.clear`, async () => {
-        if (Config.ready) {
-          await Config.setPastQueries([]);
-          this.refresh();
-        }
+        window.showInformationMessage(`Statement history`, {detail: `Are you sure you want to clear your statement history?`, modal: true}, `Clear`).then(async (result) => {
+          if (result) {
+            if (Config.ready) {
+              await Config.setPastQueries([]);
+              this.refresh();
+            }
+          }
+        });
       }),
     )
   }
@@ -151,7 +159,7 @@ class TimePeriodNode extends TreeItem {
 
 class PastQueryNode extends TreeItem {
   constructor(public query: string) {
-    super(query.length > 63 ? query.substring(0, 60) + `...` : query);
+    super(query);
 
     this.contextValue = `query`;
 

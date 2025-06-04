@@ -6,7 +6,7 @@
           "id": "queryHistory",
           "name": "Statement History",
           "visibility": "visible",
-          "when": "code-for-ibmi:connected == true"
+          "when": "code-for-ibmi:connected == true && vscode-db2i:jobManager"
         }
       ]
     },
@@ -28,6 +28,12 @@
         "title": "Clear statement history",
         "category": "Db2 for i",
         "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.queryHistory.find",
+        "title": "Search query history",
+        "category": "Db2 for i",
+        "icon": "$(search)"
       }
     ],
     "menus": {
@@ -35,11 +41,20 @@
         {
           "command": "vscode-db2i.queryHistory.remove",
           "when": "never"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.find",
+          "when": "never"
         }
       ],
       "view/title": [
         {
           "command": "vscode-db2i.queryHistory.clear",
+          "group": "navigation",
+          "when": "view == queryHistory"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.find",
           "group": "navigation",
           "when": "view == queryHistory"
         }
