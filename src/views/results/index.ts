@@ -39,6 +39,12 @@ export interface ParsedStatementInfo extends StatementInfo {
   embeddedInfo: ParsedEmbeddedStatement;
 }
 
+const DelimValue = {
+  Comma: `,`,
+  Semicolon: `;`,
+  Tab: `\t`
+}
+
 export function setCancelButtonVisibility(visible: boolean) {
   vscode.commands.executeCommand(`setContext`, `vscode-db2i:statementCanCancel`, visible);
 }
@@ -414,10 +420,13 @@ async function runHandler(options?: StatementInfo) {
               case `sql`:
                 let content = ``;
                 switch (statementDetail.qualifier) {
-                  case `csv`: content = csv.stringify(data, {
-                    header: true,
-                    quoted_string: true,
-                  }); break;
+                  case `csv`: 
+                    content = csv.stringify(data, {
+                      header: true,
+                      quoted_string: true,
+                      delimiter: DelimValue[Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`]
+                    }); 
+                  break;
                   case `json`: content = JSON.stringify(data, null, 2); break;
 
                   case `sql`:

@@ -43,6 +43,16 @@
               "Use the column name",
               "Use the column label\n'Extended metadata' must be set to true in the JDBC configuration"
             ]
+          },
+          "vscode-db2i.codegen.csvColumnDelimiter": {
+            "type": "string",
+            "description": "Delimiter",
+            "default": "Comma",
+            "enum": [
+              "Comma",
+              "Semicolon",
+              "Tab"
+            ]
           }
         }
       }
