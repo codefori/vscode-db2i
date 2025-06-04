@@ -310,7 +310,7 @@
           "id": "queryHistory",
           "name": "Statement History",
           "visibility": "visible",
-          "when": "code-for-ibmi:connected == true && vscode-db2i:jobManager"
+          "when": "code-for-ibmi:connected == true && vscode-db2i:jobManager.hasJob"
         },
         {
           "id": "jobManager",
@@ -586,6 +586,12 @@
         "title": "Search query history",
         "category": "Db2 for i",
         "icon": "$(search)"
+      },
+      {
+        "command": "vscode-db2i.queryHistory.toggleStar",
+        "title": "Star statement",
+        "category": "Db2 for i",
+        "icon": "$(star)"
       },
       {
         "command": "vscode-db2i.openSqlDocument",
@@ -868,6 +874,10 @@
         },
         {
           "command": "vscode-db2i.queryHistory.find",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.toggleStar",
           "when": "never"
         },
         {
@@ -1156,6 +1166,11 @@
         },
         {
           "command": "vscode-db2i.queryHistory.remove",
+          "when": "view == queryHistory && viewItem == query",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.toggleStar",
           "when": "view == queryHistory && viewItem == query",
           "group": "inline"
         },

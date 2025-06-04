@@ -6,6 +6,7 @@ const SERVERCOMPONENT_KEY = `serverVersion`
 export interface QueryHistoryItem {
   query: string;
   unix: number;
+  starred?: boolean;
 }
 
 export type QueryList = QueryHistoryItem[];
