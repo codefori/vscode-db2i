@@ -124,6 +124,8 @@ export class queryHistory implements TreeDataProvider<any> {
         let pastWeekQueries: PastQueryNode[] = [];
         let pastMonthQueries: PastQueryNode[] = [];
         let olderQueries: PastQueryNode[] = [];
+        const starredQueries = currentList.filter(queryItem => queryItem.starred);
+        const hasStarredQueries = starredQueries.length > 0;
 
         currentList.forEach(queryItem => {
           // The smaller the unix value, the older it is
@@ -140,8 +142,11 @@ export class queryHistory implements TreeDataProvider<any> {
 
         let nodes: TimePeriodNode[] = [];
 
+        if (hasStarredQueries) {
+          nodes.push(new TimePeriodNode(`Starred`, starredQueries.map(q => new PastQueryNode(q)), {expanded: true, stars: true}));
+        }
         if (pastDayQueries.length > 0) {
-          nodes.push(new TimePeriodNode(`Past day`, pastDayQueries, true));
+          nodes.push(new TimePeriodNode(`Past day`, pastDayQueries, {expanded: !hasStarredQueries}));
         }
         if (pastWeekQueries.length > 0) {
           nodes.push(new TimePeriodNode(`Past week`, pastWeekQueries));
@@ -163,11 +168,11 @@ export class queryHistory implements TreeDataProvider<any> {
 }
 
 class TimePeriodNode extends TreeItem {
-  constructor(public period: string, private nodes: PastQueryNode[], expanded = false) {
-    super(period, expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
+  constructor(title: string, private nodes: PastQueryNode[], opts: { expanded?: boolean, stars?: boolean } = {}) {
+    super(title, opts.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
     this.contextValue = `timePeriod`;
 
-    this.iconPath = new ThemeIcon(`calendar`);
+    this.iconPath = new ThemeIcon(opts.stars ? `star-full` : `calendar`);
   }
 
   getChildren() {
