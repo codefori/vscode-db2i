@@ -320,7 +320,7 @@
           "id": "queryHistory",
           "name": "Statement History",
           "visibility": "visible",
-          "when": "code-for-ibmi:connected == true"
+          "when": "code-for-ibmi:connected == true && vscode-db2i:jobManager.hasJob"
         },
         {
           "id": "jobManager",
@@ -590,6 +590,18 @@
         "title": "Clear statement history",
         "category": "Db2 for i",
         "icon": "$(trash)"
+      },
+      {
+        "command": "vscode-db2i.queryHistory.find",
+        "title": "Search query history",
+        "category": "Db2 for i",
+        "icon": "$(search)"
+      },
+      {
+        "command": "vscode-db2i.queryHistory.toggleStar",
+        "title": "Star statement",
+        "category": "Db2 for i",
+        "icon": "$(star)"
       },
       {
         "command": "vscode-db2i.openSqlDocument",
@@ -871,6 +883,14 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.queryHistory.find",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.toggleStar",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.jobManager.closeJob",
           "when": "never"
         },
@@ -980,6 +1000,11 @@
         },
         {
           "command": "vscode-db2i.queryHistory.clear",
+          "group": "navigation",
+          "when": "view == queryHistory"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.find",
           "group": "navigation",
           "when": "view == queryHistory"
         },
@@ -1151,6 +1176,11 @@
         },
         {
           "command": "vscode-db2i.queryHistory.remove",
+          "when": "view == queryHistory && viewItem == query",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.queryHistory.toggleStar",
           "when": "view == queryHistory && viewItem == query",
           "group": "inline"
         },

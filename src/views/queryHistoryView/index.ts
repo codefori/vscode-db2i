@@ -1,6 +1,7 @@
 import { commands, EventEmitter, ExtensionContext, MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState, window, workspace, Event } from "vscode";
 import { TreeDataProvider } from "vscode";
 import { Config } from "../../config";
+import { QueryHistoryItem } from "../../Storage";
 
 const openSqlDocumentCommand = `vscode-db2i.openSqlDocument`;
 
@@ -17,6 +18,10 @@ export class queryHistory implements TreeDataProvider<any> {
         }).then(doc => {
           window.showTextDocument(doc);
         });
+      }),
+      commands.registerCommand(`vscode-db2i.queryHistory.find`, async () => {
+        commands.executeCommand('queryHistory.focus');
+        commands.executeCommand('list.find');
       }),
 
       commands.registerCommand(`vscode-db2i.queryHistory.prepend`, async (newQuery?: string) => {
@@ -43,12 +48,28 @@ export class queryHistory implements TreeDataProvider<any> {
         }
       }),
 
+      commands.registerCommand(`vscode-db2i.queryHistory.toggleStar`, async (node: PastQueryNode) => {
+        if (node && Config.ready) {
+          let currentList = Config.getPastQueries();
+          const existingQuery = currentList.findIndex(queryItem => 
+            queryItem.unix === node.item.unix
+          );
+      
+          // If it exists, remove it
+          if (existingQuery >= 0) {
+            // Toggle the starred status
+            currentList[existingQuery].starred = !(currentList[existingQuery].starred === true);
+            await Config.setPastQueries(currentList);
+            this.refresh();
+          }
+        }
+      }),
+
       commands.registerCommand(`vscode-db2i.queryHistory.remove`, async (node: PastQueryNode) => {
         if (node && Config.ready) {
           let currentList = Config.getPastQueries();
-          const chosenQuery = node.query;
           const existingQuery = currentList.findIndex(queryItem => 
-            queryItem.query.trim() === chosenQuery.trim()
+            queryItem.unix === node.item.unix
           );
       
           // If it exists, remove it
@@ -61,10 +82,15 @@ export class queryHistory implements TreeDataProvider<any> {
       }),
 
       commands.registerCommand(`vscode-db2i.queryHistory.clear`, async () => {
-        if (Config.ready) {
-          await Config.setPastQueries([]);
-          this.refresh();
-        }
+        window.showInformationMessage(`Statement history`, {detail: `Are you sure you want to clear your statement history? This will not remove starred items.`, modal: true}, `Clear`).then(async (result) => {
+          if (result) {
+            if (Config.ready) {
+              const starredItems = Config.getPastQueries().filter(queryItem => queryItem.starred === true);
+              await Config.setPastQueries(starredItems);
+              this.refresh();
+            }
+          }
+        });
       }),
     )
   }
@@ -98,24 +124,29 @@ export class queryHistory implements TreeDataProvider<any> {
         let pastWeekQueries: PastQueryNode[] = [];
         let pastMonthQueries: PastQueryNode[] = [];
         let olderQueries: PastQueryNode[] = [];
+        const starredQueries = currentList.filter(queryItem => queryItem.starred);
+        const hasStarredQueries = starredQueries.length > 0;
 
         currentList.forEach(queryItem => {
           // The smaller the unix value, the older it is
           if (queryItem.unix < monthAgo) {
-             olderQueries.push(new PastQueryNode(queryItem.query));
+             olderQueries.push(new PastQueryNode(queryItem));
           } else if (queryItem.unix < weekAgo) {
-            pastMonthQueries.push(new PastQueryNode(queryItem.query));
+            pastMonthQueries.push(new PastQueryNode(queryItem));
          } else if (queryItem.unix < dayAgo) {
-            pastWeekQueries.push(new PastQueryNode(queryItem.query));
+            pastWeekQueries.push(new PastQueryNode(queryItem));
          } else {
-            pastDayQueries.push(new PastQueryNode(queryItem.query));
+            pastDayQueries.push(new PastQueryNode(queryItem));
          }
         });
 
         let nodes: TimePeriodNode[] = [];
 
+        if (hasStarredQueries) {
+          nodes.push(new TimePeriodNode(`Starred`, starredQueries.map(q => new PastQueryNode(q)), {expanded: true, stars: true}));
+        }
         if (pastDayQueries.length > 0) {
-          nodes.push(new TimePeriodNode(`Past day`, pastDayQueries, true));
+          nodes.push(new TimePeriodNode(`Past day`, pastDayQueries, {expanded: !hasStarredQueries}));
         }
         if (pastWeekQueries.length > 0) {
           nodes.push(new TimePeriodNode(`Past week`, pastWeekQueries));
@@ -137,11 +168,11 @@ export class queryHistory implements TreeDataProvider<any> {
 }
 
 class TimePeriodNode extends TreeItem {
-  constructor(public period: string, private nodes: PastQueryNode[], expanded = false) {
-    super(period, expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
+  constructor(title: string, private nodes: PastQueryNode[], opts: { expanded?: boolean, stars?: boolean } = {}) {
+    super(title, opts.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
     this.contextValue = `timePeriod`;
 
-    this.iconPath = new ThemeIcon(`calendar`);
+    this.iconPath = new ThemeIcon(opts.stars ? `star-full` : `calendar`);
   }
 
   getChildren() {
@@ -150,19 +181,19 @@ class TimePeriodNode extends TreeItem {
 }
 
 class PastQueryNode extends TreeItem {
-  constructor(public query: string) {
-    super(query.length > 63 ? query.substring(0, 60) + `...` : query);
+  constructor(public item: QueryHistoryItem) {
+    super(item.query);
 
     this.contextValue = `query`;
 
-    this.tooltip = new MarkdownString(['```sql', query, '```'].join(`\n`));
+    this.tooltip = new MarkdownString(['```sql', item.query, '```'].join(`\n`));
 
     this.command = {
       command: openSqlDocumentCommand,
-      arguments: [query],
+      arguments: [item.query],
       title: `Open into new document`
     };
 
-    this.iconPath = new ThemeIcon(`go-to-file`);
+    this.iconPath = new ThemeIcon(item.starred ? `star` : `go-to-file`);
   }
 }
