@@ -414,10 +414,28 @@ async function runHandler(options?: StatementInfo) {
               case `sql`:
                 let content = ``;
                 switch (statementDetail.qualifier) {
-                  case `csv`: content = csv.stringify(data, {
-                    header: true,
-                    quoted_string: true,
-                  }); break;
+                  case `csv`: 
+                    let delimiter;
+                    switch (Configuration.get(`codegen.csvColumnDelimiter`)) {
+                      case `Comma`:
+                        delimiter = `,`;
+                        break;
+                      case `Semicolon`:
+                        delimiter = `;`;
+                        break;
+                      case `Tab`:
+                        delimiter = `\t`;
+                        break;
+                      default:
+                        delimiter = `,`;
+                        break;
+                    }
+                    content = csv.stringify(data, {
+                      header: true,
+                      quoted_string: true,
+                      delimiter: delimiter
+                    }); 
+                  break;
                   case `json`: content = JSON.stringify(data, null, 2); break;
 
                   case `sql`:
