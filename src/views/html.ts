@@ -52,6 +52,7 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       background-color: var(--vscode-list-hoverBackground);
       opacity: 1;
       padding: 2px;
+      font-style: normal;
       border: 1px solid var(--vscode-banner-foreground);
     }
 
