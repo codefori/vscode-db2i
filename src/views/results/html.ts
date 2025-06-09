@@ -44,6 +44,7 @@ export interface BasicColumn {
   name: string;
   useInWhere: boolean
   jsType: "number"|"asString";
+  isNullable: boolean,
   maxInputLength?: number;
 }
 
@@ -137,19 +138,14 @@ document.getElementById('resultset').onclick = function(e){
     }
 
     // Can return undefined or {updateStatement, bindings, saneStatement?}
-    const getSqlStatement = (newValue, withSane = false) => {
+    const getSqlStatement = (newValue, withSane = false, nullify = false) => {
       const useRrn = updateKeyColumns.length === 1 && updateKeyColumns.some(col => col.name === 'RRN');
 
       let bindings = [];
       let updateStatement = 'UPDATE ' + updateTable.table + ' t SET t.' + chosenColumn + ' = ';
 
-      if (chosenColumnDetail.maxInputLength >= 4 && newValue === 'null') {
-        // If the column can fit 'null', then set it to null value
+      if (nullify) {
         updateStatement += 'NULL';
-      } else if (chosenColumnDetail.maxInputLength < 4 && newValue === '-') {
-        // If the column cannot fit 'null', then '-' is the null value
-        updateStatement += 'NULL';
-      
       } else { 
         switch (chosenColumnDetail.jsType) {
           case 'number':
@@ -223,7 +219,11 @@ document.getElementById('resultset').onclick = function(e){
 
     // Already editable, just return
     if (editableNode.contentEditable === 'true') return;
+    let nullify = false;
     editableNode.contentEditable = true;
+    if((editableNode.classList.contains("null") || editableNode.parentNode.classList.contains("null")) && editableNode.innerText === 'null') {
+      editableNode.innerText = '';
+    }
     editableNode.focus();
     updateMessageWithSql(originalValue);
 
@@ -237,6 +237,9 @@ document.getElementById('resultset').onclick = function(e){
 
       switch (e.key) {
         case 'Enter':
+          if(chosenColumnDetail.isNullable && e.shiftKey) {
+            nullify = true;
+          }
           e.preventDefault();
           editableNode.blur();
           break;
@@ -263,17 +266,29 @@ document.getElementById('resultset').onclick = function(e){
       editableNode.contentEditable = false;
       let newValue = editableNode.innerText;
 
-      if (newValue === originalValue) return;
+      if (!nullify && newValue === originalValue) return;
       if (chosenColumnDetail.maxInputLength && newValue.length > chosenColumnDetail.maxInputLength) {
         newValue = newValue.substring(0, chosenColumnDetail.maxInputLength);
         editableNode.innerText = newValue;
       }
 
-      const sql = getSqlStatement(newValue);
+      const sql = getSqlStatement(newValue, false, nullify);
 
       if (!sql) {
         editableNode.innerHTML = originalValue;
         return;
+      }
+
+      if(nullify) {
+        editableNode.innerHTML = "null";
+        if(editableNode.tagName.toLowerCase() === "td") {
+          editableNode.classList.add("null");
+        } else {
+          editableNode.parentNode.classList.add("null");
+        }
+      } else {
+        editableNode.classList.remove("null");
+        editableNode.parentNode.classList.remove("null");
       }
 
       requestCellUpdate(editableNode, originalValue, sql.updateStatement, sql.bindings);
@@ -481,6 +496,10 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
 
                 let newDiv = document.createElement("div");
                 newDiv.className = "hoverable";
+                if(columnMetaData[currentColumn].nullable === 1) {
+                  newCell.classList.add("nullable");
+                  newDiv.classList.add("nullable");
+                }
 
                 // Append a formatted JSON object to the cell
                 const contentMightBeJson = typeof cell === 'string' && (cell.startsWith('{') || cell.startsWith('[')) && (cell.endsWith('}') || cell.endsWith(']'));
@@ -501,7 +520,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                   newDiv.style["font-family"] = "monospace";
                   newDiv.appendChild(document.createTextNode(cell === undefined ? 'null' : cell));
                   if(cell === undefined || cell === null) {
-                    newDiv.style["font-style"] = "italic";
+                    newCell.classList.add("null");
                   }
                 }
                 

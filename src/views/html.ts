@@ -41,6 +41,23 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
     
     #resultset tbody tr {
       border-bottom: 1px solid var(--vscode-activityBar-border);
+      position: relative;
+    }
+
+    #resultset tbody [contenteditable="true"].nullable:before {
+      color: var(--vscode-banner-foreground);
+      position: absolute;
+      top: -22px;
+      content: "Shift+Enter for null";
+      background-color: var(--vscode-list-hoverBackground);
+      opacity: 1;
+      padding: 2px;
+      border: 1px solid var(--vscode-banner-foreground);
+    }
+
+    #resultset tbody .null {
+      font-style: italic;
+      background-color: var(--vscode-editor-wordHighlightBackground);
     }
 
     ${options.withCollapsed ? /*css*/`
