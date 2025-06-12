@@ -27,19 +27,26 @@ export class queryHistory implements TreeDataProvider<any> {
       commands.registerCommand(`vscode-db2i.queryHistory.prepend`, async (newQuery?: string) => {
         if (newQuery && Config.ready) {
           let currentList = Config.getPastQueries();
-          const existingQuery = currentList.findIndex(queryItem => queryItem.query.trim() === newQuery.trim());
+          const existingQueryi = currentList.findIndex(queryItem => queryItem.query.trim() === newQuery.trim());
+          const existingQuery = currentList[existingQueryi];
+
+          const newQueryItem: QueryHistoryItem = {
+            query: newQuery,
+            unix: Math.floor(Date.now() / 1000),
+          };
+
+          if (existingQuery) {
+            newQueryItem.starred = existingQuery.starred; // Preserve starred status
+          }
       
           // If it exists, remove it
-          if (existingQuery > 0) {
-            currentList.splice(existingQuery, 1);
+          if (existingQueryi > 0) {
+            currentList.splice(existingQueryi, 1);
           }
       
           // If it's at the top, don't add it, it's already at the top
-          if (existingQuery !== 0) {
-            currentList.splice(0, 0, {
-              query: newQuery,
-              unix: Math.floor(Date.now() / 1000)
-            });
+          if (existingQueryi !== 0) {
+            currentList.splice(0, 0, newQueryItem);
           }
       
           await Config.setPastQueries(currentList);
