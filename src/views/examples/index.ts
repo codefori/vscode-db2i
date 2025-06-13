@@ -20,9 +20,85 @@ export const ServiceInfoLabel = `IBM i (SQL) Services`;
 export const Examples: SQLExamplesList = {
   "Notebooks": [
     {
+      name: "IBM i History",
+      content: [
+        `## `.concat([
+          `This notebook utilizes the \`ENDED_JOB_INFO\` SQL service, which extracts details about jobs that have started and ended within a specific time period.`,
+          `If no parameter values are passed to \`ENDED_JOB_INFO\`, it will use today and yesterday for the historical analysis.`,
+          `[Click here for documentation](https://www.ibm.com/docs/en/i/7.5.0?topic=services-ended-job-info-table-function).`,
+        ].join('\n\n')),
+
+        `## Top 10 jobs that used the most temporary storage (where the job ended, today or yesterday)`,
+        [
+          `-- title: Temp Storage top 10`,
+          `-- hideStatement: true`,
+          `-- y: Peak Temporary Storage `,
+          `bar: select from_job as label, PEAK_TEMPORARY_STORAGE, `,
+          `            from_user concat ' using ' concat JOB_INTERFACE as PEAK_TEMPORARY_STORAGE_DESC`,
+          `  from table (`,
+          `      SYSTOOLS.ENDED_JOB_INFO()`,
+          `    )`,
+          `  where subsystem in ('QUSRWRK', 'QBATCH')`,
+          `  order by PEAK_TEMPORARY_STORAGE desc`,
+          `  limit 10`,
+        ].join('\n'),
+
+        `## Top 10 jobs that used the most CPU (where the job ended, today or yesterday)`,
+        [
+          `-- title: CPU top 10`,
+          `-- hideStatement: true`,
+          `-- y: CPU Consumers `,
+          `bar: select from_job as label, cpu_time, `,
+          `            from_user concat ' using ' concat JOB_INTERFACE as cpu_time_DESC`,
+          `  from table (`,
+          `      SYSTOOLS.ENDED_JOB_INFO()`,
+          `    )`,
+          `  where subsystem in ('QUSRWRK', 'QBATCH')`,
+          `  order by cpu_time desc`,
+          `  limit 10`,
+        ].join('\n'),
+
+        `## Top 10 jobs that used the most I/O (where the job ended, today or yesterday)`,
+        [
+          `-- title: I/O top 10`,
+          `-- hideStatement: true`,
+          `-- y: I/O Drivers `,
+          `bar: select from_job as label, sync_aux_io_count, `,
+          `            from_user concat ' using ' concat JOB_INTERFACE as sync_aux_io_count_DESC`,
+          `  from table (`,
+          `      SYSTOOLS.ENDED_JOB_INFO()`,
+          `    )`,
+          `  where subsystem in ('QUSRWRK', 'QBATCH')`,
+          `  order by sync_aux_io_count desc`,
+          `  limit 10`,
+        ].join('\n'),
+
+        `## Top 10 longest running jobs over the last 7 days`,
+        [
+          `-- title: Longest running jobs over the 7 days`,
+          `-- hideStatement: true`,
+          `-- y: Elapsed time (minutes)`,
+          `bar: with barchart(execution_minutes, job_info) as (`,
+          `  select timestampdiff(4, cast(MESSAGE_TIMESTAMP - JOB_ACTIVE_TIME as char(22))),  `,
+          `         from_user concat ' using ' concat JOB_INTERFACE concat ' in job: ' concat from_job`,
+          `  from table (`,
+          `      SYSTOOLS.ENDED_JOB_INFO(start_time => ( CURRENT_DATE - 7 DAYS ))`,
+          `    )`,
+          `  where subsystem in ('QUSRWRK', 'QSYSWRK', 'QBATCH')`,
+          `  order by timestampdiff(4, cast(MESSAGE_TIMESTAMP - JOB_ACTIVE_TIME as char(22))) desc`,
+          `  limit 10`,
+          `  )`,
+          `  select execution_minutes as label, execution_minutes, job_info as execution_minutes_desc`,
+          `    from barchart`,
+        ].join('\n')
+      ],
+      isNotebook: true
+    },
+
+    {
       name: "Local Services (Bar with tooltip)",
       content: [
-        `-- This will show top services sending/receiving data`,
+        `## This will show top services sending/receiving data`,
         [
           `bar: `,
           `  SELECT local_port_name as label, `,
@@ -41,7 +117,7 @@ export const Examples: SQLExamplesList = {
     {
       "name": "User Storage (Bar)",
       content: [
-        `-- This notebook will show the top 10 users by storage used`,
+        `## This notebook will show the top 10 users by storage used`,
         [
           `bar: SELECT A.AUTHORIZATION_NAME as label, SUM(A.STORAGE_USED) AS TOTAL_STORAGE_USED`,
           `  FROM QSYS2.USER_STORAGE A `,
@@ -55,7 +131,7 @@ export const Examples: SQLExamplesList = {
     {
       "name": "Spool Storage (Line)",
       content: [
-        `-- This notebook will show the top 10 consumers of spool storage.`,
+        `## This notebook will show the top 10 consumers of spool storage.`,
         [
           `line: SELECT USER_NAME as label, SUM(SIZE) AS TOTAL_SPOOL_SPACE FROM `,
           `  TABLE (QSYS2.OBJECT_STATISTICS('QSYS      ', '*LIB') ) as a, `,
@@ -72,7 +148,7 @@ export const Examples: SQLExamplesList = {
     {
       name: "CPU Consumption (Pie)",
       content: [
-        `-- Find the top 10 consumers of CPU in the QUSRWRK and QSYSWRK subsystems`,
+        `## Find the top 10 consumers of CPU in the QUSRWRK and QSYSWRK subsystems`,
         [
           `pie: select JOB_NAME as label, CPU_TIME`,
           `from table(QSYS2.ACTIVE_JOB_INFO(SUBSYSTEM_LIST_FILTER => 'QUSRWRK,QSYSWRK')) A `,
@@ -85,7 +161,7 @@ export const Examples: SQLExamplesList = {
     {
       name: "Largest Objects owned (Line)",
       content: [
-        `-- Find the top 10 largest objects owned by a user (current_user)`,
+        `## Find the top 10 largest objects owned by a user (current_user)`,
         [
           `line: with qsysobjs (lib, obj, type) as (`,
           `  select object_library, object_name, object_type`,
@@ -108,13 +184,13 @@ export const Examples: SQLExamplesList = {
     {
       name: "Authority Failures review",
       content: [
-        `--Review the audit journal authority failure (AF) detail, over the last month\n\nWhich days had the highest number of AF entries?`,
+        `## Review the audit journal authority failure (AF) detail, over the last month\n\nWhich days had the highest number of AF entries?`,
         `bar: select date(entry_timestamp) as label, count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by date(entry_timestamp)\n  order by AF_count desc`,
-        `--Which users had the highest number of AF entries?`,
+        `## Which users had the highest number of AF entries?`,
         `bar: select user_name as label, count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by user_name\n  order by AF_count desc`,
-        `--Which types of AF failures are being hit?`,
+        `## Which types of AF failures are being hit?`,
         `bar: select VIOLATION_TYPE_DETAIL as label, count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by VIOLATION_TYPE_DETAIL\n  order by AF_count desc`,
-        `--Which objects are having the authorization failures?`,
+        `## Which objects are having the authorization failures?`,
         `bar: select coalesce(\n         path_name, object_library concat '/' concat object_name concat ' ' concat object_type) as label,\n       count(*) as AF_count\n  from table (\n      SYSTOOLS.AUDIT_JOURNAL_AF(STARTING_TIMESTAMP => current timestamp - 1 month)\n    )\n  group by coalesce(\n      path_name, object_library concat '/' concat object_name concat ' ' concat object_type)\n  order by AF_count desc limit 10 `
       ],
       isNotebook: true
@@ -122,7 +198,7 @@ export const Examples: SQLExamplesList = {
     {
       name: `IFS_OBJECT_STATISTICS (Bar)`,
       content: [
-        `-- Get raw info about files from IFS_OBJECT_STATISTICS. **This is a long running query**.`,
+        `## Get raw info about files from IFS_OBJECT_STATISTICS. **This is a long running query**.`,
         `bar: WITH ALL_OBJS AS (\n         SELECT PATH_NAME,\n                OBJECT_TYPE,\n                DATA_SIZE AS FILESIZE,\n                OBJECT_OWNER\n             FROM TABLE (\n                     QSYS2.IFS_OBJECT_STATISTICS(START_PATH_NAME => '/home', -- Set "root" directory for analysis\n                                                 SUBTREE_DIRECTORIES => 'YES',\n                                                 OMIT_LIST => '/QSYS.LIB /QFileSvr.400')\n                 )\n     ),\n     -- Get the total size of all data underneath root\n     TOTAL_DATA_SIZE AS (\n         SELECT CAST(SUM(FILESIZE) AS DECFLOAT) AS DATA_SIZE\n             FROM ALL_OBJS\n             WHERE OBJECT_TYPE != '*DIR'\n     ),\n    -- Get path names to files, also calculate percent storage used (relative to total storage under root).\n    PATHS_AND_FILES AS (\n        SELECT SUBSTRING(PATH_NAME, 1, LOCATE_IN_STRING(PATH_NAME, '/', -1)) AS PATHNAME,\n               SUBSTRING(PATH_NAME, LOCATE_IN_STRING(PATH_NAME, '/', -1) + 1) AS FILENAME,\n               FILESIZE,\n               OBJECT_TYPE,\n               (CAST(FILESIZE AS DECFLOAT) / (SELECT DATA_SIZE FROM TOTAL_DATA_SIZE)) * 100 AS PERCENT_STORAGE\n            FROM ALL_OBJS\n            WHERE OBJECT_TYPE != '*DIR'\n    ),\n    \n    -- Sum file size by directory.\n    FILES_AND_DIRS AS (\n        SELECT PATHNAME, \n               COUNT(*) AS NUM_FILES,\n               CAST(CAST(SUM(FILESIZE) AS DECFLOAT) / 1000000 AS DEC(12, 2)) AS STORAGE_USED_MB, \n               CAST(SUM(PERCENT_STORAGE) AS DEC(5, 2)) AS PERCENT_STORAGE_USED_OF_RELATIVE_ROOT\n        FROM PATHS_AND_FILES\n        GROUP BY PATHNAME)\nSELECT PATHNAME AS LABEL, STORAGE_USED_MB FROM FILES_AND_DIRS\nORDER BY PERCENT_STORAGE_USED_OF_RELATIVE_ROOT DESC\nLIMIT 10;`
       ],
       isNotebook: true
@@ -130,7 +206,7 @@ export const Examples: SQLExamplesList = {
     {
       name: `Temp storage by day (Line)`,
       content: [
-        `--Show the top temp storage consumption by day. **This is a long running query**.`,
+        `##Show the top temp storage consumption by day. **This is a long running query**.`,
         `line: WITH TOP_CONSUMERS AS (\n        SELECT RANK() OVER (\n                   PARTITION BY DATE(MESSAGE_TIMESTAMP)\n                   ORDER BY PEAK_TEMPORARY_STORAGE DESC\n               ) AS RANK,\n               DATE(MESSAGE_TIMESTAMP) AS DATE,\n               FROM_JOB,\n               JOB_END_CODE,\n               JOB_END_DETAIL,\n               CPU_TIME,\n               SYNC_AUX_IO_COUNT,\n               PEAK_TEMPORARY_STORAGE\n            FROM TABLE (\n                    SYSTOOLS.ENDED_JOB_INFO(START_TIME => CURRENT TIMESTAMP - 7 DAYS, END_TIME => CURRENT TIMESTAMP)\n                )\n    )\n    SELECT FROM_JOB || ' ' || DATE AS LABEL, PEAK_TEMPORARY_STORAGE \n        FROM TOP_CONSUMERS\n        WHERE RANK <= 1\n        ORDER BY DATE ASC,\n                 RANK ASC`,
       ],
       isNotebook: true

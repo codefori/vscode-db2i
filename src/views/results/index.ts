@@ -17,8 +17,10 @@ import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { DbCache } from "../../language/providers/logic/cache";
 import { ExplainType } from "../../connection/types";
+import { queryResultToRpgDs } from "./codegen";
+import Configuration from "../../configuration";
 
-export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql";
+export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
 export interface StatementInfo {
   content: string,
@@ -35,6 +37,12 @@ export interface ParsedStatementInfo extends StatementInfo {
   statement: Statement;
   group: StatementGroup;
   embeddedInfo: ParsedEmbeddedStatement;
+}
+
+const DelimValue = {
+  Comma: `,`,
+  Semicolon: `;`,
+  Tab: `\t`
 }
 
 export function setCancelButtonVisibility(visible: boolean) {
@@ -375,7 +383,26 @@ async function runHandler(options?: StatementInfo) {
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
-        
+
+        } else if (statementDetail.qualifier === `rpg`) {
+          if (statementDetail.statement.type !== StatementType.Select) {
+            vscode.window.showErrorMessage('RPG qualifier only supported for select statements');
+          } else {
+            chosenView.setLoadingText(`Executing SQL statement...`, false);
+            setCancelButtonVisibility(true);
+            updateStatusBar({executing: true});
+            const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
+            setCancelButtonVisibility(false);
+            updateStatusBar({executing: false});
+            let content = `**free\n\n`
+              + `// statement: ${statementDetail.content}\n\n`
+              + `// Row data structure\n`
+              + queryResultToRpgDs(result, Configuration.get(`codegen.rpgSymbolicNameSource`));
+            const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
+            await vscode.window.showTextDocument(textDoc);
+            chosenView.setLoadingText(`RPG data structure generated.`, false);
+          }
+
         } else {
           // Otherwise... it's a bit complicated.
           chosenView.setLoadingText(`Executing SQL statement...`, false);
@@ -393,10 +420,13 @@ async function runHandler(options?: StatementInfo) {
               case `sql`:
                 let content = ``;
                 switch (statementDetail.qualifier) {
-                  case `csv`: content = csv.stringify(data, {
-                    header: true,
-                    quoted_string: true,
-                  }); break;
+                  case `csv`: 
+                    content = csv.stringify(data, {
+                      header: true,
+                      quoted_string: true,
+                      delimiter: DelimValue[Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`]
+                    }); 
+                  break;
                   case `json`: content = JSON.stringify(data, null, 2); break;
 
                   case `sql`:
@@ -524,7 +554,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   }
 
   if (statementInfo.content) {
-    [`cl`, `json`, `csv`, `sql`, `explain`, `update`].forEach(mode => {
+    [`cl`, `json`, `csv`, `sql`, `explain`, `update`, `rpg`].forEach(mode => {
       if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
         statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 

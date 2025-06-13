@@ -431,7 +431,11 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
             var header = document.getElementById(htmlTableId).getElementsByTagName('thead')[0];
             header.innerHTML = '';
             var headerRow = header.insertRow();
-            columnMetaData.map(col => columnHeadings === 'Label' ? col.label : col.name).forEach(colName => headerRow.insertCell().appendChild(document.createTextNode(colName)));
+            columnMetaData.map(column => {
+              var cell = headerRow.insertCell();
+              cell.appendChild(document.createTextNode(columnHeadings === 'Label' ? column.label : column.name));
+              cell.title = getTooltip(column, columnHeadings);
+            });
 
             // Initialize the footer
             var footer = document.getElementById(htmlTableId).getElementsByTagName('tfoot')[0];
@@ -493,7 +497,12 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
 
                 if (!isJson) {
                   // Append a text node to the cell
+                  newDiv.style.whiteSpace = "pre";
+                  newDiv.style["font-family"] = "monospace";
                   newDiv.appendChild(document.createTextNode(cell === undefined ? 'null' : cell));
+                  if(cell === undefined || cell === null) {
+                    newDiv.style["font-style"] = "italic";
+                  }
                 }
                 
                 newCell.column = columnName;
@@ -509,9 +518,43 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
               var headerCells = document.getElementById(htmlTableId).getElementsByTagName('thead')[0].rows[0].cells;
               for (let x = 0; x < headerCells.length; ++x) {
                 headerCells[x].innerText = columnHeadings === 'Label' ? columnMetaData[x].label : columnMetaData[x].name;
+                headerCells[x].title = getTooltip(columnMetaData[x], columnHeadings);
               }
             }
           }
+
+          function getTooltip(column, columnHeadings) {
+            let title = '';
+            switch (column.type) {
+              case 'CHAR':
+              case 'VARCHAR':
+              case 'CLOB':
+              case 'BINARY':
+              case 'VARBINARY':
+              case 'BLOB':
+              case 'GRAPHIC':
+              case 'VARGRAPHIC':
+              case 'DBCLOB':
+              case 'NCHAR':
+              case 'NVARCHAR':
+              case 'NCLOB':
+              case 'FLOAT':
+              case 'DECFLOAT':
+              case 'DATALINK':
+                title = column.type + '(' + column.precision + ')';
+                break;
+              case 'DECIMAL':
+              case 'NUMERIC':
+                title = column.type + '(' + column.precision + ', ' + column.scale + ')';
+                break;
+              default:
+                title = column.type;
+            }
+            title += \`\\n\`;
+            title += columnHeadings === 'Label' ? column.name : column.label;
+            return title;
+          }
+
         </script>
       </head>
       <body style="padding: 0;">

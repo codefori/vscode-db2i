@@ -117,7 +117,16 @@ export default class Statement {
 			if (tokenInOffset) {
 				if (tokenInOffset.type === `block`) {
 					if (tokenInOffset.block!.length > 0) {
-						return blockContainsOffset(cOffset, tokenInOffset.block!);
+						let blockRange = blockContainsOffset(cOffset, tokenInOffset.block!);
+						if (!blockRange) {
+							blockRange = {
+								start: this.tokens.findIndex(token => token.range.start === tokenInOffset.range.start) + 1,
+								end: this.tokens.findIndex(token => token.range.end === tokenInOffset.range.end)
+							}
+						}
+
+						return blockRange;
+						
 					} else {
 						const rawEnd = this.tokens.findIndex(token => token.range.end === tokenInOffset.range.end);
 						return {
@@ -378,7 +387,7 @@ export default class Statement {
 		switch (this.type) {
 			case StatementType.Call:
 				// CALL X()
-				doAdd(this.getRefAtToken(1));
+				doAdd(this.getRefAtToken(1, {includeParameters: true}));
 				break;
 
 			case StatementType.Alter:
@@ -550,7 +559,7 @@ export default class Statement {
 
 		let endIndex = i;
 
-		const isSubSelect = tokenIs(nextToken, `function`, `TABLE`) || tokenIs(nextToken, `function`, `LATERAL`) || (options.includeParameters && tokenIs(nextToken, `function`));
+		const isSubSelect = (tokenIs(nextToken, `function`, `TABLE`) || tokenIs(nextToken, `function`, `LATERAL`) || (options.includeParameters && tokenIs(nextToken, `function`)) && this.type !== StatementType.Call);
 
 		if (isSubSelect) {
 			sqlObj = this.getRefAtToken(i+2);
@@ -598,7 +607,6 @@ export default class Statement {
 		}
 			
 		if (sqlObj) {
-
 			if (options.withSystemName !== true) {
 				// If the next token is not a clause.. we might have the alias
 				if (nextToken && this.tokens[nextIndex+1]) {
@@ -615,6 +623,18 @@ export default class Statement {
 
 			if (!isSubSelect && !sqlObj.isUDTF) {
 				sqlObj.tokens = this.tokens.slice(i, endIndex+1);
+
+				if (options.includeParameters && tokenIs(this.tokens[endIndex+1], `openbracket`)) {
+					const blockTokens = this.getBlockAt(this.tokens[endIndex+1].range.end+1);
+
+					if (blockTokens.length > 0) {
+						sqlObj.tokens = sqlObj.tokens.concat([
+							{type: `openbracket`, value: `(`, range: {start: this.tokens[endIndex+1].range.start, end: this.tokens[endIndex+1].range.end}},
+							...blockTokens,
+							{type: `closebracket`, value: `)`, range: {start: blockTokens[blockTokens.length-1].range.end, end: blockTokens[blockTokens.length-1].range.end}}
+						]);
+					}
+				}
 			}
 
 			if (options.withSystemName) {

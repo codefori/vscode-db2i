@@ -2,6 +2,7 @@ import { MarkdownString, StatusBarAlignment, ThemeColor, languages, window } fro
 import { ServerComponent } from "../../connection/serverComponent";
 import { JobManager } from "../../config";
 import { getInstance } from "../../base";
+import Statement from "../../database/statement";
 
 const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Left);
 
@@ -14,7 +15,7 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
 
     let text;
     let backgroundColour: ThemeColor|undefined = undefined;
-    let toolTipItems = [];
+    let toolTipItems: string[] = [];
 
     if (options.executing) {
       text = `$(sync~spin) Executing...`;
@@ -30,6 +31,20 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
     } else
     if (selected) {
       text = `$(database) ${selected.name}`;
+
+      const job = selected.job;
+
+      if (job.getNaming() === `sql`) {
+        toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${Statement.delimName(await job.getCurrentSchema())}\``);
+      } else {
+        toolTipItems.push([
+          `System Naming.`,
+          ``,
+          `Configured user library list for job:`,
+          ``,
+          ...job.options.libraries.map((lib, i) => `${i+1}. \`${lib}\``)
+        ].join(`\n`));
+      }
 
       if (selected.job.underCommitControl()) {
         const pendingsTracts = await selected.job.getPendingTransactions();

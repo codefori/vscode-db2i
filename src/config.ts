@@ -19,8 +19,6 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
 
   Config.setConnectionName(instance.getConnection().currentConnectionName);
 
-  await Config.fixPastQueries();
-
   osDetail = new IBMiDetail();
 
   await osDetail.fetchSystemInfo();
