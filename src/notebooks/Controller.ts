@@ -86,30 +86,27 @@ export class IBMiController {
               const results = await query.execute(1000);
 
               const table = results.data;
+              const columnNames = results.metadata.columns.map(c => c.name);
+
               if (table === undefined && results.success && !results.has_results) {
                 items.push(vscode.NotebookCellOutputItem.text(`Statement executed successfully. ${results.update_count ? `${results.update_count} rows affected.` : ``}`, `text/markdown`));
                 break;
               }
 
               if (table.length > 0) {
-
-                const keys = Object.keys(table[0]);
-
                 // Add `-` for blanks.
                 table.forEach(row => {
-                  keys.forEach(key => {
+                  columnNames.forEach(key => {
                     //@ts-ignore
                     if (!row[key]) { row[key] = `-`; }
                   });
                 });
 
-                const columns = results.metadata.columns.map(c => c.label);
-
                 let fallbackToTable = true;
 
                 if (chartDetail.type) {
                   if (chartJsTypes.includes(chartDetail.type as ChartJsType)) {
-                    const possibleChart = generateChart(execution.executionOrder, chartDetail, columns, table, generateChartHTMLCell);
+                    const possibleChart = generateChart(execution.executionOrder, chartDetail, columnNames, table, generateChartHTMLCell);
                     if (possibleChart) {
                       items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
                       fallbackToTable = false;
@@ -118,7 +115,7 @@ export class IBMiController {
                 }
 
                 if (fallbackToTable) {
-                  items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columns), `text/markdown`));
+                  items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columnNames), `text/markdown`));
                 }
               } else {
                 items.push(vscode.NotebookCellOutputItem.stderr(`No rows returned from statement.`));
