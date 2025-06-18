@@ -230,6 +230,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   name: column.COLUMN_NAME,
                   jsType: column.NUMERIC_PRECISION ? `number` : `asString`,
                   useInWhere: column.IS_IDENTITY === `YES`,
+                  isNullable: column.IS_NULLABLE === `Y`,
                   maxInputLength: column.CHARACTER_MAXIMUM_LENGTH
                 }));
 
@@ -263,7 +264,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
 
                 basicSelect = `select rrn(${cName}) as RRN, ${possibleColumnList} from ${schema}.${ref.object.name} as ${cName} ${fromWhereClause || ``}`;
-                currentColumns = [{ name: `RRN`, jsType: `number`, useInWhere: true }, ...currentColumns];
+                currentColumns = [{ name: `RRN`, jsType: `number`, isNullable: false, useInWhere: true }, ...currentColumns];
               }
 
               updatable = {
