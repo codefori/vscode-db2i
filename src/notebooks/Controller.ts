@@ -98,7 +98,7 @@ export class IBMiController {
                 table.forEach(row => {
                   columnNames.forEach(key => {
                     //@ts-ignore
-                    if (!row[key]) { row[key] = `-`; }
+                    if (row[key] === null) { row[key] = `-`; }
                   });
                 });
 
