@@ -1,4 +1,3 @@
-import Tokenizer from "sql-formatter/lib/src/lexer/Tokenizer";
 import SQLTokeniser, { NameTypes } from "./tokens";
 import { CTEReference, CallableReference, ClauseType, ClauseTypeWord, IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
 

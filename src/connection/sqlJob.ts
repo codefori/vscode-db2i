@@ -151,6 +151,7 @@ export class OldSQLJob extends SQLJob {
 
     const props = Object
       .keys(this.options)
+      .filter(prop => this.options[prop] !== `` && this.options[prop] !== null && this.options[prop] !== undefined) // 0 is valid
       .map(prop => {
         if (Array.isArray(this.options[prop])) {
           return `${prop}=${(this.options[prop] as string[]).join(`,`)}`;

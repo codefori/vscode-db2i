@@ -36,6 +36,11 @@ export class JobManagerView implements TreeDataProvider<any> {
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (options?: JDBCOptions, name?: string) => {
+        if (options && 'contextValue' in options) {
+          // This happens because the button is clickable from the Job Manager title bar.
+          options = undefined;
+        }
+
         try {
           updateStatusBar({newJob: true});
           await JobManager.newJob(
