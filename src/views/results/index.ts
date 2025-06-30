@@ -20,7 +20,7 @@ import { ExplainType } from "../../connection/types";
 import { queryResultToRpgDs } from "./codegen";
 import Configuration from "../../configuration";
 
-export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
+export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
 export interface StatementInfo {
   content: string,
@@ -333,10 +333,13 @@ async function runHandler(options?: StatementInfo) {
             if (inWindow) {
               useWindow(`CL results`, options.viewColumn);
             }
-            chosenView.setScrolling(statementDetail.content, true); // Never errors
+            chosenView.setScrolling({
+              basicSelect: statementDetail.content,
+              isCL: true,
+            }); // Never errors
           }
           
-        } else if ([`statement`, `update`].includes(statementDetail.qualifier)) {
+        } else if ([`statement`, `update`, `cl`].includes(statementDetail.qualifier)) {
           // If it's a basic statement, we can let it scroll!
           if (statementDetail.noUi) {
             setCancelButtonVisibility(true);
@@ -353,7 +356,11 @@ async function runHandler(options?: StatementInfo) {
               updatableTable = refs[0];
             }
 
-            chosenView.setScrolling(statementDetail.content, false, undefined, inWindow, updatableTable); // Never errors
+            chosenView.setScrolling({ // Never errors
+              basicSelect: statementDetail.content,
+              withCancel: inWindow,
+              ref: updatableTable,
+            })
           }
 
         } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
@@ -372,7 +379,10 @@ async function runHandler(options?: StatementInfo) {
             if (onlyExplain) {
               chosenView.setLoadingText(`Explained.`, false);
             } else {
-              chosenView.setScrolling(statementDetail.content, false, explained.id); // Never errors
+              chosenView.setScrolling({ // Never errors
+                basicSelect: statementDetail.content,
+                queryId: explained.id,
+              })
             }
 
             explainTree = new ExplainTree(explained.vedata);

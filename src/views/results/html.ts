@@ -2,6 +2,7 @@ import { Webview } from "vscode";
 import { getHeader } from "../html";
 
 import Configuration from "../../configuration";
+import { SqlParameter } from "./resultSetPanelProvider";
 
 export function setLoadingText(webview: Webview, text: string) {
   webview.postMessage({
@@ -294,7 +295,7 @@ document.getElementById('resultset').onclick = function(e){
 };
 `;
 
-export function generateScroller(basicSelect: string, isCL: boolean, withCancel?: boolean, updatable?: UpdatableInfo): string {
+export function generateScroller(basicSelect: string, parameters: SqlParameter[] = [], isCL: boolean = false, withCancel: boolean = false, updatable?: UpdatableInfo): string {
   const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
 
   return /*html*/`
@@ -417,6 +418,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
             isFetching = true;
             vscode.postMessage({
               query: basicSelect,
+              parameters: ${JSON.stringify(parameters)},
               isCL: ${isCL},
               queryId: myQueryId
             });
