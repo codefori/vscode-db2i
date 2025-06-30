@@ -90,7 +90,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
         default:
           if (message.query) {
-
             if (this.currentQuery) {
               // If we get a request for a new query, then we need to close the old one
               if (this.currentQuery.getId() !== message.queryId) {
@@ -102,10 +101,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
             try {
               if (this.currentQuery === undefined) {
-                // We will need to revisit this if we ever allow multiple result tabs like ACS does
-                // Query.cleanup();
-
-                this.currentQuery = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, isTerseResults: true });
+                this.currentQuery = await JobManager.getPagingStatement(message.query, { parameters: message.parameters, isClCommand: message.isCL, isTerseResults: true });
               }
 
               if (this.currentQuery.getState() !== "RUN_DONE") {
