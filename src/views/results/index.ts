@@ -353,7 +353,10 @@ async function runHandler(options?: StatementInfo) {
                 vscode.window.showErrorMessage(`Incorrect number of parameters for statement. Expected ${runStatement.parameters}, got ${parameters.length}.`);
                 return;
               }
+
+              vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, runStatement.statement, `bind: ${statementDetail.content}`);
               
+              // Overwrite to run the prior statement
               statementDetail.content = runStatement.statement;
             }
           }
