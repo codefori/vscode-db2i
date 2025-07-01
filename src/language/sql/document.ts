@@ -223,7 +223,7 @@ export default class Document {
     })
   }
 
-  removeEmbeddedAreas(statement: Statement, replacement: `snippet`|`?` = `?`): ParsedEmbeddedStatement {
+  removeEmbeddedAreas(statement: Statement, options: {replacement: `snippet`|`?`|`values`, values?: any[]} = {replacement: `?`}): ParsedEmbeddedStatement {
     const areas = statement.getEmbeddedStatementAreas();
 
     const totalParameters = areas.filter(a => a.type === `marker`).length;
@@ -242,12 +242,26 @@ export default class Document {
         case `marker`:
           const markerContent = newContent.substring(start, end);
 
-          switch (replacement) {
+          switch (options.replacement) {
             case `snippet`:
               newContent = newContent.substring(0, start) + `\${${totalParameters-parameterCount}:${markerContent}}` + newContent.substring(end) + `$0`;
               break;
             case `?`:
               newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
+              break;
+            case `values`:
+              let valueIndex = totalParameters - parameterCount - 1;
+              if (options.values && options.values.length > valueIndex) {
+                let value = options.values[valueIndex];
+                
+                if (typeof value === `string`) {
+                  value = `'${value.replace(/'/g, `''`)}'`; // Escape single quotes in strings
+                }
+
+                newContent = newContent.substring(0, start) + value + newContent.substring(end);
+              } else {
+                newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
+              }
               break;
           }
       

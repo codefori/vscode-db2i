@@ -18,7 +18,7 @@ export function getPriorBindableStatement(editor: TextEditor, offset: number): {
     if (group.statements.length === 1) {
       const statement = group.statements[0];
       if (!statement.getLabel()) {
-        const newStatement = sqlDocument.removeEmbeddedAreas(statement, `?`);
+        const newStatement = sqlDocument.removeEmbeddedAreas(statement);
         return {
           statement: newStatement.content,
           parameters: newStatement.parameterCount

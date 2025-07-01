@@ -163,7 +163,7 @@ export function initialise(context: vscode.ExtensionContext) {
   )
 }
 
-const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] = [`cl`, `json`, `csv`, `sql`, `statement`];
+const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] = [`cl`, `json`, `csv`, `sql`, `statement`, `bind`];
 
 function isStop(statement: Statement) {
   return (statement.type === StatementType.Unknown && statement.tokens.length === 1 && statement.tokens[0].value.toUpperCase() === `STOP`);
@@ -600,7 +600,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
 
   if (sqlDocument) {
     if (statementInfo.qualifier !== `cl`) {
-      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, `snippet`);
+      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, {replacement: `snippet`});
     }
   }
 
