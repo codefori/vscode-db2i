@@ -92,7 +92,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           if (message.query) {
             if (this.currentQuery) {
               // If we get a request for a new query, then we need to close the old one
-              if (this.currentQuery.getId() !== message.queryId) {
+              if (this.currentQuery.getId() === undefined || this.currentQuery.getId() !== message.queryId) {
                 // This is a new query, so we need to clean up the old one
                 await this.currentQuery.close();
                 this.currentQuery = undefined;
