@@ -1386,7 +1386,7 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const parameterTokens = medianResultSetProc.getBlockAt(46);
     expect(parameterTokens.length).toBeGreaterThan(0);
-    expect(parameterTokens.map(t => t.type).join()).toBe([`parmType`, `word`, `word`, `openbracket`, `word`, `comma`, `word`, `closebracket`].join());
+    expect(parameterTokens.map(t => t.type).join()).toBe([`parmType`, `word`, `word`, `openbracket`, `number`, `comma`, `number`, `closebracket`].join());
 
     const numRecordsDeclare = statements[1];
     expect(numRecordsDeclare.type).toBe(StatementType.Declare);

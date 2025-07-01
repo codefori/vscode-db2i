@@ -1,7 +1,7 @@
 import SQLTokeniser, { NameTypes } from "./tokens";
 import { CTEReference, CallableReference, ClauseType, ClauseTypeWord, IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
 
-const tokenIs = (token: Token|undefined, type: string, value?: string) => {
+export const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 	return (token && token.type === type && (value ? token.value?.toUpperCase() === value : true));
 }
 
