@@ -30,7 +30,7 @@ export function getLiteralsFromStatement(group: StatementGroup): SqlParameter[] 
   for (const statement of group.statements) {
     for (const token of statement.tokens) {
       if (token.type === `string`) {
-        literals.push(token.value);
+        literals.push(token.value.substring(1, token.value.length - 1)); // Remove quotes
       }
     }
   }

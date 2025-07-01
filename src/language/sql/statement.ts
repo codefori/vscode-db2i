@@ -30,7 +30,7 @@ export default class Statement {
 			first = this.tokens[2];
 		}
 
-		const wordValue = first.value?.toUpperCase();
+		const wordValue = first?.value?.toUpperCase();
 
 		this.type = StatementTypeWord[wordValue] || StatementType.Unknown;
 		
