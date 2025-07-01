@@ -1,0 +1,39 @@
+import { TextEditor } from "vscode";
+import { getSqlDocument } from "../../language/providers/logic/parse";
+import { StatementGroup } from "../../language/sql/types";
+import { SqlParameter } from "./resultSetPanelProvider";
+
+export function getPriorBindableStatement(editor: TextEditor, offset: number): string|undefined {
+  const sqlDocument = getSqlDocument(editor.document);
+
+  const groups = sqlDocument.getStatementGroups();
+  if (groups.length === 0) {
+    return undefined;
+  }
+
+  const currentGroupI = groups.findIndex(g => g.range.start <= offset && g.range.end >= offset);
+  for (let i = currentGroupI - 1; i >= 0; i--) {
+    const group = groups[i];
+    if (group.statements.length === 1) {
+      const statement = group.statements[0];
+      if (!statement.getLabel()) {
+        return sqlDocument.content.substring(group.range.start, group.range.end);
+      }
+    }
+  }
+
+  return undefined;
+}
+
+export function getLiteralsFromStatement(group: StatementGroup): SqlParameter[] {
+  const literals: SqlParameter[] = [];
+  for (const statement of group.statements) {
+    for (const token of statement.tokens) {
+      if (token.type === `string`) {
+        literals.push(token.value);
+      }
+    }
+  }
+  
+  return literals;
+}

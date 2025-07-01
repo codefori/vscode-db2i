@@ -12,13 +12,15 @@ import { ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
-import { ResultSetPanelProvider } from "./resultSetPanelProvider";
+import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { DbCache } from "../../language/providers/logic/cache";
 import { ExplainType } from "../../connection/types";
 import { queryResultToRpgDs } from "./codegen";
 import Configuration from "../../configuration";
+import { getSqlDocument } from "../../language/providers/logic/parse";
+import { getLiteralsFromStatement, getPriorBindableStatement } from "./binding";
 
 export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
@@ -317,7 +319,6 @@ async function runHandler(options?: StatementInfo) {
         const inWindow = Boolean(options && options.viewColumn);
 
         if (statementDetail.qualifier === `cl`) {
-          // TODO: handle noUi
           if (statementDetail.noUi) {
             setCancelButtonVisibility(true);
             const command = statementDetail.content.split(` `)[0].toUpperCase();
@@ -338,13 +339,24 @@ async function runHandler(options?: StatementInfo) {
               isCL: true,
             }); // Never errors
           }
-          
-        } else if ([`statement`, `update`, `cl`].includes(statementDetail.qualifier)) {
+
+        } else if ([`statement`, `update`, `bind`].includes(statementDetail.qualifier)) {
+          let parameters: SqlParameter[] = [];
+          if (editor && statementDetail.qualifier === `bind`) {
+            const position = editor.selection.active;
+            const runStatement = getPriorBindableStatement(editor, editor.document.offsetAt(position));
+
+            if (runStatement) {
+              parameters = getLiteralsFromStatement(statementDetail.group);
+              statementDetail.content = runStatement;
+            }
+          }
+
           // If it's a basic statement, we can let it scroll!
           if (statementDetail.noUi) {
             setCancelButtonVisibility(true);
             chosenView.setLoadingText(`Running SQL statement... (${possibleTitle})`, false);
-            await JobManager.runSQL(statementDetail.content, undefined, 1);
+            await JobManager.runSQL(statementDetail.content, {parameters}, 1);
 
           } else {
             if (inWindow) {
@@ -360,6 +372,7 @@ async function runHandler(options?: StatementInfo) {
               basicSelect: statementDetail.content,
               withCancel: inWindow,
               ref: updatableTable,
+              parameters,
             })
           }
 
@@ -551,7 +564,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     const document = editor.document;
     const cursor = editor.document.offsetAt(editor.selection.active);
 
-    sqlDocument = new Document(document.getText());
+    sqlDocument = getSqlDocument(document);
     statementInfo.group = sqlDocument.getGroupByOffset(cursor);
   }
 
