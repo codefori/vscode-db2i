@@ -348,7 +348,13 @@ async function runHandler(options?: StatementInfo) {
 
             if (runStatement) {
               parameters = getLiteralsFromStatement(statementDetail.group);
-              statementDetail.content = runStatement;
+
+              if (runStatement.parameters !== parameters.length) {
+                vscode.window.showErrorMessage(`Incorrect number of parameters for statement. Expected ${runStatement.parameters}, got ${parameters.length}.`);
+                return;
+              }
+              
+              statementDetail.content = runStatement.statement;
             }
           }
 

@@ -4,7 +4,7 @@ import { StatementGroup } from "../../language/sql/types";
 import { SqlParameter } from "./resultSetPanelProvider";
 import { tokenIs } from "../../language/sql/statement";
 
-export function getPriorBindableStatement(editor: TextEditor, offset: number): string|undefined {
+export function getPriorBindableStatement(editor: TextEditor, offset: number): {statement: string, parameters: number}|undefined {
   const sqlDocument = getSqlDocument(editor.document);
 
   const groups = sqlDocument.getStatementGroups();
@@ -18,7 +18,11 @@ export function getPriorBindableStatement(editor: TextEditor, offset: number): s
     if (group.statements.length === 1) {
       const statement = group.statements[0];
       if (!statement.getLabel()) {
-        return sqlDocument.content.substring(group.range.start, group.range.end);
+        const markers = statement.getEmbeddedStatementAreas().filter(a => a.type === `marker`);
+        return {
+          statement: sqlDocument.content.substring(group.range.start, group.range.end),
+          parameters: markers.length
+        };
       }
     }
   }
