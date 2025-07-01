@@ -18,10 +18,10 @@ export function getPriorBindableStatement(editor: TextEditor, offset: number): {
     if (group.statements.length === 1) {
       const statement = group.statements[0];
       if (!statement.getLabel()) {
-        const markers = statement.getEmbeddedStatementAreas().filter(a => a.type === `marker`);
+        const newStatement = sqlDocument.removeEmbeddedAreas(statement, `?`);
         return {
-          statement: sqlDocument.content.substring(group.range.start, group.range.end),
-          parameters: markers.length
+          statement: newStatement.content,
+          parameters: newStatement.parameterCount
         };
       }
     }
@@ -40,7 +40,7 @@ export function getLiteralsFromStatement(group: StatementGroup): SqlParameter[] 
         literals.push(token.value.substring(1, token.value.length - 1)); // Remove quotes
       } else if (token.type === `number`) {
         // Handle decimal numbers
-        if (tokenIs(tokens[i+1], `number`) && tokenIs(tokens[i+2], `number`)) {
+        if (tokenIs(tokens[i+1], `dot`) && tokenIs(tokens[i+2], `number`)) {
           literals.push(Number(`${token.value}.${tokens[i+2].value}`));
           i += 2; // Skip the next two tokens as they are part of the decimal number
         } else {

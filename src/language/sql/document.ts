@@ -223,7 +223,7 @@ export default class Document {
     })
   }
 
-  removeEmbeddedAreas(statement: Statement, snippetString?: boolean): ParsedEmbeddedStatement {
+  removeEmbeddedAreas(statement: Statement, replacement: `snippet`|`?`): ParsedEmbeddedStatement {
     const areas = statement.getEmbeddedStatementAreas();
 
     const totalParameters = areas.filter(a => a.type === `marker`).length;
@@ -242,7 +242,14 @@ export default class Document {
         case `marker`:
           const markerContent = newContent.substring(start, end);
 
-          newContent = newContent.substring(0, start) + (snippetString ? `\${${totalParameters-parameterCount}:${markerContent}}` : `?`) + newContent.substring(end) + (snippetString ? `$0` : ``);
+          switch (replacement) {
+            case `snippet`:
+              newContent = newContent.substring(0, start) + `\${${totalParameters-parameterCount}:${markerContent}}` + newContent.substring(end) + `$0`;
+              break;
+            case `?`:
+              newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
+              break;
+          }
       
           parameterCount++;
           break;

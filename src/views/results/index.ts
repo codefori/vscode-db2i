@@ -600,7 +600,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
 
   if (sqlDocument) {
     if (statementInfo.qualifier !== `cl`) {
-      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, true);
+      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, `snippet`);
     }
   }
 
