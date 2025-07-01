@@ -223,7 +223,7 @@ export default class Document {
     })
   }
 
-  removeEmbeddedAreas(statement: Statement, replacement: `snippet`|`?`): ParsedEmbeddedStatement {
+  removeEmbeddedAreas(statement: Statement, replacement: `snippet`|`?` = `?`): ParsedEmbeddedStatement {
     const areas = statement.getEmbeddedStatementAreas();
 
     const totalParameters = areas.filter(a => a.type === `marker`).length;
