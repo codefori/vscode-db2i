@@ -1886,7 +1886,7 @@ describe(`Parameter statement tests`, () => {
     const result = document.removeEmbeddedAreas(statement);
     expect(result.parameterCount).toBe(1);
     expect(result.content).toBe([
-      `  SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+      `SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
       `  FROM EMPLOYEE`,
       `  WHERE WORKDEPT = ?`
     ].join(`\n`));
@@ -1958,6 +1958,32 @@ describe(`Parameter statement tests`, () => {
     expect(result.parameterCount).toBe(0);
     expect(result.content + `;`).toBe(content);
     expect(result.changed).toBe(false);
+  });
+
+  test('Remove indicator variables', () => {
+    const content = [
+      `UPDATE CORPDATA.EMPLOYEE`,
+      `SET PHONENO = :NEWPHONE:PHONEIND`,
+      `WHERE EMPNO = :EMPID;`,
+      ``,
+      `bind: '3535', '000110';`,
+    ].join(`\n`);
+
+    const expectedContent = [
+      `UPDATE CORPDATA.EMPLOYEE`,
+      `SET PHONENO = ?`,
+      `WHERE EMPNO = ?`,
+    ].join(`\n`);
+
+    const document = new Document(content);
+    const statements = document.statements;
+    expect(statements.length).toBe(2);
+
+    const statement = statements[0];
+    const result = document.removeEmbeddedAreas(statement);
+    console.log(result.content);
+    expect(result.parameterCount).toBe(2);
+    expect(result.content).toBe(expectedContent);
   });
 
   test(`Callable blocks`, () => {

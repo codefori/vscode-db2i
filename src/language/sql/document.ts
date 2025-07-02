@@ -269,14 +269,17 @@ export default class Document {
           break;
 
         case `remove`:
-          newContent = newContent.substring(0, start) + newContent.substring(end+1);
+          newContent = newContent.substring(0, start) + newContent.substring(end);
+          if (newContent[start-1] === ` ` && newContent[start] === ` `) {
+            newContent = newContent.substring(0, start-1) + newContent.substring(start);
+          }
           break;
       }
     }
 
     return {
       changed: areas.length > 0,
-      content: newContent,
+      content: newContent.trim(),
       parameterCount
     };
   }

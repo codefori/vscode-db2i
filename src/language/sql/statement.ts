@@ -662,10 +662,15 @@ export default class Statement {
 		let ranges: {type: "remove"|"marker", range: IRange}[] = [];
 		let intoClause: Token|undefined;
 		let declareStmt: Token|undefined;
+		let lastTokenWasMarker = false;
 
 		for (let i = 0; i < this.tokens.length; i++) {
 			const prevToken = this.tokens[i-1];
 			const currentToken = this.tokens[i];
+
+			if (!tokenIs(currentToken, `colon`)) {
+				lastTokenWasMarker = false;
+			}
 
 			switch (currentToken.type) {
 				case `statementType`:
@@ -752,14 +757,15 @@ export default class Statement {
 
 					if (endToken) {
 						ranges.push({
-							type: `marker`,
+							type: lastTokenWasMarker ? `remove` : `marker`,
 							range: {
 								start: currentToken.range.start,
-								end: endToken.range.end
+								end: (endToken.range.end)
 							}
 						});
 
-						i = followingTokenI;
+						lastTokenWasMarker = true;
+						i = (followingTokenI-1);
 					}
 
 					break;
