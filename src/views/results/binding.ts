@@ -46,6 +46,8 @@ export function getLiteralsFromStatement(group: StatementGroup): SqlParameter[] 
         } else {
           literals.push(Number(token.value));
         }
+      } else if (tokenIs(token, `word`, `NULL`)) {
+        literals.push(null);
       }
     }
   }
