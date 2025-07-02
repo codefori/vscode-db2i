@@ -377,9 +377,9 @@ export function generateScroller(basicSelect: string, parameters: SqlParameter[]
                     appendRows(data.rows);
                   }
 
-                  if (data.rows === undefined && totalRows === 0) {
+                  if (data.rows === undefined || totalRows === 0) {
                     document.getElementById(messageSpanId).innerText = 'Statement executed with no result set returned. Rows affected: ' + data.update_count;
-                  } else {
+                  } else if (totalRows > 0) {
                     if (data.executionTime) {
                       document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + ' rows in ' + data.executionTime.toFixed() + 'ms. End of data.') : ('Loaded ' + totalRows + ' rows in ' + data.executionTime.toFixed() + 'ms. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');
                     }
