@@ -3,7 +3,7 @@ import { remoteAssistIsEnabled } from "./logic/available";
 import { getSqlDocument } from "./logic/parse";
 
 class SqlCodeAction extends CodeAction {
-  constructor(title: string, kind: CodeActionKind, public file: {document: TextDocument, statementOffset: number, bindCount: number}) {
+  constructor(title: string, kind: CodeActionKind, public file: {document: TextDocument, statementOffset: number, names: string[]}) {
     super(title, kind);
   }
 }
@@ -32,7 +32,7 @@ export const actionProvider = languages.registerCodeActionsProvider({ language: 
           const action = new SqlCodeAction(`Generate bind statement`, CodeActionKind.QuickFix, {
             document,
             statementOffset: currentStatement.range.end,
-            bindCount: markers.length
+            names: markers.map(marker => marker.named || `?`)
           });
 
           codeActions.push(action);
@@ -52,7 +52,7 @@ export const actionProvider = languages.registerCodeActionsProvider({ language: 
     const endOfStatementPos = document.positionAt(codeAction.file.statementOffset);
     const lineOfStatement = document.lineAt(endOfStatementPos.line);
 
-    let statement = `bind: ${new Array(codeAction.file.bindCount).fill(`v`).join(`, `)}`;
+    let statement = `bind: ${codeAction.file.names.join(`, `)}`;
 
     codeAction.edit.insert(document.uri, lineOfStatement.range.end, `\n${statement};`);
     return codeAction;

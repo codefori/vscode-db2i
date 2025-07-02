@@ -659,7 +659,7 @@ export default class Statement {
 		// Only these statements support the INTO clause in embedded SQL really
 		const validIntoStatements: StatementType[] = [StatementType.Unknown, StatementType.With, StatementType.Select];
 
-		let ranges: {type: "remove"|"marker", range: IRange}[] = [];
+		let ranges: {type: "remove"|"marker", range: IRange, named?: string}[] = [];
 		let intoClause: Token|undefined;
 		let declareStmt: Token|undefined;
 		let lastTokenWasMarker = false;
@@ -761,7 +761,8 @@ export default class Statement {
 							range: {
 								start: currentToken.range.start,
 								end: (endToken.range.end)
-							}
+							},
+							named: endToken.value
 						});
 
 						lastTokenWasMarker = true;
