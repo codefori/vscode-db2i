@@ -27,6 +27,13 @@ interface TokenState {
 export default class SQLTokeniser {
   static matchers: Matcher[] = [
     {
+      name: `IS_NUMBER`,
+      match: [
+        { type: `word`, match: (value: string) => {return !isNaN(Number(value)) && !isNaN(parseFloat(value)); }},
+      ],
+      becomes: `number`,
+    },
+    {
       name: `PROCEDURE_PARM_TYPE`,
       match: [{ type: `word`, match: (value: string) => {return [`IN`, `OUT`, `INOUT`].includes(value.toUpperCase())}}],
       becomes: `parmType`,

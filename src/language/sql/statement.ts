@@ -1,7 +1,7 @@
 import SQLTokeniser, { NameTypes } from "./tokens";
 import { CTEReference, CallableReference, ClauseType, ClauseTypeWord, IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
 
-const tokenIs = (token: Token|undefined, type: string, value?: string) => {
+export const tokenIs = (token: Token|undefined, type: string, value?: string) => {
 	return (token && token.type === type && (value ? token.value?.toUpperCase() === value : true));
 }
 
@@ -30,7 +30,7 @@ export default class Statement {
 			first = this.tokens[2];
 		}
 
-		const wordValue = first.value?.toUpperCase();
+		const wordValue = first?.value?.toUpperCase();
 
 		this.type = StatementTypeWord[wordValue] || StatementType.Unknown;
 		
@@ -659,13 +659,18 @@ export default class Statement {
 		// Only these statements support the INTO clause in embedded SQL really
 		const validIntoStatements: StatementType[] = [StatementType.Unknown, StatementType.With, StatementType.Select];
 
-		let ranges: {type: "remove"|"marker", range: IRange}[] = [];
+		let ranges: {type: "remove"|"marker", range: IRange, named?: string}[] = [];
 		let intoClause: Token|undefined;
 		let declareStmt: Token|undefined;
+		let lastTokenWasMarker = false;
 
 		for (let i = 0; i < this.tokens.length; i++) {
 			const prevToken = this.tokens[i-1];
 			const currentToken = this.tokens[i];
+
+			if (!tokenIs(currentToken, `colon`)) {
+				lastTokenWasMarker = false;
+			}
 
 			switch (currentToken.type) {
 				case `statementType`:
@@ -752,14 +757,16 @@ export default class Statement {
 
 					if (endToken) {
 						ranges.push({
-							type: `marker`,
+							type: lastTokenWasMarker ? `remove` : `marker`,
 							range: {
 								start: currentToken.range.start,
-								end: endToken.range.end
-							}
+								end: (endToken.range.end)
+							},
+							named: endToken.value
 						});
 
-						i = followingTokenI;
+						lastTokenWasMarker = true;
+						i = (followingTokenI-1);
 					}
 
 					break;

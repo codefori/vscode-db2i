@@ -223,7 +223,7 @@ export default class Document {
     })
   }
 
-  removeEmbeddedAreas(statement: Statement, snippetString?: boolean): ParsedEmbeddedStatement {
+  removeEmbeddedAreas(statement: Statement, options: {replacement: `snippet`|`?`|`values`, values?: any[]} = {replacement: `?`}): ParsedEmbeddedStatement {
     const areas = statement.getEmbeddedStatementAreas();
 
     const totalParameters = areas.filter(a => a.type === `marker`).length;
@@ -242,20 +242,44 @@ export default class Document {
         case `marker`:
           const markerContent = newContent.substring(start, end);
 
-          newContent = newContent.substring(0, start) + (snippetString ? `\${${totalParameters-parameterCount}:${markerContent}}` : `?`) + newContent.substring(end) + (snippetString ? `$0` : ``);
+          switch (options.replacement) {
+            case `snippet`:
+              newContent = newContent.substring(0, start) + `\${${totalParameters-parameterCount}:${markerContent}}` + newContent.substring(end) + `$0`;
+              break;
+            case `?`:
+              newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
+              break;
+            case `values`:
+              let valueIndex = totalParameters - parameterCount - 1;
+              if (options.values && options.values.length > valueIndex) {
+                let value = options.values[valueIndex];
+                
+                if (typeof value === `string`) {
+                  value = `'${value.replace(/'/g, `''`)}'`; // Escape single quotes in strings
+                }
+
+                newContent = newContent.substring(0, start) + value + newContent.substring(end);
+              } else {
+                newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
+              }
+              break;
+          }
       
           parameterCount++;
           break;
 
         case `remove`:
-          newContent = newContent.substring(0, start) + newContent.substring(end+1);
+          newContent = newContent.substring(0, start) + newContent.substring(end);
+          if (newContent[start-1] === ` ` && newContent[start] === ` `) {
+            newContent = newContent.substring(0, start-1) + newContent.substring(start);
+          }
           break;
       }
     }
 
     return {
       changed: areas.length > 0,
-      content: newContent,
+      content: newContent.trim(),
       parameterCount
     };
   }

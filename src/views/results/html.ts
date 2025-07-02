@@ -2,6 +2,7 @@ import { Webview } from "vscode";
 import { getHeader } from "../html";
 
 import Configuration from "../../configuration";
+import { SqlParameter } from "./resultSetPanelProvider";
 
 export function setLoadingText(webview: Webview, text: string) {
   webview.postMessage({
@@ -294,7 +295,7 @@ document.getElementById('resultset').onclick = function(e){
 };
 `;
 
-export function generateScroller(basicSelect: string, isCL: boolean, withCancel?: boolean, updatable?: UpdatableInfo): string {
+export function generateScroller(basicSelect: string, parameters: SqlParameter[] = [], isCL: boolean = false, withCancel: boolean = false, updatable?: UpdatableInfo): string {
   const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
 
   return /*html*/`
@@ -376,9 +377,9 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                     appendRows(data.rows);
                   }
 
-                  if (data.rows === undefined && totalRows === 0) {
+                  if (data.rows === undefined || totalRows === 0) {
                     document.getElementById(messageSpanId).innerText = 'Statement executed with no result set returned. Rows affected: ' + data.update_count;
-                  } else {
+                  } else if (totalRows > 0) {
                     if (data.executionTime) {
                       document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + ' rows in ' + data.executionTime.toFixed() + 'ms. End of data.') : ('Loaded ' + totalRows + ' rows in ' + data.executionTime.toFixed() + 'ms. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');
                     }
@@ -417,6 +418,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
             isFetching = true;
             vscode.postMessage({
               query: basicSelect,
+              parameters: ${JSON.stringify(parameters)},
               isCL: ${isCL},
               queryId: myQueryId
             });

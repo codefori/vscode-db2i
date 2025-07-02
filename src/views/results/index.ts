@@ -12,15 +12,17 @@ import { ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
-import { ResultSetPanelProvider } from "./resultSetPanelProvider";
+import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { DbCache } from "../../language/providers/logic/cache";
 import { ExplainType } from "../../connection/types";
 import { queryResultToRpgDs } from "./codegen";
 import Configuration from "../../configuration";
+import { getSqlDocument } from "../../language/providers/logic/parse";
+import { getLiteralsFromStatement, getPriorBindableStatement } from "./binding";
 
-export type StatementQualifier = "statement" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
+export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
 export interface StatementInfo {
   content: string,
@@ -161,7 +163,7 @@ export function initialise(context: vscode.ExtensionContext) {
   )
 }
 
-const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] = [`cl`, `json`, `csv`, `sql`, `statement`];
+const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] = [`cl`, `json`, `csv`, `sql`, `statement`, `bind`];
 
 function isStop(statement: Statement) {
   return (statement.type === StatementType.Unknown && statement.tokens.length === 1 && statement.tokens[0].value.toUpperCase() === `STOP`);
@@ -317,7 +319,6 @@ async function runHandler(options?: StatementInfo) {
         const inWindow = Boolean(options && options.viewColumn);
 
         if (statementDetail.qualifier === `cl`) {
-          // TODO: handle noUi
           if (statementDetail.noUi) {
             setCancelButtonVisibility(true);
             const command = statementDetail.content.split(` `)[0].toUpperCase();
@@ -333,15 +334,38 @@ async function runHandler(options?: StatementInfo) {
             if (inWindow) {
               useWindow(`CL results`, options.viewColumn);
             }
-            chosenView.setScrolling(statementDetail.content, true); // Never errors
+            chosenView.setScrolling({
+              basicSelect: statementDetail.content,
+              isCL: true,
+            }); // Never errors
           }
-          
-        } else if ([`statement`, `update`].includes(statementDetail.qualifier)) {
+
+        } else if ([`statement`, `update`, `bind`].includes(statementDetail.qualifier)) {
+          let parameters: SqlParameter[] = [];
+          if (editor && statementDetail.qualifier === `bind`) {
+            const position = editor.selection.active;
+            const runStatement = getPriorBindableStatement(editor, editor.document.offsetAt(position));
+
+            if (runStatement) {
+              parameters = getLiteralsFromStatement(statementDetail.group);
+
+              if (runStatement.parameters !== parameters.length) {
+                vscode.window.showErrorMessage(`Incorrect number of parameters for statement. Expected ${runStatement.parameters}, got ${parameters.length}.`);
+                return;
+              }
+
+              vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, runStatement.statement, `bind: ${statementDetail.content}`);
+              
+              // Overwrite to run the prior statement
+              statementDetail.content = runStatement.statement;
+            }
+          }
+
           // If it's a basic statement, we can let it scroll!
           if (statementDetail.noUi) {
             setCancelButtonVisibility(true);
             chosenView.setLoadingText(`Running SQL statement... (${possibleTitle})`, false);
-            await JobManager.runSQL(statementDetail.content, undefined, 1);
+            await JobManager.runSQL(statementDetail.content, {parameters}, 1);
 
           } else {
             if (inWindow) {
@@ -353,7 +377,12 @@ async function runHandler(options?: StatementInfo) {
               updatableTable = refs[0];
             }
 
-            chosenView.setScrolling(statementDetail.content, false, undefined, inWindow, updatableTable); // Never errors
+            chosenView.setScrolling({ // Never errors
+              basicSelect: statementDetail.content,
+              withCancel: inWindow,
+              ref: updatableTable,
+              parameters,
+            })
           }
 
         } else if ([`explain`, `onlyexplain`].includes(statementDetail.qualifier)) {
@@ -372,7 +401,10 @@ async function runHandler(options?: StatementInfo) {
             if (onlyExplain) {
               chosenView.setLoadingText(`Explained.`, false);
             } else {
-              chosenView.setScrolling(statementDetail.content, false, explained.id); // Never errors
+              chosenView.setScrolling({ // Never errors
+                basicSelect: statementDetail.content,
+                queryId: explained.id,
+              })
             }
 
             explainTree = new ExplainTree(explained.vedata);
@@ -541,7 +573,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     const document = editor.document;
     const cursor = editor.document.offsetAt(editor.selection.active);
 
-    sqlDocument = new Document(document.getText());
+    sqlDocument = getSqlDocument(document);
     statementInfo.group = sqlDocument.getGroupByOffset(cursor);
   }
 
@@ -554,7 +586,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   }
 
   if (statementInfo.content) {
-    [`cl`, `json`, `csv`, `sql`, `explain`, `update`, `rpg`].forEach(mode => {
+    [`cl`, `json`, `csv`, `sql`, `explain`, `update`, `rpg`, `bind`].forEach(mode => {
       if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
         statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 
@@ -570,8 +602,8 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   }
 
   if (sqlDocument) {
-    if (statementInfo.qualifier !== `cl`) {
-      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, true);
+    if (![`cl`, `bind`].includes(statementInfo.qualifier)) {
+      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, {replacement: `snippet`});
     }
   }
 
