@@ -1,4 +1,4 @@
-import { commands, CompletionItemKind, Diagnostic, DiagnosticSeverity, languages, ProgressLocation, Range, TextDocument, Uri, window, workspace } from "vscode";
+import { commands, CompletionItemKind, Diagnostic, Disposable, DiagnosticSeverity, languages, ProgressLocation, Range, TextDocument, Uri, window, workspace } from "vscode";
 import {
   SQLType,
 } from "../../database/schemas";
@@ -58,9 +58,7 @@ export function setCheckerAvailableContext(additionalState = true) {
   commands.executeCommand(`setContext`, CHECKER_AVAILABLE_CONTEXT, available);
 }
 
-let checkerRunning = false;
 export function setCheckerRunningContext(isRunning: boolean) {
-  checkerRunning = isRunning;
   commands.executeCommand(`setContext`, CHECKER_RUNNING_CONTEXT, isRunning);
 }
 
@@ -73,7 +71,9 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
   }
 });
 
-export const problemProvider = [
+export const problemProvider: Disposable[] = [
+  sqlDiagnosticCollection, 
+
   workspace.onDidCloseTextDocument(e => {
     // Only clear errors from unsaved files.
     if (e.isUntitled) {
@@ -120,7 +120,8 @@ interface SqlDiagnostic extends Diagnostic {
 
 async function validateSqlDocument(document: TextDocument, specificStatement?: number) {
   const checker = SQLStatementChecker.get();
-  if (remoteAssistIsEnabled() && checker && !checkerRunning) {
+  const job = remoteAssistIsEnabled(true);
+  if (checker && job) {
     const basename = document.fileName ? path.basename(document.fileName) : `Untitled`;
     if (isSafeDocument(document)) {
       setCheckerRunningContext(true);
@@ -181,7 +182,7 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
 
               let syntaxChecked: SqlSyntaxError[] | undefined;
               try {
-                syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(sqlStatementContents) });
+                syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(job, sqlStatementContents) });
               } catch (e) {
                 window.showErrorMessage(`${basename}: the SQL syntax checker failed to run. ${e.message}`);
                 syntaxChecked = undefined;
@@ -286,7 +287,7 @@ function getStatementRangeFromGroup(currentGroup: StatementGroup, groupId: numbe
 
     const label = firstStatement.getLabel();
     if (label) {
-      if (label.toUpperCase() === `CL`) {
+      if ([`CL`, `BIND`].includes(label.toUpperCase())) {
         statementRange.validate = false;
       } else {
         statementRange.start = firstStatement.tokens[2].range.start;

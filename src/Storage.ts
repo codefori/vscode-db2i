@@ -1,11 +1,13 @@
 import vscode from 'vscode';
 
 const QUERIES_KEY = `queries`;
-const SERVERCOMPONENT_KEY = `serverVersion`
+const SERVERCOMPONENT_KEY = `serverVersion`;
 
 export interface QueryHistoryItem {
   query: string;
   unix: number;
+  substatements?: string[];
+  starred?: boolean;
 }
 
 export type QueryList = QueryHistoryItem[];
@@ -57,24 +59,6 @@ export class ConnectionStorage extends Storage {
 
   setServerComponentName(name: string) {
     return this.set(SERVERCOMPONENT_KEY, name);
-  }
-
-  /**
-   * Eventually we will want to remove this function, but for now we need to fix the past queries
-   */
-  fixPastQueries() {
-    const currentList = this.getPastQueries() as (string|QueryHistoryItem)[];
-    const hasOldFormat = currentList.some(item => typeof item === `string`);
-    if (hasOldFormat) {
-      const newList = currentList.map(item => {
-        if (typeof item === `string`) {
-          return { query: item, unix: Math.floor(Date.now() / 1000) - 86400 };
-        } else {
-          return item;
-        }
-      });
-      return this.setPastQueries(newList);
-    }
   }
 
   getPastQueries() {

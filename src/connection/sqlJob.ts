@@ -2,9 +2,10 @@ import { getInstance } from "../base";
 import { ServerComponent } from "./serverComponent";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import { SQLJob } from "@ibm/mapepire-js";
-import { ConnectionResult, JobStatus, QueryResult, ServerRequest, ServerResponse } from "@ibm/mapepire-js/dist/src/types";
-import { JobLogEntry } from "./types";
+import { ConnectionResult, QueryResult, ServerRequest, ServerResponse } from "@ibm/mapepire-js/dist/src/types";
+import { JobLogEntry, JobStatus } from "./types";
 import Statement from "../database/statement";
+import { NamingFormats } from "./manager";
 
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
@@ -13,9 +14,33 @@ export class OldSQLJob extends SQLJob {
   private selfState: SelfValue = "*NONE";
 
   id: string | undefined;
+  private currentSchemaStore: string | undefined;
 
   getSelfCode(): SelfValue {
     return this.selfState;
+  }
+
+  resetCurrentSchemaCache() {
+    this.currentSchemaStore = undefined;
+  }
+
+  async getCurrentSchema(): Promise<string> {
+    if (this.getNaming() === `sql`) {
+      if (this.currentSchemaStore) 
+        return this.currentSchemaStore;
+
+      const result = await this.execute<{'00001': string}>(`values (current schema)`);
+      if (result.success && result.data.length > 0) {
+        this.currentSchemaStore = result.data[0]['00001'];
+        return this.currentSchemaStore;
+      }
+    }
+
+    return this.options.libraries[0] || `QGPL`;
+  }
+
+  getNaming(): NamingFormats {
+    return this.options.naming;
   }
 
   public static async useExec() {
@@ -106,7 +131,7 @@ export class OldSQLJob extends SQLJob {
   getStatus(): JobStatus {
     const currentListenerCount = this.responseEmitter.eventNames().length;
 
-    return this.channel && currentListenerCount > 0 ? "busy" : this.status;
+    return this.channel && currentListenerCount > 0 ? JobStatus.BUSY : this.status as JobStatus;
   }
 
   async connect(): Promise<ConnectionResult> {
@@ -116,16 +141,17 @@ export class OldSQLJob extends SQLJob {
 
     this.channel.on(`error`, (err) => {
       ServerComponent.writeOutput(err);
-      this.dispose();
+      this.end();
     })
 
     this.channel.on(`close`, (code: number) => {
       ServerComponent.writeOutput(`Exited with code ${code}.`)
-      this.dispose();
+      this.end();
     })
 
     const props = Object
       .keys(this.options)
+      .filter(prop => this.options[prop] !== `` && this.options[prop] !== null && this.options[prop] !== undefined) // 0 is valid
       .map(prop => {
         if (Array.isArray(this.options[prop])) {
           return `${prop}=${(this.options[prop] as string[]).join(`,`)}`;
@@ -147,10 +173,10 @@ export class OldSQLJob extends SQLJob {
     const connectResult = await this.send<ConnectionResult>(connectionObject);
 
     if (connectResult.success === true) {
-      this.status = "ready";
+      this.status = JobStatus.READY;
     } else {
-      this.dispose();
-      this.status = "notStarted";
+      this.end();
+      this.status = JobStatus.NOT_STARTED;
       throw new Error(connectResult.error || `Failed to connect to server.`);
     }
 
@@ -167,19 +193,6 @@ export class OldSQLJob extends SQLJob {
       this.selfState = code;
     } catch (e) {
       throw e;
-    }
-  }
-  
-  async setCurrentSchema(schema: string): Promise<QueryResult<any>> {
-    if (schema) {
-      const upperSchema = Statement.delimName(schema, true);
-      const result = await this.execute(`set current schema = ?`, {parameters: [upperSchema]});
-      if (result.success) {
-        this.options.libraries[0] = upperSchema;
-      }
-
-      return result;
-  
     }
   }
 
@@ -217,13 +230,13 @@ export class OldSQLJob extends SQLJob {
       }));
     });
 
-    this.dispose();
+    this.end();
   }
 
-  dispose() {
+ private end() {
     this.channel.close();
     this.channel = undefined;
-    this.status = "ended";
+    this.status = JobStatus.ENDED;
     this.responseEmitter.removeAllListeners();
   }
 }

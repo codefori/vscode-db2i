@@ -4,6 +4,7 @@ import { posix } from "path";
 import { getValidatorSource, VALIDATOR_NAME, WRAPPER_NAME } from "./checker";
 import { JobManager } from "../../config";
 import { getBase, getInstance } from "../../base";
+import { JobInfo } from "../manager";
 
 interface SqlCheckError {
   CURSTMTLENGTH: number;
@@ -46,7 +47,7 @@ export class SQLStatementChecker implements IBMiComponent {
 
   private getLibrary(connection: IBMi) {
     if (!this.library) {
-      this.library = connection?.config?.tempLibrary.toUpperCase() || `ILEDITOR`;
+      this.library = connection?.getConfig()?.tempLibrary.toUpperCase() || `ILEDITOR`;
     }
 
     return this.library;
@@ -78,7 +79,7 @@ export class SQLStatementChecker implements IBMiComponent {
     return -1;
   }
 
-  async getRemoteState(connection: IBMi) {
+  async getRemoteState(connection: IBMi): Promise<ComponentState> {
     const lib = this.getLibrary(connection);
 
     const wrapperVersion = await SQLStatementChecker.getVersionOf(connection, lib, WRAPPER_NAME);
@@ -97,7 +98,7 @@ export class SQLStatementChecker implements IBMiComponent {
   update(connection: IBMi): ComponentState | Promise<ComponentState> {
     return connection.withTempDirectory(async tempDir => {
       const tempSourcePath = posix.join(tempDir, `sqlchecker.sql`);
-      await connection.content.writeStreamfileRaw(tempSourcePath, Buffer.from(this.getSource(connection), "utf-8"));
+      await connection.getConfig().writeStreamfileRaw(tempSourcePath, Buffer.from(this.getSource(connection), "utf-8"));
       const result = await connection.runCommand({
         command: `RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SYS)`,
         noLibList: true
@@ -134,14 +135,13 @@ export class SQLStatementChecker implements IBMiComponent {
     return undefined;
   }
 
-  async checkMultipleStatements(statements: string[]): Promise<SqlSyntaxError[]|undefined> {
+  async checkMultipleStatements(currentJob: JobInfo, statements: string[]): Promise<SqlSyntaxError[]|undefined> {
     const connection = getInstance()?.getConnection();
     if (!connection) return undefined;
 
-    const currentJob = JobManager.getSelection();
     const library = this.getLibrary(connection);
 
-    if (currentJob && library) {
+    if (library) {
       const checks = statements.map(stmt => `select * from table(${library}.${this.functionName}(?)) x`).join(` union all `);
       const stmt = currentJob.job.query<SqlCheckError>(checks, {parameters: statements});
       const result = await stmt.execute(statements.length);

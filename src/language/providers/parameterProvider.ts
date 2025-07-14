@@ -1,8 +1,8 @@
 import { MarkdownString, ParameterInformation, Position, Range, SignatureHelp, SignatureInformation, TextEdit, languages } from "vscode";
 import Statement from "../../database/statement";
-import Document from "../sql/document";
-import { getCallableParameters, getPositionData, isCallableType } from "./logic/callable";
-import { getParmAttributes, prepareParamType } from "./logic/completion";
+import Document, { getPositionData } from "../sql/document";
+import { isCallableType } from "./logic/callable";
+import { prepareParamType } from "./logic/completion";
 import { CallableType } from "../../database/callable";
 import { StatementType } from "../sql/types";
 import { remoteAssistIsEnabled } from "./logic/available";
@@ -11,9 +11,8 @@ import { getSqlDocument } from "./logic/parse";
 
 export const signatureProvider = languages.registerSignatureHelpProvider({ language: `sql` }, {
   async provideSignatureHelp(document, position, token, context) {
-    const content = document.getText();
     const offset = document.offsetAt(position);
-
+    
     if (remoteAssistIsEnabled()) {
 
       const sqlDoc = getSqlDocument(document);
@@ -23,7 +22,7 @@ export const signatureProvider = languages.registerSignatureHelpProvider({ langu
       const currentStatement = sqlDoc.getStatementByOffset(offset);
 
       if (currentStatement) {
-        const routineType: CallableType = currentStatement.type === StatementType.Call ? `PROCEDURE` : `FUNCTION`;
+        const routineType: CallableType = currentStatement. type === StatementType.Call ? `PROCEDURE` : `FUNCTION`;
         const callableRef = currentStatement.getCallableDetail(offset, true);
         // TODO: check the function actually exists before returning
         if (callableRef) {

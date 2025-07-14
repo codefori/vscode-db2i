@@ -2,6 +2,7 @@ import { Webview } from "vscode";
 import { getHeader } from "../html";
 
 import Configuration from "../../configuration";
+import { SqlParameter } from "./resultSetPanelProvider";
 
 export function setLoadingText(webview: Webview, text: string) {
   webview.postMessage({
@@ -294,7 +295,7 @@ document.getElementById('resultset').onclick = function(e){
 };
 `;
 
-export function generateScroller(basicSelect: string, isCL: boolean, withCancel?: boolean, updatable?: UpdatableInfo): string {
+export function generateScroller(basicSelect: string, parameters: SqlParameter[] = [], isCL: boolean = false, withCancel: boolean = false, updatable?: UpdatableInfo): string {
   const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
 
   return /*html*/`
@@ -376,10 +377,15 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
                     appendRows(data.rows);
                   }
 
-                  if (data.rows === undefined && totalRows === 0) {
+                  if (data.rows === undefined || totalRows === 0) {
                     document.getElementById(messageSpanId).innerText = 'Statement executed with no result set returned. Rows affected: ' + data.update_count;
-                  } else {
-                    document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + '. End of data.') : ('Loaded ' + totalRows + '. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');
+                  } else if (totalRows > 0) {
+                    if (data.executionTime) {
+                      document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + ' rows in ' + data.executionTime.toFixed() + 'ms. End of data.') : ('Loaded ' + totalRows + ' rows in ' + data.executionTime.toFixed() + 'ms. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');
+                    }
+                    else {
+                      document.getElementById(statusId).innerText = (noMoreRows ? ('Loaded ' + totalRows + ' rows. End of data.') : ('Loaded ' + totalRows + ' rows. More available.')) + ' ' + (updateTable ? 'Updatable.' : '');
+                    }
                     document.getElementById(jobId).innerText = data.jobId ? data.jobId : '';
                     document.getElementById(messageSpanId).style.visibility = "hidden";
                   }
@@ -412,6 +418,7 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
             isFetching = true;
             vscode.postMessage({
               query: basicSelect,
+              parameters: ${JSON.stringify(parameters)},
               isCL: ${isCL},
               queryId: myQueryId
             });
@@ -426,7 +433,11 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
             var header = document.getElementById(htmlTableId).getElementsByTagName('thead')[0];
             header.innerHTML = '';
             var headerRow = header.insertRow();
-            columnMetaData.map(col => columnHeadings === 'Label' ? col.label : col.name).forEach(colName => headerRow.insertCell().appendChild(document.createTextNode(colName)));
+            columnMetaData.map(column => {
+              var cell = headerRow.insertCell();
+              cell.appendChild(document.createTextNode(columnHeadings === 'Label' ? column.label : column.name));
+              cell.title = getTooltip(column, columnHeadings);
+            });
 
             // Initialize the footer
             var footer = document.getElementById(htmlTableId).getElementsByTagName('tfoot')[0];
@@ -488,7 +499,12 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
 
                 if (!isJson) {
                   // Append a text node to the cell
+                  newDiv.style.whiteSpace = "pre";
+                  newDiv.style["font-family"] = "monospace";
                   newDiv.appendChild(document.createTextNode(cell === undefined ? 'null' : cell));
+                  if(cell === undefined || cell === null) {
+                    newDiv.style["font-style"] = "italic";
+                  }
                 }
                 
                 newCell.column = columnName;
@@ -504,9 +520,43 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
               var headerCells = document.getElementById(htmlTableId).getElementsByTagName('thead')[0].rows[0].cells;
               for (let x = 0; x < headerCells.length; ++x) {
                 headerCells[x].innerText = columnHeadings === 'Label' ? columnMetaData[x].label : columnMetaData[x].name;
+                headerCells[x].title = getTooltip(columnMetaData[x], columnHeadings);
               }
             }
           }
+
+          function getTooltip(column, columnHeadings) {
+            let title = '';
+            switch (column.type) {
+              case 'CHAR':
+              case 'VARCHAR':
+              case 'CLOB':
+              case 'BINARY':
+              case 'VARBINARY':
+              case 'BLOB':
+              case 'GRAPHIC':
+              case 'VARGRAPHIC':
+              case 'DBCLOB':
+              case 'NCHAR':
+              case 'NVARCHAR':
+              case 'NCLOB':
+              case 'FLOAT':
+              case 'DECFLOAT':
+              case 'DATALINK':
+                title = column.type + '(' + column.precision + ')';
+                break;
+              case 'DECIMAL':
+              case 'NUMERIC':
+                title = column.type + '(' + column.precision + ', ' + column.scale + ')';
+                break;
+              default:
+                title = column.type;
+            }
+            title += \`\\n\`;
+            title += columnHeadings === 'Label' ? column.name : column.label;
+            return title;
+          }
+
         </script>
       </head>
       <body style="padding: 0;">

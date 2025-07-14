@@ -60,6 +60,11 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.getRecordLocks",
+        "title": "Get Record Locks",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.clearData",
         "title": "Clear...",
         "category": "Db2 for i"
@@ -96,21 +101,73 @@
         "icon": "$(output)"
       },
       {
-        "command": "vscode-db2i.setCurrentSchema",
-        "title": "Set current schema",
-        "category": "Db2 for i"
-      },
-      {
         "command": "vscode-db2i.setSchemaFilter",
         "title": "Set filter",
         "category": "Db2 for i",
         "icon": "$(search)"
+      },
+      {
+        "command": "vscode-db2i.viewPermissions",
+        "title": "View permissions",
+        "category": "Db2 for i"
       }
     ],
     "menus": {
       "commandPalette": [
         {
           "command": "vscode-db2i.setSchemaFilter",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateSQL",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getRelatedObjects",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getMTIs",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getIndexes",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getAuthorities",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getObjectLocks",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.getRecordLocks",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.clearData",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.copyData",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.deleteObject",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.renameObject",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.clearAdvisedIndexes",
           "when": "never"
         }
       ],
@@ -127,11 +184,6 @@
         }
       ],
       "view/item/context": [
-        {
-          "command": "vscode-db2i.setCurrentSchema",
-          "when": "viewItem == schema",
-          "group": "db2@1"
-        },
         {
           "command": "vscode-db2i.setSchemaFilter",
           "when": "viewItem == schema",
@@ -178,6 +230,11 @@
           "group": "db2workWith@5"
         },
         {
+          "command": "vscode-db2i.getRecordLocks",
+          "when": "viewItem == table",
+          "group": "db2workWith@6"
+        },
+        {
           "command": "vscode-db2i.clearData",
           "when": "viewItem == table",
           "group": "db2data@1"
@@ -196,6 +253,11 @@
           "command": "vscode-db2i.renameObject",
           "when": "viewItem == table || viewItem == view || viewItem == index",
           "group": "db2data@4"
+        },
+        {
+          "command": "vscode-db2i.viewPermissions",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "group": "db2data@5"
         },
         {
           "command": "vscode-db2i.advisedIndexes",

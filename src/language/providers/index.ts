@@ -1,7 +1,9 @@
+import { actionProvider } from "./actionProvider";
 import { completionProvider } from "./completionProvider";
 import { formatProvider } from "./formatProvider";
 import { hoverProvider, openProvider } from "./hoverProvider";
 import { signatureProvider } from "./parameterProvider";
+import { peekProvider } from "./peekProvider";
 import { checkDocumentDefintion, problemProvider } from "./problemProvider";
 import { Db2StatusProvider } from "./statusProvider";
 
@@ -16,9 +18,11 @@ export function languageInit() {
     signatureProvider,
     hoverProvider,
     openProvider,
+    // peekProvider,
     ...problemProvider,
     checkDocumentDefintion,
-    sqlLanguageStatus
+    sqlLanguageStatus,
+    actionProvider
   );
   
   return functionality;
