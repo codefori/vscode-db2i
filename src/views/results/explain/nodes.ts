@@ -128,14 +128,17 @@ export class ExplainTree {
 
     return node;
   }
+
+  private isValidTitle(title:string):boolean{
+    return /[a-zA-z]/.test(title)
+  }
   
   /**
    * Update the node properties
    */
   private updateNode(node: ExplainNode, value: any, state: NodeProcessingState, data: any): void {
     const title = data.IFA_COLHDG;
-    // Ignore rows with no title
-    if (!title) {
+    if (!this.isValidTitle(title)) {
       return;
     }
     const type = data.IFA_COLTYP;
