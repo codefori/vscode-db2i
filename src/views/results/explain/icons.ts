@@ -26,6 +26,7 @@ export const icons = {
   "Index Scan - Key Selection, Parallel":   `key`,
   "Insert":                                 `insert`,
   "Nested Loop Join":                       `add`,
+  "Radix Index Probe":                      `list-selection`,
   "Select":                                 `selection`,
   "Skip Sequential Table Scan":             `list-unordered`,
   "Skip Sequential Table Scan, Parallel":   `list-unordered`,

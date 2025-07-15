@@ -39,8 +39,8 @@ const cy = cytoscape({
   // Layout options
   layout: {
     name: "grid",
-    padding: 100, // Padding around the graph
-    spacingFactor: 0.4, // Spacing between nodes
+    padding: 50, // Padding around the graph
+    spacingFactor: 0.9, // Spacing between nodes
   },
 });
 
