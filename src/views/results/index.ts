@@ -10,7 +10,7 @@ import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } fro
 import Statement from "../../language/sql/statement";
 import { ExplainNode, ExplainTree } from "./explain/nodes";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
-import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
+import { DoveTreeDecorationProvider, toDoveTreeDecorationProviderUri } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
@@ -389,9 +389,10 @@ async function runHandler(options?: StatementInfo) {
             
             function addNode(node: ExplainNode, parent?: string) {
               const id = graph.addNode({
-                label: node.title,
+                label: ` ${node.title}`,
                 parent: parent,
                 data: node,
+                styles: node.styles
               });
 
               if (node.children) {
@@ -401,6 +402,15 @@ async function runHandler(options?: StatementInfo) {
               }
             }
 
+            const uri = toDoveTreeDecorationProviderUri(topLevel.highlights);
+            const decoration = doveTreeDecorationProvider.provideFileDecoration(uri)
+            // if (decoration?.color){
+            //   topLevel.styles["background-color"] = decoration.color.id;
+            //   topLevel.styles["shape"] = "rectangle"
+            // }
+            // topLevel.styles["shape"] = "rectangle"
+
+            
             addNode(topLevel);
 
             const webview = graph.createView(`Explain Graph`, (data: ExplainNode) => {

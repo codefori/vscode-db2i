@@ -2,6 +2,9 @@ import Statement from "../../../database/statement";
 import { ThemeColor } from "vscode";
 import Configuration from "../../../configuration";
 import { DoveNodeView } from "./doveNodeView";
+import { Styles } from "../../cytoscape";
+import * as vscode from 'vscode';
+import * as path from 'path';
 
 export interface ExplainNode {
   id: number;
@@ -15,8 +18,9 @@ export interface ExplainNode {
   highlights: NodeHighlights;
   /** Context objects include advised indexes and statistics */
   contextObjects: ContextObject[];
-  /** Context to set when displaying this node, used to identify additional actions */
+  /** Context to set when displaying t;his node, used to identify additional actions */
   nodeContext: string;
+  styles: Styles
 }
 
 export interface ExplainProperty {
@@ -54,10 +58,21 @@ export class ExplainTree {
   public get(): ExplainNode {
     return this.topNode;
   }
+
+  private setNodeShape(node: ExplainNode, shape:string){
+    node.styles["shape"] = shape
+  }
+
+  private setBackgroundImage(node: ExplainNode, imagePath:string){
+    node.styles['background-image'] = imagePath
+
+  }
   
   private processNode(index: number): ExplainNode {
-    let node = this.newNode(this.order[index]);
     let state = new NodeProcessingState();
+    let node = this.newNode(this.order[index]);
+    this.setNodeShape(node, "roundrectangle");
+    // this.setBackgroundImage(node, `url("../../../../media/explain/racing-finish-svgrepo-com.svg")`) 
 
     for (const data of this.flatNodes[node.id]) {
       // When a DELTA_ATTRIBUTES_INDICATOR row is encountered, the rows following it provide new values for previously processed attributes,
@@ -201,7 +216,8 @@ export class ExplainTree {
       tooltipProps: [],
       highlights: new NodeHighlights(),
       contextObjects: [],
-      nodeContext: ``
+      nodeContext: ``,
+      styles: {}
     };
   }
 
