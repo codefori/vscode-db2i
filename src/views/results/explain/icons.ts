@@ -6,7 +6,7 @@
  * @see https://www.ibm.com/docs/en/i/7.5?topic=ssw_ibm_i_75/apis/qqqvexpl.html#icon_labels
  * @see https://code.visualstudio.com/api/references/icons-in-labels
  */
-const icons = {
+export const icons = {
   "Bitmap Merge":                           `merge`,
   "Cache":                                  ``,
   "Cache Probe":                            ``,

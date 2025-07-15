@@ -1,9 +1,9 @@
 // Initialize Cytoscape
 
-// const vscode = acquireVsCodeApi();
-console.log("IN EXPLAIN.JS!!!")
 // @ts-ignore
-const vscode = window.acquireVsCodeApi()
+const iconMap = window.iconMap;
+// @ts-ignore
+const vscode = window.acquireVsCodeApi();
 // @ts-ignore
 const cy = cytoscape({
   container: document.getElementById("diagramContainer"),
@@ -38,10 +38,9 @@ const cy = cytoscape({
 
   // Layout options
   layout: {
-    name: "breadthfirst",
-    directed: true, // Directional tree
-    padding: 10, // Padding around the graph
-    spacingFactor: 1.5, // Spacing between nodes
+    name: "grid",
+    padding: 100, // Padding around the graph
+    spacingFactor: 0.4, // Spacing between nodes
   },
 });
 
@@ -50,26 +49,26 @@ cy.on("tap", "node", function (evt) {
   const id = evt.target.id();
   // @ts-ignore
   vscode.postMessage({
-      command: 'selected',
-      nodeId: id
+    command: "selected",
+    nodeId: id,
   });
 });
 
 const getCodiconClass = (label) => {
-  const codiconClass = new Map([["d", "d"]]);
-  return codiconClass.get(label);
+  const className = iconMap[label];
+  return className !== undefined ? `codicon-${className}` : "";
 };
 
-// cy.nodeHtmlLabel([
-//   {
-//     query: ".l1",
-//     valign: "top",
-//     halign: "center",
-//     valignBox: "top",
-//     halignBox: "center",
-//     tpl: function (data) {
-//       const className = getCodiconClass(data.label);
-//       return `<div><div class="icon"><i class="codicon ${className}"></i></div>`;
-//     },
-//   },
-// ]);
+cy.nodeHtmlLabel([
+  {
+    query: ".l1",
+    valign: "top",
+    halign: "center",
+    valignBox: "top",
+    halignBox: "center",
+    tpl: function (data) {
+      const className = getCodiconClass(data.label);
+      return `<div><div class="icon"><i class="codicon ${className}"></i></div>`;
+    },
+  },
+]);

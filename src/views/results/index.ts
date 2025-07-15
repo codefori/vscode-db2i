@@ -389,7 +389,7 @@ async function runHandler(options?: StatementInfo) {
             
             function addNode(node: ExplainNode, parent?: string) {
               const id = graph.addNode({
-                label: ` ${node.title}`,
+                label: node.title,
                 parent: parent,
                 data: node,
                 styles: node.styles

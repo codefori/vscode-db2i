@@ -1,6 +1,7 @@
 import { ViewColumn, window } from "vscode";
 import * as vscode from 'vscode';
 import { ContextProvider } from "../../contextProvider";
+import { icons } from "../results/explain/icons";
 
 export type Styles = {[key: string]: string};
 
@@ -40,7 +41,7 @@ export class CytoscapeGraph {
     this.elements.push({
       data: {id, label: node.label},
       style: node.styles || {},
-      classes: ".l1"
+      classes: "l1"
     });
 
     if (node.parent) {
@@ -68,8 +69,10 @@ export class CytoscapeGraph {
 
   private getHtml(webview: vscode.Webview): string {
     const data = JSON.stringify([...this.elements, ...this.edges])
+    const iconMap = JSON.stringify(icons);
     const context = ContextProvider.getContext()
     const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'src', 'views', 'cytoscape', 'media', 'explain.css'))
+    const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'src', 'views', 'cytoscape', 'media', 'codicons', 'dist', 'codicon.css'))
     const cytoscapeUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'src', 'views', 'cytoscape', 'media', 'cytoscape.min.js'))
     const cytoscapeHtmlLabelUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'src', 'views', 'cytoscape', 'media', 'cytoscape-node-html-label.min.js'))
     const explainUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'src', 'views', 'cytoscape', 'media', 'explain.js'))
@@ -83,11 +86,13 @@ export class CytoscapeGraph {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <link href="${cssUri}" rel="stylesheet" />
+      <link href="${codiconsUri}" rel="stylesheet" />
       <script src="${cytoscapeUri}"></script>
       <script src="${cytoscapeHtmlLabelUri}"></script>
       <script src="${explainUri}" defer></script>
       <script>
           window.data = ${data};
+          window.iconMap = ${iconMap}
       </script>
     </head>
     <body>
