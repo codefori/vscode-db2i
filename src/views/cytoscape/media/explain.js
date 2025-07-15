@@ -3,6 +3,8 @@
 // const vscode = acquireVsCodeApi();
 console.log("IN EXPLAIN.JS!!!")
 // @ts-ignore
+const vscode = window.acquireVsCodeApi()
+// @ts-ignore
 const cy = cytoscape({
   container: document.getElementById("diagramContainer"),
   // @ts-ignore
@@ -46,10 +48,11 @@ const cy = cytoscape({
 // Add click event to show alert for nodes
 cy.on("tap", "node", function (evt) {
   const id = evt.target.id();
-  //   vscode.postMessage({
-  //     command: 'selected',
-  //     nodeId: id
-  //   });
+  // @ts-ignore
+  vscode.postMessage({
+      command: 'selected',
+      nodeId: id
+  });
 });
 
 const getCodiconClass = (label) => {
