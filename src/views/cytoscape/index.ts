@@ -1,31 +1,33 @@
 import { ViewColumn, window } from "vscode";
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 import { ContextProvider } from "../../contextProvider";
 import { icons } from "../results/explain/icons";
+import { ExplainNode } from "../results/explain/nodes";
 
-export type Styles = {[key: string]: string};
+export type Styles = { [key: string]: string };
 
 export interface Element {
-  data: {id: string, label: string},
-  style: Styles,
-  classes: string
+  data: { id: string; label: string };
+  style: Styles;
+  classes: string;
 }
 
 export interface Edge {
-  data: {id: string, source: string, target: string}
+  data: { id: string; source: string; target: string };
 }
 
-interface NewNode { 
-  label: string, 
-  styles?: Styles, 
-  parent?: string,
-  data?: any;
+interface NewNode {
+  label: string;
+  styles?: Styles;
+  parent?: string;
+  data?: ExplainNode;
 }
 
 const randomId = () => Math.random().toString(36).substring(7);
 
 export class CytoscapeGraph {
   private elementData = new Map<string, any>();
+  private tooltips = {};
   private elements: Element[] = [];
   private edges: Edge[] = [];
 
@@ -36,17 +38,21 @@ export class CytoscapeGraph {
 
     if (node.data) {
       this.elementData.set(id, node.data);
+      const tooltip = node.data.tooltipProps
+        .map((prop) => `${prop.title}: ${prop.value}`)
+        .join("\n");
+      this.tooltips[id] = tooltip;
     }
 
     this.elements.push({
-      data: {id, label: node.label},
+      data: { id, label: node.label },
       style: node.styles || {},
-      classes: "l1"
+      classes: "l1",
     });
 
     if (node.parent) {
       this.edges.push({
-        data: {id: randomId(), source: node.parent, target: id}
+        data: { id: randomId(), source: node.parent, target: id },
       });
     }
 
@@ -54,31 +60,87 @@ export class CytoscapeGraph {
   }
 
   createView(title: string, onNodeSelected: (data: unknown) => void): any {
-    const webview = window.createWebviewPanel(`c`, title, {viewColumn: ViewColumn.One}, {enableScripts: true, retainContextWhenHidden: true});
+    const webview = window.createWebviewPanel(
+      `c`,
+      title,
+      { viewColumn: ViewColumn.One },
+      { enableScripts: true, retainContextWhenHidden: true }
+    );
     webview.webview.html = this.getHtml(webview.webview);
 
-    webview.webview.onDidReceiveMessage((message) => {
-      if (message.command === 'selected') {
-        const data = this.elementData.get(message.nodeId);
-        onNodeSelected(data);
-      }
-    }, undefined, []);
+    webview.webview.onDidReceiveMessage(
+      (message) => {
+        if (message.command === "selected") {
+          const data = this.elementData.get(message.nodeId);
+          onNodeSelected(data);
+        }
+      },
+      undefined,
+      []
+    );
 
     return webview;
   }
 
   private getHtml(webview: vscode.Webview): string {
-    const data = JSON.stringify([...this.elements, ...this.edges])
+    const data = JSON.stringify([...this.elements, ...this.edges]);
     const iconMap = JSON.stringify(icons);
-    const context = ContextProvider.getContext()
-    const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'src', 'views', 'cytoscape', 'media', 'explain.css'))
-    const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'src', 'views', 'cytoscape', 'media', 'codicons', 'dist', 'codicon.css'))
-    const cytoscapeUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'src', 'views', 'cytoscape', 'media', 'cytoscape.min.js'))
-    const cytoscapeHtmlLabelUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'src', 'views', 'cytoscape', 'media', 'cytoscape-node-html-label.min.js'))
-    const explainUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'src', 'views', 'cytoscape', 'media', 'explain.js'))
+    const tooltips = JSON.stringify(this.tooltips);
+    const context = ContextProvider.getContext();
+    const cssUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        context.extensionUri,
+        "src",
+        "views",
+        "cytoscape",
+        "media",
+        "explain.css"
+      )
+    );
+    const codiconsUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        context.extensionUri,
+        "src",
+        "views",
+        "cytoscape",
+        "media",
+        "codicons",
+        "dist",
+        "codicon.css"
+      )
+    );
+    const cytoscapeUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        context.extensionUri,
+        "src",
+        "views",
+        "cytoscape",
+        "media",
+        "cytoscape.min.js"
+      )
+    );
+    const cytoscapeHtmlLabelUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        context.extensionUri,
+        "src",
+        "views",
+        "cytoscape",
+        "media",
+        "cytoscape-node-html-label.min.js"
+      )
+    );
+    const explainUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        context.extensionUri,
+        "src",
+        "views",
+        "cytoscape",
+        "media",
+        "explain.js"
+      )
+    );
 
-  
-    return /*html*/`
+    return /*html*/ `
     <!DOCTYPE html>
     <html lang="en">
     
@@ -93,6 +155,7 @@ export class CytoscapeGraph {
       <script>
           window.data = ${data};
           window.iconMap = ${iconMap}
+          window.tooltips = ${tooltips}
       </script>
     </head>
     <body>

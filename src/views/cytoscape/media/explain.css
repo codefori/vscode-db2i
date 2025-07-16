@@ -14,3 +14,21 @@
     border: none;
     margin: 0;
 }
+
+.hover-box {
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: sans-serif;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid #444;
+  white-space: nowrap;
+  z-index: 1000;
+  transition: opacity 0.2s ease;
+  opacity: 0.95;
+  position: absolute;
+  background: #fff;
+  border: 1px solid #aaa;
+  padding: 4px 8px;
+  color: black;
+}

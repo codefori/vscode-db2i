@@ -3,6 +3,8 @@
 // @ts-ignore
 const iconMap = window.iconMap;
 // @ts-ignore
+const tooltips = window.tooltips;
+// @ts-ignore
 const vscode = window.acquireVsCodeApi();
 // @ts-ignore
 const cy = cytoscape({
@@ -72,3 +74,55 @@ cy.nodeHtmlLabel([
     },
   },
 ]);
+
+cy.nodes().on("mouseover", (event) => {
+  const node = event.target;
+  const id = node.id();
+  const tooltip = tooltips[id];
+  const hoverDiv = document.createElement("pre");
+  hoverDiv.innerText = tooltip;
+  hoverDiv.className = "hover-box";
+  document.body.appendChild(hoverDiv);
+
+  function updatePosition() {
+    const { x, y } = node.renderedPosition(); // center of node
+    const containerRect = cy.container().getBoundingClientRect(); // Cytoscape canvas
+    const boxRect = hoverDiv.getBoundingClientRect(); // Tooltip box
+    const boxWidth = boxRect.width;
+    const boxHeight = boxRect.height;
+
+    const nodeTopY = y - node.renderedOuterHeight() / 2;
+    const offset = 20;
+
+    let top = nodeTopY + containerRect.top - boxHeight - offset;
+    let left = x + containerRect.left - boxWidth / 2;
+
+    // Constrain to visible area
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Keep inside horizontal bounds
+    if (left < 4) left = 4;
+    if (left + boxWidth > viewportWidth - 4) {
+      left = viewportWidth - boxWidth - 4;
+    }
+
+    // If tooltip would be cut off vertically, show it *below* the node instead
+    if (top < 4) {
+      top = y + containerRect.top + node.renderedOuterHeight() / 2;
+    }
+
+    hoverDiv.style.left = `${left}px`;
+    hoverDiv.style.top = `${top}px`;
+  }
+
+  updatePosition(); // initial position
+  cy.on("pan zoom resize", updatePosition);
+  node.on("position", updatePosition);
+
+  node.once("mouseout", () => {
+    hoverDiv.remove();
+    cy.off("pan zoom resize", updatePosition);
+    node.off("position", updatePosition);
+  });
+});
