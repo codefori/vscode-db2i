@@ -42,7 +42,6 @@ export function getBorderWidthAndHeight(
 }
 
 // === Tooltip Position Utility ===
-
 export function getTooltipPosition(node, container, tooltipBox) {
   const { x, y } = node.renderedPosition();
   const containerRect = container.getBoundingClientRect();
