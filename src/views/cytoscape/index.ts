@@ -82,62 +82,34 @@ export class CytoscapeGraph {
     return webview;
   }
 
+  private getUri(path: string[], webview: vscode.Webview): vscode.Uri {
+    const context = ContextProvider.getContext();
+    const vscodeUri = vscode.Uri.joinPath(context.extensionUri, ...path);
+    return webview.asWebviewUri(vscodeUri);
+  }
+
   private getHtml(webview: vscode.Webview): string {
     const data = JSON.stringify([...this.elements, ...this.edges]);
     const iconMap = JSON.stringify(icons);
     const tooltips = JSON.stringify(this.tooltips);
-    const context = ContextProvider.getContext();
-    const cssUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        context.extensionUri,
-        "src",
-        "views",
-        "cytoscape",
-        "media",
-        "explain.css"
-      )
+    const cssUri = this.getUri(
+      ["src", "views", "cytoscape", "media", "explain.css"],
+      webview
     );
-    const codiconsUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        context.extensionUri,
-        "src",
-        "views",
-        "cytoscape",
-        "media",
-        "codicons",
-        "dist",
-        "codicon.css"
-      )
+
+    const codiconsUri = this.getUri(
+      ["src", "views", "cytoscape", "media", "codicons", "dist", "codicon.css"],
+      webview
     );
-    const cytoscapeUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        context.extensionUri,
-        "src",
-        "views",
-        "cytoscape",
-        "media",
-        "cytoscape.min.js"
-      )
+
+    const cytoscapeUri = this.getUri(
+      ["node_modules", "cytoscape", "dist", "cytoscape.min.js"],
+      webview
     );
-    const cytoscapeHtmlLabelUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        context.extensionUri,
-        "src",
-        "views",
-        "cytoscape",
-        "media",
-        "cytoscape-node-html-label.min.js"
-      )
-    );
-    const explainUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        context.extensionUri,
-        "src",
-        "views",
-        "cytoscape",
-        "media",
-        "explain.js"
-      )
+
+    const explainUri = this.getUri(
+      ["src", "views", "cytoscape", "media", "explain.js"],
+      webview
     );
 
     return /*html*/ `
@@ -150,7 +122,6 @@ export class CytoscapeGraph {
       <link href="${cssUri}" rel="stylesheet" />
       <link href="${codiconsUri}" rel="stylesheet" />
       <script src="${cytoscapeUri}"></script>
-      <script src="${cytoscapeHtmlLabelUri}"></script>
       <script type="module" src="${explainUri}" defer></script>
       <script>
           window.data = ${data};
