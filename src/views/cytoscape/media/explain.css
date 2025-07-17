@@ -1,9 +1,8 @@
-.codicon {
+/* .codicon {
   font-size: 30px !important;
   color: #007acc;
   margin-bottom: 8px;
-  /* margin-right: 8px; */
-}
+} */
     
 .diagram-container {
     position: absolute;
@@ -31,4 +30,9 @@
   border: 1px solid #aaa;
   padding: 4px 8px;
   color: black;
+}
+
+.border {
+    border: 3px solid #007acc;
+    pointer-events: none;
 }

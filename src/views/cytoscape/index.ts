@@ -151,7 +151,7 @@ export class CytoscapeGraph {
       <link href="${codiconsUri}" rel="stylesheet" />
       <script src="${cytoscapeUri}"></script>
       <script src="${cytoscapeHtmlLabelUri}"></script>
-      <script src="${explainUri}" defer></script>
+      <script type="module" src="${explainUri}" defer></script>
       <script>
           window.data = ${data};
           window.iconMap = ${iconMap}
