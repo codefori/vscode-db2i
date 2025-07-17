@@ -34,6 +34,7 @@
   "scripts": {
     "test": "vitest",
     "dsc": "npx tsx src/dsc",
+    "prepackage": "rm -rf media/explain/cytoscape.min.js && cp node_modules/cytoscape/dist/cytoscape.min.js media/explain",
     "package": "vsce package",
     "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
     "webpack": "vscd --clean && webpack --mode development",

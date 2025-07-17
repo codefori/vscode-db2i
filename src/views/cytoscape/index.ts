@@ -93,22 +93,22 @@ export class CytoscapeGraph {
     const iconMap = JSON.stringify(icons);
     const tooltips = JSON.stringify(this.tooltips);
     const cssUri = this.getUri(
-      ["src", "views", "cytoscape", "media", "explain.css"],
+      ["media", "explain", "explain.css"],
       webview
     );
 
     const codiconsUri = this.getUri(
-      ["src", "views", "cytoscape", "media", "codicons", "dist", "codicon.css"],
+      ["media", "explain", "dist", "codicon.css"],
       webview
     );
 
     const cytoscapeUri = this.getUri(
-      ["node_modules", "cytoscape", "dist", "cytoscape.min.js"],
+      ["media", "explain", "cytoscape.min.js"],
       webview
     );
 
     const explainUri = this.getUri(
-      ["src", "views", "cytoscape", "media", "explain.js"],
+      ["media", "explain", "explain.js"],
       webview
     );
 
