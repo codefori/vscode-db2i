@@ -10,7 +10,6 @@ import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } fro
 import Statement from "../../language/sql/statement";
 import { ExplainNode, ExplainTree } from "./explain/nodes";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
-import { DoveTreeDecorationProvider, toDoveTreeDecorationProviderUri } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
@@ -55,7 +54,6 @@ let resultSetProvider = new ResultSetPanelProvider();
 let explainTree: ExplainTree;
 let doveNodeView = new DoveNodeView();
 let doveNodeTreeView: TreeView<PropertyNode> = doveNodeView.getTreeView();
-let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration providor
 
 export function initialise(context: vscode.ExtensionContext) {
   setCancelButtonVisibility(false);
@@ -401,15 +399,6 @@ async function runHandler(options?: StatementInfo) {
                 }
               }
             }
-
-            const uri = toDoveTreeDecorationProviderUri(topLevel.highlights);
-            const decoration = doveTreeDecorationProvider.provideFileDecoration(uri)
-            // if (decoration?.color){
-            //   topLevel.styles["background-color"] = decoration.color.id;
-            //   topLevel.styles["shape"] = "rectangle"
-            // }
-            // topLevel.styles["shape"] = "rectangle"
-
             
             addNode(topLevel);
 
