@@ -68,3 +68,47 @@ export function getTooltipPosition(node, container, tooltipBox) {
 
   return { left, top };
 }
+
+export function showResizeWarning() {
+  const warningDiv = document.createElement("div");
+  warningDiv.className = "warning-div"
+
+  const h1 = document.createElement("h1");
+  h1.className = "warning-div-title"
+  h1.textContent = "Window is too small. Make your window larger and run again.";
+  
+  warningDiv.appendChild(h1);
+  document.body.appendChild(warningDiv);
+}
+
+export function isEnoughAreaWithoutBorders(cy, windowPadding) {
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+
+  let areaNeededForAllNodes = 0;
+  let maxHeightNeededForNode = 60;
+  let maxWidthNeededForNode = 100;
+
+  cy.nodes().forEach(node => {
+    const nodeW = node.renderedWidth();
+    const nodeH = node.renderedHeight();
+    areaNeededForAllNodes += nodeW * nodeH
+    maxHeightNeededForNode = Math.max(maxHeightNeededForNode, nodeH);
+    maxWidthNeededForNode = Math.max(maxWidthNeededForNode, nodeW);
+  });
+
+  const usableWidth = windowWidth - 2 * windowPadding;
+  const usableHeight = windowHeight - 2 * windowPadding;
+
+  const maxCols = Math.floor(usableWidth / maxWidthNeededForNode);
+  const maxRows = Math.floor(usableHeight / maxHeightNeededForNode);
+
+  const maxNodesThatCanFit = maxCols * maxRows;
+
+  return cy.nodes().length <= maxNodesThatCanFit;
+}
+
+export function isWindowTooSmall(windowPadding){
+    const extraRoom = 50
+    return windowPadding * 2 >= window.innerWidth || windowPadding * 2 + extraRoom >= window.innerHeight
+}

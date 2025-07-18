@@ -31,3 +31,20 @@
     border: 3px solid #007acc;
     pointer-events: none;
 }
+
+.warning-div {
+  position: fixed;
+  width: 100%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  padding: 2rem;
+  text-align: center;
+}
+
+.warning-div-title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #007acc;
+}
