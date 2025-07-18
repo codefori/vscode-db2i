@@ -62,8 +62,7 @@ export function getTooltipPosition(node, container, tooltipBox) {
   }
 
   if (top < MIN_DISTANCE_TO_VIEWPORT) {
-    top =
-      y + containerRect.top + node.renderedOuterHeight() / 2 + TOOLTIP_OFFSET;
+    top = y + containerRect.top + node.renderedOuterHeight() / 2;
   }
 
   return { left, top };
