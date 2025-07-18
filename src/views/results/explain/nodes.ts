@@ -2,6 +2,7 @@ import Statement from "../../../database/statement";
 import { ThemeColor } from "vscode";
 import Configuration from "../../../configuration";
 import { DoveNodeView } from "./doveNodeView";
+import { Styles } from "../../cytoscape";
 
 export interface ExplainNode {
   id: number;
@@ -17,6 +18,7 @@ export interface ExplainNode {
   contextObjects: ContextObject[];
   /** Context to set when displaying this node, used to identify additional actions */
   nodeContext: string;
+  styles: Styles
 }
 
 export interface ExplainProperty {
@@ -54,10 +56,15 @@ export class ExplainTree {
   public get(): ExplainNode {
     return this.topNode;
   }
+
+  private setNodeShape(node: ExplainNode, shape:string){
+    node.styles["shape"] = shape
+  }
   
   private processNode(index: number): ExplainNode {
-    let node = this.newNode(this.order[index]);
     let state = new NodeProcessingState();
+    let node = this.newNode(this.order[index]);
+    this.setNodeShape(node, "roundrectangle");
 
     for (const data of this.flatNodes[node.id]) {
       // When a DELTA_ATTRIBUTES_INDICATOR row is encountered, the rows following it provide new values for previously processed attributes,
@@ -128,14 +135,17 @@ export class ExplainTree {
 
     return node;
   }
+
+  private isValidTitle(title:string):boolean{
+    return /[a-zA-z]/.test(title)
+  }
   
   /**
    * Update the node properties
    */
   private updateNode(node: ExplainNode, value: any, state: NodeProcessingState, data: any): void {
     const title = data.IFA_COLHDG;
-    // Ignore rows with no title
-    if (!title) {
+    if (!this.isValidTitle(title)) {
       return;
     }
     const type = data.IFA_COLTYP;
@@ -198,7 +208,8 @@ export class ExplainTree {
       tooltipProps: [],
       highlights: new NodeHighlights(),
       contextObjects: [],
-      nodeContext: ``
+      nodeContext: ``,
+      styles: {}
     };
   }
 
