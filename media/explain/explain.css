@@ -1,0 +1,51 @@
+.diagram-container {
+  position: absolute;
+  margin: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  overflow: hidden;
+  border: none;
+  box-sizing: border-box;
+}
+
+.hover-box {
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: sans-serif;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid #444;
+  white-space: nowrap;
+  z-index: 1000;
+  transition: opacity 0.2s ease;
+  opacity: 0.95;
+  position: absolute;
+  background: #fff;
+  border: 1px solid #aaa;
+  padding: 4px 8px;
+  color: black;
+}
+
+.border {
+  pointer-events: none;
+}
+
+.warning-div {
+  position: fixed;
+  width: 100%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  padding: 2rem;
+  text-align: center;
+}
+
+.warning-div-title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #007acc;
+}

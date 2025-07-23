@@ -26,6 +26,7 @@ import { queryHistory } from "./views/queryHistoryView";
 import { registerCopilotProvider } from "./aiProviders/copilot";
 import { registerDb2iTablesProvider } from "./aiProviders/continue/listTablesContextProvider";
 import { setCheckerAvailableContext } from "./language/providers/problemProvider";
+import { ContextProvider } from "./contextProvider";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -42,6 +43,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   console.log(`Congratulations, your extension "vscode-db2i" is now active!`);
 
   loadBase(context);
+  ContextProvider.setContext(context);
 
   const exampleBrowser = new ExampleBrowser(context);
   const selfCodesView = new selfCodesResultsView(context);
