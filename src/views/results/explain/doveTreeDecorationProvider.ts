@@ -35,7 +35,7 @@ export class DoveTreeDecorationProvider implements FileDecorationProvider {
      * @inheritdoc
      * Provides tree node decorations specific to Db2 for i Visual Explain.
      */
-    async provideFileDecoration(uri: Uri): Promise<FileDecoration | undefined> {
+    provideFileDecoration(uri: Uri): FileDecoration | null {
         // Only decorate tree items tagged with the VE scheme
         if (uri?.scheme === doveUriScheme) {
             // The Uri path should simply be a number that represents the highlight attributes

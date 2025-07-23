@@ -107,6 +107,12 @@
         "icon": "$(gear)"
       },
       {
+        "command": "vscode-db2i.dove.export",
+        "title": "Export current VE data",
+        "category": "Db2 for i",
+        "icon": "$(file)"
+      },
+      {
         "command": "vscode-db2i.dove.node.copy",
         "title": "Copy value",
         "category": "Db2 for i",
@@ -128,6 +134,10 @@
           "when": "vscode-db2i:explaining == true"
         },
         {
+          "command": "vscode-db2i.dove.export",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
           "command": "vscode-db2i.dove.node.copy",
           "when": "never"
         }
@@ -141,6 +151,11 @@
         {
           "command": "vscode-db2i.dove.editSettings",
           "group": "navigation@1",
+          "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.export",
+          "group": "navigation@2",
           "when": "view == vscode-db2i.dove.nodes"
         },
         {
