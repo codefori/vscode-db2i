@@ -27,17 +27,23 @@ if (isWindowTooSmall(GRAPH_PADDING)) {
         selector: "node",
         style: {
           padding: "5px",
-          width: "150px", 
+          width: "150px",
           shape: "roundrectangle",
           "background-color": "lightgray",
-          color: "var(--vscode-list-activeSelectionForeground)",
+          color: "black",
           label: "data(label)",
-          "text-wrap": "wrap", 
-          "text-max-width": "150px", 
+          "text-wrap": "wrap",
+          "text-max-width": "150px",
           "text-valign": "center",
           "text-halign": "center",
           "font-size": "14px",
           "line-height": "1.2",
+        },
+      },
+      {
+        selector: "node:selected",
+        style: {
+          "background-color": "deepskyblue",
         },
       },
       {
@@ -65,8 +71,8 @@ if (isWindowTooSmall(GRAPH_PADDING)) {
   });
 
   window.addEventListener("resize", () => {
-    cy.resize(); 
-    cy.fit(cy.nodes().boundingBox(), GRAPH_PADDING); 
+    cy.resize();
+    cy.fit(cy.nodes().boundingBox(), GRAPH_PADDING);
     cy.center();
   });
 
