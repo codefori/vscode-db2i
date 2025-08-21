@@ -97,6 +97,11 @@
     },
     "commands": [
       {
+        "command": "vscode-db2i.language.getStatements",
+        "title": "Get statements",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.json.pasteGenerator",
         "title": "Paste JSON as SQL",
         "category": "Db2 for i"
@@ -114,6 +119,10 @@
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "vscode-db2i.language.getStatements",
+          "when": "never"
+        },
         {
           "command": "vscode-db2i.getStatementUri",
           "when": "editorLangId == sql"
