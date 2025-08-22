@@ -377,8 +377,11 @@ async function runHandler(options?: StatementInfo) {
               updatableTable = refs[0];
             }
 
+            const eol = editor.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+            const basicSelect = statementDetail.content.split(eol).filter(line => !line.trimStart().startsWith(`--`)).join(eol);
+
             chosenView.setScrolling({ // Never errors
-              basicSelect: statementDetail.content,
+              basicSelect: basicSelect,
               withCancel: inWindow,
               ref: updatableTable,
               parameters,
