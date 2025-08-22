@@ -264,6 +264,7 @@ async function runHandler(options?: StatementInfo) {
   vscode.commands.executeCommand('vscode-db2i.dove.close');
 
   if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
+    const eol = editor.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
     let chosenView = resultSetProvider;
 
     const useWindow = (title: string, column?: ViewColumn) => {
@@ -426,8 +427,10 @@ async function runHandler(options?: StatementInfo) {
             const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
             setCancelButtonVisibility(false);
             updateStatusBar({executing: false});
+
+            const statement = statementDetail.content.split(eol).map((line, index) => index === 0 ? line : `// ${line}`).join(eol);
             let content = `**free\n\n`
-              + `// statement: ${statementDetail.content}\n\n`
+              + `// statement: ${statement}\n\n`
               + `// Row data structure\n`
               + queryResultToRpgDs(result, Configuration.get(`codegen.rpgSymbolicNameSource`));
             const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
