@@ -23,6 +23,11 @@
             "type": "boolean",
             "description": "Make larger cells collapsed by default",
             "default": false
+          },
+          "vscode-db2i.resultsets.outputDecorations": {
+            "type": "boolean",
+            "description": "Show INOUT and OUT parameters inside the editor",
+            "default": true
           }
         }
       },
