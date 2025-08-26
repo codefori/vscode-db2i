@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.14.0",
+  "version": "1.14.0-dev1",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -365,6 +365,11 @@
       ]
     },
     "commands": [
+      {
+        "command": "vscode-db2i.language.getStatements",
+        "title": "Get statements",
+        "category": "Db2 for i"
+      },
       {
         "command": "vscode-db2i.json.pasteGenerator",
         "title": "Paste JSON as SQL",
@@ -794,6 +799,10 @@
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "vscode-db2i.language.getStatements",
+          "when": "never"
+        },
         {
           "command": "vscode-db2i.getStatementUri",
           "when": "editorLangId == sql"
