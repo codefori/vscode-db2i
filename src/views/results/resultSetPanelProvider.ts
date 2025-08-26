@@ -10,10 +10,13 @@ import { ObjectRef } from "../../language/sql/types";
 import Table from "../../database/table";
 import Statement from "../../database/statement";
 import { TableColumn } from "../../types";
+import { statementDone } from "./editorUi";
+import { QueryResult } from "@ibm/mapepire-js";
 
 export type SqlParameter = string|number;
 
 export interface ScrollerOptions {
+  uiId?: string;
   basicSelect: string;
   parameters?: SqlParameter[];
   isCL?: boolean;
@@ -106,7 +109,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
               if (this.currentQuery.getState() !== "RUN_DONE") {
                 setCancelButtonVisibility(true);
-                let queryResults = undefined;
+                let queryResults: QueryResult<any> = undefined;
                 let startTime = 0;
                 let endTime = 0;
                 let executionTime: number|undefined;
@@ -118,7 +121,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   startTime = performance.now();
                   queryResults = await this.currentQuery.execute();
                   endTime = performance.now();
-                  executionTime = (endTime - startTime)
+                  executionTime = (endTime - startTime);
+
+                  if (message.uiId) {
+                    statementDone(message.uiId, {paramsOut: queryResults.output_parms});
+                  }
                 }
                 const jobId = this.currentQuery.getHostJob().id;
 
@@ -285,7 +292,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       }
     }
 
-    this._view.webview.html = html.generateScroller(options.basicSelect, options.parameters, options.isCL, options.withCancel, updatable);
+    this._view.webview.html = html.generateScroller(options.uiId, options.basicSelect, options.parameters, options.isCL, options.withCancel, updatable);
 
     this._view.webview.postMessage({
       command: `fetch`,
