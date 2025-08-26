@@ -427,7 +427,8 @@ async function runHandler(options?: StatementInfo) {
             setCancelButtonVisibility(false);
             updateStatusBar({executing: false});
             let content = `**free\n\n`
-              + `// statement: ${statementDetail.content}\n\n`
+              + `// statement:\n`
+              + `// ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n// ') }\n\n`
               + `// Row data structure\n`
               + queryResultToRpgDs(result, Configuration.get(`codegen.rpgSymbolicNameSource`));
             const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
