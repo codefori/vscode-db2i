@@ -12,6 +12,8 @@ import Statement from "../../database/statement";
 import { getCopyUi } from "./copyUI";
 import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement } from "./statements";
 import { BasicSQLObject } from "../../types";
+import { TextDecoder } from "util";
+import { parse } from "csv/sync";
 
 const itemIcons = {
   "table": `split-horizontal`,
@@ -393,10 +395,103 @@ export default class schemaBrowser {
             this.refresh(node);
           }
         }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.importData`, async () => {
+        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL` }, async () => {
+          try {
+            const uri = await this.pickFile();
+            if (!uri) { return; }
+            const data = await this.readFile(uri);
+            const tableName = `SYSIBM.SYSDUMMY1`;
+            let ext: string = (uri.fsPath.split('.').pop() || '').toLowerCase();
+
+            if (ext != `csv` && ext != `json`) {
+              ext = await vscode.window.showQuickPick(['csv','json'], { placeHolder: 'What format is this file?' });
+              if (!ext) { return; }
+            }
+
+            let rows: any[] = [];
+
+            if (ext === `csv`) {
+              rows = parse(data, {
+                columns: true,
+                cast: true
+              });
+              if (!rows.length) { 
+                vscode.window.showWarningMessage('No rows found.'); 
+                return;
+              }
+
+              // Get the headers and types
+              // Using the first two rows, first row is header names, second row will tell us the type
+
+            } else if (ext === `json`) {
+              rows = JSON.parse(data);
+              if (!Array.isArray(rows)) {
+                throw new Error('Unsupported JSON format: expected an array of objects.');
+              }
+            } 
+
+            if (!rows.length) { 
+              vscode.window.showWarningMessage('No rows found.'); 
+              return;
+            }
+
+            // Get headers using the first row of data
+            const colNames = Object.keys(rows[0]);
+            const cols = colNames.join(', ');
+
+            // Generate the INSERT statement
+            let content: string = `INSERT INTO SYSIBM.SYSDUMMY1 (${cols}) \nVALUES\n`;
+            for (let i = 0; i < rows.length; i++) {
+              const row = rows[i];
+              let allValues = [];
+              for(const col of colNames) {
+                const val = row[col];
+                if (typeof val === `string`) {
+                  allValues.push(`'${val}'`);
+                } else 
+                  allValues.push(val);
+              }
+              content += `  (${allValues.join(', ')})`;
+
+              // If not at last item yet, append a comma
+              if (i != rows.length - 1) {
+                content += `,\n`;
+              }
+            }
+
+            content += `;`;
+            
+            // Open the generated SQL in a new file
+            const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+            await vscode.window.showTextDocument(textDoc);
+          } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+          }
+        });
       })
     )
 
     getInstance().subscribe(context, `connected`, `db2i-clearCacheAndRefresh`, () => this.clearCacheAndRefresh());
+  }
+
+  async pickFile(): Promise<vscode.Uri | undefined> {
+    const res = await vscode.window.showOpenDialog({
+      canSelectMany: false,
+      openLabel: 'Import',
+      filters: {
+        'Data files': ['csv', 'json'],
+        'All files': ['*']
+      }
+    });
+    return res?.[0];
+  }
+
+  async readFile(uri: vscode.Uri): Promise<string> {
+    const ab = await vscode.workspace.fs.readFile(uri);
+    return new TextDecoder('utf-8').decode(ab);
   }
 
   clearCacheAndRefresh() {

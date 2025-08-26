@@ -110,6 +110,11 @@
         "command": "vscode-db2i.getStatementUri",
         "title": "Copy sharable statement URI",
         "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.importData",
+        "title": "Generate Insert from File",
+        "category": "Db2 for IBM i"
       }
     ],
     "menus": {
