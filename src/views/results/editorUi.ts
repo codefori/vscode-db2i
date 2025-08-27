@@ -25,9 +25,9 @@ export function statementDone(uniqueId: string, options: { paramsOut?: Parameter
   const existingStatement = priorStatements[uniqueId];
   const activeEditor = window.activeTextEditor;
 
-  const shortValue = (v: any) => {
+  const shortValue = (v: any, short = true) => {
     if (typeof v === "string") {
-      return v.length > 10 ? `${v.substring(0, 10)}...` : v;
+      return short && v.length > 10 ? `${v.substring(0, 10)}...` : v;
     }
     return v || `-`;
   };
@@ -52,7 +52,8 @@ export function statementDone(uniqueId: string, options: { paramsOut?: Parameter
             }
           });
 
-          const values = `=> ` + options.paramsOut.map(p => shortValue(p.value)).join(", ");
+          const shouldBeShort = options.paramsOut.length > 1;
+          const values = `=> ` + options.paramsOut.map((p) => shortValue(p.value, shouldBeShort)).join(", ");
 
           const decoration: DecorationOptions = {
             range: new Range(startPosition, endPosition),
