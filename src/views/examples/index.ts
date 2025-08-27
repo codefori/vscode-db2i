@@ -18,6 +18,7 @@ export interface SQLExample {
   content: string[];
   requirements?: ExampleSystemRequirements;
   isNotebook?: boolean;
+  customFileUri?: Uri;
 };
 
 // Unlike the bulk of the examples defined below, the services examples are retrieved dynamically
@@ -6057,7 +6058,8 @@ export async function getCustomExamples(): Promise<SQLExamplesList> {
 
     examplesList[group].push({
       name: name,
-      content: textDocument.getText().split(eol)
+      content: textDocument.getText().split(eol),
+      customFileUri: textDocument.uri
     });
   }
 

@@ -28,6 +28,40 @@
         "title": "Refresh Examples",
         "category": "Db2 for i (Examples)",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-db2i.examples.add",
+        "title": "Add...",
+        "category": "Db2 for i (Examples)"
+      },
+      {
+        "command": "vscode-db2i.examples.remove",
+        "title": "Remove...",
+        "category": "Db2 for i (Examples)"
+      },
+      {
+        "command": "vscode-db2i.examples.edit",
+        "title": "Edit Example",
+        "category": "Db2 for i (Examples)"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "vscode-db2i.customExampleDirectories",
+        "label": "Custom Example Directories",
+        "icon": "$(sparkle)"
+      }
+    ],
+    "vscode-db2i.customExampleDirectories": [
+      {
+        "command": "vscode-db2i.examples.add",
+        "group": "navigation@0",
+        "when": "view == exampleBrowser"
+      },
+      {
+        "command": "vscode-db2i.examples.remove",
+        "group": "navigation@1",
+        "when": "view == exampleBrowser"
       }
     ],
     "menus": {
@@ -43,9 +77,21 @@
           "when": "view == exampleBrowser"
         },
         {
-          "command": "vscode-db2i.examples.reload",
+          "submenu": "vscode-db2i.customExampleDirectories",
           "group": "navigation@2",
           "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.examples.reload",
+          "group": "navigation@3",
+          "when": "view == exampleBrowser"
+        }
+      ],
+      "view/item/context": [
+        {
+        "command": "vscode-db2i.examples.edit",
+          "when": "view == exampleBrowser && viewItem == example.custom",
+          "group": "0_open"
         }
       ]
     },

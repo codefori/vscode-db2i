@@ -2,6 +2,7 @@ import { Event, EventEmitter, ExtensionContext, MarkdownString, ThemeIcon, TreeD
 import { Examples, SQLExample, ServiceInfoLabel, getMergedExamples } from ".";
 import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
 import { osDetail } from "../../config";
+import Configuration from "../../configuration";
 
 export const openExampleCommand = `vscode-db2i.examples.open`;
 
@@ -48,6 +49,49 @@ export class ExampleBrowser implements TreeDataProvider<any> {
         this.refresh();
       }),
 
+      commands.registerCommand("vscode-db2i.examples.add", async () => {
+        const dirsToAdd = await window.showOpenDialog({
+          title: "Add Custom Example Directory",
+          canSelectFolders: true,
+          canSelectFiles: false,
+          canSelectMany: true
+        });
+
+        if (dirsToAdd && dirsToAdd.length > 0) {
+          const existingDirectories = Configuration.get<string[]>(`examples.customExampleDirectories`) || [];
+          const newDirectoryPaths = dirsToAdd.map(dir => dir.fsPath);
+          const updatedDirectories = Array.from(new Set([...existingDirectories, ...newDirectoryPaths]));
+          await Configuration.set(`examples.customExampleDirectories`, updatedDirectories);
+        }
+      }),
+
+      commands.registerCommand("vscode-db2i.examples.remove", async () => {
+        const existingDirectories = Configuration.get<string[]>(`examples.customExampleDirectories`) || [];
+        if (existingDirectories.length === 0) {
+          window.showErrorMessage(`No custom example directories to remove.`);
+          return;
+        }
+
+        const quickPickItems = existingDirectories.map(dir => ({ label: dir }));
+        const selectedDirectories = await window.showQuickPick(quickPickItems, {
+          title: `Select custom example directories to remove`,
+          canPickMany: true
+        });
+
+        if (selectedDirectories && selectedDirectories.length > 0) {
+          const dirsToRemove = selectedDirectories.map(item => item.label);
+          const updatedDirectories = existingDirectories.filter(dir => !dirsToRemove.includes(dir));
+          await Configuration.set(`examples.customExampleDirectories`, updatedDirectories);
+        }
+      }),
+
+      commands.registerCommand("vscode-db2i.examples.edit", async (item: SQLExampleItem) => {
+        if (item.example.customFileUri) {
+          const document = await workspace.openTextDocument(item.example.customFileUri);
+          await window.showTextDocument(document);
+        }
+      }),
+
       workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('vscode-db2i.examples.customExampleDirectories')) {
           this.refresh();
@@ -64,7 +108,7 @@ export class ExampleBrowser implements TreeDataProvider<any> {
     return element;
   }
 
-  async getChildren(element?: ExampleGroupItem): Promise<SQLExampleItem[]> {
+  async getChildren(element?: ExampleGroupItem): Promise<TreeItem[]> {
     if (element) {
       return element.getChildren();
     }
@@ -104,11 +148,12 @@ class ExampleGroupItem extends TreeItem {
 }
 
 class SQLExampleItem extends TreeItem {
-  constructor(example: SQLExample) {
+  constructor(public example: SQLExample) {
     super(example.name, TreeItemCollapsibleState.None);
     this.iconPath = ThemeIcon.File;
     this.resourceUri = Uri.parse('_.sql');
     this.tooltip = new MarkdownString(['```sql', example.content.join(`\n`), '```'].join(`\n`));
+    this.contextValue = example.customFileUri ? `example.custom` : `example`;
 
     this.command = {
       command: openExampleCommand,

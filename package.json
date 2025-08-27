@@ -794,6 +794,21 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "vscode-db2i.examples.add",
+        "title": "Add...",
+        "category": "Db2 for i (Examples)"
+      },
+      {
+        "command": "vscode-db2i.examples.remove",
+        "title": "Remove...",
+        "category": "Db2 for i (Examples)"
+      },
+      {
+        "command": "vscode-db2i.examples.edit",
+        "title": "Edit Example",
+        "category": "Db2 for i (Examples)"
+      },
+      {
         "command": "vscode-db2i.notebook.fromSqlUri",
         "title": "Open as Notebook",
         "category": "IBM i Notebooks",
@@ -1100,8 +1115,13 @@
           "when": "view == exampleBrowser"
         },
         {
-          "command": "vscode-db2i.examples.reload",
+          "submenu": "vscode-db2i.customExampleDirectories",
           "group": "navigation@2",
+          "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.examples.reload",
+          "group": "navigation@3",
           "when": "view == exampleBrowser"
         }
       ],
@@ -1274,6 +1294,11 @@
           "command": "vscode-db2i.self.explainSelf",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && vscode-db2i:continueExtensionActive",
           "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.examples.edit",
+          "when": "view == exampleBrowser && viewItem == example.custom",
+          "group": "0_open"
         }
       ],
       "editor/title": [
@@ -1348,6 +1373,11 @@
         "icon": "$(notebook-execute)",
         "id": "sql/editor/context",
         "label": "Run SQL statement"
+      },
+      {
+        "id": "vscode-db2i.customExampleDirectories",
+        "label": "Custom Example Directories",
+        "icon": "$(sparkle)"
       }
     ],
     "keybindings": [
@@ -1468,6 +1498,18 @@
       {
         "view": "vscode-db2i.self.nodes",
         "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
+      }
+    ],
+    "vscode-db2i.customExampleDirectories": [
+      {
+        "command": "vscode-db2i.examples.add",
+        "group": "navigation@0",
+        "when": "view == exampleBrowser"
+      },
+      {
+        "command": "vscode-db2i.examples.remove",
+        "group": "navigation@1",
+        "when": "view == exampleBrowser"
       }
     ],
     "notebooks": [
