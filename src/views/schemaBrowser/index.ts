@@ -397,15 +397,55 @@ export default class schemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.importData`, async () => {
-        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL` }, async () => {
+      vscode.commands.registerCommand(`vscode-db2i.importDataContextMenu`, async () => {
+        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL` }, async (arg?: any) => {
           try {
+            const data = vscode.window.activeTextEditor.document.getText();
+            const uri = vscode.window.activeTextEditor.document.uri;
+            await this.generateInsert(uri, data);
+          } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+          }
+        });
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.importData`, async () => {
+        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL` }, async (arg?: any) => {
+          try {            
             const uri = await this.pickFile();
             if (!uri) { return; }
             const data = await this.readFile(uri);
-            const tableName = `SYSIBM.SYSDUMMY1`;
-            let ext: string = (uri.fsPath.split('.').pop() || '').toLowerCase();
 
+            await this.generateInsert(uri, data);
+          } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+          }
+        });
+      })
+    )
+
+    getInstance().subscribe(context, `connected`, `db2i-clearCacheAndRefresh`, () => this.clearCacheAndRefresh());
+  }
+
+  async pickFile(): Promise<vscode.Uri | undefined> {
+    const res = await vscode.window.showOpenDialog({
+      canSelectMany: false,
+      openLabel: 'Import',
+      filters: {
+        'Data files': ['csv', 'json'],
+        'All files': ['*']
+      }
+    });
+    return res?.[0];
+  }
+
+  async readFile(uri: vscode.Uri): Promise<string> {
+    const ab = await vscode.workspace.fs.readFile(uri);
+    return new TextDecoder('utf-8').decode(ab);
+  }
+
+  async generateInsert(uri: vscode.Uri, data: string) {
+    let ext: string = (uri.fsPath.split('.').pop() || '').toLowerCase();
             if (ext != `csv` && ext != `json`) {
               ext = await vscode.window.showQuickPick(['csv','json'], { placeHolder: 'What format is this file?' });
               if (!ext) { return; }
@@ -467,31 +507,6 @@ export default class schemaBrowser {
             // Open the generated SQL in a new file
             const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
             await vscode.window.showTextDocument(textDoc);
-          } catch (e) {
-            vscode.window.showErrorMessage(e.message);
-          }
-        });
-      })
-    )
-
-    getInstance().subscribe(context, `connected`, `db2i-clearCacheAndRefresh`, () => this.clearCacheAndRefresh());
-  }
-
-  async pickFile(): Promise<vscode.Uri | undefined> {
-    const res = await vscode.window.showOpenDialog({
-      canSelectMany: false,
-      openLabel: 'Import',
-      filters: {
-        'Data files': ['csv', 'json'],
-        'All files': ['*']
-      }
-    });
-    return res?.[0];
-  }
-
-  async readFile(uri: vscode.Uri): Promise<string> {
-    const ab = await vscode.workspace.fs.readFile(uri);
-    return new TextDecoder('utf-8').decode(ab);
   }
 
   clearCacheAndRefresh() {
