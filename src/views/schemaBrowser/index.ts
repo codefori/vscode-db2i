@@ -452,20 +452,17 @@ export default class schemaBrowser {
             }
 
             let rows: any[] = [];
-
+            let hasHeaders = true;
             if (ext === `csv`) {
+              hasHeaders = (await vscode.window.showQuickPick(['Yes','No'], { placeHolder: 'Does the file have headers?' })) === `Yes` ? true : false;
               rows = parse(data, {
-                columns: true,
+                columns: hasHeaders,
                 cast: true
               });
               if (!rows.length) { 
                 vscode.window.showWarningMessage('No rows found.'); 
                 return;
               }
-
-              // Get the headers and types
-              // Using the first two rows, first row is header names, second row will tell us the type
-
             } else if (ext === `json`) {
               rows = JSON.parse(data);
               if (!Array.isArray(rows)) {
@@ -478,28 +475,47 @@ export default class schemaBrowser {
               return;
             }
 
-            // Get headers using the first row of data
-            const colNames = Object.keys(rows[0]);
-            const cols = colNames.join(', ');
+            let content: string = ``;
+            if(hasHeaders) {
+              // Get headers using the first row of data
+              const colNames = Object.keys(rows[0]);
+              const cols = colNames.join(', ');
 
-            // Generate the INSERT statement
-            let content: string = `INSERT INTO SYSIBM.SYSDUMMY1 (${cols}) \nVALUES\n`;
-            for (let i = 0; i < rows.length; i++) {
-              const row = rows[i];
-              let allValues = [];
-              for(const col of colNames) {
-                const val = row[col];
-                if (typeof val === `string`) {
-                  allValues.push(`'${val}'`);
-                } else 
-                  allValues.push(val);
-              }
-              content += `  (${allValues.join(', ')})`;
-
-              // If not at last item yet, append a comma
-              if (i != rows.length - 1) {
-                content += `,\n`;
-              }
+              // Generate the INSERT statement
+              content = `INSERT INTO SYSIBM.SYSDUMMY1 (${cols}) \nVALUES\n`;
+              const allRowValues = [];
+              for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                let allValues = [];
+                for(const col of colNames) {
+                  const val = row[col];
+                  if (typeof val === `string`) {
+                    allValues.push(`'${val}'`);
+                  } else {
+                    allValues.push(val);
+                  }
+                }
+                allRowValues.push(`  (${allValues.join(', ')})`);
+              }   
+              content += allRowValues.join(`,\n`);
+            } else {
+              // Generate the INSERT statement
+              content = `INSERT INTO SYSIBM.SYSDUMMY1 \nVALUES\n`;
+              const allRowValues = [];
+              for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                let allValues = [];
+                for(let j = 0; j < row.length; j++) {
+                  const val = row[j];
+                  if (typeof val === `string`) {
+                    allValues.push(`'${val}'`);
+                  } else {
+                    allValues.push(val);
+                  }
+                }
+                allRowValues.push(`  (${allValues.join(', ')})`);
+              }   
+              content += allRowValues.join(`,\n`);
             }
 
             content += `;`;
