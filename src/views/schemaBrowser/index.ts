@@ -479,7 +479,7 @@ export default class schemaBrowser {
             if(hasHeaders) {
               // Get headers using the first row of data
               const colNames = Object.keys(rows[0]);
-              const cols = colNames.join(', ');
+              const cols = colNames.map(c => c.includes(` `) ? `"${c}"` : c).join(', ');
 
               // Generate the INSERT statement
               content = `INSERT INTO SYSIBM.SYSDUMMY1 (${cols}) \nVALUES\n`;
