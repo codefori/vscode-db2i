@@ -1,6 +1,5 @@
 import { Event, EventEmitter, ExtensionContext, MarkdownString, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, commands, window, workspace } from "vscode";
-import { Examples, SQLExample, ServiceInfoLabel } from ".";
-import { getServiceInfo } from "../../database/serviceInfo";
+import { Examples, SQLExample, ServiceInfoLabel, getMergedExamples } from ".";
 import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
 import { osDetail } from "../../config";
 
@@ -47,7 +46,13 @@ export class ExampleBrowser implements TreeDataProvider<any> {
       commands.registerCommand("vscode-db2i.examples.reload", () => {
         delete Examples[ServiceInfoLabel];
         this.refresh();
-      })
+      }),
+
+      workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('vscode-db2i.examples.customExampleDirectories')) {
+          this.refresh();
+        }
+      }),
     );
   }
 
@@ -64,22 +69,19 @@ export class ExampleBrowser implements TreeDataProvider<any> {
       return element.getChildren();
     }
     else {
-      // Unlike the bulk of the examples which are defined in views/examples/index.ts, the services examples are retrieved dynamically
-      if (!Examples[ServiceInfoLabel]) {
-        Examples[ServiceInfoLabel] = await getServiceInfo();
-      }
+      const mergedExamples = await getMergedExamples();
 
       if (this.currentFilter) {
         // If there is a filter, then show all examples that include this criteria
         const upperFilter = this.currentFilter.toUpperCase();
-        return Object.values(Examples)
+        return Object.values(mergedExamples)
           .flatMap(examples => examples.filter(exampleWorksForOnOS))
           .filter(example => example.name.toUpperCase().includes(upperFilter) || example.content.some(line => line.toUpperCase().includes(upperFilter)))
           .sort(sort)
           .map(example => new SQLExampleItem(example));
       }
       else {
-        return Object.entries(Examples)
+        return Object.entries(mergedExamples)
           .sort(([name1], [name2]) => sort(name1, name2))
           .map(([name, examples]) => new ExampleGroupItem(name, examples));
       }
@@ -117,7 +119,7 @@ class SQLExampleItem extends TreeItem {
 }
 
 function exampleWorksForOnOS(example: SQLExample): boolean {
-  
+
   if (osDetail) {
     const myOsVersion = osDetail.getVersion();
 
