@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
+import crypto from "crypto";
 import { SnippetString, ViewColumn, TreeView, window } from "vscode"
 
 import * as csv from "csv/sync";
-
 
 import { JobManager } from "../../config";
 import Document from "../../language/sql/document";
@@ -21,6 +21,7 @@ import { queryResultToRpgDs } from "./codegen";
 import Configuration from "../../configuration";
 import { getSqlDocument } from "../../language/providers/logic/parse";
 import { getLiteralsFromStatement, getPriorBindableStatement } from "./binding";
+import { registerRunStatement } from "./editorUi";
 
 export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
@@ -57,7 +58,7 @@ let doveResultsView = new DoveResultsView();
 let doveResultsTreeView: TreeView<ExplainTreeItem> = doveResultsView.getTreeView();
 let doveNodeView = new DoveNodeView();
 let doveNodeTreeView: TreeView<PropertyNode> = doveNodeView.getTreeView();
-let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration providor
+let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration provider
 
 export function initialise(context: vscode.ExtensionContext) {
   setCancelButtonVisibility(false);
@@ -378,6 +379,7 @@ async function runHandler(options?: StatementInfo) {
               updatableTable = refs[0];
             }
 
+            const uiId = registerRunStatement(statementDetail);
             const basicSelect = statementDetail.content.split(eol).filter(line => !line.trimStart().startsWith(`--`)).join(eol);
 
             chosenView.setScrolling({ // Never errors
@@ -385,6 +387,7 @@ async function runHandler(options?: StatementInfo) {
               withCancel: inWindow,
               ref: updatableTable,
               parameters,
+              uiId
             })
           }
 

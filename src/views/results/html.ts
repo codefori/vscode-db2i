@@ -295,7 +295,7 @@ document.getElementById('resultset').onclick = function(e){
 };
 `;
 
-export function generateScroller(basicSelect: string, parameters: SqlParameter[] = [], isCL: boolean = false, withCancel: boolean = false, updatable?: UpdatableInfo): string {
+export function generateScroller(uiId: string, basicSelect: string, parameters: SqlParameter[] = [], isCL: boolean = false, withCancel: boolean = false, updatable?: UpdatableInfo): string {
   const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
 
   return /*html*/`
@@ -417,6 +417,7 @@ export function generateScroller(basicSelect: string, parameters: SqlParameter[]
           function fetchNextPage() {
             isFetching = true;
             vscode.postMessage({
+              uiId: ${JSON.stringify(uiId)},
               query: basicSelect,
               parameters: ${JSON.stringify(parameters)},
               isCL: ${isCL},
