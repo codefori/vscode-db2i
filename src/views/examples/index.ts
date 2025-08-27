@@ -2,6 +2,7 @@ import { EndOfLine, FileType, TextDocument, Uri, workspace } from "vscode";
 import Configuration from "../../configuration";
 import * as path from "path";
 import { getServiceInfo } from "../../database/serviceInfo";
+import { getStatementDetail } from "../../notebooks/logic/statement";
 
 export interface SQLExamplesList {
   [group: string]: SQLExample[]
@@ -6032,9 +6033,23 @@ export async function getCustomExamples(): Promise<SQLExamplesList> {
   // Organize the SQL files into groups based on their parent directory names
   const examplesList: SQLExamplesList = {};
   for (const textDocument of sqlTextDocuments) {
+    // Set group and name based on file path by default
     const parsedPath = path.parse(textDocument.uri.path);
-    const group = path.basename(parsedPath.dir);
-    const name = parsedPath.name;
+    let group = path.basename(parsedPath.dir);
+    let name = parsedPath.name;
+
+    // Override group and name if category and description is specified in the SQL file as comments
+    const content = textDocument.getText();
+    const eol = textDocument.eol === EndOfLine.LF ? '\n' : '\r\n';
+    const detail = getStatementDetail(content, eol);
+    const category = detail?.settings.category;
+    if (category) {
+      group = category;
+    }
+    const description = detail?.settings.description;
+    if (description) {
+      name = description;
+    }
 
     if (!examplesList[group]) {
       examplesList[group] = [];
@@ -6042,7 +6057,7 @@ export async function getCustomExamples(): Promise<SQLExamplesList> {
 
     examplesList[group].push({
       name: name,
-      content: textDocument.getText().split(textDocument.eol === EndOfLine.LF ? '\n' : '\r\n')
+      content: textDocument.getText().split(eol)
     });
   }
 

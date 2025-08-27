@@ -265,7 +265,7 @@
               "type": "string",
               "description": "The directory containing SQL example files."
             },
-            "markdownDescription": "Set of custom directories containing SQL example files to be shown in the `Examples` view. All SQL files in the specified directories and at most one subdirectory level deeper will be picked up.\n\nBy default, the folder name will be the category and the file name will be the name of the example. This can be customized by optionally including a comment at the top of the file with the tags `category` and `description`.",
+            "markdownDescription": "Set of custom directories containing SQL example files to be shown in the `Examples` view. All SQL files in the specified directories and at most one subdirectory level deeper will be picked up.\n\nBy default, the folder name will be the category and the file name will be the name of the example. This can be customized by optionally including a comment in the file with the tags `category` and `description`.",
             "default": []
           }
         }
