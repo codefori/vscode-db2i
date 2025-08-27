@@ -151,8 +151,7 @@
         },
         {
           "command": "vscode-db2i.importDataContextMenu",
-          "group": "sql@3",
-          "when": "editorLangId == csv || editorLangId == json "
+          "group": "sql@3"
         }
       ]
     }
