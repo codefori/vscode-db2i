@@ -22,21 +22,49 @@
         "title": "Clear filter",
         "category": "Db2 for i (Examples)",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "vscode-db2i.examples.reload",
+        "title": "Refresh Examples",
+        "category": "Db2 for i (Examples)",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "vscode-db2i.examples.setFilter",
-          "group": "navigation",
+          "group": "navigation@0",
           "when": "view == exampleBrowser"
         },
         {
           "command": "vscode-db2i.examples.clearFilter",
-          "group": "navigation",
+          "group": "navigation@1",
+          "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.examples.reload",
+          "group": "navigation@2",
           "when": "view == exampleBrowser"
         }
       ]
-    }
+    },
+    "configuration": [
+      {
+        "id": "vscode-db2i.examples",
+        "title": "Examples",
+        "properties": {
+          "vscode-db2i.examples.customExampleDirectories": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "The directory containing SQL example files."
+            },
+            "markdownDescription": "Set of custom directories containing SQL example files to be shown in the `Examples` view. All SQL files in the specified directories and at most one subdirectory level deeper will be picked up.\n\nBy default, the folder name will be the category and the file name will be the name of the example. This can be customized by optionally including a comment at the top of the file with the tags `category` and `description`.",
+            "default": []
+          }
+        }
+      }
+    ]
   }
 }
