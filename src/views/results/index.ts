@@ -8,11 +8,11 @@ import { JobManager } from "../../config";
 import Document from "../../language/sql/document";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import Statement from "../../language/sql/statement";
-import { ExplainTree } from "./explain/nodes";
+import { ExplainNode, ExplainTree } from "./explain/nodes";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
-import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
+import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";	
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { DbCache } from "../../language/providers/logic/cache";
@@ -21,6 +21,7 @@ import { queryResultToRpgDs } from "./codegen";
 import Configuration from "../../configuration";
 import { getSqlDocument } from "../../language/providers/logic/parse";
 import { getLiteralsFromStatement, getPriorBindableStatement } from "./binding";
+import { CytoscapeGraph } from "../cytoscape";
 
 export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
@@ -412,9 +413,35 @@ async function runHandler(options?: StatementInfo) {
 
             explainTree = new ExplainTree(explained.vedata);
             const topLevel = explainTree.get();
-            const rootNode = doveResultsView.setRootNode(topLevel);
-            doveNodeView.setNode(rootNode.explainNode);
+            const rootNode = doveResultsView.setRootNode(topLevel);	
+            doveNodeView.setNode(rootNode.explainNode);	            
             doveTreeDecorationProvider.updateTreeItems(rootNode);
+            
+            const graph = new CytoscapeGraph();
+            
+            function addNode(node: ExplainNode, parent?: string) {
+              const id = graph.addNode({
+                label: node.title,
+                parent: parent,
+                data: node,
+                styles: node.styles
+              });
+
+              if (node.children) {
+                for (const child of node.children) {
+                  addNode(child, id);
+                }
+              }
+            }
+            
+            addNode(topLevel);
+
+            const webview = graph.createView(`Explain Graph`, (data: ExplainNode) => {
+              if (data) {
+                doveNodeView.setNode(data);
+              }
+            });
+
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
