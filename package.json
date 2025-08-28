@@ -794,6 +794,12 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "vscode-db2i.examples.save",
+        "title": "Save As New Example",
+        "category": "Db2 for i (Examples)",
+        "icon": "$(save)"
+      },
+      {
         "command": "vscode-db2i.examples.add",
         "title": "Add...",
         "category": "Db2 for i (Examples)"
@@ -1115,13 +1121,18 @@
           "when": "view == exampleBrowser"
         },
         {
-          "submenu": "vscode-db2i.customExampleDirectories",
+          "command": "vscode-db2i.examples.save",
           "group": "navigation@2",
           "when": "view == exampleBrowser"
         },
         {
-          "command": "vscode-db2i.examples.reload",
+          "submenu": "vscode-db2i.customExampleDirectories",
           "group": "navigation@3",
+          "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.examples.reload",
+          "group": "navigation@4",
           "when": "view == exampleBrowser"
         }
       ],
