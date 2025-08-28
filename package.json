@@ -973,6 +973,10 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.examples.edit",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.notebook.fromSqlUri",
           "when": "never"
         }

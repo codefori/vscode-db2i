@@ -102,6 +102,12 @@
           "command": "vscode-db2i.examples.remove",
           "group": "navigation@1"
         }
+      ],
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.examples.edit",
+          "when": "never"
+        }
       ]
     },
     "configuration": [
