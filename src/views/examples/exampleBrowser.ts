@@ -1,4 +1,4 @@
-import { Event, EventEmitter, ExtensionContext, MarkdownString, TextDocument, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, commands, window, workspace } from "vscode";
+import { Event, EventEmitter, ExtensionContext, FileSystemWatcher, MarkdownString, RelativePattern, TextDocument, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, commands, window, workspace } from "vscode";
 import { Examples, SQLExample, ServiceInfoLabel, getMergedExamples } from ".";
 import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
 import { osDetail } from "../../config";
@@ -11,9 +11,12 @@ export class ExampleBrowser implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
   readonly onDidChangeTreeData: Event<TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
+  private watchers: FileSystemWatcher[] = [];
   private currentFilter: string | undefined;
 
   constructor(context: ExtensionContext) {
+    this.setupWatchers();
+
     context.subscriptions.push(
       commands.registerCommand(openExampleCommand, (example: SQLExample) => {
         if (example) {
@@ -153,6 +156,7 @@ export class ExampleBrowser implements TreeDataProvider<any> {
 
       workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('vscode-db2i.examples.customExampleDirectories')) {
+          this.setupWatchers();
           this.refresh();
         }
       })
@@ -188,6 +192,32 @@ export class ExampleBrowser implements TreeDataProvider<any> {
           .sort(([name1], [name2]) => sort(name1, name2))
           .map(([name, examples]) => new ExampleGroupItem(name, examples));
       }
+    }
+  }
+
+  setupWatchers() {
+    if (this.watchers) {
+      for (const watcher of this.watchers) {
+        watcher.dispose();
+      }
+      this.watchers = [];
+    }
+
+    const existingDirectories = Configuration.get<string[]>(`examples.customExampleDirectories`) || [];
+    for (const directory of existingDirectories) {
+      const directoryUri = Uri.file(directory);
+      const relativePattern = new RelativePattern(directoryUri, '**/*');
+      const watcher = workspace.createFileSystemWatcher(relativePattern);
+      watcher.onDidCreate(async (uri) => {
+        this.refresh();
+      });
+      watcher.onDidChange(async (uri) => {
+        this.refresh();
+      });
+      watcher.onDidDelete(async (uri) => {
+        this.refresh();
+      });
+      this.watchers.push(watcher);
     }
   }
 }
