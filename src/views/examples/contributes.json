@@ -55,19 +55,7 @@
       {
         "id": "vscode-db2i.customExampleDirectories",
         "label": "Custom Example Directories",
-        "icon": "$(sparkle)"
-      }
-    ],
-    "vscode-db2i.customExampleDirectories": [
-      {
-        "command": "vscode-db2i.examples.add",
-        "group": "navigation@0",
-        "when": "view == exampleBrowser"
-      },
-      {
-        "command": "vscode-db2i.examples.remove",
-        "group": "navigation@1",
-        "when": "view == exampleBrowser"
+        "icon": "$(folder-library)"
       }
     ],
     "menus": {
@@ -103,6 +91,16 @@
           "command": "vscode-db2i.examples.edit",
           "when": "view == exampleBrowser && viewItem == example.custom",
           "group": "0_open"
+        }
+      ],
+      "vscode-db2i.customExampleDirectories": [
+        {
+          "command": "vscode-db2i.examples.add",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.examples.remove",
+          "group": "navigation@1"
         }
       ]
     },

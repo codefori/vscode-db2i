@@ -1371,6 +1371,16 @@
           "group": "navigation_notebook@1"
         }
       ],
+      "vscode-db2i.customExampleDirectories": [
+        {
+          "command": "vscode-db2i.examples.add",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.examples.remove",
+          "group": "navigation@1"
+        }
+      ],
       "notebook/toolbar": [
         {
           "command": "vscode-db2i.notebook.exportAsHtml",
@@ -1388,7 +1398,7 @@
       {
         "id": "vscode-db2i.customExampleDirectories",
         "label": "Custom Example Directories",
-        "icon": "$(sparkle)"
+        "icon": "$(folder-library)"
       }
     ],
     "keybindings": [
@@ -1509,18 +1519,6 @@
       {
         "view": "vscode-db2i.self.nodes",
         "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
-      }
-    ],
-    "vscode-db2i.customExampleDirectories": [
-      {
-        "command": "vscode-db2i.examples.add",
-        "group": "navigation@0",
-        "when": "view == exampleBrowser"
-      },
-      {
-        "command": "vscode-db2i.examples.remove",
-        "group": "navigation@1",
-        "when": "view == exampleBrowser"
       }
     ],
     "notebooks": [
