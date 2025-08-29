@@ -18,7 +18,8 @@ export function getStatementDetail(content: string, eol: string) {
     const lines = content.split(eol);
     const firstNonCommentLine = lines.findIndex(line => !line.startsWith(`--`));
 
-    const startingComments = lines.slice(0, firstNonCommentLine).map(line => line.substring(2).trim());
+    const startingCommentLines = firstNonCommentLine === -1 ? lines : lines.slice(0, firstNonCommentLine);
+    const startingComments = startingCommentLines.map(line => line.substring(2).trim());
     content = lines.slice(firstNonCommentLine).join(eol);
 
     for (let comment of startingComments) {
