@@ -403,6 +403,16 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.importData",
+        "title": "Generate Insert from File",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.importDataContextMenu",
+        "title": "Generate Insert from File",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.refreshSchemaBrowser",
         "title": "Refresh Schema Browser",
         "category": "Db2 for i",
@@ -821,6 +831,10 @@
           "when": "editorLangId == sql"
         },
         {
+          "command": "vscode-db2i.importDataContextMenu",
+          "when": "false"
+        },
+        {
           "command": "vscode-db2i.setSchemaFilter",
           "when": "never"
         },
@@ -972,6 +986,10 @@
           "command": "vscode-db2i.json.pasteParser",
           "group": "sql@2",
           "when": "editorLangId == sql"
+        },
+        {
+          "command": "vscode-db2i.importDataContextMenu",
+          "group": "sql@3"
         }
       ],
       "view/title": [
@@ -1566,6 +1584,7 @@
     "json-to-markdown-table": "^1.0.0",
     "lru-cache": "^6.0.0",
     "node-fetch": "^3.3.1",
+    "octokit": "^5.0.3",
     "showdown": "^2.1.0",
     "sql-formatter": "^14.0.0"
   }
