@@ -59,13 +59,13 @@
       ],
       "view/title": [
         {
-          "command": "vscode-db2i.queryHistory.clear",
-          "group": "navigation",
+          "command": "vscode-db2i.queryHistory.find",
+          "group": "navigation@0",
           "when": "view == queryHistory"
         },
         {
-          "command": "vscode-db2i.queryHistory.find",
-          "group": "navigation",
+          "command": "vscode-db2i.queryHistory.clear",
+          "group": "navigation@1",
           "when": "view == queryHistory"
         }
       ],
