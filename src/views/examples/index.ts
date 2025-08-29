@@ -6075,17 +6075,24 @@ async function getSqlTextDocumentsFromDirectory(directory: Uri, depth = 1): Prom
       const uri = Uri.joinPath(directory, name);
 
       if (type === FileType.File) {
-        const textDocument = await workspace.openTextDocument(uri);
-        if (textDocument.languageId === 'sql') {
-          sqlTextDocuments.push(textDocument);
+        try {
+          const textDocument = await workspace.openTextDocument(uri);
+          if (textDocument.languageId === 'sql') {
+            sqlTextDocuments.push(textDocument);
+          }
+        } catch (error) {
+          // Ignore error reading file
+          console.log(error);
+          continue;
         }
       } else if (type === FileType.Directory && depth > 0) {
         const subContents = await getSqlTextDocumentsFromDirectory(uri, depth - 1);
         sqlTextDocuments.push(...subContents);
       }
     }
-  } catch {
-    // Ignore errors
+  } catch (error) {
+    // Ignore error reading directory
+    console.log(error);
   }
 
   return sqlTextDocuments;
