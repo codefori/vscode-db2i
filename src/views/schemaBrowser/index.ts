@@ -459,15 +459,16 @@ export default class schemaBrowser {
         columns: hasHeaders,
         cast: true
       });
-      if (!rows.length) { 
-        vscode.window.showWarningMessage('No rows found.'); 
-        return;
-      }
     } else if (ext === `json`) {
       rows = JSON.parse(data);
       if (!Array.isArray(rows)) {
         throw new Error('Unsupported JSON format: expected an array of objects.');
       }
+    }
+    
+    if (!rows.length) { 
+      vscode.window.showWarningMessage('No rows found.'); 
+      return;
     }
 
     let content: string = ``;
