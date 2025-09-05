@@ -1,10 +1,10 @@
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
 import { ComponentIdentification, ComponentState, IBMiComponent } from "@halcyontech/vscode-ibmi-types/api/components/component";
 import { posix } from "path";
-import { getValidatorSource, VALIDATOR_NAME, WRAPPER_NAME } from "./checker";
+import { getInstance } from "../../base";
 import { JobManager } from "../../config";
-import { getBase, getInstance } from "../../base";
 import { JobInfo } from "../manager";
+import { getValidatorSource, VALIDATOR_NAME, WRAPPER_NAME } from "./checker";
 
 interface SqlCheckError {
   CURSTMTLENGTH: number;
@@ -98,7 +98,7 @@ export class SQLStatementChecker implements IBMiComponent {
   update(connection: IBMi): ComponentState | Promise<ComponentState> {
     return connection.withTempDirectory(async tempDir => {
       const tempSourcePath = posix.join(tempDir, `sqlchecker.sql`);
-      await connection.getConfig().writeStreamfileRaw(tempSourcePath, Buffer.from(this.getSource(connection), "utf-8"));
+      await connection.getContent().writeStreamfileRaw(tempSourcePath, Buffer.from(this.getSource(connection), "utf-8"));
       const result = await connection.runCommand({
         command: `RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SYS)`,
         noLibList: true
