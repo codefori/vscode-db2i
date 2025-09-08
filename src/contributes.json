@@ -127,6 +127,16 @@
         "command": "vscode-db2i.getStatementUri",
         "title": "Copy sharable statement URI",
         "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.importData",
+        "title": "Generate Insert from File",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.importDataContextMenu",
+        "title": "Generate Insert from File",
+        "category": "Db2 for i"
       }
     ],
     "menus": {
@@ -134,6 +144,10 @@
         {
           "command": "vscode-db2i.getStatementUri",
           "when": "editorLangId == sql"
+        },
+        {
+          "command": "vscode-db2i.importDataContextMenu",
+          "when": "false"
         }
       ],
       "editor/context": [
@@ -151,6 +165,10 @@
           "command": "vscode-db2i.json.pasteParser",
           "group": "sql@2",
           "when": "editorLangId == sql"
+        },
+        {
+          "command": "vscode-db2i.importDataContextMenu",
+          "group": "sql@3"
         }
       ]
     }
