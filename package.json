@@ -278,6 +278,21 @@
         }
       },
       {
+        "id": "vscode-db2i.examples",
+        "title": "Examples",
+        "properties": {
+          "vscode-db2i.examples.customExampleDirectories": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "The directory containing SQL example files."
+            },
+            "markdownDescription": "Set of custom directories containing SQL example files to be shown in the `Examples` view. All SQL files in the specified directories and at most one subdirectory level deeper will be picked up.\n\nBy default, the folder name will be the category and the file name will be the name of the example. This can be customized by optionally including a comment in the file with the tags `category` and `description`.",
+            "default": []
+          }
+        }
+      },
+      {
         "id": "vscode-db2i.syntax",
         "title": "SQL Syntax Options",
         "properties": {
@@ -805,6 +820,33 @@
         "icon": "$(clear-all)"
       },
       {
+        "command": "vscode-db2i.examples.reload",
+        "title": "Refresh Examples",
+        "category": "Db2 for i (Examples)",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-db2i.examples.save",
+        "title": "Save As New Example",
+        "category": "Db2 for i (Examples)",
+        "icon": "$(save)"
+      },
+      {
+        "command": "vscode-db2i.examples.add",
+        "title": "Add...",
+        "category": "Db2 for i (Examples)"
+      },
+      {
+        "command": "vscode-db2i.examples.remove",
+        "title": "Remove...",
+        "category": "Db2 for i (Examples)"
+      },
+      {
+        "command": "vscode-db2i.examples.edit",
+        "title": "Edit Example",
+        "category": "Db2 for i (Examples)"
+      },
+      {
         "command": "vscode-db2i.notebook.fromSqlUri",
         "title": "Open as Notebook",
         "category": "IBM i Notebooks",
@@ -967,6 +1009,10 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.examples.edit",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.notebook.fromSqlUri",
           "when": "never"
         }
@@ -1039,13 +1085,13 @@
           "when": "view == vscode-db2i.dove.node"
         },
         {
-          "command": "vscode-db2i.queryHistory.clear",
-          "group": "navigation",
+          "command": "vscode-db2i.queryHistory.find",
+          "group": "navigation@0",
           "when": "view == queryHistory"
         },
         {
-          "command": "vscode-db2i.queryHistory.find",
-          "group": "navigation",
+          "command": "vscode-db2i.queryHistory.clear",
+          "group": "navigation@1",
           "when": "view == queryHistory"
         },
         {
@@ -1110,12 +1156,27 @@
         },
         {
           "command": "vscode-db2i.examples.setFilter",
-          "group": "navigation",
+          "group": "navigation@0",
           "when": "view == exampleBrowser"
         },
         {
           "command": "vscode-db2i.examples.clearFilter",
-          "group": "navigation",
+          "group": "navigation@1",
+          "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.examples.save",
+          "group": "navigation@2",
+          "when": "view == exampleBrowser"
+        },
+        {
+          "submenu": "vscode-db2i.customExampleDirectories",
+          "group": "navigation@3",
+          "when": "view == exampleBrowser"
+        },
+        {
+          "command": "vscode-db2i.examples.reload",
+          "group": "navigation@4",
           "when": "view == exampleBrowser"
         }
       ],
@@ -1288,6 +1349,11 @@
           "command": "vscode-db2i.self.explainSelf",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && vscode-db2i:continueExtensionActive",
           "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.examples.edit",
+          "when": "view == exampleBrowser && viewItem == example.custom",
+          "group": "0_open"
         }
       ],
       "editor/title": [
@@ -1349,6 +1415,16 @@
           "group": "navigation_notebook@1"
         }
       ],
+      "vscode-db2i.customExampleDirectories": [
+        {
+          "command": "vscode-db2i.examples.add",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.examples.remove",
+          "group": "navigation@1"
+        }
+      ],
       "notebook/toolbar": [
         {
           "command": "vscode-db2i.notebook.exportAsHtml",
@@ -1362,6 +1438,11 @@
         "icon": "$(notebook-execute)",
         "id": "sql/editor/context",
         "label": "Run SQL statement"
+      },
+      {
+        "id": "vscode-db2i.customExampleDirectories",
+        "label": "Custom Example Directories",
+        "icon": "$(folder-library)"
       }
     ],
     "keybindings": [
