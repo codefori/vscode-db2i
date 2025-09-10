@@ -265,7 +265,6 @@ async function runHandler(options?: StatementInfo) {
   vscode.commands.executeCommand('vscode-db2i.dove.close');
 
   if (optionsIsValid || (editor && editor.document.languageId === `sql`)) {
-    const eol = editor.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
     let chosenView = resultSetProvider;
 
     const useWindow = (title: string, column?: ViewColumn) => {
@@ -380,6 +379,7 @@ async function runHandler(options?: StatementInfo) {
             }
 
             const uiId = registerRunStatement(statementDetail);
+            const eol = editor.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
             const basicSelect = statementDetail.content.split(eol).filter(line => !line.trimStart().startsWith(`--`)).join(eol);
 
             chosenView.setScrolling({ // Never errors
