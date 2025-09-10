@@ -210,6 +210,12 @@
         "when": "editorLangId == sql && resourceExtname != .inb"
       },
       {
+        "command": "vscode-db2i.runEditorStatement.multiple.all",
+        "key": "ctrl+r a",
+        "mac": "cmd+r a",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
         "command": "vscode-db2i.runEditorStatement.inView",
         "key": "ctrl+alt+r",
         "mac": "cmd+ctrl+r",
