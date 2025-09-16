@@ -1460,14 +1460,14 @@
       },
       {
         "command": "vscode-db2i.editorExplain.withRun",
-        "key": "ctrl+shift+r",
-        "mac": "cmd+shift+r",
+        "key": "ctrl+u",
+        "mac": "cmd+u",
         "when": "editorLangId == sql && resourceExtname != .inb"
       },
       {
         "command": "vscode-db2i.editorExplain.withoutRun",
-        "key": "ctrl+alt+r",
-        "mac": "cmd+alt+r",
+        "key": "ctrl+e",
+        "mac": "cmd+e",
         "when": "editorLangId == sql && resourceExtname != .inb"
       },
       {
