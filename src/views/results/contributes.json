@@ -216,6 +216,18 @@
         "when": "editorLangId == sql"
       },
       {
+        "command": "vscode-db2i.runEditorStatement.multiple.all",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
+        "command": "vscode-db2i.runEditorStatement.multiple.from",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
         "command": "vscode-db2i.editorExplain.withRun",
         "key": "ctrl+u",
         "mac": "cmd+u",
