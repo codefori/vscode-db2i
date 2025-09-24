@@ -540,6 +540,12 @@
         "icon": "$(list-selection)"
       },
       {
+        "command": "vscode-db2i.filterDatabaseObjectTypes",
+        "title": "Filter Database Object Types",
+        "category": "Db2 for i",
+        "icon": "$(filter)"
+      },
+      {
         "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
         "title": "Remove schema from view",
         "category": "Db2 for i",
@@ -977,6 +983,10 @@
           "when": "false"
         },
         {
+          "command": "vscode-db2i.filterDatabaseObjectTypes",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.setSchemaFilter",
           "when": "never"
         },
@@ -1140,14 +1150,19 @@
       ],
       "view/title": [
         {
-          "command": "vscode-db2i.refreshSchemaBrowser",
-          "group": "navigation",
+          "command": "vscode-db2i.manageSchemaBrowserList",
+          "group": "navigation@0",
+          "when": "view == schemaBrowser && vscode-db2i:manageSchemaBrowserEnabled"
+        },
+        {
+          "command": "vscode-db2i.filterDatabaseObjectTypes",
+          "group": "navigation@1",
           "when": "view == schemaBrowser"
         },
         {
-          "command": "vscode-db2i.manageSchemaBrowserList",
-          "group": "navigation",
-          "when": "view == schemaBrowser && vscode-db2i:manageSchemaBrowserEnabled"
+          "command": "vscode-db2i.refreshSchemaBrowser",
+          "group": "navigation@2",
+          "when": "view == schemaBrowser"
         },
         {
           "command": "vscode-db2i.resultset.settings",

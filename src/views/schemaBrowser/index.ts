@@ -1,5 +1,5 @@
 
-import { ThemeIcon, TreeItem, workspace } from "vscode"
+import { ThemeIcon, TreeItem, workspace, window } from "vscode"
 import * as vscode from "vscode"
 import Schemas, { AllSQLTypes, InternalTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
@@ -103,6 +103,30 @@ export default class schemaBrowser {
         } finally {
           // We're done, enable the command
           this.enableManageCommand(true);
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.filterDatabaseObjectTypes`, async () => {
+        const currentTypes = Configuration.get(`schemaBrowser.databaseObjectTypes`);
+        if (currentTypes) {
+          const quickPickItems = Object.keys(currentTypes).map((key) => {
+            return {
+              label: key, picked: currentTypes[key]
+            }
+          });
+          const selectedTypes = await window.showQuickPick(quickPickItems, {
+            title: `Select which database object types should be shown`,
+            canPickMany: true
+          });
+          if (selectedTypes) {
+            const unselectedTypes: Record<string, boolean> = {};
+            for (const key of Object.keys(currentTypes)) {
+              if (!selectedTypes.find(type => type.label === key)) {
+                unselectedTypes[key] = false;
+              }
+            }
+            Configuration.set(`schemaBrowser.databaseObjectTypes`, unselectedTypes);
+          }
         }
       }),
 
