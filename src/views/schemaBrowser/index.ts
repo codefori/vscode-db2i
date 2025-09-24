@@ -25,7 +25,14 @@ const itemIcons = {
   "trigger": `play`,
   "variable": `symbol-value`,
   "index": `list-tree`,
-  "logical": `symbol-interface`
+  "logical": `symbol-interface`,
+  "mask": `map-vertical`,
+  "constraint": `lock`,
+  "receiver": `inbox`,
+  "journal": `note`,
+  "permission": `key`,
+  "sequence": `file-binary`,
+  "package": `package`
 }
 
 export default class schemaBrowser {
@@ -751,18 +758,18 @@ const getSchemaItems = (schema) => {
   const items = [
     //new SchemaItem(`All Database Objects`, `all`, schema),
     new SchemaItem(`Aliases`, `aliases`, schema, `symbol-reference`),
-    //new SchemaItem(`Column Masks`, `masks`, schema),
-    //new SchemaItem(`Constraints`, `constraints`, schema),
+    new SchemaItem(`Column Masks`, `masks`, schema, `layout-centered`),
+    new SchemaItem(`Constraints`, `constraints`, schema, `group-by-ref-type`),
     new SchemaItem(`Logicals`, `logicals`, schema, `telescope`),
     new SchemaItem(`Functions`, `functions`, schema, `symbol-function`),
     new SchemaItem(`Global Variables`, `variables`, schema, `symbol-variable`),
     new SchemaItem(`Indexes`, `indexes`, schema, `tag`),
-    //new SchemaItem(`Journal Receivers`, `receivers`, schema),
-    //new SchemaItem(`Journals`, `journals`, schema),
+    new SchemaItem(`Journal Receivers`, `receivers`, schema, `briefcase`),
+    new SchemaItem(`Journals`, `journals`, schema, `book`),
     new SchemaItem(`Procedures`, `procedures`, schema, `gear`),
-    //new SchemaItem(`Row Permissions`, `permissions`, schema),
-    //new SchemaItem(`Sequences`, `sequences`, schema),
-    //new SchemaItem(`SQL Packages`, `packages`, schema),
+    new SchemaItem(`Row Permissions`, `permissions`, schema, `gist-secret`),
+    new SchemaItem(`Sequences`, `sequences`, schema, `surround-with`),
+    new SchemaItem(`SQL Packages`, `packages`, schema, `archive`),
     new SchemaItem(`Tables`, `tables`, schema, `menu`),
     new SchemaItem(`Triggers`, `triggers`, schema, `symbol-event`),
     new SchemaItem(`Types`, `types`, schema, `symbol-type-parameter`),
