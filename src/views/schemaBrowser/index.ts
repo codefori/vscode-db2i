@@ -1,5 +1,5 @@
 
-import { ThemeIcon, TreeItem } from "vscode"
+import { ThemeIcon, TreeItem, workspace } from "vscode"
 import * as vscode from "vscode"
 import Schemas, { AllSQLTypes, InternalTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
@@ -418,7 +418,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.importData`, async () => {
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL` }, async (arg?: any) => {
-          try {            
+          try {
             const uri = await this.pickFile();
             if (!uri) { return; }
             const data = await this.readFile(uri);
@@ -428,6 +428,12 @@ export default class schemaBrowser {
             vscode.window.showErrorMessage(e.message);
           }
         });
+      }),
+
+      workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('vscode-db2i.schemaBrowser.databaseObjectTypes')) {
+          this.refresh();
+        }
       })
     )
 
@@ -454,14 +460,14 @@ export default class schemaBrowser {
   async generateInsert(uri: vscode.Uri, data: string) {
     let ext: string = (uri.fsPath.split('.').pop() || '').toLowerCase();
     if (ext != `csv` && ext != `json`) {
-      ext = await vscode.window.showQuickPick(['csv','json'], { placeHolder: 'What format is this file?' });
+      ext = await vscode.window.showQuickPick(['csv', 'json'], { placeHolder: 'What format is this file?' });
       if (!ext) { return; }
     }
 
     let rows: any[] = [];
     let hasHeaders = true;
     if (ext === `csv`) {
-      hasHeaders = (await vscode.window.showQuickPick(['Yes','No'], { placeHolder: 'Does the file have headers?' })) === `Yes` ? true : false;
+      hasHeaders = (await vscode.window.showQuickPick(['Yes', 'No'], { placeHolder: 'Does the file have headers?' })) === `Yes` ? true : false;
       rows = parse(data, {
         columns: hasHeaders,
         cast: true
@@ -472,14 +478,14 @@ export default class schemaBrowser {
         throw new Error('Unsupported JSON format: expected an array of objects.');
       }
     }
-    
-    if (!rows.length) { 
-      vscode.window.showWarningMessage('No rows found.'); 
+
+    if (!rows.length) {
+      vscode.window.showWarningMessage('No rows found.');
       return;
     }
 
     let content: string = ``;
-    if(hasHeaders) {
+    if (hasHeaders) {
       // Get headers using the first row of data
       const colNames = Object.keys(rows[0]);
       const cols = colNames.map(c => c.includes(` `) ? `"${c}"` : c).join(', ');
@@ -490,7 +496,7 @@ export default class schemaBrowser {
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         let allValues = [];
-        for(const col of colNames) {
+        for (const col of colNames) {
           const val = row[col];
           if (typeof val === `string`) {
             allValues.push(`'${val.replace(`'`, `''`)}'`);
@@ -499,7 +505,7 @@ export default class schemaBrowser {
           }
         }
         allRowValues.push(`  (${allValues.join(', ')})`);
-      }   
+      }
       content += allRowValues.join(`,\n`);
     } else {
       // Generate the INSERT statement
@@ -508,7 +514,7 @@ export default class schemaBrowser {
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         let allValues = [];
-        for(let j = 0; j < row.length; j++) {
+        for (let j = 0; j < row.length; j++) {
           const val = row[j];
           if (typeof val === `string`) {
             allValues.push(`'${val}'`);
@@ -517,12 +523,12 @@ export default class schemaBrowser {
           }
         }
         allRowValues.push(`  (${allValues.join(', ')})`);
-      }   
+      }
       content += allRowValues.join(`,\n`);
     }
 
     content += `;`;
-    
+
     // Open the generated SQL in a new file
     const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
     await vscode.window.showTextDocument(textDoc);
@@ -776,7 +782,8 @@ const getSchemaItems = (schema) => {
     new SchemaItem(`Views`, `views`, schema, `symbol-interface`)
   ];
 
-  return items;
+  const databaseObjectTypes = Configuration.get(`schemaBrowser.databaseObjectTypes`);
+  return databaseObjectTypes ? items.filter(item => databaseObjectTypes[item.label.toString()]) : items;
 }
 
 const moreButton = (schema, type) => {

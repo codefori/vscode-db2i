@@ -270,6 +270,108 @@
           "group": "db2idxAdv@2"
         }
       ]
-    }
+    },
+    "configuration": [
+      {
+        "id": "vscode-db2i.schemaBrowser",
+        "title": "Schema Browser",
+        "properties": {
+          "vscode-db2i.schemaBrowser.databaseObjectTypes": {
+            "type": "object",
+            "default": {
+              "Aliases": true,
+              "Column Masks": true,
+              "Constraints": true,
+              "Functions": true,
+              "Global Variables": true,
+              "Indexes": true,
+              "Journal Receivers": true,
+              "Journals": true,
+              "Logicals": true,
+              "Procedures": true,
+              "Row Permissions": true,
+              "Sequences": true,
+              "SQL Packages": true,
+              "Tables": true,
+              "Triggers": true,
+              "Types": true,
+              "Views": true
+            },
+            "properties": {
+              "Aliases": {
+                "type": "boolean",
+                "default": true
+              },
+              "Column Masks": {
+                "type": "boolean",
+                "default": true
+              },
+              "Constraints": {
+                "type": "boolean",
+                "default": true
+              },
+              "Functions": {
+                "type": "boolean",
+                "default": true
+              },
+              "Global Variables": {
+                "type": "boolean",
+                "default": true
+              },
+              "Indexes": {
+                "type": "boolean",
+                "default": true
+              },
+              "Journal Receivers": {
+                "type": "boolean",
+                "default": true
+              },
+              "Journals": {
+                "type": "boolean",
+                "default": true
+              },
+              "Logicals": {
+                "type": "boolean",
+                "default": true
+              },
+              "Procedures": {
+                "type": "boolean",
+                "default": true
+              },
+              "Row Permissions": {
+                "type": "boolean",
+                "default": true
+              },
+              "Sequences": {
+                "type": "boolean",
+                "default": true
+              },
+              "SQL Packages": {
+                "type": "boolean",
+                "default": true
+              },
+              "Tables": {
+                "type": "boolean",
+                "default": true
+              },
+              "Triggers": {
+                "type": "boolean",
+                "default": true
+              },
+              "Types": {
+                "type": "boolean",
+                "default": true
+              },
+              "Views": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "additionalProperties": false,
+            "description": "Select which database object types should be shown in the Schema Browser"
+          }
+        }
+      }
+    ]
   }
 }
