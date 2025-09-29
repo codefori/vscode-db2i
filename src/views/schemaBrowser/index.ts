@@ -291,7 +291,7 @@ export default class schemaBrowser {
                 location: vscode.ProgressLocation.Notification,
                 title: `Deleting ${object.name}...`
               }, async () => {
-                await Schemas.deleteObject(object.schema, object.uniqueName(), object.type);
+                await Schemas.deleteObject(object.schema, object.uniqueName(), object.type, object.basedOn?.name, object.constraintType);
               });
 
               vscode.window.showInformationMessage(`${object.name} deleted`);
@@ -711,7 +711,12 @@ class SQLObject extends vscode.TreeItem {
   specificName: string;
   type: string;
   tableType: string;
+  constraintType: string;
   system: {
+    schema: string;
+    name: string;
+  }
+  basedOn: {
     schema: string;
     name: string;
   }
@@ -726,8 +731,10 @@ class SQLObject extends vscode.TreeItem {
     this.name = item.name;
     this.specificName = item.specificName; // Only applies to routines
     this.system = item.system;
+    this.basedOn = item.basedOn;
     this.type = type;
     this.tableType = item.tableType;
+    this.constraintType = item.constraintType;
     this.description = item.text;
     // For functions and procedures, set a tooltip that includes the specific name
     if (Schemas.isRoutineType(this.type)) {
