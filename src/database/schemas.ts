@@ -292,7 +292,7 @@ export default class Schemas {
           filter = getFilterClause(`NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, NAME as NAME, COALESCE(LABEL, '') as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, NAME as NAME, COALESCE(LABEL, '') as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
               `from QSYS2.SYSCONTROLS`,
               `where SCHEMA = ? AND CONTROL_TYPE = 'M' ${filter.clause}`,
             ].join(` `)
@@ -305,7 +305,7 @@ export default class Schemas {
           filter = getFilterClause(`CONSTRAINT_NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
               `from QSYS2.SYSCST`,
               `where CONSTRAINT_SCHEMA = ? ${filter.clause}`,
             ].join(` `)
@@ -396,7 +396,7 @@ export default class Schemas {
           filter = getFilterClause(`NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, NAME as NAME, COALESCE(LABEL, '') as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, NAME as NAME, COALESCE(LABEL, '') as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
               `from QSYS2.SYSCONTROLS`,
               `where SCHEMA = ? and CONTROL_TYPE = 'R' ${filter.clause}`,
             ].join(` `)
