@@ -267,7 +267,7 @@ export default class schemaBrowser {
 
           result = await vscode.window.showWarningMessage(`Are you sure you want to clear all of the advised index rows from the Index Advisor for ${object.schema}${isObject ? `${object.name}` : ''}?`, {
             modal: true,
-          }, 'No', 'Yes');
+          }, 'Yes', 'No');
 
           if (result === 'Yes') {
             try {
@@ -283,7 +283,7 @@ export default class schemaBrowser {
         if (object) {
           const result = await vscode.window.showWarningMessage(`Are you sure you want to delete ${object.name}?`, {
             modal: true,
-          }, 'No', 'Yes');
+          }, 'Yes', 'No');
 
           if (result === 'Yes') {
             try {
@@ -337,7 +337,7 @@ export default class schemaBrowser {
         if (object) {
           const result = await vscode.window.showWarningMessage(`Are you sure you want to clear ${object.name}?`, {
             modal: true,
-          }, 'No', 'Yes');
+          }, 'Yes', 'No');
 
           if (result === 'Yes') {
             try {
