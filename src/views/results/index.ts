@@ -379,7 +379,7 @@ async function runHandler(options?: StatementInfo) {
             }
 
             const uiId = registerRunStatement(statementDetail);
-            const eol = editor.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+            const eol = editor?.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
             const basicSelect = statementDetail.content.split(eol).filter(line => !line.trimStart().startsWith(`--`)).join(eol);
 
             chosenView.setScrolling({ // Never errors
