@@ -263,6 +263,10 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
   `;
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;
+  } else if (objectType === 'RECEIVER') {
+    sql += ` and object_type = '*JRNRCV'`;
+  } else if (objectType === 'JOURNAL') {
+    sql += ` and object_type = '*JRN'`;
   } else {
     sql += ` and sql_object_type = '${objectType}'`;
   }
