@@ -1,27 +1,26 @@
 import * as vscode from "vscode";
-import crypto from "crypto";
-import { SnippetString, ViewColumn, TreeView, window } from "vscode"
+import { SnippetString, TreeView, ViewColumn, window } from "vscode";
 
 import * as csv from "csv/sync";
 
 import { JobManager } from "../../config";
-import Document from "../../language/sql/document";
-import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
-import Statement from "../../language/sql/statement";
-import { ExplainTree } from "./explain/nodes";
-import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
-import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
-import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
-import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
-import { generateSqlForAdvisedIndexes } from "./explain/advice";
-import { updateStatusBar } from "../jobManager/statusBar";
-import { DbCache } from "../../language/providers/logic/cache";
-import { ExplainType } from "../../connection/types";
-import { queryResultToRpgDs } from "./codegen";
 import Configuration from "../../configuration";
+import { ExplainType } from "../../connection/types";
+import { DbCache } from "../../language/providers/logic/cache";
 import { getSqlDocument } from "../../language/providers/logic/parse";
+import Document from "../../language/sql/document";
+import Statement from "../../language/sql/statement";
+import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
+import { updateStatusBar } from "../jobManager/statusBar";
 import { getLiteralsFromStatement, getPriorBindableStatement } from "./binding";
+import { queryResultToRpgDs } from "./codegen";
 import { registerRunStatement } from "./editorUi";
+import { generateSqlForAdvisedIndexes } from "./explain/advice";
+import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
+import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
+import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
+import { ExplainTree } from "./explain/nodes";
+import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 
 export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
 
@@ -379,7 +378,7 @@ async function runHandler(options?: StatementInfo) {
             }
 
             const uiId = registerRunStatement(statementDetail);
-            const eol = editor.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+            const eol = editor?.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
             const basicSelect = statementDetail.content.split(eol).filter(line => !line.trimStart().startsWith(`--`)).join(eol);
 
             chosenView.setScrolling({ // Never errors
