@@ -59,3 +59,53 @@ export function columnToRpgDefinition(column: ColumnMetaData) : string {
       return `// type:${column.type} precision:${column.precision} scale:${column.scale}`;
   }
 }
+
+export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string) : string {
+  let columnDefinitions = '';
+  for (let i = 0; i < result.metadata.column_count; i++) {
+    const column = result.metadata.columns[i];
+    columnDefinitions += `  ${column.name} ${columnToSqlDefinition(column)}`;
+    if (i < result.metadata.column_count - 1) {
+      columnDefinitions += ',\n';
+    } else {
+      columnDefinitions += '\n';
+    }
+  }
+  
+  return `create or replace function MyFunction()\n`
+    + `returns table (\n`
+    + columnDefinitions
+    + `)\n`
+    + `begin\n`
+    + `  return ${sqlStatement};\n`
+    + `end;`;
+}
+
+export function columnToSqlDefinition(column: ColumnMetaData) : string {
+  switch (column.type) {
+    case 'NUMERIC':
+      return `numeric(${column.precision},${column.scale})`;
+    case 'DECIMAL':
+      return `decimal(${column.precision},${column.scale})`;
+    case 'CHAR':
+      return `char(${column.precision})`;
+    case 'VARCHAR':
+      return `varchar(${column.precision})`;
+    case 'DATE':
+      return `date`;
+    case 'TIME':
+      return `time`;
+    case 'TIMESTAMP':
+      return `timestamp`;
+    case 'SMALLINT':
+      return `integer`;
+    case 'INTEGER':
+      return `integer`;
+    case 'BIGINT':
+      return `bigint`;
+    case 'BOOLEAN':
+      return `boolean`;
+    default:
+      return `-- type:${column.type} precision:${column.precision} scale:${column.scale} */`;
+  }
+}
