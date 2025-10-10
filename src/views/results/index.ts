@@ -548,7 +548,7 @@ async function runHandler(options?: StatementInfo) {
           errorText = e.message || `Error running SQL statement.`;
         }
 
-        if ([`statement`, `explain`, `onlyexplain`, `cl`, `udtf`].includes(statementDetail.qualifier) && statementDetail.history !== false) {
+        if ([`statement`, `explain`, `onlyexplain`, `cl`].includes(statementDetail.qualifier) && statementDetail.history !== false) {
           chosenView.setError(errorText);
         } else {
           vscode.window.showErrorMessage(errorText);
@@ -612,7 +612,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   }
 
   if (statementInfo.content) {
-    [`cl`, `json`, `csv`, `sql`, `explain`, `update`, `rpg`, `bind`, `udtf`].forEach(mode => {
+    [`cl`, `json`, `csv`, `sql`, `explain`, `update`, `rpg`, `udtf`, `bind`].forEach(mode => {
       if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
         statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 
