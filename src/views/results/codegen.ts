@@ -1,6 +1,6 @@
 import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
 
-export function queryResultToRpgDs(result: QueryResult<any>, source: string = 'Name') : string {
+export function queryResultToRpgDs(result: QueryResult<any>, source: string = 'Name'): string {
   let content = `dcl-ds row_t qualified template;\n`;
   for (let i = 0; i < result.metadata.column_count; i++) {
     const name = columnToRpgFieldName(result.metadata.columns[i], source);
@@ -10,7 +10,7 @@ export function queryResultToRpgDs(result: QueryResult<any>, source: string = 'N
   return content;
 }
 
-export function columnToRpgFieldName(column: ColumnMetaData, source: string = 'Name') : string {
+export function columnToRpgFieldName(column: ColumnMetaData, source: string = 'Name'): string {
   let name = source === 'Label' ? column.label.toLowerCase().trim() : column.name.toLowerCase().trim();
   name = name.replace(/\u00fc/g, "u")  // ü -> u
     .replace(/\u00e4/g, "a")  // ä -> a
@@ -24,14 +24,14 @@ export function columnToRpgFieldName(column: ColumnMetaData, source: string = 'N
     .replace(/\s+/g, "_")  // remaining whitespaces to underscore
     .replace(/[^a-zA-Z0-9_]/g, "")  // remove non-alphanumeric chars
     .replace(/\_+/i, "_")  // replace multiple underscores with single underscore
-    .trim();  
+    .trim();
   if (!isNaN(+name.charAt(0))) {
     name = `col` + name;
   }
   return name;
 }
 
-export function columnToRpgDefinition(column: ColumnMetaData) : string {
+export function columnToRpgDefinition(column: ColumnMetaData): string {
   switch (column.type) {
     case `NUMERIC`:
       return `zoned(${column.precision}${column.scale > 0 ? ' : ' + column.scale : ''})`;
@@ -60,51 +60,57 @@ export function columnToRpgDefinition(column: ColumnMetaData) : string {
   }
 }
 
-export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string) : string {
+export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string): string {
   let columnDefinitions = '';
   for (let i = 0; i < result.metadata.column_count; i++) {
     const column = result.metadata.columns[i];
-    columnDefinitions += `  ${column.name} ${columnToSqlDefinition(column)}`;
+    columnDefinitions += `    ${column.name} ${columnToSqlDefinition(column)}`;
     if (i < result.metadata.column_count - 1) {
       columnDefinitions += ',\n';
     } else {
       columnDefinitions += '\n';
     }
   }
-  
-  return `create or replace function MyFunction()\n`
-    + `returns table (\n`
+
+  return `CREATE OR REPLACE FUNCTION MyFunction()\n`
+    + `  RETURNS TABLE (\n`
     + columnDefinitions
-    + `)\n`
-    + `begin\n`
-    + `  return ${sqlStatement};\n`
-    + `end;`;
+    + `  )\n`
+    + `  NOT DETERMINISTIC\n`
+    + `  NO EXTERNAL ACTION\n`
+    + `  READS SQL DATA\n`
+    + `  SET OPTION COMMIT = *NONE,\n`
+    + `             DYNUSRPRF = *USER,\n`
+    + `             USRPRF = *USER\n`
+    + `  BEGIN\n`
+    + `    RETURN ${sqlStatement};\n`
+    + `  END;`;
 }
 
-export function columnToSqlDefinition(column: ColumnMetaData) : string {
+export function columnToSqlDefinition(column: ColumnMetaData): string {
   switch (column.type) {
     case 'NUMERIC':
-      return `numeric(${column.precision},${column.scale})`;
+      return `NUMERIC(${column.precision},${column.scale})`;
     case 'DECIMAL':
-      return `decimal(${column.precision},${column.scale})`;
+      return `DECIMAL(${column.precision},${column.scale})`;
     case 'CHAR':
-      return `char(${column.precision})`;
+      return `CHAR(${column.precision})`;
     case 'VARCHAR':
-      return `varchar(${column.precision})`;
+      return `VARCHAR(${column.precision})`;
     case 'DATE':
-      return `date`;
+      return `DATE`;
     case 'TIME':
-      return `time`;
+      return `TIME`;
     case 'TIMESTAMP':
-      return `timestamp`;
+      return `TIMESTAMP`;
     case 'SMALLINT':
-      return `integer`;
+      return `INTEGER`;
     case 'INTEGER':
-      return `integer`;
+      return `INTEGER`;
     case 'BIGINT':
-      return `bigint`;
+      return `BIGINT`;
     case 'BOOLEAN':
-      return `boolean`;
+      return `BOOLEAN`;
     default:
       return `-- type:${column.type} precision:${column.precision} scale:${column.scale} */`;
   }
