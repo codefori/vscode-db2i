@@ -269,8 +269,8 @@
     "keybindings": [
       {
         "command": "vscode-db2i.openSqlDocument",
-        "key": "ctrl+alt-n",
-        "mac": "cmd+alt-n"
+        "key": "ctrl+alt+n",
+        "mac": "cmd+alt+n"
       }
     ]
   }
