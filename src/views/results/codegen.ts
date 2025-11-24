@@ -1,4 +1,6 @@
 import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
+import { Token } from "../../language/sql/types";
+import { tokenIs } from "../../language/sql/statement";
 
 export function queryResultToRpgDs(result: QueryResult<any>, source: string = 'Name'): string {
   let content = `dcl-ds row_t qualified template;\n`;
@@ -60,7 +62,7 @@ export function columnToRpgDefinition(column: ColumnMetaData): string {
   }
 }
 
-export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string): string {
+export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string, tokens: Token[]): string {
   let columnDefinitions = '';
   for (let i = 0; i < result.metadata.column_count; i++) {
     const column = result.metadata.columns[i];
@@ -70,6 +72,17 @@ export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string
     } else {
       columnDefinitions += '\n';
     }
+  }
+
+  if (tokens.length > 4 &&
+    tokenIs(tokens[0], `word`, `UDTF`) &&
+    tokenIs(tokens[1], `colon`, `:`) &&
+    tokenIs(tokens[2], `statementType`, `SELECT`) &&
+    tokenIs(tokens[3], `asterisk`, `*`)) {
+    const prefixEnd = tokens[3].range.start - tokens[0].range.start - tokens[1].range.start - 2;
+    const suffixStart = tokens[3].range.start - tokens[0].range.start - tokens[1].range.start;
+    const columns = result.metadata.columns.map(column => column.name).join(`,\n                  `)
+    sqlStatement = `${sqlStatement.substring(0, prefixEnd)}${columns}\n            ${sqlStatement.substring(suffixStart)}`;
   }
 
   return `CREATE OR REPLACE FUNCTION MyFunction()\n`

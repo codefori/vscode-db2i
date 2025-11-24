@@ -454,7 +454,7 @@ async function runHandler(options?: StatementInfo) {
             let content = `-- statement:\n`
               + `-- ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n-- ') }\n\n`
               + `-- User-defined table function\n`
-              + queryResultToUdtf(result, statementDetail.content);
+              + queryResultToUdtf(result, statementDetail.content, statementDetail.statement.tokens);
               
             const textDoc = await vscode.workspace.openTextDocument({ language: 'sql', content });
             await vscode.window.showTextDocument(textDoc);
