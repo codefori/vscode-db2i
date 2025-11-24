@@ -166,7 +166,7 @@ export class SQLJobManager {
 
     } else if (!ServerComponent.isInstalled()) {
       let updateResult = await ServerComponent.checkForUpdate();
-      if (UpdateStatus.JUST_UPDATED === updateResult) {
+      if (UpdateStatus.JUST_UPDATED === updateResult || UpdateStatus.UP_TO_DATE === updateResult) {
         await onConnectOrServerInstall();
         return this.getPagingStatement(query, opts);
       }
