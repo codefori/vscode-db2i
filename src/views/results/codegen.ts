@@ -93,6 +93,7 @@ export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string
     + `  NO EXTERNAL ACTION\n`
     + `  READS SQL DATA\n`
     + `  SET OPTION COMMIT = *NONE,\n`
+    + `             DBGVIEW = *SOURCE,\n`
     + `             DYNUSRPRF = *USER,\n`
     + `             USRPRF = *USER\n`
     + `  BEGIN\n`
