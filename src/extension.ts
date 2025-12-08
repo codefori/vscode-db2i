@@ -11,6 +11,7 @@ import { getInstance, loadBase } from "./base";
 import { JobManager, initConfig, onConnectOrServerInstall } from "./config";
 import Configuration from "./configuration";
 import { SQLJobManager } from "./connection/manager";
+import {SQLStatementChecker} from "./connection/syntaxChecker";
 import { ServerComponent } from "./connection/serverComponent";
 import { OldSQLJob } from "./connection/sqlJob";
 import { languageInit } from "./language/providers";
@@ -29,6 +30,7 @@ import { setCheckerAvailableContext } from "./language/providers/problemProvider
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
+  SQLStatementChecker: SQLStatementChecker,
   sqlJob: (options?: JDBCOptions) => OldSQLJob
 }
 
@@ -121,7 +123,8 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   instance.subscribe(context, `disconnected`, `db2i-disconnected`, () => ServerComponent.reset());
 
-  return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new OldSQLJob(options) };
+  return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new OldSQLJob(options), SQLStatementChecker: new SQLStatementChecker() };
+
 }
 
 // this method is called when your extension is deactivated
