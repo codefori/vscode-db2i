@@ -1,6 +1,22 @@
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-import { CallableReference, Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
+import { Definition, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
+
+export interface ParsedColumn {
+  columnName: string;      
+  aliasName?: string;    
+  isAlias: boolean;        
+  type?: string;           
+}
+
+export interface ParsedTableEntry {
+  tableName: string;   
+  systemTableName?:string;    
+  columns: ParsedColumn[];  // array of columns for that table
+}
+export interface ParsedTable {
+  columns: ParsedColumn[];
+}
 
 export default class Document {
   content: string;
@@ -130,28 +146,21 @@ export default class Document {
 
   getStatementGroups(): StatementGroup[] {
     let groups: StatementGroup[] = [];
-
     let currentGroup: Statement[] = [];
-
     let depth = 0;
-
     for (const statement of this.statements) {
         if (statement.isCompoundEnd()) {
           if (depth > 0) {
-            currentGroup.push(statement);
-              
+            currentGroup.push(statement);    
             depth--;
-
             this.log(`<` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           }
-
           if (depth === 0) {
             if (currentGroup.length > 0) {
               groups.push({
                 range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
                 statements: currentGroup
               });
-
               currentGroup = [];
             }
           }
@@ -163,9 +172,7 @@ export default class Document {
           } else {
             currentGroup = [statement];
           }
-
           depth++;
-
         } else {
           this.log(` ` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           if (depth > 0) {
@@ -187,6 +194,21 @@ export default class Document {
     }
 
     return groups;
+  }
+ getColumnsAndTable():ParsedTableEntry[] {
+    const groups = this.getStatementGroups();
+
+    const result:ParsedTableEntry[] = [];
+
+    for (const group of groups) {
+      if(group.statements[0].type === StatementType.Create) {
+      const info:ParsedTableEntry = getCreateTableInfo(group.statements[0].tokens);
+        result.push(info);
+      
+      }
+    }
+
+    return result;
   }
 
   getDefinitions(): Definition[] {
@@ -223,7 +245,7 @@ export default class Document {
     })
   }
 
-  removeEmbeddedAreas(statement: Statement, options: {replacement: `snippet`|`?`|`values`, values?: any[]} = {replacement: `?`}): ParsedEmbeddedStatement {
+  removeEmbeddedAreas(statement: Statement, snippetString?: boolean): ParsedEmbeddedStatement {
     const areas = statement.getEmbeddedStatementAreas();
 
     const totalParameters = areas.filter(a => a.type === `marker`).length;
@@ -242,71 +264,23 @@ export default class Document {
         case `marker`:
           const markerContent = newContent.substring(start, end);
 
-          switch (options.replacement) {
-            case `snippet`:
-              newContent = newContent.substring(0, start) + `\${${totalParameters-parameterCount}:${markerContent}}` + newContent.substring(end) + `$0`;
-              break;
-            case `?`:
-              newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
-              break;
-            case `values`:
-              let valueIndex = totalParameters - parameterCount - 1;
-              if (options.values && options.values.length > valueIndex) {
-                let value = options.values[valueIndex];
-                
-                if (typeof value === `string`) {
-                  value = `'${value.replace(/'/g, `''`)}'`; // Escape single quotes in strings
-                }
-
-                newContent = newContent.substring(0, start) + value + newContent.substring(end);
-              } else {
-                newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
-              }
-              break;
-          }
+          newContent = newContent.substring(0, start) + (snippetString ? `\${${totalParameters-parameterCount}:${markerContent}}` : `?`) + newContent.substring(end) + (snippetString ? `$0` : ``);
       
           parameterCount++;
           break;
 
         case `remove`:
-          newContent = newContent.substring(0, start) + newContent.substring(end);
-          if (newContent[start-1] === ` ` && newContent[start] === ` `) {
-            newContent = newContent.substring(0, start-1) + newContent.substring(start);
-          }
+          newContent = newContent.substring(0, start) + newContent.substring(end+1);
           break;
       }
     }
 
     return {
       changed: areas.length > 0,
-      content: newContent.trim(),
+      content: newContent,
       parameterCount
     };
   }
-}
-
-
-export function getPositionData(ref: CallableReference, offset: number) {
-  const paramCommas = ref.tokens.filter(token => token.type === `comma`);
-
-  let currentParm = paramCommas.findIndex(t => offset < t.range.start);
-
-  if (currentParm === -1) {
-    currentParm = paramCommas.length;
-  }
-
-  const firstNamedPipe = ref.tokens.find((token, i) => token.type === `rightpipe`);
-  let firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : undefined;
-
-  if (firstNamedParameter === -1) {
-    firstNamedParameter = undefined;
-  }
-
-  return {
-    currentParm,
-    currentCount: paramCommas.length + 1,
-    firstNamedParameter
-  };
 }
 
 function getSymbolsForStatements(statements: Statement[]) {
@@ -331,4 +305,243 @@ function getSymbolsForStatements(statements: Statement[]) {
   }
 
   return defintions;
+}
+
+
+//-----------------------------------------------------------
+// UNIVERSAL SQL COLUMN PARSER FOR ALL CREATE TABLE STYLES
+//-----------------------------------------------------------
+//-----------------------------------------------------------
+// UNIVERSAL SQL PARSER (TABLE NAME + COLUMNS)
+//-----------------------------------------------------------
+export function getCreateTableInfo(tokens: any[]):ParsedTableEntry {
+  const {tableName,systemName} = extractTableNames(tokens);
+  const columnGroups = extractColumnGroups(tokens);
+  const columnsValues = extractColumnNames(columnGroups);
+  const {columns,ColumnNames}= columnsValues;
+  return {
+   tableName: tableName,
+  systemTableName:systemName ?? tableName,      
+  columns: ColumnNames
+  };
+}
+
+//-----------------------------------------------------------
+// 0) Extract TABLE NAME from CREATE TABLE statement
+//-----------------------------------------------------------
+function extractTableNames(tokens: any[]) {
+  let foundTable = false;
+  let tableNameParts: string[] = [];
+  let systemName: string | null = null;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const v = tokens[i].value?.toLowerCase();
+
+    // Detect TABLE keyword
+    if (v === "table") {
+      foundTable = true;
+      continue;
+    }
+
+    if (!foundTable) continue;
+
+    // STOP collecting table name if "(" begins
+    if (tokens[i].value === "(") break;
+
+    // Detect "FOR SYSTEM NAME <xxx>"
+    if (
+      v === "for" &&
+      tokens[i + 1]?.value?.toLowerCase() === "system" &&
+      tokens[i + 2]?.value?.toLowerCase() === "name"
+    ) {
+      // system name is the next token after NAME
+      systemName = tokens[i + 3]?.value ?? null;
+      break; // STOP reading table name
+    }
+
+    // Skip noise keywords
+    const skip = ["if", "not", "exists", "or", "replace"];
+    if (skip.includes(v)) continue;
+
+    // Collect table name parts
+    if (
+      tokens[i].type === "word" ||
+      tokens[i].type === "string" ||
+      /[\/\.]/.test(tokens[i].value)
+    ) {
+      tableNameParts.push(tokens[i].value);
+    }
+  }
+
+  const tableName = tableNameParts.length > 0 ? tableNameParts.join("") : null;
+
+  return { tableName, systemName };
+}
+
+
+
+
+//-----------------------------------------------------------
+// 1) Extract column groups inside the main ( ... ) block
+//-----------------------------------------------------------
+function extractColumnGroups(tokens: any[]) {
+  let startIndex = -1;
+  let depth = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+
+    if (t.value === "(" && startIndex === -1) {
+      startIndex = i;
+      depth = 1;
+      i++;
+
+      // find matching closing )
+      while (i < tokens.length && depth > 0) {
+        if (tokens[i].value === "(") depth++;
+        else if (tokens[i].value === ")") depth--;
+        i++;
+      }
+
+      const endIndex = i - 1;
+      const innerTokens = tokens.slice(startIndex + 1, endIndex);
+
+      // ---------------------------------------------------
+      // Split by commas ONLY on depth=0
+      // ---------------------------------------------------
+      const groups: any[][] = [];
+      let current: any[] = [];
+      let d = 0;
+
+      for (const token of innerTokens) {
+        if (token.value === "," && d === 0) {
+          if (current.length > 0) {
+            groups.push(current);
+            current = [];
+          }
+          continue;
+        }
+
+        current.push(token);
+
+        if (token.value === "(") d++;
+        else if (token.value === ")") d--;
+      }
+
+      if (current.length > 0) groups.push(current);
+
+      // REMOVE TABLE CONSTRAINT GROUPS
+      const unwanted = [
+        "constraint",
+        "primary",
+        "foreign",
+        "unique",
+        "check",
+        "references",
+        "key"
+      ];
+
+      return groups.filter(group => {
+        const text = group.map(t => t.value.toLowerCase()).join(" ");
+        return !unwanted.some(word => text.startsWith(word));
+      });
+    }
+  }
+
+  return [];
+}
+
+//-----------------------------------------------------------
+// 2) Extract column names from each group
+//-----------------------------------------------------------
+
+
+
+function extractColumnNames(groups: any[][]) {
+  const columns: string[] = [];
+  const ColumnNames: ParsedColumn[] = [];
+
+
+  for (const group of groups) {
+    const result = parseSingleColumn(group);
+    if (!result) continue;
+
+    const { aliasForColumn, normalIdentifiers } = result;
+if(aliasForColumn.length===1&& normalIdentifiers.length===1)
+{      
+      ColumnNames.push({columnName:normalIdentifiers[0], aliasName:aliasForColumn[0], isAlias: true});
+      ColumnNames.push({columnName:aliasForColumn[0], isAlias: false});
+      ColumnNames.map(col=> columns.push(col.columnName));
+        // columns.push(columnNames);
+  // 
+}
+  }
+
+  return {columns,
+    ColumnNames
+  };
+}
+
+
+//-----------------------------------------------------------
+// 3) Parse a single column definition
+//-----------------------------------------------------------
+function parseSingleColumn(tokens: any[]) {
+  if (!tokens.length) return null;
+
+  const aliasForColumn: string[] = [];
+  const normalIdentifiers: string[] = [];
+
+  // ----------------------------------------------
+  // A) FIRST TOKEN CHECK → Alias name (only once)
+  // ----------------------------------------------
+  const first = tokens[0];
+  if (first && first.type === "word" && !isKeyword(first.value)) {
+    aliasForColumn.push(cleanIdentifier(first.value));
+  }
+
+  // ----------------------------------------------
+  // B) Look for "FOR COLUMN realColumn"
+  // ----------------------------------------------
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i].value?.toLowerCase();
+
+    if (
+      t === "for" &&
+      tokens[i + 1]?.value?.toLowerCase() === "column" &&
+      tokens[i + 2]
+    ) {
+      normalIdentifiers.push(cleanIdentifier(tokens[i + 2].value));
+    }
+  }
+
+  // ----------------------------------------------
+  // C) Return final structured result
+  // ----------------------------------------------
+  return {
+    aliasForColumn,
+    normalIdentifiers,
+  };
+}
+
+
+//-----------------------------------------------------------
+// Helpers
+//-----------------------------------------------------------
+
+
+function cleanIdentifier(name: string) {
+  return name.replace(/^[`\["']+|[`"\]']+$/g, "");
+}
+
+function isKeyword(val: string) {
+  const keywords = [
+    "char", "varchar", "nvarchar", "text", "int", "integer", "bigint",
+    "decimal", "numeric", "float", "real", "double",
+    "date", "datetime", "timestamp", "time",
+    "ccsid", "default", "constraint", "primary", "foreign",
+    "key", "unique", "check", "not", "null", "for", "column",
+    "references", "on", "update", "delete", "by"
+  ];
+
+  return keywords.includes(val.toLowerCase());
 }
