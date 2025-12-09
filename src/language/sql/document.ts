@@ -1,23 +1,24 @@
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-import { Definition, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
+import { CallableReference, Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
+
+
 
 export interface ParsedColumn {
-  columnName: string;      
-  aliasName?: string;    
-  isAlias: boolean;        
-  type?: string;           
+  columnName: string;      // SQL-facing or physical name
+  aliasName?: string;    // always the real DB2 column name (zztype, zzvaleur, etc.)
+  isAlias: boolean;        // true if alias name, false if physical name
+  type?: string;           // optional: char(5), varchar(20), etc.
 }
 
 export interface ParsedTableEntry {
   tableName: string;   
-  systemTableName?:string;    
+  systemTableName?:string;     // "mouni", "mouni3", "mylib/zz01pf", etc.
   columns: ParsedColumn[];  // array of columns for that table
 }
 export interface ParsedTable {
   columns: ParsedColumn[];
 }
-
 export default class Document {
   content: string;
   statements: Statement[];
@@ -146,21 +147,28 @@ export default class Document {
 
   getStatementGroups(): StatementGroup[] {
     let groups: StatementGroup[] = [];
+
     let currentGroup: Statement[] = [];
+
     let depth = 0;
+
     for (const statement of this.statements) {
         if (statement.isCompoundEnd()) {
           if (depth > 0) {
-            currentGroup.push(statement);    
+            currentGroup.push(statement);
+              
             depth--;
+
             this.log(`<` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           }
+
           if (depth === 0) {
             if (currentGroup.length > 0) {
               groups.push({
                 range: { start: currentGroup[0].range.start, end: currentGroup[currentGroup.length-1].range.end },
                 statements: currentGroup
               });
+
               currentGroup = [];
             }
           }
@@ -172,7 +180,9 @@ export default class Document {
           } else {
             currentGroup = [statement];
           }
+
           depth++;
+
         } else {
           this.log(` ` + ``.padEnd(depth*2) + Statement.formatSimpleTokens(statement.tokens.slice(0, 2)));
           if (depth > 0) {
@@ -245,7 +255,7 @@ export default class Document {
     })
   }
 
-  removeEmbeddedAreas(statement: Statement, snippetString?: boolean): ParsedEmbeddedStatement {
+  removeEmbeddedAreas(statement: Statement, options: {replacement: `snippet`|`?`|`values`, values?: any[]} = {replacement: `?`}): ParsedEmbeddedStatement {
     const areas = statement.getEmbeddedStatementAreas();
 
     const totalParameters = areas.filter(a => a.type === `marker`).length;
@@ -264,23 +274,71 @@ export default class Document {
         case `marker`:
           const markerContent = newContent.substring(start, end);
 
-          newContent = newContent.substring(0, start) + (snippetString ? `\${${totalParameters-parameterCount}:${markerContent}}` : `?`) + newContent.substring(end) + (snippetString ? `$0` : ``);
+          switch (options.replacement) {
+            case `snippet`:
+              newContent = newContent.substring(0, start) + `\${${totalParameters-parameterCount}:${markerContent}}` + newContent.substring(end) + `$0`;
+              break;
+            case `?`:
+              newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
+              break;
+            case `values`:
+              let valueIndex = totalParameters - parameterCount - 1;
+              if (options.values && options.values.length > valueIndex) {
+                let value = options.values[valueIndex];
+                
+                if (typeof value === `string`) {
+                  value = `'${value.replace(/'/g, `''`)}'`; // Escape single quotes in strings
+                }
+
+                newContent = newContent.substring(0, start) + value + newContent.substring(end);
+              } else {
+                newContent = newContent.substring(0, start) + `?` + newContent.substring(end);
+              }
+              break;
+          }
       
           parameterCount++;
           break;
 
         case `remove`:
-          newContent = newContent.substring(0, start) + newContent.substring(end+1);
+          newContent = newContent.substring(0, start) + newContent.substring(end);
+          if (newContent[start-1] === ` ` && newContent[start] === ` `) {
+            newContent = newContent.substring(0, start-1) + newContent.substring(start);
+          }
           break;
       }
     }
 
     return {
       changed: areas.length > 0,
-      content: newContent,
+      content: newContent.trim(),
       parameterCount
     };
   }
+}
+
+
+export function getPositionData(ref: CallableReference, offset: number) {
+  const paramCommas = ref.tokens.filter(token => token.type === `comma`);
+
+  let currentParm = paramCommas.findIndex(t => offset < t.range.start);
+
+  if (currentParm === -1) {
+    currentParm = paramCommas.length;
+  }
+
+  const firstNamedPipe = ref.tokens.find((token, i) => token.type === `rightpipe`);
+  let firstNamedParameter = firstNamedPipe ? paramCommas.findIndex((token, i) => token.range.start > firstNamedPipe.range.start) : undefined;
+
+  if (firstNamedParameter === -1) {
+    firstNamedParameter = undefined;
+  }
+
+  return {
+    currentParm,
+    currentCount: paramCommas.length + 1,
+    firstNamedParameter
+  };
 }
 
 function getSymbolsForStatements(statements: Statement[]) {
@@ -491,57 +549,38 @@ function parseSingleColumn(tokens: any[]) {
   const aliasForColumn: string[] = [];
   const normalIdentifiers: string[] = [];
 
-  // ----------------------------------------------
-  // A) FIRST TOKEN CHECK → Alias name (only once)
-  // ----------------------------------------------
-  const first = tokens[0];
-  if (first && first.type === "word" && !isKeyword(first.value)) {
-    aliasForColumn.push(cleanIdentifier(first.value));
-  }
-
-  // ----------------------------------------------
-  // B) Look for "FOR COLUMN realColumn"
-  // ----------------------------------------------
+  // -------------------------------
+  // A) Collect DB2 alias-for-column
+  // -------------------------------
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i].value?.toLowerCase();
-
-    if (
-      t === "for" &&
-      tokens[i + 1]?.value?.toLowerCase() === "column" &&
-      tokens[i + 2]
-    ) {
-      normalIdentifiers.push(cleanIdentifier(tokens[i + 2].value));
+// IF first token is identifier/word/string → it's the alias name
+    if(tokens[i].value===tokens[0].value && tokens[0].type==="word")
+    {
+      aliasForColumn.push(cleanIdentifier(tokens[0].value));
     }
+
+    // IF (FOR COLUMN realName)
+   else if (t === "for" && tokens[i + 1]?.value?.toLowerCase() === "column") {
+      const real = tokens[i + 2];
+      if (real) normalIdentifiers.push(cleanIdentifier(real.value));
+    }
+
   }
 
-  // ----------------------------------------------
-  // C) Return final structured result
-  // ----------------------------------------------
+  // ------------------------
+  // B) Return everything
+  // ------------------------
   return {
     aliasForColumn,
     normalIdentifiers,
   };
 }
 
-
 //-----------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------
 
-
 function cleanIdentifier(name: string) {
   return name.replace(/^[`\["']+|[`"\]']+$/g, "");
-}
-
-function isKeyword(val: string) {
-  const keywords = [
-    "char", "varchar", "nvarchar", "text", "int", "integer", "bigint",
-    "decimal", "numeric", "float", "real", "double",
-    "date", "datetime", "timestamp", "time",
-    "ccsid", "default", "constraint", "primary", "foreign",
-    "key", "unique", "check", "not", "null", "for", "column",
-    "references", "on", "update", "delete", "by"
-  ];
-
-  return keywords.includes(val.toLowerCase());
 }
