@@ -129,12 +129,14 @@ export function initialise(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand(`vscode-db2i.dove.export`, () => {
+      let veContent = JSON.stringify(doveResultsView.getRootExplainNode(), null, 2)
       vscode.workspace.openTextDocument({
         language: `json`,
-        content: JSON.stringify(doveResultsView.getRootExplainNode(), null, 2)
+        content: veContent
       }).then(doc => {
         vscode.window.showTextDocument(doc);
-      });
+      })
+      return veContent;
     }),
 
     vscode.commands.registerCommand(`vscode-db2i.dove.generateSqlForAdvisedIndexes`, () => {
