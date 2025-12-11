@@ -499,8 +499,7 @@ function extractColumnGroups(tokens: any[]) {
       ];
 
       return groups.filter(group => {
-        const text = group.map(t => t.value.toLowerCase()).join(" ");
-        return !unwanted.some(word => text.startsWith(word));
+         return !unwanted.includes(group[0].value.toLowerCase())
       });
     }
   }
@@ -522,16 +521,41 @@ function extractColumnNames(groups: any[][]) {
   for (const group of groups) {
     const result = parseSingleColumn(group);
     if (!result) continue;
-
     const { aliasForColumn, normalIdentifiers } = result;
-if(aliasForColumn.length===1&& normalIdentifiers.length===1)
-{      
-      ColumnNames.push({columnName:normalIdentifiers[0], aliasName:aliasForColumn[0], isAlias: true});
-      ColumnNames.push({columnName:aliasForColumn[0], isAlias: false});
-      ColumnNames.map(col=> columns.push(col.columnName));
-        // columns.push(columnNames);
-  // 
+    let alias=normalizeNames(aliasForColumn);
+    let normal=normalizeNames(normalIdentifiers);
+
+if (alias.length === 1 && normal.length === 1) {
+    // Case 1: Both alias and real column exist
+    ColumnNames.push({
+        columnName: normal[0],
+        aliasName: alias[0],
+        isAlias: true
+    });
+
+    ColumnNames.push({
+        columnName: alias[0],
+        isAlias: false
+    });
 }
+else if (alias.length === 1 && normal.length === 0) {
+    // Case 2: Only alias exists
+    ColumnNames.push({
+        columnName: alias[0],
+        isAlias: false
+    });
+}
+else if (normal.length === 1 && alias.length === 0) {
+    // Case 3: Only real column name exists (rare case)
+    ColumnNames.push({
+        columnName: normal[0],
+        isAlias: false
+    });
+}
+
+// Push to columns array
+ColumnNames.forEach(col => columns.push(col.columnName));
+
   }
 
   return {columns,
@@ -539,7 +563,15 @@ if(aliasForColumn.length===1&& normalIdentifiers.length===1)
   };
 }
 
+function normalizeNames(arr: string[]) {
+  // clean quotes + lowercase
+  const cleaned = arr.map(a => cleanIdentifier(a).toLowerCase());
 
+  // remove duplicates
+  const unique = [...new Set(cleaned)];
+
+  return unique; // can be 1 or many
+}
 //-----------------------------------------------------------
 // 3) Parse a single column definition
 //-----------------------------------------------------------
@@ -554,13 +586,13 @@ function parseSingleColumn(tokens: any[]) {
   // -------------------------------
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i].value?.toLowerCase();
-// IF first token is identifier/word/string → it's the alias name
-    if(tokens[i].value===tokens[0].value && tokens[0].type==="word")
+  // IF first token is identifier/word/string/sqlName → it's the alias name and also considering the sqlName type with quotes
+    if(t===tokens[0].value.toLowerCase() && (tokens[0].type ==="word"||(tokens[0].type==="sqlName" && tokens[0].value.startsWith('"'))) )
     {
       aliasForColumn.push(cleanIdentifier(tokens[0].value));
     }
 
-    // IF (FOR COLUMN realName)
+    // IF (FOR COLUMN realName as per SYSTEM)
    else if (t === "for" && tokens[i + 1]?.value?.toLowerCase() === "column") {
       const real = tokens[i + 2];
       if (real) normalIdentifiers.push(cleanIdentifier(real.value));
