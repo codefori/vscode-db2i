@@ -5,15 +5,15 @@ import { CallableReference, Definition, IRange, ParsedEmbeddedStatement, Stateme
 
 
 export interface ParsedColumn {
-  columnName: string;      // SQL-facing or physical name
-  aliasName?: string;    // always the real DB2 column name (zztype, zzvaleur, etc.)
-  isAlias: boolean;        // true if alias name, false if physical name
-  type?: string;           // optional: char(5), varchar(20), etc.
+  columnName: string;      
+  aliasName?: string;   
+  isAlias: boolean;        
+  type?: string;         
 }
 
 export interface ParsedTableEntry {
   tableName: string;   
-  systemTableName?:string;     // "mouni", "mouni3", "mylib/zz01pf", etc.
+  systemTableName?:string;    
   columns: ParsedColumn[];  // array of columns for that table
 }
 export interface ParsedTable {
