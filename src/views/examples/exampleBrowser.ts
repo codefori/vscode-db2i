@@ -154,6 +154,10 @@ export class ExampleBrowser implements TreeDataProvider<any> {
         }
       }),
 
+      commands.registerCommand("vscode-db2i.examples.get", async () => {
+        return await getMergedExamples();
+      }),
+
       workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('vscode-db2i.examples.customExampleDirectories')) {
           this.setupWatchers();
