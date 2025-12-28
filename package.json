@@ -1679,6 +1679,7 @@
     "node-fetch": "^3.3.1",
     "octokit": "^5.0.3",
     "showdown": "^2.1.0",
-    "sql-formatter": "^14.0.0"
+    "sql-formatter": "^14.0.0",
+    "json-bigint": "^1.0.0"
   }
 }
