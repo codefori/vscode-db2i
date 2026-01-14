@@ -25,7 +25,7 @@ function generatePage(rows: JobLogEntry[]) {
         ${getHeader()}
               </head>
       <body>
-        <div style="grid-template-columns:150px auto auto auto auto auto;width: 100%;" id="resultset">
+        <div style="grid-template-columns:150px auto auto auto auto auto;width: 100%;" class="joblog" id="resultset">
           <div class="row">
             <div class="header">Sent</div>
             <div class="header">Type</div>

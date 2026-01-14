@@ -50,6 +50,10 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       position: relative;
     }
 
+    .joblog > div:not(:first-child) > div.cell {
+      display: flex;
+      align-items: center;
+    }
     .header {
       /* stop content from "spilling" */
       overflow: hidden;

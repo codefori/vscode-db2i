@@ -470,13 +470,13 @@ export function generateScroller(basicSelect: string, isCL: boolean, withCancel?
               cell.classList.add("header");
               switch(columnHeadings) {
                 case 'Name':
-                  cell.innerText = column.label;
+                  cell.innerText = column.name;
                   break;
                 case 'Both':
                   cell.innerHTML = escapeHTML(column.name)+'<br>'+escapeHTML(column.label);
                   break;
                 default:
-                  cell.innerText = column.name;
+                  cell.innerText = column.label;
               }
               cell.title = getTooltip(column, columnHeadings);
               const grip = document.createElement("div");
