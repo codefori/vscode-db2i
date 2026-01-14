@@ -3,6 +3,7 @@ import path from "path";
 import { getInstance } from "../base";
 import { JobManager } from "../config";
 import { ResolvedSqlObject, BasicSQLObject } from "../types";
+import Statement from "./statement";
 
 export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types" | "logicals";
 export type PageData = { filter?: string, offset?: number, limit?: number, sort?: boolean };
@@ -475,7 +476,7 @@ export default class Schemas {
 
       await JobManager.runSQL<{ SRCDTA: string }>([
         `CALL QSYS2.GENERATE_SQL( ${options.join(`, `)} )`,
-      ].join(` `), { parameters: [object, schema, internalType] });
+      ].join(` `), { parameters: [Statement.escapeString(object), Statement.escapeString(schema), internalType] });
 
       // TODO: eventually .content -> .getContent(), it's not available yet
       const contents = (
@@ -494,7 +495,7 @@ export default class Schemas {
     type: string
   ): Promise<void> {
     const query = `DROP ${(this.isRoutineType(type) ? "SPECIFIC " : "") + type
-      } IF EXISTS ${schema}.${name}`;
+      } IF EXISTS ${Statement.delimName(schema)}.${Statement.delimName(name)}`;
     await getInstance().getContent().runSQL(query);
   }
 
@@ -505,7 +506,7 @@ export default class Schemas {
     type: string
   ): Promise<void> {
     const query = `RENAME ${type === "view" ? "table" : type
-      } ${schema}.${oldName} TO ${newName}`;
+      } ${Statement.delimName(schema)}.${Statement.delimName(oldName)} TO ${Statement.delimName(newName)}`;
     await getInstance().getContent().runSQL(query);
   }
 
@@ -514,10 +515,10 @@ export default class Schemas {
   }
 
   static clearAdvisedIndexes(schema: string, name?: string) {
-    let query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}'`;
+    let query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${Statement.escapeString(schema)}'`;
 
     if (name) {
-      query += `and TABLE_NAME = '${name}'`;
+      query += `and TABLE_NAME = '${Statement.escapeString(name)}'`;
     }
 
     return getInstance().getContent().runSQL(query);

@@ -10,7 +10,7 @@ import Configuration from "../../configuration";
 import Types from "../types";
 import Statement from "../../database/statement";
 import { getCopyUi } from "./copyUI";
-import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement } from "./statements";
+import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects, viewPermissions } from "./statements";
 import { BasicSQLObject } from "../../types";
 import { TextDecoder } from "util";
 import { parse } from "csv/sync";
@@ -139,9 +139,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getRelatedObjects`, async (object: SQLObject) => {
         if (object) {
-          const content = `SELECT SQL_NAME, SYSTEM_NAME, SCHEMA_NAME, LIBRARY_NAME, SQL_OBJECT_TYPE, 
-          OBJECT_OWNER, LAST_ALTERED, OBJECT_TEXT, LONG_COMMENT 
-          FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${object.schema}', '${object.name}')) ORDER BY SQL_OBJECT_TYPE, SQL_NAME`;
+          const content = getRelatedObjects(object.schema, object.name);
 
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
@@ -153,11 +151,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.viewPermissions`, async (object: SQLObject) => {
         if (object) {
-          const content = `SELECT AUTHORIZATION_NAME as USER_NAME, OBJECT_AUTHORITY,
-          OWNER, OBJECT_OPERATIONAL, OBJECT_MANAGEMENT, OBJECT_EXISTENCE, OBJECT_ALTER, OBJECT_REFERENCE,
-          DATA_READ, DATA_ADD, DATA_UPDATE, DATA_DELETE, DATA_EXECUTE FROM QSYS2.OBJECT_PRIVILEGES 
-          WHERE OBJECT_SCHEMA='${object.schema}' AND OBJECT_NAME='${object.name}' AND 
-          SQL_OBJECT_TYPE='${object.type.toUpperCase()}'`;
+          const content = viewPermissions(object.schema, object.name, object.type.toUpperCase());
 
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
@@ -411,7 +405,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.importData`, async () => {
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL` }, async (arg?: any) => {
-          try {            
+          try {
             const uri = await this.pickFile();
             if (!uri) { return; }
             const data = await this.readFile(uri);
@@ -447,14 +441,14 @@ export default class schemaBrowser {
   async generateInsert(uri: vscode.Uri, data: string) {
     let ext: string = (uri.fsPath.split('.').pop() || '').toLowerCase();
     if (ext != `csv` && ext != `json`) {
-      ext = await vscode.window.showQuickPick(['csv','json'], { placeHolder: 'What format is this file?' });
+      ext = await vscode.window.showQuickPick(['csv', 'json'], { placeHolder: 'What format is this file?' });
       if (!ext) { return; }
     }
 
     let rows: any[] = [];
     let hasHeaders = true;
     if (ext === `csv`) {
-      hasHeaders = (await vscode.window.showQuickPick(['Yes','No'], { placeHolder: 'Does the file have headers?' })) === `Yes` ? true : false;
+      hasHeaders = (await vscode.window.showQuickPick(['Yes', 'No'], { placeHolder: 'Does the file have headers?' })) === `Yes` ? true : false;
       rows = parse(data, {
         columns: hasHeaders,
         cast: true
@@ -465,14 +459,14 @@ export default class schemaBrowser {
         throw new Error('Unsupported JSON format: expected an array of objects.');
       }
     }
-    
-    if (!rows.length) { 
-      vscode.window.showWarningMessage('No rows found.'); 
+
+    if (!rows.length) {
+      vscode.window.showWarningMessage('No rows found.');
       return;
     }
 
     let content: string = ``;
-    if(hasHeaders) {
+    if (hasHeaders) {
       // Get headers using the first row of data
       const colNames = Object.keys(rows[0]);
       const cols = colNames.map(c => c.includes(` `) ? `"${c}"` : c).join(', ');
@@ -483,7 +477,7 @@ export default class schemaBrowser {
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         let allValues = [];
-        for(const col of colNames) {
+        for (const col of colNames) {
           const val = row[col];
           if (typeof val === `string`) {
             allValues.push(`'${val.replace(`'`, `''`)}'`);
@@ -492,7 +486,7 @@ export default class schemaBrowser {
           }
         }
         allRowValues.push(`  (${allValues.join(', ')})`);
-      }   
+      }
       content += allRowValues.join(`,\n`);
     } else {
       // Generate the INSERT statement
@@ -501,7 +495,7 @@ export default class schemaBrowser {
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         let allValues = [];
-        for(let j = 0; j < row.length; j++) {
+        for (let j = 0; j < row.length; j++) {
           const val = row[j];
           if (typeof val === `string`) {
             allValues.push(`'${val}'`);
@@ -510,12 +504,12 @@ export default class schemaBrowser {
           }
         }
         allRowValues.push(`  (${allValues.join(', ')})`);
-      }   
+      }
       content += allRowValues.join(`,\n`);
     }
 
     content += `;`;
-    
+
     // Open the generated SQL in a new file
     const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
     await vscode.window.showTextDocument(textDoc);
