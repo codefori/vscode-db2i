@@ -36,7 +36,7 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
     }
 
     #resultset td.preserve {
-      white-space: pre-wrap; /* preserves spaces AND wraps lines */
+      white-space: pre-wrap;
     }
 
     #resultset tbody tr:hover {
