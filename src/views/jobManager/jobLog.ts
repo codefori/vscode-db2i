@@ -51,12 +51,8 @@ function generatePage(rows: JobLogEntry[]) {
                 <td>
                   ${row.MESSAGE_ID}
                 </td>
-                <td>
-                  ${escapeHTML(row.MESSAGE_TEXT || ``)}
-                </td>
-                <td>
-                  ${escapeHTML(row.MESSAGE_SECOND_LEVEL_TEXT || ``)}
-                </td>
+                <td class="preserve">${escapeHTML(row.MESSAGE_TEXT || ``)}</td>
+                <td class="preserve">${escapeHTML(row.MESSAGE_SECOND_LEVEL_TEXT || ``)}</td>
               </tr>`
             }).join(``)}
           </tbody>

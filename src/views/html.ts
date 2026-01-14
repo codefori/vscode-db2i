@@ -35,6 +35,10 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
       padding: 5px 15px;
     }
 
+    #resultset td.preserve {
+      white-space: pre-wrap; /* preserves spaces AND wraps lines */
+    }
+
     #resultset tbody tr:hover {
       background-color: var(--vscode-list-hoverBackground);
     }
