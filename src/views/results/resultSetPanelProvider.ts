@@ -79,6 +79,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             console.log(message);
             try {
               const result = await JobManager.runSQL(message.update, { parameters: message.bindings });
+              commands.executeCommand(`vscode-db2i.queryHistory.prepend`, message.update);
               postCellResponse(message.id, true);
             } catch (e) {
               // this.setError(e.message);
