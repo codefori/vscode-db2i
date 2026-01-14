@@ -10,6 +10,20 @@ import { ObjectRef } from "../../language/sql/types";
 import Table from "../../database/table";
 import Statement from "../../database/statement";
 import { TableColumn } from "../../types";
+import { statementDone } from "./editorUi";
+import { QueryResult } from "@ibm/mapepire-js";
+
+export type SqlParameter = string|number;
+
+export interface ScrollerOptions {
+  uiId?: string;
+  basicSelect: string;
+  parameters?: SqlParameter[];
+  isCL?: boolean;
+  queryId?: string;
+  withCancel?: boolean;
+  ref?: ObjectRef;
+}
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel;
@@ -79,10 +93,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
         default:
           if (message.query) {
-
             if (this.currentQuery) {
               // If we get a request for a new query, then we need to close the old one
-              if (this.currentQuery.getId() !== message.queryId) {
+              if (this.currentQuery.getId() === undefined || this.currentQuery.getId() !== message.queryId) {
                 // This is a new query, so we need to clean up the old one
                 await this.currentQuery.close();
                 this.currentQuery = undefined;
@@ -91,15 +104,12 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
             try {
               if (this.currentQuery === undefined) {
-                // We will need to revisit this if we ever allow multiple result tabs like ACS does
-                // Query.cleanup();
-
-                this.currentQuery = await JobManager.getPagingStatement(message.query, { isClCommand: message.isCL, isTerseResults: true });
+                this.currentQuery = await JobManager.getPagingStatement(message.query, { parameters: message.parameters, isClCommand: message.isCL, isTerseResults: true });
               }
 
               if (this.currentQuery.getState() !== "RUN_DONE") {
                 setCancelButtonVisibility(true);
-                let queryResults = undefined;
+                let queryResults: QueryResult<any> = undefined;
                 let startTime = 0;
                 let endTime = 0;
                 let executionTime: number|undefined;
@@ -111,7 +121,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   startTime = performance.now();
                   queryResults = await this.currentQuery.execute();
                   endTime = performance.now();
-                  executionTime = (endTime - startTime)
+                  executionTime = (endTime - startTime);
+
+                  if (message.uiId) {
+                    statementDone(message.uiId, {paramsOut: queryResults.output_parms});
+                  }
                 }
                 const jobId = this.currentQuery.getHostJob().id;
 
@@ -193,17 +207,17 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
   }
 
-  async setScrolling(basicSelect: string, isCL = false, queryId: string = ``, withCancel = false, ref?: ObjectRef) {
+  async setScrolling(options: ScrollerOptions) {
     this.loadingState = false;
     await this.focus();
 
     let updatable: html.UpdatableInfo | undefined;
 
-    if (ref) {
-      const schema = ref.object.schema || ref.object.system;
+    if (options.ref) {
+      const schema = options.ref.object.schema || options.ref.object.system;
       if (schema) {
         const goodSchema = Statement.delimName(schema, true);
-        const goodName = Statement.delimName(ref.object.name, true);
+        const goodName = Statement.delimName(options.ref.object.name, true);
 
         try {
           const isPartitioned = await Table.isPartitioned(goodSchema, goodName);
@@ -235,16 +249,16 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 }));
 
               if (!currentColumns.some(c => c.useInWhere)) {
-                const cName = ref.alias || `t`;
+                const cName = options.ref.alias || `t`;
 
                 // Support for using a custom column list
-                const selectClauseStart = basicSelect.toLowerCase().indexOf(`select `);
-                const fromClauseStart = basicSelect.toLowerCase().indexOf(`from`);
+                const selectClauseStart = options.basicSelect.toLowerCase().indexOf(`select `);
+                const fromClauseStart = options.basicSelect.toLowerCase().indexOf(`from`);
                 let possibleColumnList: string | undefined;
 
                 possibleColumnList = `${cName}.*`;
                 if (fromClauseStart > 0) {
-                  possibleColumnList = basicSelect.substring(0, fromClauseStart);
+                  possibleColumnList = options.basicSelect.substring(0, fromClauseStart);
                   if (selectClauseStart >= 0) {
                     possibleColumnList = possibleColumnList.substring(selectClauseStart + 7);
 
@@ -255,20 +269,19 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 }
 
                 // We need to override the input statement if they want to do updatable
-                const whereClauseStart = basicSelect.toLowerCase().indexOf(`where`);
+                const whereClauseStart = options.basicSelect.toLowerCase().indexOf(`where`);
                 let fromWhereClause: string | undefined;
 
                 if (whereClauseStart > 0) {
-                  fromWhereClause = basicSelect.substring(whereClauseStart);
+                  fromWhereClause = options.basicSelect.substring(whereClauseStart);
                 }
 
-
-                basicSelect = `select rrn(${cName}) as RRN, ${possibleColumnList} from ${schema}.${ref.object.name} as ${cName} ${fromWhereClause || ``}`;
+                options.basicSelect = `select rrn(${cName}) as RRN, ${possibleColumnList} from ${schema}.${options.ref.object.name} as ${cName} ${fromWhereClause || ``}`;
                 currentColumns = [{ name: `RRN`, jsType: `number`, isNullable: false, useInWhere: true }, ...currentColumns];
               }
 
               updatable = {
-                table: schema + `.` + ref.object.name,
+                table: schema + `.` + options.ref.object.name,
                 columns: currentColumns
               };
             }
@@ -279,11 +292,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       }
     }
 
-    this._view.webview.html = html.generateScroller(basicSelect, isCL, withCancel, updatable);
+    this._view.webview.html = html.generateScroller(options.uiId, options.basicSelect, options.parameters, options.isCL, options.withCancel, updatable);
 
     this._view.webview.postMessage({
       command: `fetch`,
-      queryId
+      queryId: options.queryId
     });
   }
 

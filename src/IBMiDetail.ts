@@ -7,7 +7,8 @@ export type Db2FeatureIds = `SELF`;
 const featureRequirements: { [id in Db2FeatureIds]: { [osVersion: number]: number } } = {
   'SELF': {
     7.4: 26,
-    7.5: 5
+    7.5: 5,
+    7.6: 1
   }
 };
 
@@ -38,16 +39,15 @@ export class IBMiDetail {
       this.setFeatureSupport(featureId, false);
     }
 
-    const instance = getInstance();
-    const content = instance.getContent();
+    const connection = getInstance().getConnection();
 
     let levelCheckFailed = false;
     
-    const versionResults = await content.runSQL(`select OS_VERSION concat '.' concat OS_RELEASE as VERSION from sysibmadm.env_sys_info`);
+    const versionResults = await connection.runSQL(`select OS_VERSION concat '.' concat OS_RELEASE as VERSION from sysibmadm.env_sys_info`);
     this.version = Number(versionResults[0].VERSION);
   
     try {
-      const db2LevelResults = await content.runSQL([
+      const db2LevelResults = await connection.runSQL([
         `select max(ptf_group_level) as HIGHEST_DB2_PTF_GROUP_LEVEL`,
         `from qsys2.group_ptf_info`,
         `where PTF_GROUP_DESCRIPTION like 'DB2 FOR IBM I%' and`,
@@ -77,11 +77,8 @@ export class IBMiDetail {
   }
 
   private async validateSelfInstallation() {
-    const instance = getInstance();
-    const content = instance.getContent();
-
     try {
-      await content.runSQL(`values SYSIBMADM.SELFCODES`);
+      await getInstance().getConnection().runSQL(`values SYSIBMADM.SELFCODES`);
 
       // This means we have the SELF feature
       return true;

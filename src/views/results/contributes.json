@@ -24,6 +24,11 @@
             "type": "boolean",
             "description": "Make larger cells collapsed by default",
             "default": false
+          },
+          "vscode-db2i.resultsets.outputDecorations": {
+            "type": "boolean",
+            "description": "Show INOUT and OUT parameters inside the editor",
+            "default": true
           }
         }
       },
@@ -212,15 +217,27 @@
         "when": "editorLangId == sql"
       },
       {
-        "command": "vscode-db2i.editorExplain.withRun",
+        "command": "vscode-db2i.runEditorStatement.multiple.all",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
+        "command": "vscode-db2i.runEditorStatement.multiple.from",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
         "when": "editorLangId == sql && resourceExtname != .inb"
       },
       {
+        "command": "vscode-db2i.editorExplain.withRun",
+        "key": "ctrl+u",
+        "mac": "cmd+u",
+        "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
         "command": "vscode-db2i.editorExplain.withoutRun",
-        "key": "ctrl+alt+r",
-        "mac": "cmd+alt+r",
+        "key": "ctrl+e",
+        "mac": "cmd+e",
         "when": "editorLangId == sql && resourceExtname != .inb"
       }
     ]

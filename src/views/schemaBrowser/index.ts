@@ -12,6 +12,8 @@ import Statement from "../../database/statement";
 import { getCopyUi } from "./copyUI";
 import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement } from "./statements";
 import { BasicSQLObject } from "../../types";
+import { TextDecoder } from "util";
+import { parse } from "csv/sync";
 
 const itemIcons = {
   "table": `split-horizontal`,
@@ -393,10 +395,130 @@ export default class schemaBrowser {
             this.refresh(node);
           }
         }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.importDataContextMenu`, async () => {
+        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL` }, async (arg?: any) => {
+          try {
+            const data = vscode.window.activeTextEditor.document.getText();
+            const uri = vscode.window.activeTextEditor.document.uri;
+            await this.generateInsert(uri, data);
+          } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+          }
+        });
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.importData`, async () => {
+        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL` }, async (arg?: any) => {
+          try {            
+            const uri = await this.pickFile();
+            if (!uri) { return; }
+            const data = await this.readFile(uri);
+
+            await this.generateInsert(uri, data);
+          } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+          }
+        });
       })
     )
 
     getInstance().subscribe(context, `connected`, `db2i-clearCacheAndRefresh`, () => this.clearCacheAndRefresh());
+  }
+
+  async pickFile(): Promise<vscode.Uri | undefined> {
+    const res = await vscode.window.showOpenDialog({
+      canSelectMany: false,
+      openLabel: 'Import',
+      filters: {
+        'Data files': ['csv', 'json'],
+        'All files': ['*']
+      }
+    });
+    return res?.[0];
+  }
+
+  async readFile(uri: vscode.Uri): Promise<string> {
+    const ab = await vscode.workspace.fs.readFile(uri);
+    return new TextDecoder('utf-8').decode(ab);
+  }
+
+  async generateInsert(uri: vscode.Uri, data: string) {
+    let ext: string = (uri.fsPath.split('.').pop() || '').toLowerCase();
+    if (ext != `csv` && ext != `json`) {
+      ext = await vscode.window.showQuickPick(['csv','json'], { placeHolder: 'What format is this file?' });
+      if (!ext) { return; }
+    }
+
+    let rows: any[] = [];
+    let hasHeaders = true;
+    if (ext === `csv`) {
+      hasHeaders = (await vscode.window.showQuickPick(['Yes','No'], { placeHolder: 'Does the file have headers?' })) === `Yes` ? true : false;
+      rows = parse(data, {
+        columns: hasHeaders,
+        cast: true
+      });
+    } else if (ext === `json`) {
+      rows = JSON.parse(data);
+      if (!Array.isArray(rows)) {
+        throw new Error('Unsupported JSON format: expected an array of objects.');
+      }
+    }
+    
+    if (!rows.length) { 
+      vscode.window.showWarningMessage('No rows found.'); 
+      return;
+    }
+
+    let content: string = ``;
+    if(hasHeaders) {
+      // Get headers using the first row of data
+      const colNames = Object.keys(rows[0]);
+      const cols = colNames.map(c => c.includes(` `) ? `"${c}"` : c).join(', ');
+
+      // Generate the INSERT statement
+      content = `INSERT INTO TABLE (${cols}) \nVALUES\n`;
+      const allRowValues = [];
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        let allValues = [];
+        for(const col of colNames) {
+          const val = row[col];
+          if (typeof val === `string`) {
+            allValues.push(`'${val.replace(`'`, `''`)}'`);
+          } else {
+            allValues.push(val);
+          }
+        }
+        allRowValues.push(`  (${allValues.join(', ')})`);
+      }   
+      content += allRowValues.join(`,\n`);
+    } else {
+      // Generate the INSERT statement
+      content = `INSERT INTO TABLE \nVALUES\n`;
+      const allRowValues = [];
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        let allValues = [];
+        for(let j = 0; j < row.length; j++) {
+          const val = row[j];
+          if (typeof val === `string`) {
+            allValues.push(`'${val}'`);
+          } else {
+            allValues.push(val);
+          }
+        }
+        allRowValues.push(`  (${allValues.join(', ')})`);
+      }   
+      content += allRowValues.join(`,\n`);
+    }
+
+    content += `;`;
+    
+    // Open the generated SQL in a new file
+    const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+    await vscode.window.showTextDocument(textDoc);
   }
 
   clearCacheAndRefresh() {

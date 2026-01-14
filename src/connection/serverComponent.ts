@@ -10,8 +10,10 @@ import { SERVER_VERSION_FILE } from "./SCVersion";
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
 import * as Crypto from 'crypto';
 import { readFileSync } from "fs";
+import Configuration from "../configuration";
 
 const ExecutablePathDir = `$HOME/.vscode/`;
+const DEFAULT_JAVA_EIGHT = `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java`;
 
 export enum UpdateStatus {
   FAILED,
@@ -50,8 +52,10 @@ export class ServerComponent {
   static getInitCommand(): string | undefined {
     const path = this.getComponentPath();
 
+    const jvmVersion = Configuration.get<string>(`jobJava`) || DEFAULT_JAVA_EIGHT;
+
     if (path) {
-      return `/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java -Dos400.stdio.convert=N -jar ${path} --single`
+      return `${jvmVersion} -Dos400.stdio.convert=N -jar ${path} --single`
     }
   }
 
