@@ -23,7 +23,7 @@ function generatePage(rows: JobLogEntry[]) {
     <html lang="en">
       <head>
         ${getHeader()}
-              </head>
+      </head>
       <body>
         <div style="grid-template-columns:150px auto auto auto auto auto;width: 100%;" class="joblog" id="resultset">
           <div class="row">
@@ -36,24 +36,12 @@ function generatePage(rows: JobLogEntry[]) {
           </div>
             ${rows.map(row => {
               return `<div class="row">
-                <div class="cell">
-                  ${row.MESSAGE_TIMESTAMP}
-                </div>
-                <div class="cell">
-                  ${row.MESSAGE_TYPE}
-                </div>
-                <div class="cell">
-                  ${row.SEVERITY}
-                </div>
-                <div class="cell">
-                  ${row.MESSAGE_ID}
-                </div>
-                <div class="cell">
-                  ${escapeHTML(row.MESSAGE_TEXT || ``)}
-                </div>
-                <div class="cell">
-                  ${escapeHTML(row.MESSAGE_SECOND_LEVEL_TEXT || ``)}
-                </div>
+                <div class="cell">${row.MESSAGE_TIMESTAMP}</div>
+                <div class="cell">${row.MESSAGE_TYPE}</div>
+                <div class="cell">${row.SEVERITY}</div>
+                <div class="cell">${row.MESSAGE_ID}</div>
+                <div class="cell">${escapeHTML(row.MESSAGE_TEXT || ``)}</div>
+                <div class="cell">${escapeHTML(row.MESSAGE_SECOND_LEVEL_TEXT || ``)}</div>
               </div>`
             }).join(``)}
           </div>

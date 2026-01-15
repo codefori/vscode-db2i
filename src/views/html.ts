@@ -1,5 +1,5 @@
 
-export function getHeader(options: {withCollapsed?: boolean} = {}): string {
+export function getHeader(options: { withCollapsed?: boolean } = {}): string {
   return /*html*/`
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,6 +48,7 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
 
     .cell {
       position: relative;
+      white-space: pre-wrap;
     }
 
     .joblog > div:not(:first-child) > div.cell {
@@ -204,11 +205,11 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
   `;
 }
 
-export const escapeHTML = str => str.replace(/[&<>'"]/g, 
+export const escapeHTML = str => str.replace(/[&<>'"]/g,
   tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag]));
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[tag]));
