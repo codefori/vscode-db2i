@@ -25,42 +25,38 @@ function generatePage(rows: JobLogEntry[]) {
         ${getHeader()}
               </head>
       <body>
-        <table id="resultset">
-          <thead>
-            <tr>
-              <th>Sent</th>
-              <th>Type</th>
-              <th>Severity</th>
-              <th>Message ID</th>
-              <th>Message</th>
-              <th>Second Level Text</th>
-            </tr>
-          </thead>
-          <tbody>
+        <div style="grid-template-columns:150px auto auto auto auto auto;width: 100%;" class="joblog" id="resultset">
+          <div class="row">
+            <div class="header">Sent</div>
+            <div class="header">Type</div>
+            <div class="header">Severity</div>
+            <div class="header">Message ID</div>
+            <div class="header">Message</div>
+            <div class="header">Second Level Text</div>
+          </div>
             ${rows.map(row => {
-              return `<tr>
-                <td width="150px">
+              return `<div class="row">
+                <div class="cell">
                   ${row.MESSAGE_TIMESTAMP}
-                </td>
-                <td>
+                </div>
+                <div class="cell">
                   ${row.MESSAGE_TYPE}
-                </td>
-                <td>
+                </div>
+                <div class="cell">
                   ${row.SEVERITY}
-                </td>
-                <td>
+                </div>
+                <div class="cell">
                   ${row.MESSAGE_ID}
-                </td>
-                <td>
+                </div>
+                <div class="cell">
                   ${escapeHTML(row.MESSAGE_TEXT || ``)}
-                </td>
-                <td>
+                </div>
+                <div class="cell">
                   ${escapeHTML(row.MESSAGE_SECOND_LEVEL_TEXT || ``)}
-                </td>
-              </tr>`
+                </div>
+              </div>`
             }).join(``)}
-          </tbody>
-        </table>
+          </div>
       </body>
     </html>
   `;

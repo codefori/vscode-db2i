@@ -45,6 +45,7 @@ export interface BasicColumn {
   name: string;
   useInWhere: boolean
   jsType: "number"|"asString";
+  isNullable: boolean,
   maxInputLength?: number;
 }
 
@@ -88,7 +89,6 @@ const updateMessageContent = (show, initialMessage) => {
 }
 
 document.getElementById('resultset').onclick = function(e){
-  console.log('click')
   if (updateTable === undefined) return;
 
   var e = e || window.event;
@@ -98,23 +98,27 @@ document.getElementById('resultset').onclick = function(e){
   let trWithColumn;
   let editableNode;
 
-  if (target.tagName.toLowerCase() == "div") {
+  if (target.tagName.toLowerCase() == "div" && target.classList.contains("hoverable")) {
     originalValue = target.innerText;
     editableNode = target;
-    trWithColumn = target.parentElement;
+    trWithColumn = target.parentNode;
   }
-  else if (target.tagName.toLowerCase() == "td") {
+  else if (target.tagName.toLowerCase() == "div" && target.classList.contains("cell")) {
     // Usually means it is blank
     if (!target.firstChild) {
       // Add a div to the cell
       const newDiv = document.createElement("div");
+      newDiv.className = "hoverable";
       newDiv.innerText = '';
       target.appendChild(newDiv);
+      originalValue = '';
+      editableNode = newDiv;
+      trWithColumn = target;
+    } else {    
+      originalValue = target.firstChild.innerText;
+      editableNode = target.firstChild;
+      trWithColumn = target;
     }
-    
-    originalValue = target.firstChild.innerText;
-    editableNode = target;
-    trWithColumn = target;
   }
 
   if (trWithColumn && trWithColumn.column) {
@@ -130,27 +134,23 @@ document.getElementById('resultset').onclick = function(e){
     if (updateKeyColumns.length === 0) return;
 
     let idValues = [];
-    for (let i = 0; i < parentRow.cells.length; i++) {
-      const cell = parentRow.cells[i];
+    const cols = parentRow.children;
+    for (let i = 0; i < cols.length; i++) {
+      const cell = cols[i];
       if (updateKeyColumns.some(col => col.name === cell.column)) {
         idValues.push(cell.firstChild.innerText);
       }
     }
 
     // Can return undefined or {updateStatement, bindings, saneStatement?}
-    const getSqlStatement = (newValue, withSane = false) => {
+    const getSqlStatement = (newValue, withSane = false, nullify = false) => {
       const useRrn = updateKeyColumns.length === 1 && updateKeyColumns.some(col => col.name === 'RRN');
 
       let bindings = [];
       let updateStatement = 'UPDATE ' + updateTable.table + ' t SET t.' + chosenColumn + ' = ';
 
-      if (chosenColumnDetail.maxInputLength >= 4 && newValue === 'null') {
-        // If the column can fit 'null', then set it to null value
+      if (nullify) {
         updateStatement += 'NULL';
-      } else if (chosenColumnDetail.maxInputLength < 4 && newValue === '-') {
-        // If the column cannot fit 'null', then '-' is the null value
-        updateStatement += 'NULL';
-      
       } else { 
         switch (chosenColumnDetail.jsType) {
           case 'number':
@@ -224,7 +224,11 @@ document.getElementById('resultset').onclick = function(e){
 
     // Already editable, just return
     if (editableNode.contentEditable === 'true') return;
+    let nullify = false;
     editableNode.contentEditable = true;
+    if((editableNode.classList.contains("null") || editableNode.parentNode.classList.contains("null")) && editableNode.innerText === 'null') {
+      editableNode.innerText = '';
+    }
     editableNode.focus();
     updateMessageWithSql(originalValue);
 
@@ -238,6 +242,9 @@ document.getElementById('resultset').onclick = function(e){
 
       switch (e.key) {
         case 'Enter':
+          if(chosenColumnDetail.isNullable && e.shiftKey) {
+            nullify = true;
+          }
           e.preventDefault();
           editableNode.blur();
           break;
@@ -264,17 +271,29 @@ document.getElementById('resultset').onclick = function(e){
       editableNode.contentEditable = false;
       let newValue = editableNode.innerText;
 
-      if (newValue === originalValue) return;
+      if (!nullify && newValue === originalValue) return;
       if (chosenColumnDetail.maxInputLength && newValue.length > chosenColumnDetail.maxInputLength) {
         newValue = newValue.substring(0, chosenColumnDetail.maxInputLength);
         editableNode.innerText = newValue;
       }
 
-      const sql = getSqlStatement(newValue);
+      const sql = getSqlStatement(newValue, false, nullify);
 
       if (!sql) {
         editableNode.innerHTML = originalValue;
         return;
+      }
+
+      if(nullify) {
+        editableNode.innerHTML = "null";
+        if(editableNode.classList.contains("cell")) {
+          editableNode.classList.add("null");
+        } else {
+          editableNode.parentNode.classList.add("null");
+        }
+      } else {
+        editableNode.classList.remove("null");
+        editableNode.parentNode.classList.remove("null");
       }
 
       requestCellUpdate(editableNode, originalValue, sql.updateStatement, sql.bindings);
@@ -307,9 +326,19 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
           /* 
           ${new Date().getTime()}
           */
-          const vscode = acquireVsCodeApi();
+        const escapeHTML = str => str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+          }[tag]));
+
+         const vscode = acquireVsCodeApi();
           const basicSelect = ${JSON.stringify(basicSelect)};
           const htmlTableId = 'resultset';
+          const footerId = 'footer';
           const statusId = 'status';
           const jobId = 'jobId';
           const messageSpanId = 'messageSpan';
@@ -431,59 +460,94 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
 
           function initializeTable(columnHeadings) {
             // Initialize the header
-            var header = document.getElementById(htmlTableId).getElementsByTagName('thead')[0];
-            header.innerHTML = '';
-            var headerRow = header.insertRow();
-            columnMetaData.map(column => {
-              var cell = headerRow.insertCell();
-              cell.appendChild(document.createTextNode(columnHeadings === 'Label' ? column.label : column.name));
+            let thElem;
+            let startOffset;
+            let columnTemplate = '';
+            let i = 0;
+            let adjustingColumn = undefined;
+            const resultSetDiv = document.getElementById(htmlTableId);
+            const footerDiv = document.getElementById(footerId);
+            columnMetaData.forEach(column => {
+              const cell = document.createElement("div");
+              const col = i++;
+              cell.classList.add("header");
+              switch(columnHeadings) {
+                case 'Name':
+                  cell.innerText = column.name;
+                  break;
+                case 'Both':
+                  cell.innerHTML = escapeHTML(column.name)+'<br>'+escapeHTML(column.label);
+                  break;
+                default:
+                  cell.innerText = column.label;
+              }
               cell.title = getTooltip(column, columnHeadings);
+              const grip = document.createElement("div");
+              grip.innerHtml="&nbsp;";
+              grip.classList.add("grip");
+              grip.addEventListener("mousedown",(e) => {
+                adjustingColumn = col;
+                startOffset = cell.offsetWidth-e.pageX;
+              });
+              grip.addEventListener("dblclick",(e) => {
+                const columnTemplates = resultSetDiv.style["grid-template-columns"].split(' ');
+                columnTemplates[col] = 'max-content';
+                ${withCollapsed?`resultSetDiv.style.setProperty('--col-'+adjustingColumn,undefined);`:''}
+                resultSetDiv.style["grid-template-columns"] = columnTemplates.join(' ');
+              });
+              cell.appendChild(grip);
+              footerDiv.before(cell);
+              columnTemplate += ' max-content';
+              ${withCollapsed?
+              `resultSetDiv.style.setProperty('--col-'+col,'200px');
+              cell.style['max-width'] = 'var(--col-'+col+')';`:''}
+            });
+            resultSetDiv.style["grid-template-columns"] = columnTemplate;
+
+
+            document.addEventListener("mousemove",(e) => {
+              if(adjustingColumn !== undefined) {
+                const columnTemplates = resultSetDiv.style["grid-template-columns"].split(' ');
+                columnTemplates[adjustingColumn] = Math.max(startOffset + e.pageX,40) + "px";
+                ${withCollapsed?`resultSetDiv.style.setProperty('--col-'+adjustingColumn,undefined);`:''}
+                resultSetDiv.style["grid-template-columns"] = columnTemplates.join(' ');
+              }
             });
 
-            // Initialize the footer
-            var footer = document.getElementById(htmlTableId).getElementsByTagName('tfoot')[0];
-            footer.innerHTML = '';
+            document.addEventListener("mouseup", () => {
+              adjustingColumn = undefined;
+            });
 
             // Foot specificaly for updating tables.
             if (updateTable) {
-              const newRow = footer.insertRow();
-              const updateCell = newRow.insertCell();
-              updateCell.colSpan = columnMetaData.length;
-              updateCell.id = updateMessageId;
-              updateCell.appendChild(document.createTextNode(' '));
-            }
+              // Initialize the footer
+              const footer = document.getElementById(updateMessageId);
 
-            const newRow = footer.insertRow();
-
-            const statusCell = newRow.insertCell();
-            statusCell.id = statusId;
-            statusCell.appendChild(document.createTextNode(' '));
-
-            const jobIdCell = newRow.insertCell();
-            jobIdCell.id = jobId;
-            jobIdCell.appendChild(document.createTextNode(' '));
-
-            if (columnMetaData.length > 2) {
-              statusCell.colSpan = 2;
-              jobIdCell.colSpan = columnMetaData.length - 2;
+              footer.innerHTML = '&nbsp;';
             }
           }
 
           function appendRows(rows) {
-            let tBodyRef = document.getElementById(htmlTableId).getElementsByTagName('tbody')[0];
+            const footerDiv = document.getElementById(footerId);
 
             for (const row of rows) {
               // Insert a row at the end of table
-              let newRow = tBodyRef.insertRow()
               let currentColumn = 0;
+              const rowDiv = document.createElement("div");
+              rowDiv.className = "row";
 
               for (const cell of row) {
-                let columnName = columnMetaData[currentColumn].name;
+                const columnName = columnMetaData[currentColumn].name;
                 // Insert a cell at the end of the row
-                let newCell = newRow.insertCell();
+                const newCell = document.createElement("div");
+                newCell.classList.add("cell");
 
-                let newDiv = document.createElement("div");
+                const newDiv = document.createElement("div");
                 newDiv.className = "hoverable";
+                if(columnMetaData[currentColumn].nullable === 1) {
+                  newCell.classList.add("nullable");
+                  newDiv.classList.add("nullable");
+                }
 
                 // Append a formatted JSON object to the cell
                 const contentMightBeJson = typeof cell === 'string' && (cell.startsWith('{') || cell.startsWith('[')) && (cell.endsWith('}') || cell.endsWith(']'));
@@ -504,23 +568,38 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
                   newDiv.style["font-family"] = "monospace";
                   newDiv.appendChild(document.createTextNode(cell === undefined ? 'null' : cell));
                   if(cell === undefined || cell === null) {
-                    newDiv.style["font-style"] = "italic";
+                    newCell.classList.add("null");
                   }
                 }
                 
                 newCell.column = columnName;
                 newCell.appendChild(newDiv);
+                ${withCollapsed?
+                `newCell.style['max-width'] = 'var(--col-'+currentColumn+')';`:''}
+                rowDiv.appendChild(newCell);
                 currentColumn += 1;
               }
+              footerDiv.before(rowDiv);
             }
           }
 
-          // columnHeadings parameter is the value of the "vscode-db2i.resultsets.columnHeadings" setting, either 'Name' or 'Label'
+          // columnHeadings parameter is the value of the "vscode-db2i.resultsets.columnHeadings" setting, either 'Name', 'Label' or 'Both'
           function updateHeader(columnHeadings) {
             if (columnMetaData) {
-              var headerCells = document.getElementById(htmlTableId).getElementsByTagName('thead')[0].rows[0].cells;
-              for (let x = 0; x < headerCells.length; ++x) {
-                headerCells[x].innerText = columnHeadings === 'Label' ? columnMetaData[x].label : columnMetaData[x].name;
+              var headerCells = document.getElementById(htmlTableId).querySelectorAll(':scope > div.header');
+              for (let x = 0; x < columnMetaData.length; ++x) {
+                const grip = headerCells[x].querySelector('div.grip');
+                switch(columnHeadings) {
+                  case 'Name':
+                    headerCells[x].innerText = columnMetaData[x].name;
+                    break;
+                  case 'Both':
+                    headerCells[x].innerHTML = escapeHTML(columnMetaData[x].name)+'<br>'+escapeHTML(columnMetaData[x].label);
+                    break;
+                  default:
+                    headerCells[x].innerText = columnMetaData[x].label;
+                }
+                headerCells[x].appendChild(grip);
                 headerCells[x].title = getTooltip(columnMetaData[x], columnHeadings);
               }
             }
@@ -554,18 +633,30 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
                 title = column.type;
             }
             title += \`\\n\`;
-            title += columnHeadings === 'Label' ? column.name : column.label;
+            switch(columnHeadings) {
+              case 'Name':
+                title += column.label;
+                break;
+              case 'Both':
+                break;
+              default:
+                title += column.name;
+            }
             return title;
           }
 
         </script>
       </head>
       <body style="padding: 0;">
-        <table id="resultset">
-          <thead></thead>
-          <tbody></tbody>
-          <tfoot id="resultfooter"></tfoot>
-          </table>
+        <div id="resultset">
+          <div id="footer">
+            <div id="updateMessage"></div>
+            <div id="footer2">
+              <span id="status"></span>
+              <span id="jobId"></span>
+            </div>
+          </div>
+        </div>
         <p style="padding-left: 20px;" id="messageSpan"></p>
         <div id="spinnerContent" class="center-screen">
           <p id="loadingText">Running statement</p>
