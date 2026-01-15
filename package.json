@@ -1484,6 +1484,11 @@
         "when": "editorLangId == sql && resourceExtname != .inb"
       },
       {
+        "command": "vscode-db2i.openSqlDocument",
+        "key": "ctrl+alt+n",
+        "mac": "cmd+alt+n"
+      },
+      {
         "command": "notebook.cell.execute",
         "key": "ctrl+r",
         "mac": "cmd+r",
