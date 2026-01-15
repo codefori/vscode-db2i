@@ -28,7 +28,7 @@ const itemIcons = {
   "logical": `symbol-interface`
 }
 
-export default class schemaBrowser {
+export default class SchemaBrowser {
   emitter: vscode.EventEmitter<any | undefined | null | void>;
   onDidChangeTreeData: vscode.Event<any | undefined | null | void>;
   cache: { [key: string]: object[] };
