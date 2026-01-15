@@ -13,7 +13,7 @@ import { TableColumn } from "../../types";
 import { statementDone } from "./editorUi";
 import { QueryResult } from "@ibm/mapepire-js";
 
-export type SqlParameter = string|number;
+export type SqlParameter = string | number;
 
 export interface ScrollerOptions {
   uiId?: string;
@@ -79,6 +79,12 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             console.log(message);
             try {
               const result = await JobManager.runSQL(message.update, { parameters: message.bindings });
+              const substatement = message.bindings
+                ? `bind: ${message.bindings
+                  .map(binding => typeof binding === 'string' ? `'${binding}'` : String(binding))
+                  .join(', ')}`
+                : undefined;
+              commands.executeCommand(`vscode-db2i.queryHistory.prepend`, message.update, substatement);
               postCellResponse(message.id, true);
             } catch (e) {
               // this.setError(e.message);
@@ -112,7 +118,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 let queryResults: QueryResult<any> = undefined;
                 let startTime = 0;
                 let endTime = 0;
-                let executionTime: number|undefined;
+                let executionTime: number | undefined;
 
                 if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
                   queryResults = await this.currentQuery.fetchMore();
@@ -124,7 +130,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   executionTime = (endTime - startTime);
 
                   if (message.uiId) {
-                    statementDone(message.uiId, {paramsOut: queryResults.output_parms});
+                    statementDone(message.uiId, { paramsOut: queryResults.output_parms });
                   }
                 }
                 const jobId = this.currentQuery.getHostJob().id;
