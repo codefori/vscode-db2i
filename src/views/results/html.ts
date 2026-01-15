@@ -200,7 +200,7 @@ document.getElementById('resultset').onclick = function(e){
       if (withSane) {
         for (let i = 0; i < statementParts.length; i++) {
           saneStatement += statementParts[i];
-          if (bindings[i]) {
+          if (bindings[i] !== undefined) {
             if (typeof bindings[i] === 'string') {
               saneStatement += "'" + bindings[i] + "'";
             } else {
@@ -256,6 +256,11 @@ document.getElementById('resultset').onclick = function(e){
     }
 
     const keyupEvent = (e) => {
+      // Remove browser-inserted <br> tags due to empty contenteditable div
+      if (editableNode.firstChild && editableNode.firstChild.tagName && editableNode.firstChild.tagName.toLowerCase() === 'br') {
+        editableNode.removeChild(editableNode.firstChild);
+      }
+
       const newValue = editableNode.innerText;
       updateMessageWithSql(newValue);
     }
