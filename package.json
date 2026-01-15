@@ -138,7 +138,8 @@
             "default": "Name",
             "enum": [
               "Name",
-              "Label"
+              "Label",
+              "Both"
             ],
             "enumDescriptions": [
               "Show the column name",

@@ -1,73 +1,115 @@
 
-export function getHeader(options: {withCollapsed?: boolean} = {}): string {
+export function getHeader(options: { withCollapsed?: boolean } = {}): string {
   return /*html*/`
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     #resultset {
       height: 100%;
-      border-collapse: collapse;
       font-size: 0.9em;
       font-family: sans-serif;
       min-width: 100%;
+      display: grid;
+      position: relative;
     }
 
-    thead tr {
+    .header {
       background-color: var(--vscode-banner-background);
       color: var(--vscode-banner-foreground);
       text-align: left;
       position: sticky; /* Lock the header row to the top so it's always visible as rows are scrolled */
       top: 0;           /* Don't forget this, required for the stickiness */
+      z-index: 1;
     }
 
-    tfoot {
+    .row {
+      grid-column: 1 / -1;
+      display: contents;
+    }
+
+    .row:hover > .cell {
+      background-color: var(--vscode-list-hoverBackground);
+    }
+
+    #footer {
       position: sticky;
       bottom: 0;
-    }
-
-    tfoot tr {
       background-color: var(--vscode-multiDiffEditor-headerBackground);
       text-align: left;
-    }
-
-    #resultset th,
-    #resultset td {
+      grid-column: 1 / -1;
+      opacity: 1;
       padding: 5px 15px;
     }
 
-    #resultset td.preserve {
+    .header,
+    .cell {
+      padding: 5px 15px;
+    }
+
+    .cell {
+      position: relative;
       white-space: pre-wrap;
     }
 
-    #resultset tbody tr:hover {
+    .joblog > div:not(:first-child) > div.cell {
+      display: flex;
+      align-items: center;
+    }
+    .header {
+      /* stop content from "spilling" */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .hoverable {
+      /* stop content from "spilling" */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      word-break: break-word;
+    }
+
+    .hoverable:hover {
+      /* stop content from "spilling" */
+      overflow: initial;
+      text-overflow: initial;
+      text-wrap-mode: wrap !important;
+      height: auto;
+    }
+
+    #resultset div.cell {
+      overflow: visible;
+    }
+
+    #resultset div[contenteditable="true"].nullable:before {
+      color: var(--vscode-banner-foreground);
+      position: absolute;
+      top: -22px;
+      content: "Shift+Enter for null";
       background-color: var(--vscode-list-hoverBackground);
-    }
-    
-    #resultset tbody tr {
-      border-bottom: 1px solid var(--vscode-activityBar-border);
+      opacity: 1;
+      padding: 2px;
+      font-style: normal;
+      border: 1px solid var(--vscode-banner-foreground);
+      width: max-content;
+      z-index: 2;
     }
 
-    ${options.withCollapsed ? /*css*/`
-      .hoverable {
-        /* your initial height  */
-        height: 12px;
-        /* stop content from "spilling" */
-        overflow: hidden;
+    #resultset .null {
+      font-style: italic;
+      background-color: var(--vscode-editor-wordHighlightBackground);
+    }
 
-        text-overflow: ellipsis;
-        max-width: 200px;
-        text-wrap: nowrap;
-      }
-      .hoverable:hover {
-        /* or height: auto then it will expand to text height */
-        max-width: initial;
-        height: auto;
-        text-wrap: initial;
-      }
-      #resultset tbody tr {
-        overflow: hidden;
-      }
-    ` : ''}
+    #resultset .grip {
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 1px;
+      position: absolute;
+      cursor: col-resize;
+      border-right:1px solid  #ffffff10;
+    }
 
     .center-screen {
       overflow: hidden;
@@ -163,11 +205,11 @@ export function getHeader(options: {withCollapsed?: boolean} = {}): string {
   `;
 }
 
-export const escapeHTML = str => str.replace(/[&<>'"]/g, 
+export const escapeHTML = str => str.replace(/[&<>'"]/g,
   tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag]));
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[tag]));
