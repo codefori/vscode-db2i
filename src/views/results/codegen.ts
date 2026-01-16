@@ -79,8 +79,8 @@ export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string
     tokenIs(tokens[1], `colon`, `:`) &&
     tokenIs(tokens[2], `statementType`, `SELECT`) &&
     tokenIs(tokens[3], `asterisk`, `*`)) {
-    const prefixEnd = tokens[3].range.start - tokens[0].range.start - tokens[1].range.start - 2;
-    const suffixStart = tokens[3].range.start - tokens[0].range.start - tokens[1].range.start;
+    const prefixEnd = (tokens[3].range.start - tokens[0].range.start) - (tokens[1].range.start - tokens[0].range.start) - 2;
+    const suffixStart = (tokens[3].range.start - tokens[0].range.start) - (tokens[1].range.start - tokens[0].range.start);
     const columns = result.metadata.columns.map(column => column.name).join(`,\n                  `)
     sqlStatement = `${sqlStatement.substring(0, prefixEnd)}${columns}\n            ${sqlStatement.substring(suffixStart)}`;
   }
@@ -101,28 +101,63 @@ export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string
     + `  END;`;
 }
 
+/**
+ * Based on built-in types: https://www.ibm.com/docs/en/i/7.6.0?topic=statements-create-table
+ */
 export function columnToSqlDefinition(column: ColumnMetaData): string {
   switch (column.type) {
-    case 'NUMERIC':
-      return `NUMERIC(${column.precision},${column.scale})`;
+    case 'SMALLINT':
+      return `SMALLINT`;
+    case 'INTEGER':
+      return `INTEGER`;
+    case 'BIGINT':
+      return `BIGINT`;
     case 'DECIMAL':
       return `DECIMAL(${column.precision},${column.scale})`;
+    case 'NUMERIC':
+      return `NUMERIC(${column.precision},${column.scale})`;
+    case 'REAL':
+      return `REAL`;
+    case 'DOUBLE':
+      return `DOUBLE`;
+    case 'DECFLOAT':
+      return `DECFLOAT(${column.precision})`;
     case 'CHAR':
       return `CHAR(${column.precision})`;
     case 'VARCHAR':
       return `VARCHAR(${column.precision})`;
+    case 'CLOB':
+      return `CLOB(${column.precision})`;
+    case 'GRAPHIC':
+      return `GRAPHIC(${column.precision})`;
+    case 'VARGRAPHIC':
+      return `VARGRAPHIC(${column.precision})`;
+    case 'DBCLOB':
+      return `DBCLOB(${column.precision})`;
+    case 'NCHAR':
+      return `NCHAR(${column.precision})`;
+    case 'NVARCHAR':
+      return `NVARCHAR(${column.precision})`;
+    case 'NCLOB':
+      return `NCLOB(${column.precision})`;
+    case 'BINARY':
+      return `BINARY(${column.precision})`;
+    case 'VARBINARY':
+      return `VARBINARY(${column.precision})`;
+    case 'BLOB':
+      return `BLOB(${column.precision})`;
     case 'DATE':
       return `DATE`;
     case 'TIME':
       return `TIME`;
     case 'TIMESTAMP':
-      return `TIMESTAMP`;
-    case 'SMALLINT':
-      return `INTEGER`;
-    case 'INTEGER':
-      return `INTEGER`;
-    case 'BIGINT':
-      return `BIGINT`;
+      return `TIMESTAMP(${column.scale})`;
+    case 'DATALINK':
+      return `DATALINK(${column.precision})`;
+    case 'ROWID':
+      return `ROWID`;
+    case 'XML':
+      return `XML`;
     case 'BOOLEAN':
       return `BOOLEAN`;
     default:
