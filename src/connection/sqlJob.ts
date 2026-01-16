@@ -9,6 +9,10 @@ import { NamingFormats } from "./manager";
 
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
+// Use json-bigint to safely parse very large integers without losing precision.
+/* eslint-disable @typescript-eslint/no-var-requires */
+const JSONbig = require('json-bigint')({ storeAsString: true });
+
 export class OldSQLJob extends SQLJob {
   private channel: any;
   private selfState: SelfValue = "*NONE";
@@ -98,7 +102,7 @@ export class OldSQLJob extends SQLJob {
               outString = ``;
               if (this.isTracingChannelData) ServerComponent.writeOutput(thisMsg);
               try {
-                let response: ServerResponse = JSON.parse(thisMsg);
+                const response: ServerResponse = JSONbig.parse(thisMsg) as ServerResponse;
                 this.responseEmitter.emit(response.id, response);
               } catch (e: any) {
                 console.log(`Error: ` + e);
