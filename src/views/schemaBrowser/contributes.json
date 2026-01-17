@@ -24,6 +24,12 @@
         "icon": "$(list-selection)"
       },
       {
+        "command": "vscode-db2i.filterDatabaseObjectTypes",
+        "title": "Filter Database Object Types",
+        "category": "Db2 for i",
+        "icon": "$(filter)"
+      },
+      {
         "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
         "title": "Remove schema from view",
         "category": "Db2 for i",
@@ -105,15 +111,14 @@
         "title": "Set filter",
         "category": "Db2 for i",
         "icon": "$(search)"
-      },
-      {
-        "command": "vscode-db2i.viewPermissions",
-        "title": "View permissions",
-        "category": "Db2 for i"
       }
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "vscode-db2i.filterDatabaseObjectTypes",
+          "when": "never"
+        },
         {
           "command": "vscode-db2i.setSchemaFilter",
           "when": "never"
@@ -173,14 +178,19 @@
       ],
       "view/title": [
         {
-          "command": "vscode-db2i.refreshSchemaBrowser",
-          "group": "navigation",
+          "command": "vscode-db2i.manageSchemaBrowserList",
+          "group": "navigation@0",
+          "when": "view == schemaBrowser && vscode-db2i:manageSchemaBrowserEnabled"
+        },
+        {
+          "command": "vscode-db2i.filterDatabaseObjectTypes",
+          "group": "navigation@1",
           "when": "view == schemaBrowser"
         },
         {
-          "command": "vscode-db2i.manageSchemaBrowserList",
-          "group": "navigation",
-          "when": "view == schemaBrowser && vscode-db2i:manageSchemaBrowserEnabled"
+          "command": "vscode-db2i.refreshSchemaBrowser",
+          "group": "navigation@2",
+          "when": "view == schemaBrowser"
         }
       ],
       "view/item/context": [
@@ -196,7 +206,7 @@
         },
         {
           "command": "vscode-db2i.generateSQL",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == trigger || viewItem == type",
           "group": "db2@2"
         },
         {
@@ -221,7 +231,7 @@
         },
         {
           "command": "vscode-db2i.getAuthorities",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
           "group": "db2workWith@4"
         },
         {
@@ -246,18 +256,13 @@
         },
         {
           "command": "vscode-db2i.deleteObject",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
           "group": "db2data@3"
         },
         {
           "command": "vscode-db2i.renameObject",
           "when": "viewItem == table || viewItem == view || viewItem == index",
           "group": "db2data@4"
-        },
-        {
-          "command": "vscode-db2i.viewPermissions",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
-          "group": "db2data@5"
         },
         {
           "command": "vscode-db2i.advisedIndexes",
@@ -270,6 +275,108 @@
           "group": "db2idxAdv@2"
         }
       ]
-    }
+    },
+    "configuration": [
+      {
+        "id": "vscode-db2i.schemaBrowser",
+        "title": "Schema Browser",
+        "properties": {
+          "vscode-db2i.schemaBrowser.databaseObjectTypes": {
+            "type": "object",
+            "default": {
+              "Aliases": true,
+              "Column Masks": true,
+              "Constraints": true,
+              "Functions": true,
+              "Global Variables": true,
+              "Indexes": true,
+              "Journal Receivers": true,
+              "Journals": true,
+              "Logicals": true,
+              "Procedures": true,
+              "Row Permissions": true,
+              "Sequences": true,
+              "SQL Packages": true,
+              "Tables": true,
+              "Triggers": true,
+              "Types": true,
+              "Views": true
+            },
+            "properties": {
+              "Aliases": {
+                "type": "boolean",
+                "default": true
+              },
+              "Column Masks": {
+                "type": "boolean",
+                "default": true
+              },
+              "Constraints": {
+                "type": "boolean",
+                "default": true
+              },
+              "Functions": {
+                "type": "boolean",
+                "default": true
+              },
+              "Global Variables": {
+                "type": "boolean",
+                "default": true
+              },
+              "Indexes": {
+                "type": "boolean",
+                "default": true
+              },
+              "Journal Receivers": {
+                "type": "boolean",
+                "default": true
+              },
+              "Journals": {
+                "type": "boolean",
+                "default": true
+              },
+              "Logicals": {
+                "type": "boolean",
+                "default": true
+              },
+              "Procedures": {
+                "type": "boolean",
+                "default": true
+              },
+              "Row Permissions": {
+                "type": "boolean",
+                "default": true
+              },
+              "Sequences": {
+                "type": "boolean",
+                "default": true
+              },
+              "SQL Packages": {
+                "type": "boolean",
+                "default": true
+              },
+              "Tables": {
+                "type": "boolean",
+                "default": true
+              },
+              "Triggers": {
+                "type": "boolean",
+                "default": true
+              },
+              "Types": {
+                "type": "boolean",
+                "default": true
+              },
+              "Views": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "additionalProperties": false,
+            "description": "Select which database object types should be shown in the Schema Browser"
+          }
+        }
+      }
+    ]
   }
 }
