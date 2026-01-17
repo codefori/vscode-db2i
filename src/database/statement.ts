@@ -44,14 +44,14 @@ export default class Statement {
       // If already delimited, return it as-is
       if (name.startsWith(`"`) && name.endsWith(`"`)) return name;
       // If the value contains a space or decimal it needs to be delimited
-      if (name.includes(` `) || name.includes(`.`)) return `"${name}"`;
+      if (name.includes(` `) || name.includes(`.`) || name.includes(`'`)) return `"${name}"`;
       // Otherwise, fold to uppercase.  The user should have explicitly delimited if that was their intention.
       return name.toUpperCase();
     } else { // The name came from a catalog file query
       // If the name contains characters other than the valid variants, uppercase, digits, or underscores, it must be delimited
       if (Statement.validQsysName(name)) return name;
       else {
-        if (name.includes(` `) || name.includes(`.`) || name !== name.toUpperCase()) {
+        if (name.includes(` `) || name.includes(`.`) || name.includes(`'`) || name !== name.toUpperCase()) {
           return `"${name}"`;
         } else {
           return name;
@@ -83,24 +83,10 @@ export default class Statement {
   }
 
   static escapeString(value: string) {
-    value = value.replace(/[\0\n\r\b\t'\x1a]/g, function (s) {
+    value = value.replace(/'/g, function (s) {
       switch (s) {
-        case `\0`:
-          return `\\0`;
-        case `\n`:
-          return `\\n`;
-        case `\r`:
-          return ``;
-        case `\b`:
-          return `\\b`;
-        case `\t`:
-          return `\\t`;
-        case `\x1a`:
-          return `\\Z`;
         case `'`:
           return `''`;
-        default:
-          return `\\` + s;
       }
     });
   
