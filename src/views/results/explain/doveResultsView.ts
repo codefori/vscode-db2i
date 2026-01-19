@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import { CancellationToken, Event, EventEmitter, ProviderResult, TreeView, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands, ThemeIcon } from "vscode";
-import { ExplainNode } from "./nodes";
+import { CancellationToken, commands, Event, EventEmitter, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, TreeView } from "vscode";
 import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
+import { ExplainNode } from "./nodes";
 
 /**
  * Icon labels as defined by the API, along with the name of the icon to display.
@@ -11,44 +11,44 @@ import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
  * @see https://code.visualstudio.com/api/references/icons-in-labels
  */
 const icons = {
-  "Bitmap Merge":                           `merge`,
-  "Cache":                                  ``,
-  "Cache Probe":                            ``,
-  "Delete":                                 `trash`,
-  "Distinct":                               `list-flat`,
-  "Dynamic Bitmap":                         `symbol-misc`,
-  "Encoded Vector Index":                   `symbol-reference`,
-  "Encoded Vector Index, Parallel":         `symbol-reference`,
-  "Final Select":                           `selection`,
-  "Hash Grouping":                          `group-by-ref-type`,
-  "Hash Join":                              `add`,
-  "Hash Scan":                              `search`,
-  "Index Grouping":                         `group-by-ref-type`,
-  "Index Scan - Key Positioning":           `key`,
+  "Bitmap Merge": `merge`,
+  "Cache": ``,
+  "Cache Probe": ``,
+  "Delete": `trash`,
+  "Distinct": `list-flat`,
+  "Dynamic Bitmap": `symbol-misc`,
+  "Encoded Vector Index": `symbol-reference`,
+  "Encoded Vector Index, Parallel": `symbol-reference`,
+  "Final Select": `selection`,
+  "Hash Grouping": `group-by-ref-type`,
+  "Hash Join": `add`,
+  "Hash Scan": `search`,
+  "Index Grouping": `group-by-ref-type`,
+  "Index Scan - Key Positioning": `key`,
   "Index Scan - Key Positioning, Parallel": `key`,
-  "Index Scan - Key Selection":             `key`,
-  "Index Scan - Key Selection, Parallel":   `key`,
-  "Insert":                                 `insert`,
-  "Nested Loop Join":                       `add`,
-  "Select":                                 `selection`,
-  "Skip Sequential Table Scan":             `list-unordered`,
-  "Skip Sequential Table Scan, Parallel":   `list-unordered`,
-  "Sort":                                   `sort-precedence`,
-  "Sorted List Scan":                       `list-ordered`,
-  "Subquery Merge":                         `merge`,
-  "Table Probe":                            `list-selection`,
-  "Table Scan":                             `search`,
-  "Table Scan, Parallel":                   `search`,
-  "Temporary Distinct Hash Table":          `new-file`,
-  "Temporary Hash Table":                   `new-file`,
-  "Temporary Index":                        `new-file`,
-  "Temporary Sorted List":                  `list-ordered`,
-  "Temporary Table":                        `new-file`,
-  "Union Merge":                            `merge`,
-  "User Defined Table Function":            `symbol-function`,
-  "Unknown":                                `question`,
-  "Update":                                 `replace`,
-  "VALUES LIST":                            `list-flat`,
+  "Index Scan - Key Selection": `key`,
+  "Index Scan - Key Selection, Parallel": `key`,
+  "Insert": `insert`,
+  "Nested Loop Join": `add`,
+  "Select": `selection`,
+  "Skip Sequential Table Scan": `list-unordered`,
+  "Skip Sequential Table Scan, Parallel": `list-unordered`,
+  "Sort": `sort-precedence`,
+  "Sorted List Scan": `list-ordered`,
+  "Subquery Merge": `merge`,
+  "Table Probe": `list-selection`,
+  "Table Scan": `search`,
+  "Table Scan, Parallel": `search`,
+  "Temporary Distinct Hash Table": `new-file`,
+  "Temporary Hash Table": `new-file`,
+  "Temporary Index": `new-file`,
+  "Temporary Sorted List": `list-ordered`,
+  "Temporary Table": `new-file`,
+  "Union Merge": `merge`,
+  "User Defined Table Function": `symbol-function`,
+  "Unknown": `question`,
+  "Update": `replace`,
+  "VALUES LIST": `list-flat`,
 }
 
 type ChangeTreeDataEventType = ExplainTreeItem | undefined | null | void;
@@ -60,7 +60,7 @@ export class DoveResultsView implements TreeDataProvider<any> {
   private topNode: ExplainTreeItem;
 
   private treeView: TreeView<ExplainTreeItem>;
-  
+
   constructor() {
     this.treeView = vscode.window.createTreeView(`vscode-db2i.dove.nodes`, { treeDataProvider: this, showCollapseAll: true });
   }
@@ -76,7 +76,7 @@ export class DoveResultsView implements TreeDataProvider<any> {
     // Show tree in the view
     commands.executeCommand(`setContext`, `vscode-db2i:explaining`, true);
     // Ensure that the tree is positioned such that the first element is visible
-    this.treeView.reveal(this.topNode,  { select: false });
+    this.treeView.reveal(this.topNode, { select: false });
     return this.topNode;
   }
   getRootNode(): ExplainTreeItem {
@@ -119,7 +119,7 @@ export class ExplainTreeItem extends TreeItem {
   private children: ExplainTreeItem[];
 
   constructor(node: ExplainNode) {
-    super(node.title, node.childrenNodes > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None);
+    super(node.title, node.children.length > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None);
     this.explainNode = node;
     this.contextValue = `explainTreeItem`;
 
