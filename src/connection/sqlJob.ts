@@ -6,12 +6,13 @@ import { ConnectionResult, QueryResult, ServerRequest, ServerResponse } from "@i
 import { JobLogEntry, JobStatus } from "./types";
 import Statement from "../database/statement";
 import { NamingFormats } from "./manager";
+import JSONBig from 'json-bigint';
 
 const DB2I_VERSION = (process.env[`DB2I_VERSION`] || `<version unknown>`) + ((process.env.DEV) ? ``:`-dev`);
 
 // Use json-bigint to safely parse very large integers without losing precision.
 /* eslint-disable @typescript-eslint/no-var-requires */
-const JSONbig = require('json-bigint')({ storeAsString: true });
+const jsonBig = JSONBig({ storeAsString: true });
 
 export class OldSQLJob extends SQLJob {
   private channel: any;
@@ -102,7 +103,7 @@ export class OldSQLJob extends SQLJob {
               outString = ``;
               if (this.isTracingChannelData) ServerComponent.writeOutput(thisMsg);
               try {
-                const response: ServerResponse = JSONbig.parse(thisMsg) as ServerResponse;
+                const response: ServerResponse = jsonBig.parse(thisMsg) as ServerResponse;
                 this.responseEmitter.emit(response.id, response);
               } catch (e: any) {
                 console.log(`Error: ` + e);
