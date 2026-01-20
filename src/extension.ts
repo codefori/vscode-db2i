@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import schemaBrowser from "./views/schemaBrowser";
+import SchemaBrowser from "./views/schemaBrowser";
 
 import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
@@ -20,9 +20,9 @@ import { initialiseTestSuite } from "./testing";
 import { Db2iUriHandler, getStatementUri } from "./uriHandler";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
-import { SelfTreeDecorationProvider, selfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
+import { SelfTreeDecorationProvider, SelfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
-import { queryHistory } from "./views/queryHistoryView";
+import { QueryHistory } from "./views/queryHistoryView";
 import { registerCopilotProvider } from "./aiProviders/copilot";
 import { registerDb2iTablesProvider } from "./aiProviders/continue/listTablesContextProvider";
 import { setCheckerAvailableContext } from "./language/providers/problemProvider";
@@ -43,33 +43,26 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   loadBase(context);
 
+  const jobManagerView = new JobManagerView(context);
+  const jobManagerTreeView = vscode.window.createTreeView(`jobManager`, { treeDataProvider: jobManagerView, showCollapseAll: true });
+  const schemaBrowser = new SchemaBrowser(context);
+  const schemaBrowserTreeView = vscode.window.createTreeView(`schemaBrowser`, { treeDataProvider: schemaBrowser, showCollapseAll: true });
+  const queryHistory = new QueryHistory(context);
+  const queryHistoryTreeView = vscode.window.createTreeView(`queryHistory`, { treeDataProvider: queryHistory, showCollapseAll: true });
   const exampleBrowser = new ExampleBrowser(context);
-  const selfCodesView = new selfCodesResultsView(context);
+  const exampleBrowserTreeView = vscode.window.createTreeView(`exampleBrowser`, { treeDataProvider: exampleBrowser, showCollapseAll: true });
+  const selfCodesView = new SelfCodesResultsView(context);
+  const selfCodesTreeView = vscode.window.createTreeView(`vscode-db2i.self.nodes`, { treeDataProvider: selfCodesView, showCollapseAll: true });
 
   context.subscriptions.push(
     ...languageInit(),
     ...notebookInit(),
     ServerComponent.initOutputChannel(),
-    vscode.window.registerTreeDataProvider(
-      `jobManager`,
-      new JobManagerView(context)
-    ),
-    vscode.window.registerTreeDataProvider(
-      `schemaBrowser`,
-      new schemaBrowser(context)
-    ),
-    vscode.window.registerTreeDataProvider(
-      `queryHistory`,
-      new queryHistory(context)
-    ),
-    vscode.window.registerTreeDataProvider(
-      `exampleBrowser`,
-      exampleBrowser
-    ),
-    vscode.window.registerTreeDataProvider(
-      'vscode-db2i.self.nodes',
-      selfCodesView
-    ),
+    jobManagerTreeView,
+    schemaBrowserTreeView,
+    queryHistoryTreeView,
+    exampleBrowserTreeView,
+    selfCodesTreeView,
     vscode.window.registerFileDecorationProvider(
       new SelfTreeDecorationProvider()
     ),
@@ -113,7 +106,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
 
   // register copilot provider
-  registerCopilotProvider(context); 
+  registerCopilotProvider(context);
   // register continue provider
   registerContinueProvider();
 

@@ -13,7 +13,7 @@ import Statement from "../../language/sql/statement";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { getLiteralsFromStatement, getPriorBindableStatement } from "./binding";
-import { queryResultToRpgDs } from "./codegen";
+import { queryResultToRpgDs, queryResultToUdtf } from "./codegen";
 import { registerRunStatement } from "./editorUi";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
@@ -22,7 +22,7 @@ import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider
 import { ExplainTree } from "./explain/nodes";
 import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 
-export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg";
+export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg" | "udtf";
 
 export interface StatementInfo {
   content: string,
@@ -440,6 +440,26 @@ async function runHandler(options?: StatementInfo) {
             await vscode.window.showTextDocument(textDoc);
             chosenView.setLoadingText(`RPG data structure generated.`, false);
           }
+        
+        } else if (statementDetail.qualifier === `udtf`) {
+          if (statementDetail.statement.type !== StatementType.Select) {
+            vscode.window.showErrorMessage('UDTF qualifier only supported for select statements');
+          } else {
+            chosenView.setLoadingText(`Executing SQL statement...`, false);
+            setCancelButtonVisibility(true);
+            updateStatusBar({executing: true});
+            const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
+            setCancelButtonVisibility(false);
+            updateStatusBar({executing: false});
+            let content = `-- statement:\n`
+              + `-- ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n-- ') }\n\n`
+              + `-- User-defined table function\n`
+              + queryResultToUdtf(result, statementDetail.content, statementDetail.statement.tokens);
+              
+            const textDoc = await vscode.workspace.openTextDocument({ language: 'sql', content });
+            await vscode.window.showTextDocument(textDoc);
+            chosenView.setLoadingText(`User-defined table function generated.`, false);
+          }
 
         } else {
           // Otherwise... it's a bit complicated.
@@ -592,7 +612,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   }
 
   if (statementInfo.content) {
-    [`cl`, `json`, `csv`, `sql`, `explain`, `update`, `rpg`, `bind`].forEach(mode => {
+    [`cl`, `json`, `csv`, `sql`, `explain`, `update`, `rpg`, `udtf`, `bind`].forEach(mode => {
       if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
         statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 

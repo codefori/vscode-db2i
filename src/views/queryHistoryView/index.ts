@@ -6,7 +6,7 @@ import { QueryHistoryItem } from "../../Storage";
 const openSqlDocumentCommand = `vscode-db2i.openSqlDocument`;
 const openHistoryItemCommand = `vscode-db2i.queryHistory.openItem`;
 
-export class queryHistory implements TreeDataProvider<any> {
+export class QueryHistory implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
   readonly onDidChangeTreeData: Event<TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
