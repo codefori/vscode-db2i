@@ -42,11 +42,13 @@ export class JobManagerView implements TreeDataProvider<any> {
         }
 
         try {
-          updateStatusBar({newJob: true});
-          await JobManager.newJob(
-            (options ? new OldSQLJob(options) : undefined), 
-            name
-          );
+          updateStatusBar({ newJob: true });
+          await window.withProgress({ location: { viewId: `jobManager` } }, async () => {
+            await JobManager.newJob(
+              (options ? new OldSQLJob(options) : undefined),
+              name
+            );
+          });
         } catch (e) {
           window.showErrorMessage(e.message);
         }
@@ -310,7 +312,7 @@ export class JobManagerView implements TreeDataProvider<any> {
     updateStatusBar();
 
     const selectedJob = JobManager.getSelection();
-    
+
     // re-register db2i tables context provider with current schema
     const selectedSchema = selectedJob?.job.options.libraries[0];
     if (
