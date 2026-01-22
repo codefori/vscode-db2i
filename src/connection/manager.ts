@@ -2,7 +2,7 @@
 import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { JDBCOptions, QueryOptions, QueryResult } from "@ibm/mapepire-js/dist/src/types";
 import { getInstance } from "../base";
-import { askAboutNewJob, onConnectOrServerInstall, osDetail } from "../config";
+import { askAboutNewJob, Config, onConnectOrServerInstall, osDetail } from "../config";
 import Configuration from "../configuration";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import { ServerComponent, UpdateStatus } from "./serverComponent";
@@ -33,9 +33,27 @@ export class SQLJobManager {
       const connection = instance.getConnection()!;
       const config = connection.getConfig();
 
-      const options = ConfigManager.getDefaultConfig();
-      options.libraries = [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)];
-      const newJob = predefinedJob || (new OldSQLJob(options));
+      let newJob: OldSQLJob;
+      if (predefinedJob) {
+        newJob = predefinedJob;
+      } else {
+        let options: JDBCOptions = ConfigManager.getDefaultConfig();
+        const startUpConfigList = Config.getStartUpConfigList();
+        const startUpConfig = startUpConfigList.find((item) => item.connectionName === connection.currentConnectionName);
+        if (startUpConfig) {
+          const savedConfig = ConfigManager.getConfig(startUpConfig.configName);
+          if (savedConfig) {
+            name = startUpConfig.configName;
+            options = savedConfig;
+          }
+        }
+
+        if (!options.libraries) {
+          options.libraries = [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)];
+        }
+
+        newJob = new OldSQLJob(options);
+      }
 
       try {
         this.creatingJobs += 1;

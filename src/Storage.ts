@@ -1,7 +1,8 @@
 import vscode from 'vscode';
 
-const QUERIES_KEY = `queries`;
 const SERVERCOMPONENT_KEY = `serverVersion`;
+const QUERIES_KEY = `queries`;
+const START_UP_CONFIGS_KEY = `startUpConfigs`;
 
 export interface QueryHistoryItem {
   query: string;
@@ -11,6 +12,13 @@ export interface QueryHistoryItem {
 }
 
 export type QueryList = QueryHistoryItem[];
+
+export interface StartUpConfig {
+  connectionName: string;
+  configName: string
+}
+
+export type StartUpConfigList = StartUpConfig[];
 
 abstract class Storage {
   protected readonly globalState;
@@ -69,4 +77,11 @@ export class ConnectionStorage extends Storage {
     await this.set(QUERIES_KEY, sourceList);
   }
 
+  getStartUpConfigList() {
+    return this.get<StartUpConfigList>(START_UP_CONFIGS_KEY) || [];
+  }
+
+  async setStartUpConfigList(startUpConfigList: StartUpConfigList) {
+    await this.set(START_UP_CONFIGS_KEY, startUpConfigList);
+  }
 }

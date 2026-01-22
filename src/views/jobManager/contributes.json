@@ -136,6 +136,18 @@
         "icon": "$(edit)"
       },
       {
+        "command": "vscode-db2i.jobManager.setAsDefault",
+        "title": "Set as default",
+        "category": "Db2 for i",
+        "icon": "$(debug-connected)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.removeAsDefault",
+        "title": "Remove as default",
+        "category": "Db2 for i",
+        "icon": "$(debug-disconnect)"
+      },
+      {
         "command": "vscode-db2i.jobManager.deleteConfig",
         "title": "Delete configuration",
         "category": "Db2 for i",
@@ -192,6 +204,14 @@
         },
         {
           "command": "vscode-db2i.jobManager.editConfig",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.setAsDefault",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.removeAsDefault",
           "when": "never"
         },
         {
@@ -268,14 +288,24 @@
           "group": "config@1"
         },
         {
-          "command": "vscode-db2i.jobManager.editConfig",
-          "when": "view == jobManager && viewItem == savedConfig",
-          "group": "inline"
+          "command": "vscode-db2i.jobManager.deleteConfig",
+          "when": "view == jobManager && viewItem =~ /^savedConfig/",
+          "group": "inline@1"
         },
         {
-          "command": "vscode-db2i.jobManager.deleteConfig",
-          "when": "view == jobManager && viewItem == savedConfig",
-          "group": "inline"
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "view == jobManager && viewItem =~ /^savedConfig/",
+          "group": "inline@2"
+        },
+        {
+          "command": "vscode-db2i.jobManager.setAsDefault",
+          "when": "view == jobManager && viewItem =~ /^savedConfig(?!_default)/",
+          "group": "inline@3"
+        },
+        {
+          "command": "vscode-db2i.jobManager.removeAsDefault",
+          "when": "view == jobManager && viewItem =~ /^savedConfig_default/",
+          "group": "inline@4"
         }
       ],
       "vscode-db2i.jobManager.defaultSettings": [

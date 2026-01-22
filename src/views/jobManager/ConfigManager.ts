@@ -1,13 +1,16 @@
-import { Disposable, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, window } from "vscode";
+import { Disposable, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, window } from "vscode";
 import Configuration from "../../configuration";
 import { SQLJobItem } from "./jobManagerView";
-import { JobManager } from "../../config";
+import { Config, JobManager } from "../../config";
 import { editJobUi } from "./editJob";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { getInstance } from "../../base";
 
 interface JobConfigs {
   [name: string]: JDBCOptions
 };
+
+const defaultConfigColor = new ThemeColor(`minimap.warningHighlight`);
 
 export class ConfigManager {
   static isJobNamingDefaultMigrated = false;
@@ -61,9 +64,42 @@ export class ConfigManager {
         }
       }),
 
+      commands.registerCommand(`vscode-db2i.jobManager.setAsDefault`, async (configNode: SavedConfig) => {
+        if (configNode && configNode.name) {
+          const instance = getInstance();
+          const connection = instance.getConnection()!;
+
+          const startUpConfigList = Config.getStartUpConfigList();
+          const startUpConfigIndex = startUpConfigList.findIndex((item) => item.connectionName === connection.currentConnectionName);
+          if (startUpConfigIndex >= 0) {
+            startUpConfigList[startUpConfigIndex].configName = configNode.name;
+          } else {
+            startUpConfigList.push({ connectionName: connection.currentConnectionName, configName: configNode.name });
+          }
+          await Config.setStartUpConfigList(startUpConfigList);
+          this.refresh();
+        }
+      }),
+
+      commands.registerCommand(`vscode-db2i.jobManager.removeAsDefault`, async (configNode: SavedConfig) => {
+        if (configNode && configNode.name) {
+          const instance = getInstance();
+          const connection = instance.getConnection()!;
+
+          const startUpConfigList = Config.getStartUpConfigList();
+          const startUpConfigIndex = startUpConfigList.findIndex((item) => item.connectionName === connection.currentConnectionName);
+          if (startUpConfigIndex >= 0) {
+            startUpConfigList.splice(startUpConfigIndex, 1);
+            await Config.setStartUpConfigList(startUpConfigList);
+            this.refresh();
+          }
+        }
+      }),
+
       commands.registerCommand(`vscode-db2i.jobManager.deleteConfig`, async (configNode: SavedConfig) => {
         if (configNode && configNode.name) {
           await this.deleteConfig(configNode.name);
+          await commands.executeCommand(`vscode-db2i.jobManager.removeAsDefault`, configNode);
           this.refresh();
         }
       }),
@@ -181,7 +217,6 @@ class SavedConfig extends TreeItem {
   constructor(public name: string) {
     super(name, TreeItemCollapsibleState.None);
 
-    this.iconPath = new ThemeIcon(`add`);
     this.tooltip = `Click to start`
     this.command = {
       command: `vscode-db2i.jobManager.startJobFromConfig`,
@@ -189,6 +224,13 @@ class SavedConfig extends TreeItem {
       arguments: [name]
     };
 
-    this.contextValue = `savedConfig`;
+
+    const instance = getInstance();
+    const connection = instance.getConnection()!;
+    const startUpConfigList = Config.getStartUpConfigList();
+    const startUpConfig = startUpConfigList.find((item) => item.connectionName === connection.currentConnectionName);
+    const isDefault = startUpConfig?.configName === name;
+    this.iconPath = new ThemeIcon(`add`, (isDefault ? defaultConfigColor : undefined));
+    this.contextValue = `savedConfig${isDefault ? '_default' : ''}`;
   }
 }
