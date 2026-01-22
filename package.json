@@ -698,7 +698,7 @@
       },
       {
         "command": "vscode-db2i.jobManager.editDefaultSelf",
-        "title": "SELF Default"
+        "title": "SELF"
       },
       {
         "command": "vscode-db2i.jobManager.editSelfCodes",
@@ -1422,16 +1422,6 @@
           "group": "navigation_notebook@1"
         }
       ],
-      "vscode-db2i.customExampleDirectories": [
-        {
-          "command": "vscode-db2i.examples.add",
-          "group": "navigation@0"
-        },
-        {
-          "command": "vscode-db2i.examples.remove",
-          "group": "navigation@1"
-        }
-      ],
       "vscode-db2i.jobManager.defaultSettings": [
         {
           "command": "vscode-db2i.jobManager.editDefaultJobProps",
@@ -1439,6 +1429,16 @@
         },
         {
           "command": "vscode-db2i.jobManager.editDefaultSelf",
+          "group": "navigation@1"
+        }
+      ],
+      "vscode-db2i.customExampleDirectories": [
+        {
+          "command": "vscode-db2i.examples.add",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.examples.remove",
           "group": "navigation@1"
         }
       ],
@@ -1457,14 +1457,14 @@
         "label": "Run SQL statement"
       },
       {
-        "id": "vscode-db2i.customExampleDirectories",
-        "label": "Custom Example Directories",
-        "icon": "$(folder-library)"
-      },
-      {
         "id": "vscode-db2i.jobManager.defaultSettings",
         "label": "Default Job Settings",
         "icon": "$(gear)"
+      },
+      {
+        "id": "vscode-db2i.customExampleDirectories",
+        "label": "Custom Example Directories",
+        "icon": "$(folder-library)"
       }
     ],
     "keybindings": [

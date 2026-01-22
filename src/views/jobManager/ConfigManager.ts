@@ -70,7 +70,7 @@ export class ConfigManager {
 
       commands.registerCommand(`vscode-db2i.jobManager.editDefaultJobProps`, () => {
         const options = this.getDefaultConfig();
-        editJobUi(options, `Default Job`).then(newOptions => {
+        editJobUi(options, `Default Job`, [`libraries`]).then(newOptions => {
           if (newOptions) {
             this.storeDefaultConfig(options);
           }
@@ -159,6 +159,10 @@ export class ConfigManager {
   }
 
   static storeDefaultConfig(options: JDBCOptions) {
+    if (options.libraries) {
+      delete options.libraries;
+    }
+
     return Configuration.set(`jobManager.defaultJobConfig`, options);
   }
 }

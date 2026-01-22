@@ -33,7 +33,8 @@ export class SQLJobManager {
       const connection = instance.getConnection()!;
       const config = connection.getConfig();
 
-      const options = SQLJobManager.getDefaultJdbcOptions([config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)]);
+      const options = ConfigManager.getDefaultConfig();
+      options.libraries = [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)];
       const newJob = predefinedJob || (new OldSQLJob(options));
 
       try {
@@ -62,15 +63,6 @@ export class SQLJobManager {
         this.creatingJobs -= 1;
       }
     }
-  }
-
-  static getDefaultJdbcOptions(libraries?: string[]): JDBCOptions {
-    const defaultJdbcOptions = ConfigManager.getDefaultConfig();
-    if (libraries) {
-      defaultJdbcOptions.libraries = libraries;
-    }
-
-    return defaultJdbcOptions;
   }
 
   isCreatingJob() {
