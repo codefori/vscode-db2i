@@ -90,6 +90,8 @@ export class SQLJobManager {
     }
     this.jobs.splice(0, this.jobs.length);
     this.selectedJob = NO_SELECTED_JOB;
+    this.creatingJobs = 0;
+    this.totalJobs = 0;
   }
 
   async closeJob(index?: number) {
