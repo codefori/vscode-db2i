@@ -5,15 +5,19 @@
         "id": "vscode-db2i.jobManager",
         "title": "SQL Job Manager",
         "properties": {
-          "vscode-db2i.jobManager.jobNamingDefault": {
-            "type": "string",
-            "order": 0,
-            "description": "Default naming mode for new jobs",
-            "default": "system",
-            "enum": [
-              "system",
-              "sql"
-            ]
+          "vscode-db2i.jobManager.defaultJobConfig": {
+            "type": "object",
+            "description": "Default job configuration",
+            "default": {
+              "naming": "system",
+              "full open": false,
+              "transaction isolation": "none",
+              "query optimize goal": "1",
+              "block size": "512",
+              "date format": "iso",
+              "extended metadata": true
+            },
+            "additionalProperties": true
           },
           "vscode-db2i.jobManager.jobSelfDefault": {
             "type": "string",
@@ -84,10 +88,12 @@
         "icon": "$(edit)"
       },
       {
-        "command": "vscode-db2i.jobManager.defaultSettings",
-        "title": "Default Job Settings",
-        "category": "Db2 for i",
-        "icon": "$(gear)"
+        "command": "vscode-db2i.jobManager.editDefaultJobProps",
+        "title": "Connection Properties"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editDefaultSelf",
+        "title": "SELF"
       },
       {
         "command": "vscode-db2i.jobManager.editSelfCodes",
@@ -143,6 +149,13 @@
         "enablement": "vscode-db2i:continueExtensionActive"
       }
     ],
+    "submenus": [
+      {
+        "id": "vscode-db2i.jobManager.defaultSettings",
+        "label": "Default Job Settings",
+        "icon": "$(gear)"
+      }
+    ],
     "menus": {
       "commandPalette": [
         {
@@ -193,7 +206,7 @@
           "when": "view == jobManager"
         },
         {
-          "command": "vscode-db2i.jobManager.defaultSettings",
+          "submenu": "vscode-db2i.jobManager.defaultSettings",
           "group": "navigation",
           "when": "view == jobManager"
         },
@@ -263,6 +276,16 @@
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "view == jobManager && viewItem == savedConfig",
           "group": "inline"
+        }
+      ],
+      "vscode-db2i.jobManager.defaultSettings": [
+        {
+          "command": "vscode-db2i.jobManager.editDefaultJobProps",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editDefaultSelf",
+          "group": "navigation@1"
         }
       ]
     },

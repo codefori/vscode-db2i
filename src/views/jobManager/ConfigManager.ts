@@ -10,6 +10,8 @@ interface JobConfigs {
 };
 
 export class ConfigManager {
+  static isJobNamingDefaultMigrated = false;
+
   static refresh() {
     commands.executeCommand(`vscode-db2i.jobManager.refresh`);
   }
@@ -66,6 +68,15 @@ export class ConfigManager {
         }
       }),
 
+      commands.registerCommand(`vscode-db2i.jobManager.editDefaultJobProps`, () => {
+        const options = this.getDefaultConfig();
+        editJobUi(options, `Default Job`).then(newOptions => {
+          if (newOptions) {
+            this.storeDefaultConfig(options);
+          }
+        });
+      }),
+
       // Currently not accessible from the UI
       commands.registerCommand(`vscode-db2i.jobManager.setAsStartupConfig`, async (configNode: SavedConfig) => {
         if (configNode && configNode.name) {
@@ -118,6 +129,38 @@ export class ConfigManager {
 
     return Configuration.set(`jobConfigs`, configs);
   };
+
+  static getDefaultConfig(): JDBCOptions {
+    const defaultJobConfig = Configuration.get<JDBCOptions>(`jobManager.defaultJobConfig`) || {
+      "naming": "system",
+      "full open": false,
+      "transaction isolation": "none",
+      "query optimize goal": "1",
+      "block size": "512",
+      "date format": "iso",
+      "extended metadata": true,
+    };
+
+    /**
+    * Below logic can eventually be removed in a major version release. This logic for now can be used
+    * to migrate `jobManager.jobNamingDefault` to `jobManager.defaultJobConfig`.
+    */
+    if (!ConfigManager.isJobNamingDefaultMigrated) {
+      const oldJobNamingDefault = Configuration.get<string>(`jobManager.jobNamingDefault`);
+      if (oldJobNamingDefault && (oldJobNamingDefault === 'sql' || oldJobNamingDefault === 'system')) {
+        defaultJobConfig.naming = oldJobNamingDefault;
+        ConfigManager.storeDefaultConfig(defaultJobConfig);
+        Configuration.set(`jobManager.jobNamingDefault`, undefined);
+      }
+      ConfigManager.isJobNamingDefaultMigrated = true;
+    }
+
+    return defaultJobConfig;
+  }
+
+  static storeDefaultConfig(options: JDBCOptions) {
+    return Configuration.set(`jobManager.defaultJobConfig`, options);
+  }
 }
 
 export class ConfigGroup extends TreeItem {

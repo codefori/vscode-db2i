@@ -1,12 +1,13 @@
 
 import { Query } from "@ibm/mapepire-js/dist/src/query";
-import { QueryOptions, QueryResult } from "@ibm/mapepire-js/dist/src/types";
+import { JDBCOptions, QueryOptions, QueryResult } from "@ibm/mapepire-js/dist/src/types";
 import { getInstance } from "../base";
 import { askAboutNewJob, onConnectOrServerInstall, osDetail } from "../config";
 import Configuration from "../configuration";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import { ServerComponent, UpdateStatus } from "./serverComponent";
 import { OldSQLJob } from "./sqlJob";
+import { ConfigManager } from "../views/jobManager/ConfigManager";
 
 export interface JobInfo {
   name: string;
@@ -32,16 +33,8 @@ export class SQLJobManager {
       const connection = instance.getConnection()!;
       const config = connection.getConfig();
 
-      const newJob = predefinedJob || (new OldSQLJob({
-        libraries: [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)],
-        naming: SQLJobManager.getNamingDefault(),
-        "full open": false,
-        "transaction isolation": "none",
-        "query optimize goal": "1",
-        "block size": "512",
-        "date format": "iso",
-        "extended metadata": true,
-      }));
+      const options = SQLJobManager.getDefaultJdbcOptions([config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)]);
+      const newJob = predefinedJob || (new OldSQLJob(options));
 
       try {
         this.creatingJobs += 1;
@@ -69,6 +62,15 @@ export class SQLJobManager {
         this.creatingJobs -= 1;
       }
     }
+  }
+
+  static getDefaultJdbcOptions(libraries?: string[]): JDBCOptions {
+    const defaultJdbcOptions = ConfigManager.getDefaultConfig();
+    if (libraries) {
+      defaultJdbcOptions.libraries = libraries;
+    }
+
+    return defaultJdbcOptions;
   }
 
   isCreatingJob() {
@@ -194,9 +196,5 @@ export class SQLJobManager {
 
   static getSelfDefault(): SelfValue {
     return Configuration.get<SelfValue>(`jobManager.jobSelfDefault`) || `*NONE`;
-  }
-
-  static getNamingDefault(): NamingFormats {
-    return (Configuration.get<string>(`jobManager.jobNamingDefault`) || `system`) as NamingFormats;
   }
 }
