@@ -5987,113 +5987,115 @@ export const Examples: SQLExamplesList = {
   ]
 }
 
-export async function getMergedExamples(): Promise<SQLExamplesList> {
-  const defaultExamples = await getDefaultExamples();
-  const customExamples = await getCustomExamples();
-  const mergedExamples: SQLExamplesList = {};
+export namespace SQLExamples {
+  export async function getMergedExamples(): Promise<SQLExamplesList> {
+    const defaultExamples = await getDefaultExamples();
+    const customExamples = await getCustomExamples();
+    const mergedExamples: SQLExamplesList = {};
 
-  for (const [group, examples] of Object.entries(defaultExamples)) {
-    mergedExamples[group] = [...examples];
-  }
-
-  for (const [group, examples] of Object.entries(customExamples)) {
-    if (mergedExamples[group]) {
-      mergedExamples[group] = [...mergedExamples[group], ...examples];
-    } else {
+    for (const [group, examples] of Object.entries(defaultExamples)) {
       mergedExamples[group] = [...examples];
     }
-  }
 
-  return mergedExamples;
-}
-
-async function getDefaultExamples(): Promise<SQLExamplesList> {
-  // Unlike the bulk of the examples which are defined in views/examples/index.ts, the services examples are retrieved dynamically
-  if (!Examples[ServiceInfoLabel]) {
-    Examples[ServiceInfoLabel] = await getServiceInfo();
-  }
-
-  return Examples;
-}
-
-export async function getCustomExamples(): Promise<SQLExamplesList> {
-  // Get custom example directories from VS Code settings
-  const customDirectoryPaths = Configuration.get<string[]>(`examples.customExampleDirectories`) || [];
-  if (customDirectoryPaths.length === 0) {
-    return {};
-  }
-
-  // Get all SQL files from the specified directories (include 1 level of subdirectories)
-  const sqlTextDocuments: TextDocument[] = [];
-  for (const dirPath of customDirectoryPaths) {
-    const dirUri = Uri.file(dirPath);
-    const dirTextDocuments = await getSqlTextDocumentsFromDirectory(dirUri);
-    sqlTextDocuments.push(...dirTextDocuments);
-  }
-
-  // Organize the SQL files into groups based on their parent directory names
-  const examplesList: SQLExamplesList = {};
-  for (const textDocument of sqlTextDocuments) {
-    // Set group and name based on file path by default
-    const parsedPath = path.parse(textDocument.uri.path);
-    let group = path.basename(parsedPath.dir);
-    let name = parsedPath.name;
-
-    // Override group and name if category and description is specified in the SQL file as comments
-    const content = textDocument.getText();
-    const eol = textDocument.eol === EndOfLine.LF ? '\n' : '\r\n';
-    const detail = getStatementDetail(content, eol);
-    const category = detail?.settings.category;
-    if (category) {
-      group = category;
-    }
-    const description = detail?.settings.description;
-    if (description) {
-      name = description;
-    }
-
-    if (!examplesList[group]) {
-      examplesList[group] = [];
-    }
-
-    examplesList[group].push({
-      name: name,
-      content: textDocument.getText().split(eol),
-      customFileUri: textDocument.uri
-    });
-  }
-
-  return examplesList;
-}
-
-async function getSqlTextDocumentsFromDirectory(directory: Uri, depth = 1): Promise<TextDocument[]> {
-  const sqlTextDocuments: TextDocument[] = [];
-
-  try {
-    const contents = await workspace.fs.readDirectory(directory);
-    for (const [name, type] of contents) {
-      const uri = Uri.joinPath(directory, name);
-
-      if (type === FileType.File) {
-        try {
-          const textDocument = await workspace.openTextDocument(uri);
-          if (textDocument.languageId === 'sql') {
-            sqlTextDocuments.push(textDocument);
-          }
-        } catch (error) {
-          // Ignore error reading file
-          console.log(error);
-          continue;
-        }
-      } else if (type === FileType.Directory && depth > 0) {
-        const subContents = await getSqlTextDocumentsFromDirectory(uri, depth - 1);
-        sqlTextDocuments.push(...subContents);
+    for (const [group, examples] of Object.entries(customExamples)) {
+      if (mergedExamples[group]) {
+        mergedExamples[group] = [...mergedExamples[group], ...examples];
+      } else {
+        mergedExamples[group] = [...examples];
       }
     }
-  } catch (error) {
-    // Ignore error reading directory
-    console.log(error);
+
+    return mergedExamples;
   }
 
-  return sqlTextDocuments;
+  export async function getDefaultExamples(): Promise<SQLExamplesList> {
+    // Unlike the bulk of the examples which are defined in views/examples/index.ts, the services examples are retrieved dynamically
+    if (!Examples[ServiceInfoLabel]) {
+      Examples[ServiceInfoLabel] = await getServiceInfo();
+    }
+
+    return Examples;
+  }
+
+  export async function getCustomExamples(): Promise<SQLExamplesList> {
+    // Get custom example directories from VS Code settings
+    const customDirectoryPaths = Configuration.get<string[]>(`examples.customExampleDirectories`) || [];
+    if (customDirectoryPaths.length === 0) {
+      return {};
+    }
+
+    // Get all SQL files from the specified directories (include 1 level of subdirectories)
+    const sqlTextDocuments: TextDocument[] = [];
+    for (const dirPath of customDirectoryPaths) {
+      const dirUri = Uri.file(dirPath);
+      const dirTextDocuments = await getSqlTextDocumentsFromDirectory(dirUri);
+      sqlTextDocuments.push(...dirTextDocuments);
+    }
+
+    // Organize the SQL files into groups based on their parent directory names
+    const examplesList: SQLExamplesList = {};
+    for (const textDocument of sqlTextDocuments) {
+      // Set group and name based on file path by default
+      const parsedPath = path.parse(textDocument.uri.path);
+      let group = path.basename(parsedPath.dir);
+      let name = parsedPath.name;
+
+      // Override group and name if category and description is specified in the SQL file as comments
+      const content = textDocument.getText();
+      const eol = textDocument.eol === EndOfLine.LF ? '\n' : '\r\n';
+      const detail = getStatementDetail(content, eol);
+      const category = detail?.settings.category;
+      if (category) {
+        group = category;
+      }
+      const description = detail?.settings.description;
+      if (description) {
+        name = description;
+      }
+
+      if (!examplesList[group]) {
+        examplesList[group] = [];
+      }
+
+      examplesList[group].push({
+        name: name,
+        content: textDocument.getText().split(eol),
+        customFileUri: textDocument.uri
+      });
+    }
+
+    return examplesList;
+  }
+
+  async function getSqlTextDocumentsFromDirectory(directory: Uri, depth = 1): Promise<TextDocument[]> {
+    const sqlTextDocuments: TextDocument[] = [];
+
+    try {
+      const contents = await workspace.fs.readDirectory(directory);
+      for (const [name, type] of contents) {
+        const uri = Uri.joinPath(directory, name);
+
+        if (type === FileType.File) {
+          try {
+            const textDocument = await workspace.openTextDocument(uri);
+            if (textDocument.languageId === 'sql') {
+              sqlTextDocuments.push(textDocument);
+            }
+          } catch (error) {
+            // Ignore error reading file
+            console.log(error);
+            continue;
+          }
+        } else if (type === FileType.Directory && depth > 0) {
+          const subContents = await this.getSqlTextDocumentsFromDirectory(uri, depth - 1);
+          sqlTextDocuments.push(...subContents);
+        }
+      }
+    } catch (error) {
+      // Ignore error reading directory
+      console.log(error);
+    }
+
+    return sqlTextDocuments;
+  }
 }

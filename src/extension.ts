@@ -26,10 +26,12 @@ import { queryHistory } from "./views/queryHistoryView";
 import { registerCopilotProvider } from "./aiProviders/copilot";
 import { registerDb2iTablesProvider } from "./aiProviders/continue/listTablesContextProvider";
 import { setCheckerAvailableContext } from "./language/providers/problemProvider";
+import { SQLExamples } from "./views/examples";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
   sqlJob: (options?: JDBCOptions) => OldSQLJob
+  sqlExamples: typeof SQLExamples,
 }
 
 // this method is called when your extension is activated
@@ -113,7 +115,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
 
   // register copilot provider
-  registerCopilotProvider(context); 
+  registerCopilotProvider(context);
   // register continue provider
   registerContinueProvider();
 
@@ -121,7 +123,11 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   instance.subscribe(context, `disconnected`, `db2i-disconnected`, () => ServerComponent.reset());
 
-  return { sqlJobManager: JobManager, sqlJob: (options?: JDBCOptions) => new OldSQLJob(options) };
+  return {
+    sqlJobManager: JobManager,
+    sqlJob: (options?: JDBCOptions) => new OldSQLJob(options),
+    sqlExamples: SQLExamples
+  };
 }
 
 // this method is called when your extension is deactivated

@@ -1,5 +1,5 @@
 import { Event, EventEmitter, ExtensionContext, FileSystemWatcher, MarkdownString, RelativePattern, TextDocument, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, commands, window, workspace } from "vscode";
-import { Examples, SQLExample, ServiceInfoLabel, getMergedExamples } from ".";
+import { Examples, SQLExample, SQLExamples, ServiceInfoLabel } from ".";
 import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
 import { osDetail } from "../../config";
 import Configuration from "../../configuration";
@@ -154,10 +154,6 @@ export class ExampleBrowser implements TreeDataProvider<any> {
         }
       }),
 
-      commands.registerCommand("vscode-db2i.examples.get", async () => {
-        return await getMergedExamples();
-      }),
-
       workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('vscode-db2i.examples.customExampleDirectories')) {
           this.setupWatchers();
@@ -180,7 +176,7 @@ export class ExampleBrowser implements TreeDataProvider<any> {
       return element.getChildren();
     }
     else {
-      const mergedExamples = await getMergedExamples();
+      const mergedExamples = await SQLExamples.getMergedExamples();
 
       if (this.currentFilter) {
         // If there is a filter, then show all examples that include this criteria
