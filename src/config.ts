@@ -1,14 +1,14 @@
 import { ExtensionContext, commands, window } from "vscode";
+import { IBMiDetail } from "./IBMiDetail";
 import { ConnectionStorage } from "./Storage";
 import { getInstance } from "./base";
+import Configuration from "./configuration";
 import { SQLJobManager } from "./connection/manager";
 import { ServerComponent } from "./connection/serverComponent";
-import { JobManagerView } from "./views/jobManager/jobManagerView";
-import Configuration from "./configuration";
-import { ConfigManager } from "./views/jobManager/ConfigManager";
 import { Examples, ServiceInfoLabel } from "./views/examples";
+import { ConfigManager } from "./views/jobManager/ConfigManager";
+import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { updateStatusBar } from "./views/jobManager/statusBar";
-import { IBMiDetail } from "./IBMiDetail";
 
 export let Config: ConnectionStorage;
 export let osDetail: IBMiDetail;
@@ -68,7 +68,7 @@ export function initConfig(context: ExtensionContext) {
 
   getInstance().subscribe(context, `disconnected`, `db2i-disconnect`, async () => {
     JobManagerView.setVisible(false);
-    JobManager.endAll();
+    await JobManager.endAll(true);
     updateStatusBar();
 
     // Remove old service examples

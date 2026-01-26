@@ -1,3 +1,4 @@
+import { actionProvider } from "./actionProvider";
 import { completionProvider } from "./completionProvider";
 import { formatProvider } from "./formatProvider";
 import { hoverProvider, openProvider } from "./hoverProvider";
@@ -20,7 +21,8 @@ export function languageInit() {
     // peekProvider,
     ...problemProvider,
     checkDocumentDefintion,
-    sqlLanguageStatus
+    sqlLanguageStatus,
+    actionProvider
   );
   
   return functionality;

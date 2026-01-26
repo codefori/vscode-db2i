@@ -21,6 +21,23 @@
             "description": "Saved configs for",
             "default": {},
             "additionalProperties": true
+          },
+          "vscode-db2i.jobJava": {
+            "type": "string",
+            "description": "Java version for Server Component",
+            "default": "/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java",
+            "enum": [
+              "/QOpenSys/QIBM/ProdData/JavaVM/jdk80/64bit/bin/java",
+              "/QOpenSys/QIBM/ProdData/JavaVM/jdk11/64bit/bin/java",
+              "/QOpenSys/QIBM/ProdData/JavaVM/jdk17/64bit/bin/java",
+              "/QOpenSys/QIBM/ProdData/JavaVM/jdk21/64bit/bin/java"
+            ],
+            "enumDescriptions": [
+              "Java 8 (system default)",
+              "Java 11",
+              "Java 17",
+              "Java 21"
+            ]
           }
         }
       },
@@ -110,6 +127,16 @@
         "command": "vscode-db2i.getStatementUri",
         "title": "Copy sharable statement URI",
         "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.importData",
+        "title": "Generate Insert from File",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.importDataContextMenu",
+        "title": "Generate Insert from File",
+        "category": "Db2 for i"
       }
     ],
     "menus": {
@@ -117,6 +144,10 @@
         {
           "command": "vscode-db2i.getStatementUri",
           "when": "editorLangId == sql"
+        },
+        {
+          "command": "vscode-db2i.importDataContextMenu",
+          "when": "false"
         }
       ],
       "editor/context": [
@@ -134,6 +165,10 @@
           "command": "vscode-db2i.json.pasteParser",
           "group": "sql@2",
           "when": "editorLangId == sql"
+        },
+        {
+          "command": "vscode-db2i.importDataContextMenu",
+          "group": "sql@3"
         }
       ]
     }

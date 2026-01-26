@@ -4,8 +4,9 @@ import { Config } from "../../config";
 import { QueryHistoryItem } from "../../Storage";
 
 const openSqlDocumentCommand = `vscode-db2i.openSqlDocument`;
+const openHistoryItemCommand = `vscode-db2i.queryHistory.openItem`;
 
-export class queryHistory implements TreeDataProvider<any> {
+export class QueryHistory implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined | null | void> = new EventEmitter<TreeItem | undefined | null | void>();
   readonly onDidChangeTreeData: Event<TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
@@ -19,24 +20,50 @@ export class queryHistory implements TreeDataProvider<any> {
           window.showTextDocument(doc);
         });
       }),
+
+      commands.registerCommand(openHistoryItemCommand, (item?: QueryHistoryItem) => {
+        if (!item) {
+          return;
+        }
+
+        let content = item.query + `;`;
+
+        if (item.substatements && item.substatements.length > 0) {
+          content += `\n\n-- Substatements: ${item.substatements.length}\n`;
+          content += item.substatements.map(sub => sub + `;`).join(`\n`);
+        }
+
+        workspace.openTextDocument({
+          language: `sql`,
+          content
+        }).then(doc => {
+          window.showTextDocument(doc);
+        });
+      }),
+
       commands.registerCommand(`vscode-db2i.queryHistory.find`, async () => {
         commands.executeCommand('queryHistory.focus');
         commands.executeCommand('list.find');
       }),
 
-      commands.registerCommand(`vscode-db2i.queryHistory.prepend`, async (newQuery?: string) => {
+      commands.registerCommand(`vscode-db2i.queryHistory.prepend`, async (newQuery?: string, substatement?: string) => {
         if (newQuery && Config.ready) {
           let currentList = Config.getPastQueries();
           const existingQueryi = currentList.findIndex(queryItem => queryItem.query.trim() === newQuery.trim());
-          const existingQuery = currentList[existingQueryi];
-
-          const newQueryItem: QueryHistoryItem = {
+          const existingQuery = currentList[existingQueryi] || {
             query: newQuery,
             unix: Math.floor(Date.now() / 1000),
           };
 
-          if (existingQuery) {
-            newQueryItem.starred = existingQuery.starred; // Preserve starred status
+          if (substatement) {
+            if (!existingQuery.substatements) {
+              existingQuery.substatements = [];
+            }
+
+            // If the substatement already exists, don't add it again
+            if (!existingQuery.substatements.includes(substatement)) {
+              existingQuery.substatements.push(substatement);
+            }
           }
       
           // If it exists, remove it
@@ -46,7 +73,7 @@ export class queryHistory implements TreeDataProvider<any> {
       
           // If it's at the top, don't add it, it's already at the top
           if (existingQueryi !== 0) {
-            currentList.splice(0, 0, newQueryItem);
+            currentList.splice(0, 0, existingQuery);
           }
       
           await Config.setPastQueries(currentList);
@@ -193,11 +220,17 @@ class PastQueryNode extends TreeItem {
 
     this.contextValue = `query`;
 
-    this.tooltip = new MarkdownString(['```sql', item.query, '```'].join(`\n`));
+    let markdownLines = ['```sql', item.query];
+
+    if (item.substatements && item.substatements.length > 0) {
+      markdownLines.push(``, `-- substatements: ${item.substatements.length}`);
+    }
+
+    this.tooltip = new MarkdownString(markdownLines.join(`\n`));
 
     this.command = {
-      command: openSqlDocumentCommand,
-      arguments: [item.query],
+      command: openHistoryItemCommand,
+      arguments: [item],
       title: `Open into new document`
     };
 

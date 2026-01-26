@@ -287,7 +287,7 @@ function getStatementRangeFromGroup(currentGroup: StatementGroup, groupId: numbe
 
     const label = firstStatement.getLabel();
     if (label) {
-      if (label.toUpperCase() === `CL`) {
+      if ([`CL`, `BIND`].includes(label.toUpperCase())) {
         statementRange.validate = false;
       } else {
         statementRange.start = firstStatement.tokens[2].range.start;

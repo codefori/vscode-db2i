@@ -1,11 +1,12 @@
 import vscode from 'vscode';
 
 const QUERIES_KEY = `queries`;
-const SERVERCOMPONENT_KEY = `serverVersion`
+const SERVERCOMPONENT_KEY = `serverVersion`;
 
 export interface QueryHistoryItem {
   query: string;
   unix: number;
+  substatements?: string[];
   starred?: boolean;
 }
 

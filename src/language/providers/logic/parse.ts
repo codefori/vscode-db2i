@@ -18,7 +18,7 @@ export function getSqlDocument(document: TextDocument): Document|undefined {
     }
   }
   
-  const newAsp = new Document(document.getText());
+  const newAsp = new Document(document.getText(), false);
   cached.set(uri, { ast: newAsp, version: document.version });
 
   return newAsp;
