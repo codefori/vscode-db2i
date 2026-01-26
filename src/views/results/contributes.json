@@ -212,8 +212,8 @@
       },
       {
         "command": "vscode-db2i.runEditorStatement.multiple.all",
-        "key": "ctrl+r a",
-        "mac": "cmd+r a",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a",
         "when": "editorLangId == sql && resourceExtname != .inb"
       },
       {
