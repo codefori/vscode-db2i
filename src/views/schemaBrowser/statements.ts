@@ -1,6 +1,6 @@
 
 export function getIndexesStatement(schema: string, name: string) {
-return `
+  return `
 --
 with X as (
     select max(INDEX_NAME) NAME, SYSTEM_INDEX_NAME SYSNAME, max(INDEX_SCHEMA) SCHEMA,
@@ -258,8 +258,8 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
       data_execute "Data execute authority", 
       text_description "Description"
     from qsys2.object_privileges
-    where object_schema = '${schema}' 
-      and object_name = '${table}'
+    where system_object_schema = '${schema}' 
+      and system_object_name = '${table}'
   `;
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;
@@ -267,6 +267,8 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
     sql += ` and object_type = '*JRNRCV'`;
   } else if (objectType === 'JOURNAL') {
     sql += ` and object_type = '*JRN'`;
+  } else if (objectType === 'PACKAGE') {
+    sql += ` and object_type = '*SQLPKG'`;
   } else {
     sql += ` and sql_object_type = '${objectType}'`;
   }
@@ -274,7 +276,7 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
 }
 
 export function getObjectLocksStatement(schema: string, table: string, objectType: string, tableType: string): string {
-    let sql: string = `
+  let sql: string = `
       select
         system_table_member "Member",
         member_lock_type "Member Lock Type", 
@@ -295,19 +297,21 @@ export function getObjectLocksStatement(schema: string, table: string, objectTyp
         statement_id "Statement ID", 
         machine_instruction "Instruction"
       from qsys2.object_lock_info
-      where object_schema = '${schema}' 
-        and object_name = '${table}'
+      where system_object_schema = '${schema}' 
+        and system_object_name = '${table}'
     `;
-    if (objectType === 'TABLE' && tableType != 'T') {
-        sql += ` and object_type = '*FILE'`;
-    } else {
-        sql += ` and sql_object_type = '${objectType.toUpperCase()}'`;
-    }
-    return sql;
+  if (objectType === 'TABLE' && tableType != 'T') {
+    sql += ` and object_type = '*FILE'`;
+  } else if (objectType === 'PACKAGE') {
+    sql += ` and object_type = '*SQLPKG'`;
+  } else {
+    sql += ` and sql_object_type = '${objectType.toUpperCase()}'`;
+  }
+  return sql;
 }
 
 export function getRecordLocksStatement(schema: string, table: string): string {
-    return `
+  return `
       select
         relative_record_number "RRN",
         qsys2.delimit_name(table_partition) "Member",
