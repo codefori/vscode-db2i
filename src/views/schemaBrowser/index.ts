@@ -10,7 +10,7 @@ import Configuration from "../../configuration";
 import Types from "../types";
 import Statement from "../../database/statement";
 import { getCopyUi } from "./copyUI";
-import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement } from "./statements";
+import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects } from "./statements";
 import { BasicSQLObject } from "../../types";
 import { TextDecoder } from "util";
 import { parse } from "csv/sync";
@@ -35,7 +35,7 @@ const itemIcons = {
   "package": `package`
 }
 
-export default class schemaBrowser {
+export default class SchemaBrowser {
   emitter: vscode.EventEmitter<any | undefined | null | void>;
   onDidChangeTreeData: vscode.Event<any | undefined | null | void>;
   cache: { [key: string]: object[] };
@@ -170,9 +170,7 @@ export default class schemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getRelatedObjects`, async (object: SQLObject) => {
         if (object) {
-          const content = `SELECT SQL_NAME, SYSTEM_NAME, SCHEMA_NAME, LIBRARY_NAME, SQL_OBJECT_TYPE, 
-          OBJECT_OWNER, LAST_ALTERED, OBJECT_TEXT, LONG_COMMENT 
-          FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${object.schema}', '${object.name}')) ORDER BY SQL_OBJECT_TYPE, SQL_NAME`;
+          const content = getRelatedObjects(object.schema, object.name);
 
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,

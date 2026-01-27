@@ -20,7 +20,7 @@ import { isContinueActive } from "../../../aiProviders/continue/continueContextP
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
-export class selfCodesResultsView implements TreeDataProvider<any> {
+export class SelfCodesResultsView implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<ChangeTreeDataEventType> =
     new EventEmitter<ChangeTreeDataEventType>();
   readonly onDidChangeTreeData: vscode.Event<ChangeTreeDataEventType> = this._onDidChangeTreeData.event;
@@ -223,7 +223,7 @@ abstract class ExtendedTreeItem extends TreeItem {
 }
 
 class SelfCodeItems extends ExtendedTreeItem {
-  constructor(private selfView: selfCodesResultsView, private selected: JobInfo) {
+  constructor(private selfView: SelfCodesResultsView, private selected: JobInfo) {
     super(`SELF`, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.iconPath = new vscode.ThemeIcon(`warning`);

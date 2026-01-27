@@ -1,3 +1,10 @@
+import Statement from "../../database/statement";
+
+export function getRelatedObjects(schema: string, name: string) {
+  return `SELECT SQL_NAME, SYSTEM_NAME, SCHEMA_NAME, LIBRARY_NAME, SQL_OBJECT_TYPE, 
+          OBJECT_OWNER, LAST_ALTERED, OBJECT_TEXT, LONG_COMMENT 
+          FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${Statement.escapeString(schema)}', '${Statement.escapeString(name)}')) ORDER BY SQL_OBJECT_TYPE, SQL_NAME`;
+}
 
 export function getIndexesStatement(schema: string, name: string) {
   return `
@@ -51,8 +58,8 @@ with X as (
       from QSYS2.SYSPARTITIONINDEXES
       where
 
-      TABLE_SCHEMA = '${schema}' and
-      TABLE_NAME = '${name}' and 
+      TABLE_SCHEMA = '${Statement.escapeString(schema)}' and
+      TABLE_NAME = '${Statement.escapeString(name)}' and 
 
       INDEX_NAME not like '%MAINTAINED TEMPORARY INDEXES%'
       group by SYSTEM_INDEX_SCHEMA, INDEX_NAME, SYSTEM_INDEX_NAME
@@ -220,8 +227,8 @@ export function getAdvisedIndexesStatement(schema: string, name?: string) {
     `   TABLE_NAME, TABLE_SCHEMA, SYSTEM_TABLE_NAME, PARTITION_NAME, LOGICAL_PAGE_SIZE,`,
     `   NLSS_TABLE_NAME, NLSS_TABLE_SCHEMA, MAX_ROW`,
     `from qsys2.condidxa where`,
-    ...(name ? [`TABLE_NAME = '${name}' and`] : []),
-    `    Table_Schema = '${schema}'`,
+    ...(name ? [`TABLE_NAME = '${Statement.escapeString(name)}' and`] : []),
+    `    Table_Schema = '${Statement.escapeString(schema)}'`,
     `    order by Times_Advised desc`,
   ].join(` `);
 }
@@ -230,7 +237,7 @@ export function getMTIStatement(schema: string, table: string = `*ALL`) {
   return [
     `select * `,
     `from table (`,
-    `  qsys2.mti_info(TABLE_SCHEMA => '${schema}', TABLE_NAME => '${table}')`,
+    `  qsys2.mti_info(TABLE_SCHEMA => '${Statement.escapeString(schema)}', TABLE_NAME => '${Statement.escapeString(table)}')`,
     `)`,
     `order by key_definition`,
   ].join(` `);
@@ -258,8 +265,8 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
       data_execute "Data execute authority", 
       text_description "Description"
     from qsys2.object_privileges
-    where system_object_schema = '${schema}' 
-      and system_object_name = '${table}'
+    where system_object_schema = '${Statement.escapeString(schema)}' 
+      and system_object_name = '${Statement.escapeString(table)}'
   `;
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;
@@ -297,8 +304,8 @@ export function getObjectLocksStatement(schema: string, table: string, objectTyp
         statement_id "Statement ID", 
         machine_instruction "Instruction"
       from qsys2.object_lock_info
-      where system_object_schema = '${schema}' 
-        and system_object_name = '${table}'
+      where system_object_schema = '${Statement.escapeString(schema)}'
+        and system_object_name = '${Statement.escapeString(table)}'
     `;
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;
@@ -324,7 +331,7 @@ export function getRecordLocksStatement(schema: string, table: string): string {
         lock_space_id "Lock Space",
         lock_scope "Scope" 
       from qsys2.record_lock_info
-      where table_schema = '${schema}' 
-        and table_name = '${table}'
+      where table_schema = '${Statement.escapeString(schema)}' 
+        and table_name = '${Statement.escapeString(table)}'
     `;
 }

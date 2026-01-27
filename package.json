@@ -238,7 +238,8 @@
             "default": "Name",
             "enum": [
               "Name",
-              "Label"
+              "Label",
+              "Both"
             ],
             "enumDescriptions": [
               "Show the column name",
@@ -1586,6 +1587,11 @@
         "key": "ctrl+e",
         "mac": "cmd+e",
         "when": "editorLangId == sql && resourceExtname != .inb"
+      },
+      {
+        "command": "vscode-db2i.openSqlDocument",
+        "key": "ctrl+alt+n",
+        "mac": "cmd+alt+n"
       },
       {
         "command": "notebook.cell.execute",
