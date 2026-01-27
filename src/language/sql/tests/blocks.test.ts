@@ -1,9 +1,11 @@
 
 import { describe, expect, test } from 'vitest'
 import Document from '../document';
+import { formatSql } from '../formatter';
 
 const parserScenarios = describe.each([
-  { newDoc: (content: string) => new Document(content), isFormatted: false },
+  {newDoc: (content: string) => new Document(content), isFormatted: false},
+  {newDoc: (content: string) => new Document(formatSql(content, {newLineLists: true})), isFormatted: true}
 ]);
 
 parserScenarios(`Block statement tests`, ({ newDoc, isFormatted }) => {
