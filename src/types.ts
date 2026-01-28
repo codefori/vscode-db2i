@@ -42,6 +42,7 @@ export interface ResolvedSqlObject {
 export interface BasicSQLObject {
   type: string;
   tableType: string;
+  constraintType: string;
   schema: string;
   name: string;
   specificName: string;

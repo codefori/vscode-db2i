@@ -6,14 +6,6 @@ export function getRelatedObjects(schema: string, name: string) {
           FROM TABLE(SYSTOOLS.RELATED_OBJECTS('${Statement.escapeString(schema)}', '${Statement.escapeString(name)}')) ORDER BY SQL_OBJECT_TYPE, SQL_NAME`;
 }
 
-export function viewPermissions(schema: string, name: string, objectType: string,) {
-  return `SELECT AUTHORIZATION_NAME as USER_NAME, OBJECT_AUTHORITY,
-            OWNER, OBJECT_OPERATIONAL, OBJECT_MANAGEMENT, OBJECT_EXISTENCE, OBJECT_ALTER, OBJECT_REFERENCE,
-            DATA_READ, DATA_ADD, DATA_UPDATE, DATA_DELETE, DATA_EXECUTE FROM QSYS2.OBJECT_PRIVILEGES 
-            WHERE OBJECT_SCHEMA='${Statement.escapeString(schema)}' AND OBJECT_NAME='${Statement.escapeString(name)}' AND 
-            SQL_OBJECT_TYPE='${objectType}'`;
-}
-
 export function getIndexesStatement(schema: string, name: string) {
   return `
 --
@@ -273,11 +265,17 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
       data_execute "Data execute authority", 
       text_description "Description"
     from qsys2.object_privileges
-    where object_schema = '${Statement.escapeString(schema)}' 
-      and object_name = '${Statement.escapeString(table)}'
+    where system_object_schema = '${Statement.escapeString(schema)}' 
+      and system_object_name = '${Statement.escapeString(table)}'
   `;
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;
+  } else if (objectType === 'RECEIVER') {
+    sql += ` and object_type = '*JRNRCV'`;
+  } else if (objectType === 'JOURNAL') {
+    sql += ` and object_type = '*JRN'`;
+  } else if (objectType === 'PACKAGE') {
+    sql += ` and object_type = '*SQLPKG'`;
   } else {
     sql += ` and sql_object_type = '${objectType}'`;
   }
@@ -306,11 +304,13 @@ export function getObjectLocksStatement(schema: string, table: string, objectTyp
         statement_id "Statement ID", 
         machine_instruction "Instruction"
       from qsys2.object_lock_info
-      where object_schema = '${Statement.escapeString(schema)}' 
-        and object_name = '${Statement.escapeString(table)}'
+      where system_object_schema = '${Statement.escapeString(schema)}'
+        and system_object_name = '${Statement.escapeString(table)}'
     `;
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;
+  } else if (objectType === 'PACKAGE') {
+    sql += ` and object_type = '*SQLPKG'`;
   } else {
     sql += ` and sql_object_type = '${objectType.toUpperCase()}'`;
   }
