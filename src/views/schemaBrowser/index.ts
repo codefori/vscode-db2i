@@ -207,7 +207,7 @@ export default class SchemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getAuthorities`, async (object: SQLObject) => {
         if (object) {
-          const content = getAuthoritiesStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
+          const content = getAuthoritiesStatement(object.system.schema, object.system.name, object.type.toUpperCase(), object.tableType);
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             qualifier: `statement`,
@@ -218,7 +218,7 @@ export default class SchemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getObjectLocks`, async (object: SQLObject) => {
         if (object) {
-          const content = getObjectLocksStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
+          const content = getObjectLocksStatement(object.system.schema, object.system.name, object.type.toUpperCase(), object.tableType);
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             qualifier: `statement`,
