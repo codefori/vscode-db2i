@@ -17,7 +17,8 @@ export function formatDescription(text: string): string {
 
 export async function editJobUi(
   options: JDBCOptions,
-  jobName?: string
+  jobName?: string,
+  excludeOptions?: (keyof JDBCOptions)[]
 ): Promise<JDBCOptions | undefined> {
   const base = getBase();
   const ui = base.customUI();
@@ -35,6 +36,13 @@ export async function editJobUi(
     { label: `Sort`, fields: sortPropsTab.fields },
     { label: `Other`, fields: otherpropsTab.fields },
   ];
+
+  if (excludeOptions) {
+    tabs = tabs.map(tab => ({
+      ...tab,
+      fields: tab.fields.filter(field => !excludeOptions.includes(field.id as keyof JDBCOptions)),
+    }));
+  }
 
   ui.addComplexTabs(tabs).addButtons(
     { id: `apply`, label: `Apply changes` },
@@ -60,7 +68,7 @@ export async function editJobUi(
           case `buttons`:
             // Do nothing with buttons
             break;
-            
+
           default:
             // Handle of true/false values back into boolean types
             switch (page.data[key]) {

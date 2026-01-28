@@ -59,7 +59,7 @@
           },
           "vscode-db2i.jobConfigs": {
             "type": "object",
-            "description": "Saved configs for",
+            "description": "Saved configurations",
             "default": {},
             "additionalProperties": true
           },
@@ -242,15 +242,19 @@
         "id": "vscode-db2i.jobManager",
         "title": "SQL Job Manager",
         "properties": {
-          "vscode-db2i.jobManager.jobNamingDefault": {
-            "type": "string",
-            "order": 0,
-            "description": "Default naming mode for new jobs",
-            "default": "system",
-            "enum": [
-              "system",
-              "sql"
-            ]
+          "vscode-db2i.jobManager.defaultJobConfig": {
+            "type": "object",
+            "description": "Default job configuration",
+            "default": {
+              "naming": "system",
+              "full open": false,
+              "transaction isolation": "none",
+              "query optimize goal": "1",
+              "block size": "512",
+              "date format": "iso",
+              "extended metadata": true
+            },
+            "additionalProperties": true
           },
           "vscode-db2i.jobManager.jobSelfDefault": {
             "type": "string",
@@ -689,10 +693,12 @@
         "icon": "$(edit)"
       },
       {
-        "command": "vscode-db2i.jobManager.defaultSettings",
-        "title": "Default Job Settings",
-        "category": "Db2 for i",
-        "icon": "$(gear)"
+        "command": "vscode-db2i.jobManager.editDefaultJobProps",
+        "title": "Connection Properties"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editDefaultSelf",
+        "title": "SELF"
       },
       {
         "command": "vscode-db2i.jobManager.editSelfCodes",
@@ -733,6 +739,18 @@
         "title": "Edit configuration",
         "category": "Db2 for i",
         "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.setAsDefault",
+        "title": "Set as default",
+        "category": "Db2 for i",
+        "icon": "$(debug-connected)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.removeAsDefault",
+        "title": "Remove as default",
+        "category": "Db2 for i",
+        "icon": "$(debug-disconnect)"
       },
       {
         "command": "vscode-db2i.jobManager.deleteConfig",
@@ -1006,6 +1024,14 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.jobManager.setAsDefault",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.removeAsDefault",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "never"
         },
@@ -1101,7 +1127,7 @@
           "when": "view == jobManager"
         },
         {
-          "command": "vscode-db2i.jobManager.defaultSettings",
+          "submenu": "vscode-db2i.jobManager.defaultSettings",
           "group": "navigation",
           "when": "view == jobManager"
         },
@@ -1327,14 +1353,24 @@
           "group": "config@1"
         },
         {
-          "command": "vscode-db2i.jobManager.editConfig",
-          "when": "view == jobManager && viewItem == savedConfig",
-          "group": "inline"
+          "command": "vscode-db2i.jobManager.deleteConfig",
+          "when": "view == jobManager && viewItem =~ /^savedConfig/",
+          "group": "inline@1"
         },
         {
-          "command": "vscode-db2i.jobManager.deleteConfig",
-          "when": "view == jobManager && viewItem == savedConfig",
-          "group": "inline"
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "view == jobManager && viewItem =~ /^savedConfig/",
+          "group": "inline@2"
+        },
+        {
+          "command": "vscode-db2i.jobManager.setAsDefault",
+          "when": "view == jobManager && viewItem =~ /^savedConfig(?!_default)/",
+          "group": "inline@3"
+        },
+        {
+          "command": "vscode-db2i.jobManager.removeAsDefault",
+          "when": "view == jobManager && viewItem =~ /^savedConfig_default/",
+          "group": "inline@4"
         },
         {
           "command": "vscode-db2i.self.copySqlStatement",
@@ -1416,6 +1452,16 @@
           "group": "navigation_notebook@1"
         }
       ],
+      "vscode-db2i.jobManager.defaultSettings": [
+        {
+          "command": "vscode-db2i.jobManager.editDefaultJobProps",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editDefaultSelf",
+          "group": "navigation@1"
+        }
+      ],
       "vscode-db2i.customExampleDirectories": [
         {
           "command": "vscode-db2i.examples.add",
@@ -1439,6 +1485,11 @@
         "icon": "$(notebook-execute)",
         "id": "sql/editor/context",
         "label": "Run SQL statement"
+      },
+      {
+        "id": "vscode-db2i.jobManager.defaultSettings",
+        "label": "Default Job Settings",
+        "icon": "$(gear)"
       },
       {
         "id": "vscode-db2i.customExampleDirectories",
@@ -1580,7 +1631,7 @@
       },
       {
         "view": "vscode-db2i.self.nodes",
-        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
+        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.editDefaultSelf)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
       }
     ],
     "notebooks": [

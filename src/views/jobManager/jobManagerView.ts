@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
 import { JobManager } from "../../config";
-import { JobInfo, SQLJobManager } from "../../connection/manager";
+import { JobInfo } from "../../connection/manager";
 import { ServerComponent } from "../../connection/serverComponent";
 import { OldSQLJob } from "../../connection/sqlJob";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
@@ -31,8 +31,8 @@ export class JobManagerView implements TreeDataProvider<any> {
 
       ...ConfigManager.initialiseSaveCommands(),
 
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.defaultSettings`, () => {
-        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobManager');
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.editDefaultSelf`, () => {
+        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobManager.jobSelfDefault');
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (options?: JDBCOptions, name?: string) => {
@@ -42,11 +42,13 @@ export class JobManagerView implements TreeDataProvider<any> {
         }
 
         try {
-          updateStatusBar({newJob: true});
-          await JobManager.newJob(
-            (options ? new OldSQLJob(options) : undefined), 
-            name
-          );
+          updateStatusBar({ newJob: true });
+          await window.withProgress({ location: { viewId: `jobManager` } }, async () => {
+            await JobManager.newJob(
+              (options ? new OldSQLJob(options) : undefined),
+              name
+            );
+          });
         } catch (e) {
           window.showErrorMessage(e.message);
         }
@@ -310,7 +312,7 @@ export class JobManagerView implements TreeDataProvider<any> {
     updateStatusBar();
 
     const selectedJob = JobManager.getSelection();
-    
+
     // re-register db2i tables context provider with current schema
     const selectedSchema = selectedJob?.job.options.libraries[0];
     if (
