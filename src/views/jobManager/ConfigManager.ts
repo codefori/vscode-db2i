@@ -106,7 +106,7 @@ export class ConfigManager {
 
       commands.registerCommand(`vscode-db2i.jobManager.editDefaultJobProps`, () => {
         const options = this.getDefaultConfig();
-        editJobUi(options, `Default Job`, [`libraries`]).then(newOptions => {
+        editJobUi(options, `Default Job`, [`libraries`, `database name`]).then(newOptions => {
           if (newOptions) {
             this.storeDefaultConfig(options);
           }
