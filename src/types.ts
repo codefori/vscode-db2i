@@ -42,6 +42,7 @@ export interface ResolvedSqlObject {
 export interface BasicSQLObject {
   type: string;
   tableType: string;
+  constraintType: string;
   schema: string;
   name: string;
   specificName: string;
@@ -64,27 +65,4 @@ export interface CPYFOptions {
   mbrOpt: string;
   crtFile: string;
   outFmt: string
-}
-
-export interface VisualExplainData {
-  IFA_ARWVAL: number
-  IFA_CHROUT: string
-  IFA_COLHDG: string
-  IFA_COLTYP: number
-  IFA_CTXORD: number
-  IFA_CTXTYP: number
-  IFA_DBLBYT: string
-  IFA_DEBUG: number
-  IFA_DESCR: number
-  IFA_FLYORD: number
-  IFA_FMTVAL: number
-  IFA_FUT2: number
-  IFA_FUT3: number
-  IFA_FUT8: number
-  IFA_FUT9: number
-  IFA_HEXOUT: string
-  IFA_ICON: number
-  IFA_IFLAG: string
-  IFA_NUMOUT: number
-  IFA_TYPOUT: string
 }

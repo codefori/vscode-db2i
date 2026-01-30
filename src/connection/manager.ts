@@ -1,25 +1,26 @@
 
+import { Query } from "@ibm/mapepire-js/dist/src/query";
+import { JDBCOptions, QueryOptions, QueryResult } from "@ibm/mapepire-js/dist/src/types";
 import { getInstance } from "../base";
+import { askAboutNewJob, Config, onConnectOrServerInstall, osDetail } from "../config";
+import Configuration from "../configuration";
+import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import { ServerComponent, UpdateStatus } from "./serverComponent";
 import { OldSQLJob } from "./sqlJob";
-import { askAboutNewJob, onConnectOrServerInstall, osDetail } from "../config";
-import { SelfValue } from "../views/jobManager/selfCodes/nodes";
-import Configuration from "../configuration";
-import { QueryOptions, QueryResult } from "@ibm/mapepire-js/dist/src/types";
-import { Query } from "@ibm/mapepire-js/dist/src/query";
+import { ConfigManager } from "../views/jobManager/ConfigManager";
 
 export interface JobInfo {
   name: string;
   job: OldSQLJob;
 }
 
-export type NamingFormats = "sql"|"system";
+export type NamingFormats = "sql" | "system";
 
 const NO_SELECTED_JOB = -1;
 
 export class SQLJobManager {
   private totalJobs = 0;
-  private jobs: JobInfo[] = [];
+  private readonly jobs: JobInfo[] = [];
   selectedJob: number = NO_SELECTED_JOB;
   private creatingJobs: number = 0;
 
@@ -32,16 +33,27 @@ export class SQLJobManager {
       const connection = instance.getConnection()!;
       const config = connection.getConfig();
 
-      const newJob = predefinedJob || (new OldSQLJob({
-        libraries: [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)],
-        naming: SQLJobManager.getNamingDefault(),
-        "full open": false,
-        "transaction isolation": "none",
-        "query optimize goal": "1",
-        "block size": "512",
-        "date format": "iso",
-        "extended metadata": true,
-      }));
+      let newJob: OldSQLJob;
+      if (predefinedJob) {
+        newJob = predefinedJob;
+      } else {
+        let options: JDBCOptions = ConfigManager.getDefaultConfig();
+        const startUpConfigList = Config.getStartUpConfigList();
+        const startUpConfig = startUpConfigList.find((item) => item.connectionName === connection.currentConnectionName);
+        if (startUpConfig) {
+          const savedConfig = ConfigManager.getConfig(startUpConfig.configName);
+          if (savedConfig) {
+            name = startUpConfig.configName;
+            options = savedConfig;
+          }
+        }
+
+        if (!options.libraries) {
+          options.libraries = [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)];
+        }
+
+        newJob = new OldSQLJob(options);
+      }
 
       try {
         this.creatingJobs += 1;
@@ -79,10 +91,19 @@ export class SQLJobManager {
     return this.jobs.filter(info => ["ready", "busy"].includes(info.job.getStatus()));
   }
 
-  async endAll() {
-    await Promise.all(this.jobs.map(current => current.job.close()));
-    this.jobs = [];
+  /**
+   * Ends all SQL jobs (unless the connection is gone) and clears the jobs list.
+   * 
+   * @param disconnected must be `true` if the connection is already lost to skip closing the SQL jobs
+   */
+  async endAll(disconnected?: boolean) {
+    if (!disconnected) {
+      await Promise.all(this.jobs.map(current => current.job.close()));
+    }
+    this.jobs.splice(0, this.jobs.length);
     this.selectedJob = NO_SELECTED_JOB;
+    this.creatingJobs = 0;
+    this.totalJobs = 0;
   }
 
   async closeJob(index?: number) {
@@ -112,7 +133,7 @@ export class SQLJobManager {
     return this.jobs.find(info => info.name === nameOrId || info.job.id === nameOrId);
   }
 
-  setSelection(selectedName: string): JobInfo|undefined {
+  setSelection(selectedName: string): JobInfo | undefined {
     const jobExists = this.jobs.findIndex(info => info.name === selectedName);
 
     this.selectedJob = jobExists;
@@ -161,7 +182,7 @@ export class SQLJobManager {
     const selected = this.jobs[this.selectedJob];
     if (ServerComponent.isInstalled() && selected) {
       this.resetCurrentSchema(query, selected?.job);
-      
+
       return selected.job.query<T>(query, opts);
 
     } else if (!ServerComponent.isInstalled()) {
@@ -185,9 +206,5 @@ export class SQLJobManager {
 
   static getSelfDefault(): SelfValue {
     return Configuration.get<SelfValue>(`jobManager.jobSelfDefault`) || `*NONE`;
-  }
-
-  static getNamingDefault(): NamingFormats {
-    return (Configuration.get<string>(`jobManager.jobNamingDefault`) || `system`) as NamingFormats;
   }
 }

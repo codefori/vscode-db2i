@@ -3,8 +3,9 @@ import path from "path";
 import { getInstance } from "../base";
 import { JobManager } from "../config";
 import { ResolvedSqlObject, BasicSQLObject } from "../types";
+import Statement from "./statement";
 
-export type SQLType = "schemas" | "tables" | "views" | "aliases" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "sequences" | "packages" | "triggers" | "types" | "logicals";
+export type SQLType = "schemas" | "tables" | "views" | "aliases" | "masks" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "receivers" | "journals" | "permissions" | "sequences" | "packages" | "triggers" | "types" | "logicals";
 export type PageData = { filter?: string, offset?: number, limit?: number, sort?: boolean };
 
 const typeMap = {
@@ -14,17 +15,21 @@ const typeMap = {
   'logicals': [`L`],
 };
 
-export const AllSQLTypes: SQLType[] = ["tables", "views", "aliases", "constraints", "functions", "variables", "indexes", "procedures", "sequences", "packages", "triggers", "types", "logicals"];
+export const AllSQLTypes: SQLType[] = ["tables", "views", "aliases", "masks", "constraints", "functions", "variables", "indexes", "procedures", "receivers", "journals", "permissions", "sequences", "packages", "triggers", "types", "logicals"];
 
 export const InternalTypes: { [t: string]: string } = {
   "tables": `table`,
   "views": `view`,
   "aliases": `alias`,
+  "masks": `mask`,
   "constraints": `constraint`,
   "functions": `function`,
   "variables": `variable`,
   "indexes": `index`,
   "procedures": `procedure`,
+  "receivers": `receiver`,
+  "journals": `journal`,
+  "permissions": `permission`,
   "sequences": `sequence`,
   "packages": `package`,
   "triggers": `trigger`,
@@ -245,7 +250,7 @@ export default class Schemas {
     let filter: PartStatementInfo;
 
     // If there are multiple types, we build a union. It's important that the ordering of the columns in the selects are consistant:
-    // OBJ_TYPE, TABLE_TYPE, NAME, TEXT, SYS_NAME, SYS_SCHEMA, SPECNAME, BASE_SCHEMA, BASE_OBJ
+    // OBJ_TYPE, TABLE_TYPE, CONSTRAINT_TYPE, NAME, TEXT, SYS_NAME, SYS_SCHEMA, SPECNAME, BASE_SCHEMA, BASE_OBJ
 
     for (const type of types) {
       switch (type) {
@@ -253,7 +258,7 @@ export default class Schemas {
           selects.push(
             [
               ``,
-              `SELECT '${type}' as OBJ_TYPE, '' as TABLE_TYPE, OBJLONGNAME AS NAME, '' as TEXT, OBJNAME AS SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `SELECT '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, OBJLONGNAME AS NAME, '' as TEXT, OBJNAME AS SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
               `FROM TABLE(QSYS2.OBJECT_STATISTICS('*ALLSIMPLE', 'LIB')) Z`,
               details.filter
                 ? `where UPPER(OBJLONGNAME) = ? or UPPER(OBJNAME) = ?`
@@ -273,7 +278,7 @@ export default class Schemas {
           filter = getFilterClause(`TABLE_NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, TABLE_TYPE as TABLE_TYPE, TABLE_NAME as NAME, TABLE_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, BASE_TABLE_SCHEMA as BASE_SCHEMA, BASE_TABLE_NAME as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, TABLE_TYPE as TABLE_TYPE, '' as CONSTRAINT_TYPE, TABLE_NAME as NAME, TABLE_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, BASE_TABLE_SCHEMA as BASE_SCHEMA, BASE_TABLE_NAME as BASE_OBJ`,
               `from QSYS2.SYSTABLES`,
               `where TABLE_SCHEMA = ? and TABLE_TYPE in (${typeMap[type]
                 .map((item) => `'${item}'`)
@@ -284,11 +289,24 @@ export default class Schemas {
           parameters.push(schema, ...filter.parameters);
           break;
 
+        case "masks":
+          filter = getFilterClause(`NAME`, details.filter);
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, NAME as NAME, COALESCE(LABEL, '') as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+              `from QSYS2.SYSCONTROLS`,
+              `where SCHEMA = ? AND CONTROL_TYPE = 'M' ${filter.clause}`,
+            ].join(` `)
+          );
+
+          parameters.push(schema, ...filter.parameters);
+          break;
+
         case `constraints`:
           filter = getFilterClause(`CONSTRAINT_NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, SYSTEM_TABLE_NAME as SYS_NAME, SYSTEM_TABLE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, CONSTRAINT_TYPE as CONSTRAINT_TYPE, CONSTRAINT_NAME as NAME, CONSTRAINT_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
               `from QSYS2.SYSCST`,
               `where CONSTRAINT_SCHEMA = ? ${filter.clause}`,
             ].join(` `)
@@ -301,7 +319,7 @@ export default class Schemas {
           filter = getFilterClause(`ROUTINE_NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, ROUTINE_NAME as NAME, coalesce(ROUTINE_TEXT, LONG_COMMENT) as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
               `from QSYS2.SYSFUNCS`,
               `where ROUTINE_SCHEMA = ? ${filter.clause} and FUNCTION_ORIGIN in ('E','U')`,
             ].join(` `)
@@ -314,7 +332,7 @@ export default class Schemas {
           filter = getFilterClause(`VARIABLE_NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, VARIABLE_NAME as NAME, VARIABLE_TEXT as TEXT, SYSTEM_VAR_NAME as SYS_NAME, SYSTEM_VAR_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, VARIABLE_NAME as NAME, VARIABLE_TEXT as TEXT, SYSTEM_VAR_NAME as SYS_NAME, SYSTEM_VAR_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
               `from QSYS2.SYSVARIABLES`,
               `where VARIABLE_SCHEMA = ? ${filter.clause}`,
             ].join(` `)
@@ -327,7 +345,7 @@ export default class Schemas {
           filter = getFilterClause(`INDEX_NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, INDEX_NAME as NAME, INDEX_TEXT as TEXT, SYSTEM_INDEX_NAME as SYS_NAME, SYSTEM_INDEX_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, INDEX_NAME as NAME, INDEX_TEXT as TEXT, SYSTEM_INDEX_NAME as SYS_NAME, SYSTEM_INDEX_SCHEMA as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
               `from QSYS2.SYSINDEXES`,
               `where INDEX_SCHEMA = ? ${filter.clause}`,
             ].join(` `)
@@ -340,9 +358,48 @@ export default class Schemas {
           filter = getFilterClause(`ROUTINE_NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, ROUTINE_NAME as NAME, ROUTINE_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, ROUTINE_NAME as NAME, ROUTINE_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, SPECIFIC_NAME as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
               `from QSYS2.SYSPROCS`,
               `where ROUTINE_SCHEMA = ? ${filter.clause}`,
+            ].join(` `)
+          );
+
+          parameters.push(schema, ...filter.parameters);
+          break;
+
+        case "receivers":
+          filter = getFilterClause(`JOURNAL_RECEIVER_NAME`, details.filter);
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, JOURNAL_RECEIVER_NAME as NAME, DESCRIPTIVE_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, JOURNAL_LIBRARY as BASE_SCHEMA, JOURNAL_NAME as BASE_OBJ`,
+              `from QSYS2.JOURNAL_RECEIVER_INFO`,
+              `where JOURNAL_RECEIVER_LIBRARY = ? ${filter.clause}`,
+            ].join(` `)
+          );
+
+          parameters.push(schema, ...filter.parameters);
+          break;
+
+        case "journals":
+          filter = getFilterClause(`JOURNAL_NAME`, details.filter);
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, JOURNAL_NAME as NAME, JOURNAL_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, JOURNAL_LIBRARY as BASE_SCHEMA, ATTACHED_JOURNAL_RECEIVER_NAME as BASE_OBJ`,
+              `from QSYS2.JOURNAL_INFO`,
+              `where JOURNAL_LIBRARY = ? ${filter.clause}`,
+            ].join(` `)
+          );
+
+          parameters.push(schema, ...filter.parameters);
+          break;
+
+        case "permissions":
+          filter = getFilterClause(`NAME`, details.filter);
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, NAME as NAME, COALESCE(LABEL, '') as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, TABLE_SCHEMA as BASE_SCHEMA, TABLE_NAME as BASE_OBJ`,
+              `from QSYS2.SYSCONTROLS`,
+              `where SCHEMA = ? and CONTROL_TYPE = 'R' ${filter.clause}`,
             ].join(` `)
           );
 
@@ -353,7 +410,7 @@ export default class Schemas {
           filter = getFilterClause(`SEQUENCE_NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, SEQUENCE_NAME as NAME, SEQUENCE_TEXT as TEXT, SYSTEM_SEQ_NAME as SYS_NAME, SYSTEM_SEQ_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, SEQUENCE_NAME as NAME, SEQUENCE_TEXT as TEXT, SYSTEM_SEQ_NAME as SYS_NAME, SYSTEM_SEQ_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
               `from QSYS2.SYSSEQUENCES`,
               `where SEQUENCE_SCHEMA = ? ${filter.clause}`,
             ].join(` `)
@@ -362,20 +419,24 @@ export default class Schemas {
           parameters.push(schema, ...filter.parameters);
           break;
 
-        // case `packages`:
-        //   selects.push([
-        //     `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, PACKAGE_NAME as NAME, PACKAGE_TEXT as TEXT, PROGRAM_SCHEMA as BASE_SCHEMA, PROGRAM_NAME as BASE_OBJ, `,
-        //     `  '' as SYS_SCHEMA, '' as SYS_NAME, '' as SPECNAME`,
-        //     `from QSYS2.SQLPACKAGE`,
-        //     `where PACKAGE_SCHEMA = '${schema}' ${details.filter ? `and PACKAGE_NAME like '%${filter.clause}%'`: ``}`,
-        //   ].join(` `));
-        //   break;
+        case "packages":
+          filter = getFilterClause(`PACKAGE_NAME`, details.filter);
+          selects.push(
+            [
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, PACKAGE_NAME as NAME, PACKAGE_TEXT as TEXT, SYSTEM_PACKAGE_NAME as SYS_NAME, SYSTEM_PACKAGE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, PACKAGE_SCHEMA as BASE_SCHEMA, PROGRAM_NAME as BASE_OBJ`,
+              `from QSYS2.SYSPACKAGE`,
+              `where PACKAGE_SCHEMA = ? ${filter.clause}`,
+            ].join(` `)
+          );
+
+          parameters.push(schema, ...filter.parameters);
+          break;
 
         case `triggers`:
           filter = getFilterClause(`TRIGGER_NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, TRIGGER_NAME as NAME, TRIGGER_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, EVENT_OBJECT_SCHEMA as BASE_SCHEMA, EVENT_OBJECT_TABLE as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, TRIGGER_NAME as NAME, TRIGGER_TEXT as TEXT, '' as SYS_NAME, '' as SYS_SCHEMA, '' as SPECNAME, EVENT_OBJECT_SCHEMA as BASE_SCHEMA, EVENT_OBJECT_TABLE as BASE_OBJ`,
               `from QSYS2.SYSTRIGGERS`,
               `where TRIGGER_SCHEMA = ? ${filter.clause}`,
             ].join(` `)
@@ -388,7 +449,7 @@ export default class Schemas {
           filter = getFilterClause(`USER_DEFINED_TYPE_NAME`, details.filter);
           selects.push(
             [
-              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, USER_DEFINED_TYPE_NAME as NAME, TYPE_TEXT as TEXT, SYSTEM_TYPE_NAME as SYS_NAME, SYSTEM_TYPE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
+              `select '${type}' as OBJ_TYPE, '' as TABLE_TYPE, '' as CONSTRAINT_TYPE, USER_DEFINED_TYPE_NAME as NAME, TYPE_TEXT as TEXT, SYSTEM_TYPE_NAME as SYS_NAME, SYSTEM_TYPE_SCHEMA as SYS_SCHEMA, '' as SPECNAME, '' as BASE_SCHEMA, '' as BASE_OBJ`,
               `from QSYS2.SYSTYPES`,
               `where USER_DEFINED_TYPE_SCHEMA = ? ${filter.clause}`,
             ].join(` `)
@@ -423,6 +484,7 @@ export default class Schemas {
     return objects.map((object) => ({
       type: object.OBJ_TYPE,
       tableType: object.TABLE_TYPE,
+      constraintType: object.CONSTRAINT_TYPE,
       schema,
       name: object.NAME || object.SYS_NAME || undefined,
       specificName: object.SPECNAME || undefined,
@@ -475,7 +537,7 @@ export default class Schemas {
 
       await JobManager.runSQL<{ SRCDTA: string }>([
         `CALL QSYS2.GENERATE_SQL( ${options.join(`, `)} )`,
-      ].join(` `), { parameters: [object, schema, internalType] });
+      ].join(` `), { parameters: [Statement.escapeString(object), Statement.escapeString(schema), internalType] });
 
       // TODO: eventually .content -> .getContent(), it's not available yet
       const contents = (
@@ -491,10 +553,15 @@ export default class Schemas {
   static async deleteObject(
     schema: string,
     name: string,
-    type: string
+    type: string,
+    table?: string,
+    constraintType?: string
   ): Promise<void> {
-    const query = `DROP ${(this.isRoutineType(type) ? "SPECIFIC " : "") + type
-      } IF EXISTS ${schema}.${name}`;
+    schema = Statement.delimName(schema);
+    name = Statement.delimName(name);
+    const query = type === 'constraint' ?
+      `ALTER TABLE ${schema}.${table} DROP ${constraintType === 'PRIMARY KEY' ? constraintType : `${constraintType} ${schema}.${name}`}` :
+      `DROP ${(this.isRoutineType(type) ? "SPECIFIC " : "") + type} IF EXISTS ${schema}.${name}`;
     await getInstance().getContent().runSQL(query);
   }
 
@@ -505,7 +572,7 @@ export default class Schemas {
     type: string
   ): Promise<void> {
     const query = `RENAME ${type === "view" ? "table" : type
-      } ${schema}.${oldName} TO ${newName}`;
+      } ${Statement.delimName(schema)}.${Statement.delimName(oldName)} TO ${Statement.delimName(newName)}`;
     await getInstance().getContent().runSQL(query);
   }
 
@@ -514,10 +581,10 @@ export default class Schemas {
   }
 
   static clearAdvisedIndexes(schema: string, name?: string) {
-    let query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${schema}'`;
+    let query = `DELETE FROM QSYS2.SYSIXADV WHERE TABLE_SCHEMA = '${Statement.escapeString(schema)}'`;
 
     if (name) {
-      query += `and TABLE_NAME = '${name}'`;
+      query += `and TABLE_NAME = '${Statement.escapeString(name)}'`;
     }
 
     return getInstance().getContent().runSQL(query);

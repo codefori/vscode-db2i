@@ -18,7 +18,7 @@
           },
           "vscode-db2i.jobConfigs": {
             "type": "object",
-            "description": "Saved configs for",
+            "description": "Saved configurations",
             "default": {},
             "additionalProperties": true
           },

@@ -59,7 +59,7 @@
           },
           "vscode-db2i.jobConfigs": {
             "type": "object",
-            "description": "Saved configs for",
+            "description": "Saved configurations",
             "default": {},
             "additionalProperties": true
           },
@@ -124,6 +124,106 @@
             "type": "boolean",
             "description": "Provide Schema definition as additional context in Continue and Copilot",
             "default": true
+          }
+        }
+      },
+      {
+        "id": "vscode-db2i.schemaBrowser",
+        "title": "Schema Browser",
+        "properties": {
+          "vscode-db2i.schemaBrowser.databaseObjectTypes": {
+            "type": "object",
+            "default": {
+              "Aliases": true,
+              "Column Masks": true,
+              "Constraints": true,
+              "Functions": true,
+              "Global Variables": true,
+              "Indexes": true,
+              "Journal Receivers": true,
+              "Journals": true,
+              "Logicals": true,
+              "Procedures": true,
+              "Row Permissions": true,
+              "Sequences": true,
+              "SQL Packages": true,
+              "Tables": true,
+              "Triggers": true,
+              "Types": true,
+              "Views": true
+            },
+            "properties": {
+              "Aliases": {
+                "type": "boolean",
+                "default": true
+              },
+              "Column Masks": {
+                "type": "boolean",
+                "default": true
+              },
+              "Constraints": {
+                "type": "boolean",
+                "default": true
+              },
+              "Functions": {
+                "type": "boolean",
+                "default": true
+              },
+              "Global Variables": {
+                "type": "boolean",
+                "default": true
+              },
+              "Indexes": {
+                "type": "boolean",
+                "default": true
+              },
+              "Journal Receivers": {
+                "type": "boolean",
+                "default": true
+              },
+              "Journals": {
+                "type": "boolean",
+                "default": true
+              },
+              "Logicals": {
+                "type": "boolean",
+                "default": true
+              },
+              "Procedures": {
+                "type": "boolean",
+                "default": true
+              },
+              "Row Permissions": {
+                "type": "boolean",
+                "default": true
+              },
+              "Sequences": {
+                "type": "boolean",
+                "default": true
+              },
+              "SQL Packages": {
+                "type": "boolean",
+                "default": true
+              },
+              "Tables": {
+                "type": "boolean",
+                "default": true
+              },
+              "Triggers": {
+                "type": "boolean",
+                "default": true
+              },
+              "Types": {
+                "type": "boolean",
+                "default": true
+              },
+              "Views": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "additionalProperties": false,
+            "description": "Select which database object types should be shown in the Schema Browser"
           }
         }
       },
@@ -242,15 +342,19 @@
         "id": "vscode-db2i.jobManager",
         "title": "SQL Job Manager",
         "properties": {
-          "vscode-db2i.jobManager.jobNamingDefault": {
-            "type": "string",
-            "order": 0,
-            "description": "Default naming mode for new jobs",
-            "default": "system",
-            "enum": [
-              "system",
-              "sql"
-            ]
+          "vscode-db2i.jobManager.defaultJobConfig": {
+            "type": "object",
+            "description": "Default job configuration",
+            "default": {
+              "naming": "system",
+              "full open": false,
+              "transaction isolation": "none",
+              "query optimize goal": "1",
+              "block size": "512",
+              "date format": "iso",
+              "extended metadata": true
+            },
+            "additionalProperties": true
           },
           "vscode-db2i.jobManager.jobSelfDefault": {
             "type": "string",
@@ -441,6 +545,12 @@
         "icon": "$(list-selection)"
       },
       {
+        "command": "vscode-db2i.filterDatabaseObjectTypes",
+        "title": "Filter Database Object Types",
+        "category": "Db2 for i",
+        "icon": "$(filter)"
+      },
+      {
         "command": "vscode-db2i.removeSchemaFromSchemaBrowser",
         "title": "Remove schema from view",
         "category": "Db2 for i",
@@ -522,11 +632,6 @@
         "title": "Set filter",
         "category": "Db2 for i",
         "icon": "$(search)"
-      },
-      {
-        "command": "vscode-db2i.viewPermissions",
-        "title": "View permissions",
-        "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.runEditorStatement",
@@ -689,10 +794,12 @@
         "icon": "$(edit)"
       },
       {
-        "command": "vscode-db2i.jobManager.defaultSettings",
-        "title": "Default Job Settings",
-        "category": "Db2 for i",
-        "icon": "$(gear)"
+        "command": "vscode-db2i.jobManager.editDefaultJobProps",
+        "title": "Connection Properties"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editDefaultSelf",
+        "title": "SELF"
       },
       {
         "command": "vscode-db2i.jobManager.editSelfCodes",
@@ -733,6 +840,18 @@
         "title": "Edit configuration",
         "category": "Db2 for i",
         "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.setAsDefault",
+        "title": "Set as default",
+        "category": "Db2 for i",
+        "icon": "$(debug-connected)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.removeAsDefault",
+        "title": "Remove as default",
+        "category": "Db2 for i",
+        "icon": "$(debug-disconnect)"
       },
       {
         "command": "vscode-db2i.jobManager.deleteConfig",
@@ -878,6 +997,10 @@
           "when": "false"
         },
         {
+          "command": "vscode-db2i.filterDatabaseObjectTypes",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.setSchemaFilter",
           "when": "never"
         },
@@ -1006,6 +1129,14 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.jobManager.setAsDefault",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.jobManager.removeAsDefault",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "never"
         },
@@ -1041,14 +1172,19 @@
       ],
       "view/title": [
         {
-          "command": "vscode-db2i.refreshSchemaBrowser",
-          "group": "navigation",
+          "command": "vscode-db2i.manageSchemaBrowserList",
+          "group": "navigation@0",
+          "when": "view == schemaBrowser && vscode-db2i:manageSchemaBrowserEnabled"
+        },
+        {
+          "command": "vscode-db2i.filterDatabaseObjectTypes",
+          "group": "navigation@1",
           "when": "view == schemaBrowser"
         },
         {
-          "command": "vscode-db2i.manageSchemaBrowserList",
-          "group": "navigation",
-          "when": "view == schemaBrowser && vscode-db2i:manageSchemaBrowserEnabled"
+          "command": "vscode-db2i.refreshSchemaBrowser",
+          "group": "navigation@2",
+          "when": "view == schemaBrowser"
         },
         {
           "command": "vscode-db2i.resultset.settings",
@@ -1101,7 +1237,7 @@
           "when": "view == jobManager"
         },
         {
-          "command": "vscode-db2i.jobManager.defaultSettings",
+          "submenu": "vscode-db2i.jobManager.defaultSettings",
           "group": "navigation",
           "when": "view == jobManager"
         },
@@ -1194,7 +1330,7 @@
         },
         {
           "command": "vscode-db2i.generateSQL",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == trigger || viewItem == type",
           "group": "db2@2"
         },
         {
@@ -1219,7 +1355,7 @@
         },
         {
           "command": "vscode-db2i.getAuthorities",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
           "group": "db2workWith@4"
         },
         {
@@ -1244,18 +1380,13 @@
         },
         {
           "command": "vscode-db2i.deleteObject",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
           "group": "db2data@3"
         },
         {
           "command": "vscode-db2i.renameObject",
           "when": "viewItem == table || viewItem == view || viewItem == index",
           "group": "db2data@4"
-        },
-        {
-          "command": "vscode-db2i.viewPermissions",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
-          "group": "db2data@5"
         },
         {
           "command": "vscode-db2i.advisedIndexes",
@@ -1327,14 +1458,24 @@
           "group": "config@1"
         },
         {
-          "command": "vscode-db2i.jobManager.editConfig",
-          "when": "view == jobManager && viewItem == savedConfig",
-          "group": "inline"
+          "command": "vscode-db2i.jobManager.deleteConfig",
+          "when": "view == jobManager && viewItem =~ /^savedConfig/",
+          "group": "inline@1"
         },
         {
-          "command": "vscode-db2i.jobManager.deleteConfig",
-          "when": "view == jobManager && viewItem == savedConfig",
-          "group": "inline"
+          "command": "vscode-db2i.jobManager.editConfig",
+          "when": "view == jobManager && viewItem =~ /^savedConfig/",
+          "group": "inline@2"
+        },
+        {
+          "command": "vscode-db2i.jobManager.setAsDefault",
+          "when": "view == jobManager && viewItem =~ /^savedConfig(?!_default)/",
+          "group": "inline@3"
+        },
+        {
+          "command": "vscode-db2i.jobManager.removeAsDefault",
+          "when": "view == jobManager && viewItem =~ /^savedConfig_default/",
+          "group": "inline@4"
         },
         {
           "command": "vscode-db2i.self.copySqlStatement",
@@ -1416,6 +1557,16 @@
           "group": "navigation_notebook@1"
         }
       ],
+      "vscode-db2i.jobManager.defaultSettings": [
+        {
+          "command": "vscode-db2i.jobManager.editDefaultJobProps",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editDefaultSelf",
+          "group": "navigation@1"
+        }
+      ],
       "vscode-db2i.customExampleDirectories": [
         {
           "command": "vscode-db2i.examples.add",
@@ -1439,6 +1590,11 @@
         "icon": "$(notebook-execute)",
         "id": "sql/editor/context",
         "label": "Run SQL statement"
+      },
+      {
+        "id": "vscode-db2i.jobManager.defaultSettings",
+        "label": "Default Job Settings",
+        "icon": "$(gear)"
       },
       {
         "id": "vscode-db2i.customExampleDirectories",
@@ -1580,7 +1736,7 @@
       },
       {
         "view": "vscode-db2i.self.nodes",
-        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.defaultSettings)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
+        "contents": "🛠️ SELF Codes will appear here. You can set the SELF log level on specific jobs, or you can set the default for new jobs in the User Settings.\n\n[Set Default for New Jobs](command:vscode-db2i.jobManager.editDefaultSelf)\n\n[Learn about SELF](command:vscode-db2i.self.help)"
       }
     ],
     "notebooks": [
