@@ -11,6 +11,7 @@ import { getSqlDocument } from "../../language/providers/logic/parse";
 import Document from "../../language/sql/document";
 import Statement from "../../language/sql/statement";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
+import { VisualExplainData } from "../../types";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { getLiteralsFromStatement, getPriorBindableStatement } from "./binding";
 import { queryResultToRpgDs, queryResultToUdtf } from "./codegen";
@@ -73,14 +74,14 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.statement.cancel`, async (jobName?: string) => {
       const selected = typeof jobName === `string` ? JobManager.getJob(jobName) : JobManager.getSelection();
       if (selected) {
-        updateStatusBar({canceling: true});
+        updateStatusBar({ canceling: true });
         const cancelled = await selected.job.requestCancel();
         if (cancelled) {
           resultSetProvider.setError(`Statement canceled.`);
           setCancelButtonVisibility(false);
           updateStatusBar();
         } else {
-          updateStatusBar({jobIsBusy: true});
+          updateStatusBar({ jobIsBusy: true });
           setTimeout(() => updateStatusBar(), 2000);
         }
       }
@@ -169,7 +170,7 @@ function isStop(statement: Statement) {
   return (statement.type === StatementType.Unknown && statement.tokens.length === 1 && statement.tokens[0].value.toUpperCase() === `STOP`);
 }
 
-async function runMultipleHandler(mode: `all`|`selected`|`from`) {
+async function runMultipleHandler(mode: `all` | `selected` | `from`) {
   const editor = vscode.window.activeTextEditor;
   if (editor && editor.document.languageId === `sql`) {
     const selection = editor.selection;
@@ -185,12 +186,12 @@ async function runMultipleHandler(mode: `all`|`selected`|`from`) {
       const groupStart = group.statements[0].tokens[0].range.start;
       const groupEnd = group.statements[group.statements.length - 1].tokens[group.statements[group.statements.length - 1].tokens.length - 1].range.end;
 
-      return (startPos >= groupStart && startPos <= groupEnd) || (endPos >= groupStart && endPos <= groupEnd) || 
-              (groupStart >= startPos && groupStart <= endPos) || (groupEnd >= startPos && groupEnd <= endPos);
+      return (startPos >= groupStart && startPos <= groupEnd) || (endPos >= groupStart && endPos <= groupEnd) ||
+        (groupStart >= startPos && groupStart <= endPos) || (groupEnd >= startPos && groupEnd <= endPos);
     }
 
     switch (mode) {
-      case `selected`: 
+      case `selected`:
         statementsToRun = statementGroups.filter(group => isInRange(group) || isInRange(group))
         break;
       case `from`: statementsToRun = statementGroups.filter(group => (startPos <= group.range.end)); break;
@@ -220,7 +221,7 @@ async function runMultipleHandler(mode: `all`|`selected`|`from`) {
           );
           return;
         }
-        
+
         statementInfos.push({
           content: sqlDocument.content.substring(
             group.range.start, group.range.end
@@ -267,7 +268,7 @@ async function runHandler(options?: StatementInfo) {
     let chosenView = resultSetProvider;
 
     const useWindow = (title: string, column?: ViewColumn) => {
-      const webview = window.createWebviewPanel(`sqlResultSet`, title, column || ViewColumn.Two, {retainContextWhenHidden: true, enableScripts: true, enableFindWidget: true});
+      const webview = window.createWebviewPanel(`sqlResultSet`, title, column || ViewColumn.Two, { retainContextWhenHidden: true, enableScripts: true, enableFindWidget: true });
       chosenView = new ResultSetPanelProvider();
       chosenView.resolveWebviewView(webview);
     }
@@ -325,7 +326,7 @@ async function runHandler(options?: StatementInfo) {
 
             chosenView.setLoadingText(`Running CL command... (${command})`, false);
             // CL does not throw
-            const result = await JobManager.runSQLVerbose<{SUMMARY: string}>(statementDetail.content, {isClCommand: true});
+            const result = await JobManager.runSQLVerbose<{ SUMMARY: string }>(statementDetail.content, { isClCommand: true });
             if (!result.success) {
               throw new Error(result.data && result.data[0] ? result.data[0].SUMMARY : `CL command ${command} executed successfully.`);
             }
@@ -355,7 +356,7 @@ async function runHandler(options?: StatementInfo) {
               }
 
               vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, runStatement.statement, `bind: ${statementDetail.content}`);
-              
+
               // Overwrite to run the prior statement
               statementDetail.content = runStatement.statement;
             }
@@ -365,7 +366,7 @@ async function runHandler(options?: StatementInfo) {
           if (statementDetail.noUi) {
             setCancelButtonVisibility(true);
             chosenView.setLoadingText(`Running SQL statement... (${possibleTitle})`, false);
-            await JobManager.runSQL(statementDetail.content, {parameters}, 1);
+            await JobManager.runSQL(statementDetail.content, { parameters }, 1);
 
           } else {
             if (inWindow) {
@@ -399,9 +400,9 @@ async function runHandler(options?: StatementInfo) {
             chosenView.setLoadingText(onlyExplain ? `Explaining without running...` : `Explaining...`);
             const explainType: ExplainType = onlyExplain ? ExplainType.DO_NOT_RUN : ExplainType.RUN;
 
-              setCancelButtonVisibility(true);
-              const explained = await selectedJob.job.explain(statementDetail.content, explainType); // Can throw
-              setCancelButtonVisibility(false);
+            setCancelButtonVisibility(true);
+            const explained = await selectedJob.job.explain<VisualExplainData[]>(statementDetail.content, explainType); // Can throw
+            setCancelButtonVisibility(false);
 
             if (onlyExplain) {
               chosenView.setLoadingText(`Explained.`, false);
@@ -427,35 +428,35 @@ async function runHandler(options?: StatementInfo) {
           } else {
             chosenView.setLoadingText(`Executing SQL statement...`, false);
             setCancelButtonVisibility(true);
-            updateStatusBar({executing: true});
+            updateStatusBar({ executing: true });
             const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
             setCancelButtonVisibility(false);
-            updateStatusBar({executing: false});
+            updateStatusBar({ executing: false });
             let content = `**free\n\n`
               + `// statement:\n`
-              + `// ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n// ') }\n\n`
+              + `// ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n// ')}\n\n`
               + `// Row data structure\n`
               + queryResultToRpgDs(result, Configuration.get(`codegen.rpgSymbolicNameSource`));
             const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
             await vscode.window.showTextDocument(textDoc);
             chosenView.setLoadingText(`RPG data structure generated.`, false);
           }
-        
+
         } else if (statementDetail.qualifier === `udtf`) {
           if (statementDetail.statement.type !== StatementType.Select) {
             vscode.window.showErrorMessage('UDTF qualifier only supported for select statements');
           } else {
             chosenView.setLoadingText(`Executing SQL statement...`, false);
             setCancelButtonVisibility(true);
-            updateStatusBar({executing: true});
+            updateStatusBar({ executing: true });
             const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
             setCancelButtonVisibility(false);
-            updateStatusBar({executing: false});
+            updateStatusBar({ executing: false });
             let content = `-- statement:\n`
-              + `-- ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n-- ') }\n\n`
+              + `-- ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n-- ')}\n\n`
               + `-- User-defined table function\n`
               + queryResultToUdtf(result, statementDetail.content, statementDetail.statement.tokens);
-              
+
             const textDoc = await vscode.workspace.openTextDocument({ language: 'sql', content });
             await vscode.window.showTextDocument(textDoc);
             chosenView.setLoadingText(`User-defined table function generated.`, false);
@@ -466,7 +467,7 @@ async function runHandler(options?: StatementInfo) {
           chosenView.setLoadingText(`Executing SQL statement...`, false);
 
           setCancelButtonVisibility(true);
-          updateStatusBar({executing: true});
+          updateStatusBar({ executing: true });
           const data = await JobManager.runSQL(statementDetail.content);
           setCancelButtonVisibility(false);
 
@@ -478,13 +479,13 @@ async function runHandler(options?: StatementInfo) {
               case `sql`:
                 let content = ``;
                 switch (statementDetail.qualifier) {
-                  case `csv`: 
+                  case `csv`:
                     content = csv.stringify(data, {
                       header: true,
                       quoted_string: true,
                       delimiter: DelimValue[Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`]
-                    }); 
-                  break;
+                    });
+                    break;
                   case `json`: content = JSON.stringify(data, null, 2); break;
 
                   case `sql`:
@@ -629,7 +630,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
 
   if (sqlDocument) {
     if (![`cl`, `bind`].includes(statementInfo.qualifier)) {
-      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, {replacement: `snippet`});
+      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, { replacement: `snippet` });
     }
   }
 
