@@ -50,7 +50,7 @@ export class ExplainTree {
 
     //Aggregate data for each node
     const nodesById = [...nodesDataById].reduce((map, [nodeId, data]) => map.set(nodeId, this.createNode(nodeId, data)), new Map<number, ExplainNode>());
-    
+
     //Get top node
     this.topNode = nodesById.get(topNodeId);
 
@@ -131,8 +131,8 @@ export class ExplainTree {
   /**
    * Update the node properties
    */
-  private updateNode(node: ExplainNode, value: any, state: NodeProcessingState, data: any): void {
-    const title = data.IFA_COLHDG;
+  private updateNode(node: ExplainNode, value: any, state: NodeProcessingState, data: VisualExplainData): void {
+    const title = data.IFA_COLHDG?.trim();
     // Ignore rows with no title
     if (!title) {
       return;
@@ -156,7 +156,14 @@ export class ExplainTree {
         if (value || value === 0) {
           // If processing delta attributes, update the existing property entry, otherwise push a new one
           if (state.processingDeltaAttributes) {
-            node.props.find(prop => prop.title === title).value = value;
+            const attribute = node.props.find(prop => prop.title === title);
+            if (attribute) {
+              attribute.value = value;
+            }
+            else {
+              //Should not happen
+              console.log(`Node ${node.id} attribute ${title} not found!`);
+            }
           } else {
             const newProperty: ExplainProperty = {
               type: type,
