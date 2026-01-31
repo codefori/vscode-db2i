@@ -151,6 +151,12 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.dove.closeDetails`, () => {
       doveNodeView.close();
     }),
+    //adding an API to expose creating explain tree from vedata to get visual explain details
+    vscode.commands.registerCommand(`vscode-db2i.explain.explainTree`, (vedata: any) => {
+      explainTree = new ExplainTree(vedata);
+      const topLevel = explainTree.get();
+      return topLevel;
+    }),
 
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.multiple.all`, () => { runMultipleHandler(`all`) }),
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.multiple.selected`, () => { runMultipleHandler(`selected`) }),
