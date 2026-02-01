@@ -101,16 +101,28 @@
         "icon": "$(lightbulb)"
       },
       {
-        "command": "vscode-db2i.dove.editSettings",
-        "title": "Settings",
+        "command": "vscode-db2i.dove.searchVisualExplain",
+        "title": "Search",
         "category": "Db2 for i",
-        "icon": "$(gear)"
+        "icon": "$(search)"
       },
       {
         "command": "vscode-db2i.dove.export",
         "title": "Export current VE data",
         "category": "Db2 for i",
         "icon": "$(file)"
+      },
+      {
+        "command": "vscode-db2i.dove.editSettings",
+        "title": "Settings",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "vscode-db2i.dove.node.searchVisualExplainDetails",
+        "title": "Search",
+        "category": "Db2 for i",
+        "icon": "$(search)"
       },
       {
         "command": "vscode-db2i.dove.node.copy",
@@ -130,12 +142,20 @@
           "when": "vscode-db2i:explaining == true"
         },
         {
-          "command": "vscode-db2i.dove.editSettings",
-          "when": "vscode-db2i:explaining == true"
+          "command": "vscode-db2i.dove.searchVisualExplain",
+          "when": "never"
         },
         {
           "command": "vscode-db2i.dove.export",
           "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.editSettings",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.node.searchVisualExplainDetails",
+          "when": "never"
         },
         {
           "command": "vscode-db2i.dove.node.copy",
@@ -149,7 +169,7 @@
           "when": "view == vscode-db2i.dove.nodes"
         },
         {
-          "command": "vscode-db2i.dove.editSettings",
+          "command": "vscode-db2i.dove.searchVisualExplain",
           "group": "navigation@1",
           "when": "view == vscode-db2i.dove.nodes"
         },
@@ -159,9 +179,19 @@
           "when": "view == vscode-db2i.dove.nodes"
         },
         {
-          "command": "vscode-db2i.dove.close",
+          "command": "vscode-db2i.dove.editSettings",
           "group": "navigation@3",
           "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.close",
+          "group": "navigation@4",
+          "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.node.searchVisualExplainDetails",
+          "group": "navigation@0",
+          "when": "view == vscode-db2i.dove.node"
         },
         {
           "command": "vscode-db2i.dove.generateSqlForAdvisedIndexes",
