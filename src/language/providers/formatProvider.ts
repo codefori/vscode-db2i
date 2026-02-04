@@ -1,13 +1,20 @@
 import { Position, Range, TextEdit, languages } from "vscode";
 import Statement from "../../database/statement";
+import { formatSql, CaseOptions } from "../sql/formatter";
+import Configuration from "../../configuration";
 
 export const formatProvider = languages.registerDocumentFormattingEditProvider({language: `sql`}, {
   async provideDocumentFormattingEdits(document, options, token) {
-    const formatted = Statement.format(
+    const identifierCase: CaseOptions = <CaseOptions>(Configuration.get(`sqlFormat.identifierCase`) || `preserve`);
+    const keywordCase: CaseOptions = <CaseOptions>(Configuration.get(`sqlFormat.keywordCase`) || `lower`);
+    const spaceBetweenStatements: string = (Configuration.get(`sqlFormat.spaceBetweenStatements`) || `false`);
+    const formatted = formatSql(
       document.getText(), 
       {
-        useTabs: !options.insertSpaces,
-        tabWidth: options.tabSize,
+        indentWidth: options.tabSize,
+        identifierCase,
+        keywordCase,
+        spaceBetweenStatements: spaceBetweenStatements === `true`
       }
     );
 

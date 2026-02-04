@@ -1,10 +1,11 @@
-import { assert, describe, expect, test } from 'vitest'
-import SQLTokeniser from '../tokens'
+import { describe, expect, test } from 'vitest'
 import Document, { getPositionData } from '../document';
 import { CallableReference, ClauseType, StatementType } from '../types';
+import { formatSql } from '../formatter';
 
 const parserScenarios = describe.each([
   {newDoc: (content: string) => new Document(content)},
+  {newDoc: (content: string) => new Document(formatSql(content))}
 ]);
 
 parserScenarios(`Basic statements`, ({newDoc}) => {

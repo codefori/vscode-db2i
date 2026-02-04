@@ -47,30 +47,30 @@
         "properties": {
           "vscode-db2i.sqlFormat.identifierCase": {
             "type": "string",
-            "description": "SQL identifiers",
+            "description": "Format SQL identifiers into a certain case",
             "default": "preserve",
             "enum": [
               "lower",
               "upper",
               "preserve"
-            ],
-            "enumDescriptions": [
-              "Format SQL identifiers in lowercase",
-              "Format SQL identifiers in uppercase",
-              "Preserve the current formatting of SQL identifiers"
             ]
           },
           "vscode-db2i.sqlFormat.keywordCase": {
             "type": "string",
-            "description": "SQL keywords",
+            "description": "Format SQL keywords into a certain case",
             "default": "lower",
             "enum": [
               "lower",
               "upper"
-            ],
-            "enumDescriptions": [
-              "Format reserved SQL keywords in lowercase",
-              "Format reserved SQL keywords in uppercase"
+            ]
+          },
+          "vscode-db2i.sqlFormat.spaceBetweenStatements": {
+            "type": "string",
+            "description": "Add space between statements.",
+            "default": "true",
+            "enum": [
+              "true",
+              "false"
             ]
           }
         }
