@@ -538,6 +538,9 @@ test('CREATE statements', () => {
   const doc = new Document(lines);
 
   const groups = doc.getStatementGroups();
+  const TABLEandCOLUMNS = doc.getColumnsAndTable();
+  expect(TABLEandCOLUMNS[0].tableName).toBe("temp_t1");
+  expect(TABLEandCOLUMNS[0].columns.length).toBe(7);
   expect(groups.length).toBe(3);
 });
 
@@ -555,3 +558,44 @@ test(`ALTER with BEGIN`, () => {
   const groups = doc.getStatementGroups();
   expect(groups.length).toBe(1);
 })
+// getTableandColumn
+test(`Get table and column details from a CREATE statement that contains different column-name formats.`, () => {
+  const lines = [
+    `CREATE OR REPLACE TABLE Schema1.ComplexTable (`,
+
+    ` ID INT PRIMARY KEY,`,
+
+    `"Full Name" VARCHAR(255) NOT NULL,`,
+
+    `"select" VARCHAR(50),`,
+    `Age INT CHECK (Age > 0),`,
+
+    `"Emp-Code" VARCHAR(40),`,
+
+    `details JSON CHECK (JSON_VALID(details)),`,
+
+    `Status ENUM('OPEN', 'CLOSED', 'IN_PROGRESS') DEFAULT 'OPEN',`,
+
+    `WeirdColumn DECIMAL(10,2) DEFAULT 0.00,`,
+
+    `Part1 INT,`,
+    `Part2 INT,`,
+
+    `Salary DECIMAL(10,2),`,
+
+    `DeptID INT,`,
+
+    ` CONSTRAINT fk_dept FOREIGN KEY (DeptID) REFERENCES Departments(DeptID),`,
+
+    `PRIMARY KEY (Part1, Part2),`,
+
+    `UNIQUE ("Full Name")`,
+
+    `);`,
+  ].join(`\n`);
+  const doc = new Document(lines);
+  const TABLEandCOLUMNS = doc.getColumnsAndTable();
+  console.log(TABLEandCOLUMNS[0].columns);
+  expect(TABLEandCOLUMNS[0].tableName).toBe("Schema1.ComplexTable");
+  expect(TABLEandCOLUMNS[0].columns.length).toBe(12);
+});
