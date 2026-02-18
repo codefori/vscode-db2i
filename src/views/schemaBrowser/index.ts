@@ -36,20 +36,16 @@ const itemIcons = {
 }
 
 export default class SchemaBrowser {
-  emitter: vscode.EventEmitter<any | undefined | null | void>;
-  onDidChangeTreeData: vscode.Event<any | undefined | null | void>;
-  cache: { [key: string]: object[] };
+  private readonly emitter: vscode.EventEmitter<any | undefined | null | void>;
+  readonly onDidChangeTreeData: vscode.Event<any | undefined | null | void>;
 
-  filters: { [schema: string]: string } = {};
+  private readonly cache: Map<string, vscode.TreeItem[]> = new Map;
+  private readonly filters: Map<string, string> = new Map;
 
-  /**
-   * @param {vscode.ExtensionContext} context
-   */
-  constructor(context) {
+  constructor(context: vscode.ExtensionContext) {
     this.emitter = new vscode.EventEmitter();
     this.onDidChangeTreeData = this.emitter.event;
     this.enableManageCommand(true);
-    this.cache = {};
 
     context.subscriptions.push(
       vscode.commands.registerCommand(`vscode-db2i.refreshSchemaBrowser`, async () => this.clearCacheAndRefresh()),
@@ -396,15 +392,15 @@ export default class SchemaBrowser {
         if (node) {
           const value = await vscode.window.showInputBox({
             title: `Set filter for ${node.schema}`,
-            value: this.filters[node.schema],
-            placeHolder: `COOL, COOL*`,
+            value: this.filters.get(node.schema),
+            placeHolder: `NAME, NAME*`,
             prompt: `Show objects that contain this value (case-insensitive). Blank to reset. Use '*' for wildcard at end.`,
           });
 
           if (value !== undefined) {
-            this.filters[node.schema] = value.trim() === `` ? undefined : value;
+            this.filters.set(node.schema, value.trim() === `` ? undefined : value);
 
-            updateSchemaNode(node, this.filters[node.schema]);
+            updateSchemaNode(node, this.filters.get(node.schema));
             this.refresh(node);
           }
         }
@@ -541,7 +537,8 @@ export default class SchemaBrowser {
   }
 
   clearCacheAndRefresh() {
-    this.cache = {};
+    this.cache.clear();
+    this.filters.clear();
     this.refresh();
   }
 
@@ -553,25 +550,19 @@ export default class SchemaBrowser {
     vscode.commands.executeCommand(`setContext`, `vscode-db2i:manageSchemaBrowserEnabled`, enabled);
   }
 
-  /**
-   * @returns {Number};
-   */
   getPageSize() {
     return Number(Configuration.get(`pageSize`)) || 100;
   }
 
-
   async fetchData(schema: string, type: SQLType, addRows?: boolean) {
     const pageSize = this.getPageSize() + 1; //Get 1 extra item to see if we need to add a more button 
     const key = `${schema}-${type}`;
-    let offset;
+    let offset = 0;
 
-    if (addRows || this.cache[key] === undefined) {
-      if (this.cache[key]) {
-        this.cache[key].pop(); //Remove more button
-        offset = this.cache[key].length;
-      } else {
-        offset = 0;
+    if (addRows || !this.cache.has(key)) {
+      if (this.cache.has(key)) {
+        this.cache.get(key).pop(); //Remove more button
+        offset = this.cache.get(key).length;
       }
 
       const data = await Schemas.getObjects(schema, [type], {
@@ -588,32 +579,28 @@ export default class SchemaBrowser {
         }
 
         const items = data.map(item => new SQLObject(item));
-        if (this.cache[key]) {
-          this.cache[key].push(...items);
+        if (this.cache.has(key)) {
+          this.cache.get(key).push(...items);
         } else {
-          this.cache[key] = items;
+          this.cache.set(key, items);
         }
 
         if (more) {
-          this.cache[key].push(moreButton(schema, type));
+          this.cache.get(key).push(moreButton(schema, type));
         }
       } else {
         vscode.window.showInformationMessage(`No items to load.`);
       }
     }
 
-    if (this.cache[key]) {
-      return this.cache[key].slice(0);
+    if (this.cache.has(key)) {
+      return this.cache.get(key).slice(0);
     } else {
       return [];
     }
   }
 
-  /**
-   * @param {vscode.TreeItem} element
-   * @returns {vscode.TreeItem};
-   */
-  getTreeItem(element) {
+  getTreeItem(element: vscode.TreeItem) {
     return element;
   }
 
@@ -626,7 +613,7 @@ export default class SchemaBrowser {
 
       if (element instanceof Schema) {
 
-        let filterValue = this.filters[element.schema];
+        const filterValue = this.filters.get(element.schema);
         if (filterValue) {
           const validSchemaName = Statement.noQuotes(element.schema);
           const filteredObjects = await Schemas.getObjects(validSchemaName, AllSQLTypes, { filter: filterValue, sort: true });
@@ -651,10 +638,8 @@ export default class SchemaBrowser {
           }
 
     } else {
-      const connection = getInstance().getConnection();
-      if (connection) {
-        const config = getInstance().getConfig();
-
+      const config = getInstance().getConnection().getConfig();
+      if (config) {
         const schemas = config[`databaseBrowserList`] || [];
         schemas.sort((s1, s2) => {
           if (s1 > s2) return 1;
@@ -662,8 +647,8 @@ export default class SchemaBrowser {
           return 0;
         });
 
-        for (let schema of schemas) {
-          items.push(new Schema(schema, this.filters[schema]));
+        for (const schema of schemas) {
+          items.push(new Schema(schema, this.filters.get(schema)));
         }
       } else {
         items.push(new Schema(`No connection. Refresh when ready.`));
@@ -703,18 +688,18 @@ class SchemaItem extends vscode.TreeItem {
 }
 
 class SQLObject extends vscode.TreeItem {
-  path: string;
-  schema: string;
-  name: string;
-  specificName: string;
-  type: string;
-  tableType: string;
-  constraintType: string;
-  system: {
+  readonly path: string;
+  readonly schema: string;
+  readonly name: string;
+  readonly specificName: string;
+  readonly type: string;
+  readonly tableType: string;
+  readonly constraintType: string;
+  readonly system: {
     schema: string;
     name: string;
   }
-  basedOn: {
+  readonly basedOn: {
     schema: string;
     name: string;
   }
@@ -754,10 +739,10 @@ class SQLObject extends vscode.TreeItem {
  * QuickPick item that represents a schema
  */
 class SchemaQuickPickItem implements vscode.QuickPickItem {
-  label: string;
-  detail?: string;
-  description?: string;
-  iconPath: ThemeIcon;
+  readonly label: string;
+  readonly detail?: string;
+  readonly description?: string;
+  readonly iconPath: ThemeIcon;
 
   constructor(object: BasicSQLObject) {
     const name = Statement.delimName(object.name);
