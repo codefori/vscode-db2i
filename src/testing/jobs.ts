@@ -1,9 +1,10 @@
 import assert from "assert";
 import { TestSuite } from ".";
 import { getInstance } from "../base";
-import { ExplainTree } from "../views/results/explain/nodes";
 import { ServerComponent } from "../connection/serverComponent";
 import { OldSQLJob } from "../connection/sqlJob";
+import { VisualExplainData } from "../types";
+import { ExplainTree } from "../views/results/explain/nodes";
 
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
@@ -385,7 +386,7 @@ export const JobsSuite: TestSuite = {
 
       const query = `select * from qiws.qcustcdt`;
 
-      const result = await newJob.explain(query);
+      const result = await newJob.explain<VisualExplainData>(query);
 
       const tree = new ExplainTree(result.data);
 
