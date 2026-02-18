@@ -1355,12 +1355,12 @@
         },
         {
           "command": "vscode-db2i.getAuthorities",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
           "group": "db2workWith@4"
         },
         {
           "command": "vscode-db2i.getObjectLocks",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
           "group": "db2workWith@5"
         },
         {
@@ -1380,12 +1380,12 @@
         },
         {
           "command": "vscode-db2i.deleteObject",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
           "group": "db2data@3"
         },
         {
           "command": "vscode-db2i.renameObject",
-          "when": "viewItem == table || viewItem == view || viewItem == index",
+          "when": "viewItem == table || viewItem == view || viewItem == index || viewItem == logical",
           "group": "db2data@4"
         },
         {
