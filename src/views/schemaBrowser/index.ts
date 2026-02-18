@@ -1,19 +1,19 @@
 
-import { ThemeIcon, TreeItem, workspace, window } from "vscode"
-import * as vscode from "vscode"
-import Schemas, { AllSQLTypes, InternalTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
+import * as vscode from "vscode";
+import { ThemeIcon, TreeItem, window, workspace } from "vscode";
+import { getInstance } from "../../base";
+import Schemas, { AllSQLTypes, InternalTypes, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
-import { getInstance, loadBase } from "../../base";
 
 import Configuration from "../../configuration";
 
-import Types from "../types";
-import Statement from "../../database/statement";
-import { getCopyUi } from "./copyUI";
-import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects } from "./statements";
-import { BasicSQLObject } from "../../types";
-import { TextDecoder } from "util";
 import { parse } from "csv/sync";
+import { TextDecoder } from "util";
+import Statement from "../../database/statement";
+import { BasicSQLObject } from "../../types";
+import Types from "../types";
+import { getCopyUi } from "./copyUI";
+import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects } from "./statements";
 
 const itemIcons = {
   "table": `split-horizontal`,
@@ -207,7 +207,7 @@ export default class SchemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getAuthorities`, async (object: SQLObject) => {
         if (object) {
-          const content = getAuthoritiesStatement(object.system.schema, object.system.name, object.type.toUpperCase(), object.tableType);
+          const content = getAuthoritiesStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             qualifier: `statement`,
@@ -218,7 +218,7 @@ export default class SchemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getObjectLocks`, async (object: SQLObject) => {
         if (object) {
-          const content = getObjectLocksStatement(object.system.schema, object.system.name, object.type.toUpperCase(), object.tableType);
+          const content = getObjectLocksStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             qualifier: `statement`,

@@ -243,7 +243,7 @@ export function getMTIStatement(schema: string, table: string = `*ALL`) {
   ].join(` `);
 }
 
-export function getAuthoritiesStatement(schema: string, table: string, objectType: string, tableType: string): string {
+export function getAuthoritiesStatement(schema: string, name: string, objectType: string, tableType: string): string {
   let sql: string = `
     select 
       authorization_name "User profile name", 
@@ -265,8 +265,8 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
       data_execute "Data execute authority", 
       text_description "Description"
     from qsys2.object_privileges
-    where system_object_schema = '${Statement.escapeString(schema)}' 
-      and system_object_name = '${Statement.escapeString(table)}'
+    where object_schema = '${Statement.escapeString(schema)}' 
+      and object_name = '${Statement.escapeString(name)}'
   `;
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;
@@ -282,7 +282,7 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
   return sql;
 }
 
-export function getObjectLocksStatement(schema: string, table: string, objectType: string, tableType: string): string {
+export function getObjectLocksStatement(schema: string, name: string, objectType: string, tableType: string): string {
   let sql: string = `
       select
         system_table_member "Member",
@@ -304,8 +304,8 @@ export function getObjectLocksStatement(schema: string, table: string, objectTyp
         statement_id "Statement ID", 
         machine_instruction "Instruction"
       from qsys2.object_lock_info
-      where system_object_schema = '${Statement.escapeString(schema)}'
-        and system_object_name = '${Statement.escapeString(table)}'
+      where object_schema = '${Statement.escapeString(schema)}'
+        and object_name = '${Statement.escapeString(name)}'
     `;
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;
