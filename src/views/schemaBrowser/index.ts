@@ -1,19 +1,19 @@
 
-import { ThemeIcon, TreeItem, workspace, window } from "vscode"
-import * as vscode from "vscode"
-import Schemas, { AllSQLTypes, InternalTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
+import * as vscode from "vscode";
+import { ThemeIcon, TreeItem, window, workspace } from "vscode";
+import { getInstance } from "../../base";
+import Schemas, { AllSQLTypes, InternalTypes, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
-import { getInstance, loadBase } from "../../base";
 
 import Configuration from "../../configuration";
 
-import Types from "../types";
-import Statement from "../../database/statement";
-import { getCopyUi } from "./copyUI";
-import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects } from "./statements";
-import { BasicSQLObject } from "../../types";
-import { TextDecoder } from "util";
 import { parse } from "csv/sync";
+import { TextDecoder } from "util";
+import Statement from "../../database/statement";
+import { BasicSQLObject } from "../../types";
+import Types from "../types";
+import { getCopyUi } from "./copyUI";
+import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects } from "./statements";
 
 const itemIcons = {
   "table": `split-horizontal`,
@@ -442,8 +442,6 @@ export default class SchemaBrowser {
         }
       })
     )
-
-    getInstance().subscribe(context, `connected`, `db2i-clearCacheAndRefresh`, () => this.clearCacheAndRefresh());
   }
 
   async pickFile(): Promise<vscode.Uri | undefined> {
