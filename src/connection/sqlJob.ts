@@ -98,7 +98,12 @@ export class OldSQLJob extends SQLJob {
               outString = ``;
               if (this.isTracingChannelData) ServerComponent.writeOutput(thisMsg);
               try {
-                let response: ServerResponse = JSON.parse(thisMsg);
+                let response: ServerResponse = JSON.parse(thisMsg, (_key, value, context) => {
+                  if (typeof value === 'number' && ('' + value !== context.source)) {
+                    return context.source;
+                  }
+                  return value;
+                });
                 this.responseEmitter.emit(response.id, response);
               } catch (e: any) {
                 console.log(`Error: ` + e);
