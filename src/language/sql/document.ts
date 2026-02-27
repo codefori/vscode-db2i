@@ -2,6 +2,23 @@ import Statement from "./statement";
 import SQLTokeniser from "./tokens";
 import { CallableReference, Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
 
+
+
+export interface ParsedColumn {
+  columnName: string;      
+  aliasName?: string;   
+  isAlias: boolean;        
+  type?: string;         
+}
+
+export interface ParsedTableEntry {
+  tableName: string;   
+  systemTableName?:string;    
+  columns: ParsedColumn[];  // array of columns for that table
+}
+export interface ParsedTable {
+  columns: ParsedColumn[];
+}
 export default class Document {
   content: string;
   statements: Statement[];
@@ -188,6 +205,21 @@ export default class Document {
 
     return groups;
   }
+ getColumnsAndTable():ParsedTableEntry[] {
+    const groups = this.getStatementGroups();
+
+    const result:ParsedTableEntry[] = [];
+
+    for (const group of groups) {
+      if(group.statements[0].type === StatementType.Create) {
+      const info:ParsedTableEntry = getCreateTableInfo(group.statements[0].tokens);
+        result.push(info);
+      
+      }
+    }
+
+    return result;
+  }
 
   getDefinitions(): Definition[] {
     const groups = this.getStatementGroups();
@@ -331,4 +363,256 @@ function getSymbolsForStatements(statements: Statement[]) {
   }
 
   return defintions;
+}
+
+
+//-----------------------------------------------------------
+// UNIVERSAL SQL COLUMN PARSER FOR ALL CREATE TABLE STYLES
+//-----------------------------------------------------------
+//-----------------------------------------------------------
+// UNIVERSAL SQL PARSER (TABLE NAME + COLUMNS)
+//-----------------------------------------------------------
+export function getCreateTableInfo(tokens: any[]):ParsedTableEntry {
+  const {tableName,systemName} = extractTableNames(tokens);
+  const columnGroups = extractColumnGroups(tokens);
+  const columnsValues = extractColumnNames(columnGroups);
+  const {columns,ColumnNames}= columnsValues;
+  return {
+   tableName: tableName,
+  systemTableName:systemName ?? tableName,      
+  columns: ColumnNames
+  };
+}
+
+//-----------------------------------------------------------
+// 0) Extract TABLE NAME from CREATE TABLE statement
+//-----------------------------------------------------------
+function extractTableNames(tokens: any[]) {
+  let foundTable = false;
+  let tableNameParts: string[] = [];
+  let systemName: string | null = null;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const v = tokens[i].value?.toLowerCase();
+
+    // Detect TABLE keyword
+    if (v === "table") {
+      foundTable = true;
+      continue;
+    }
+
+    if (!foundTable) continue;
+
+    // STOP collecting table name if "(" begins
+    if (tokens[i].value === "(") break;
+
+    // Detect "FOR SYSTEM NAME <xxx>"
+    if (
+      v === "for" &&
+      tokens[i + 1]?.value?.toLowerCase() === "system" &&
+      tokens[i + 2]?.value?.toLowerCase() === "name"
+    ) {
+      // system name is the next token after NAME
+      systemName = tokens[i + 3]?.value ?? null;
+      break; // STOP reading table name
+    }
+
+    // Skip noise keywords
+    const skip = ["if", "not", "exists", "or", "replace"];
+    if (skip.includes(v)) continue;
+
+    // Collect table name parts
+    if (
+      tokens[i].type === "word" ||
+      tokens[i].type === "string" ||
+      /[\/\.]/.test(tokens[i].value)
+    ) {
+      tableNameParts.push(tokens[i].value);
+    }
+  }
+
+  const tableName = tableNameParts.length > 0 ? tableNameParts.join("") : null;
+
+  return { tableName, systemName };
+}
+
+
+
+
+//-----------------------------------------------------------
+// 1) Extract column groups inside the main ( ... ) block
+//-----------------------------------------------------------
+function extractColumnGroups(tokens: any[]) {
+  let startIndex = -1;
+  let depth = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+
+    if (t.value === "(" && startIndex === -1) {
+      startIndex = i;
+      depth = 1;
+      i++;
+
+      // find matching closing )
+      while (i < tokens.length && depth > 0) {
+        if (tokens[i].value === "(") depth++;
+        else if (tokens[i].value === ")") depth--;
+        i++;
+      }
+
+      const endIndex = i - 1;
+      const innerTokens = tokens.slice(startIndex + 1, endIndex);
+
+      // ---------------------------------------------------
+      // Split by commas ONLY on depth=0
+      // ---------------------------------------------------
+      const groups: any[][] = [];
+      let current: any[] = [];
+      let d = 0;
+
+      for (const token of innerTokens) {
+        if (token.value === "," && d === 0) {
+          if (current.length > 0) {
+            groups.push(current);
+            current = [];
+          }
+          continue;
+        }
+
+        current.push(token);
+
+        if (token.value === "(") d++;
+        else if (token.value === ")") d--;
+      }
+
+      if (current.length > 0) groups.push(current);
+
+      // REMOVE TABLE CONSTRAINT GROUPS
+      const unwanted = [
+        "constraint",
+        "primary",
+        "foreign",
+        "unique",
+        "check",
+        "references",
+        "key"
+      ];
+
+      return groups.filter(group => {
+         return !unwanted.includes(group[0].value.toLowerCase())
+      });
+    }
+  }
+
+  return [];
+}
+
+//-----------------------------------------------------------
+// 2) Extract column names from each group
+//-----------------------------------------------------------
+
+
+
+function extractColumnNames(groups: any[][]) {
+  const columns: string[] = [];
+  const ColumnNames: ParsedColumn[] = [];
+
+
+  for (const group of groups) {
+    const result = parseSingleColumn(group);
+    if (!result) continue;
+    const { aliasForColumn, normalIdentifiers } = result;
+    let alias=normalizeNames(aliasForColumn);
+    let normal=normalizeNames(normalIdentifiers);
+
+if (alias.length === 1 && normal.length === 1) {
+    // Case 1: Both alias and real column exist
+    ColumnNames.push({
+        columnName: normal[0],
+        aliasName: alias[0],
+        isAlias: true
+    });
+
+    ColumnNames.push({
+        columnName: alias[0],
+        isAlias: false
+    });
+}
+else if (alias.length === 1 && normal.length === 0) {
+    // Case 2: Only alias exists
+    ColumnNames.push({
+        columnName: alias[0],
+        isAlias: false
+    });
+}
+else if (normal.length === 1 && alias.length === 0) {
+    // Case 3: Only real column name exists (rare case)
+    ColumnNames.push({
+        columnName: normal[0],
+        isAlias: false
+    });
+}
+
+// Push to columns array
+ColumnNames.forEach(col => columns.push(col.columnName));
+
+  }
+
+  return {columns,
+    ColumnNames
+  };
+}
+
+function normalizeNames(arr: string[]) {
+  // clean quotes + lowercase
+  const cleaned = arr.map(a => cleanIdentifier(a).toLowerCase());
+
+  // remove duplicates
+  const unique = [...new Set(cleaned)];
+
+  return unique; // can be 1 or many
+}
+//-----------------------------------------------------------
+// 3) Parse a single column definition
+//-----------------------------------------------------------
+function parseSingleColumn(tokens: any[]) {
+  if (!tokens.length) return null;
+
+  const aliasForColumn: string[] = [];
+  const normalIdentifiers: string[] = [];
+
+  // -------------------------------
+  // A) Collect DB2 alias-for-column
+  // -------------------------------
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i].value?.toLowerCase();
+  // IF first token is identifier/word/string/sqlName → it's the alias name and also considering the sqlName type with quotes
+    if(t===tokens[0].value.toLowerCase() && (tokens[0].type ==="word"||(tokens[0].type==="sqlName" && tokens[0].value.startsWith('"'))) )
+    {
+      aliasForColumn.push(cleanIdentifier(tokens[0].value));
+    }
+
+    // IF (FOR COLUMN realName as per SYSTEM)
+   else if (t === "for" && tokens[i + 1]?.value?.toLowerCase() === "column") {
+      const real = tokens[i + 2];
+      if (real) normalIdentifiers.push(cleanIdentifier(real.value));
+    }
+
+  }
+
+  // ------------------------
+  // B) Return everything
+  // ------------------------
+  return {
+    aliasForColumn,
+    normalIdentifiers,
+  };
+}
+
+//-----------------------------------------------------------
+// Helpers
+//-----------------------------------------------------------
+
+function cleanIdentifier(name: string) {
+  return name.replace(/^[`\["']+|[`"\]']+$/g, "");
 }
