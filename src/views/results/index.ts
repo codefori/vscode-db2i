@@ -95,6 +95,8 @@ export function initialise(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.resultsets');
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.resultset.clear`,  () => resultSetProvider.clear()),
+
     vscode.workspace.onDidChangeConfiguration(e => {
       // If the result set column headings setting has changed, update the header of the current result set
       if (e.affectsConfiguration('vscode-db2i.resultsets.columnHeadings')) {

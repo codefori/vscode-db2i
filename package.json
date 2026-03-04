@@ -685,6 +685,13 @@
         "icon": "$(gear)"
       },
       {
+        "command": "vscode-db2i.resultset.clear",
+        "title": "Clear Results",
+        "category": "Db2 for i",
+        "icon": "$(clear-all)",
+        "enablement": "vscode-db2i:canClear"
+      },
+      {
         "command": "vscode-db2i.dove.close",
         "title": "Close",
         "category": "Db2 for i",
@@ -1188,7 +1195,12 @@
         },
         {
           "command": "vscode-db2i.resultset.settings",
-          "group": "navigation",
+          "group": "navigation@10",
+          "when": "view == vscode-db2i.resultset"
+        },
+        {
+          "command": "vscode-db2i.resultset.clear",
+          "group": "navigation@01",
           "when": "view == vscode-db2i.resultset"
         },
         {

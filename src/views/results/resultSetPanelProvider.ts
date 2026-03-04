@@ -1,17 +1,17 @@
-import { window, CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
+import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, window } from "vscode";
 
+import { QueryResult } from "@ibm/mapepire-js";
+import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
-import { updateStatusBar } from "../jobManager/statusBar";
 import Configuration from "../../configuration";
-import * as html from "./html";
-import { Query } from "@ibm/mapepire-js/dist/src/query";
-import { ObjectRef } from "../../language/sql/types";
-import Table from "../../database/table";
 import Statement from "../../database/statement";
+import Table from "../../database/table";
+import { ObjectRef } from "../../language/sql/types";
 import { TableColumn } from "../../types";
+import { updateStatusBar } from "../jobManager/statusBar";
 import { statementDone } from "./editorUi";
-import { QueryResult } from "@ibm/mapepire-js";
+import * as html from "./html";
 
 export type SqlParameter = string | number;
 
@@ -99,6 +99,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
         default:
           if (message.query) {
+            let canClear = false;
             if (this.currentQuery) {
               // If we get a request for a new query, then we need to close the old one
               if (this.currentQuery.getId() === undefined || this.currentQuery.getId() !== message.queryId) {
@@ -146,6 +147,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   isDone: queryResults.is_done,
                   executionTime
                 });
+
+                canClear = true;
               }
 
             } catch (e) {
@@ -160,6 +163,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
             setCancelButtonVisibility(false);
             updateStatusBar();
+            commands.executeCommand(`setContext`, `vscode-db2i:canClear`, canClear);
           }
           break;
       }
@@ -310,6 +314,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     this.loadingState = false;
     // TODO: pretty error
     this._view.webview.html = `<p>${error}</p>`;
+  }
+
+  clear(){
+    this._view.webview.html = ``;
+    commands.executeCommand(`setContext`, `vscode-db2i:canClear`, false);
   }
 }
 
