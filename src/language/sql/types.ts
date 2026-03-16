@@ -34,7 +34,8 @@ export enum StatementType {
 	Return = "Return",
 	Signal = "Signal",
 	Set = "Set",
-	While = "While"
+	While = "While",
+	Label = "Label"
 }
 
 export const StatementTypeWord = {
@@ -69,6 +70,7 @@ export const StatementTypeWord = {
 	'SIGNAL': StatementType.Signal,
 	'SET': StatementType.Set,
 	'WHILE': StatementType.While,
+	'LABEL': StatementType.Label
 };
 
 export enum ClauseType {
