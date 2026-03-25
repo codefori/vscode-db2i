@@ -56,6 +56,7 @@ export enum StatementType {
 	// Additional DCL
 	Grant = "Grant",
 	Revoke = "Revoke",
+	Lock = "Lock",
 	// Cursor Management
 	Allocate = "Allocate",
 	// IBM i Specific
@@ -64,11 +65,15 @@ export enum StatementType {
 	// SQL PL Additions
 	Case = "Case",
 	When = "When",
-	Undo = "Undo",
 	Continue = "Continue",
 	Exit = "Exit",
 	Associate = "Associate",
-	Free = "Free"
+	Free = "Free",
+	// Compound Statements
+	Compound = "Compound",
+	Atomic = "Atomic",
+	// Additional Statements
+	Whenever = "Whenever"
 }
 
 export const StatementTypeWord = {
@@ -103,7 +108,47 @@ export const StatementTypeWord = {
 	'SIGNAL': StatementType.Signal,
 	'SET': StatementType.Set,
 	'WHILE': StatementType.While,
-	'LABEL': StatementType.Label
+	'LABEL': StatementType.Label,
+	'OPEN': StatementType.Open,
+	'CLOSE': StatementType.Close,
+	// Transaction Control (TCL)
+	'COMMIT': StatementType.Commit,
+	'ROLLBACK': StatementType.Rollback,
+	'SAVEPOINT': StatementType.Savepoint,
+	'RELEASE': StatementType.Release,
+	// Dynamic SQL
+	'PREPARE': StatementType.Prepare,
+	'EXECUTE': StatementType.Execute,
+	'DESCRIBE': StatementType.Describe,
+	// Session Management
+	'CONNECT': StatementType.Connect,
+	'DISCONNECT': StatementType.Disconnect,
+	// Additional DDL
+	'RENAME': StatementType.Rename,
+	'TRUNCATE': StatementType.Truncate,
+	'COMMENT': StatementType.Comment,
+	'TRANSFER': StatementType.Transfer,
+	// Additional DCL
+	'GRANT': StatementType.Grant,
+	'REVOKE': StatementType.Revoke,
+	'LOCK': StatementType.Lock,
+	// Cursor Management
+	'ALLOCATE': StatementType.Allocate,
+	// IBM i Specific
+	'REFRESH': StatementType.Refresh,
+	'VALUES': StatementType.Values,
+	// SQL PL Additions
+	'CASE': StatementType.Case,
+	'WHEN': StatementType.When,
+	'CONTINUE': StatementType.Continue,
+	'EXIT': StatementType.Exit,
+	'ASSOCIATE': StatementType.Associate,
+	'FREE': StatementType.Free,
+	// Compound Statements
+	'COMPOUND': StatementType.Compound,
+	'ATOMIC': StatementType.Atomic,
+	// Additional Statements
+	'WHENEVER': StatementType.Whenever
 };
 
 export enum ClauseType {
