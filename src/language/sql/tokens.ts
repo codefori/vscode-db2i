@@ -41,7 +41,7 @@ export default class SQLTokeniser {
     {
       name: `STATEMENTTYPE`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`, `IF`, `FOR`, `WHILE`, `LABEL`].includes(value.toUpperCase());
+        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`, `IF`, `FOR`, `WHILE`, `LABEL`, `COMMIT`, `ROLLBACK`, `SAVEPOINT`, `RELEASE`, `PREPARE`, `EXECUTE`, `DESCRIBE`, `CONNECT`, `DISCONNECT`, `RENAME`, `TRUNCATE`, `COMMENT`, `TRANSFER`, `GRANT`, `REVOKE`, `ALLOCATE`, `REFRESH`, `VALUES`, `CASE`, `WHEN`, `UNDO`, `CONTINUE`, `EXIT`, `ASSOCIATE`, `FREE`].includes(value.toUpperCase());
       } }],
       becomes: `statementType`,
     },

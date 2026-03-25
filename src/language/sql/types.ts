@@ -35,7 +35,40 @@ export enum StatementType {
 	Signal = "Signal",
 	Set = "Set",
 	While = "While",
-	Label = "Label"
+	Label = "Label",
+	// Transaction Control (TCL)
+	Commit = "Commit",
+	Rollback = "Rollback",
+	Savepoint = "Savepoint",
+	Release = "Release",
+	// Dynamic SQL
+	Prepare = "Prepare",
+	Execute = "Execute",
+	Describe = "Describe",
+	// Session Management
+	Connect = "Connect",
+	Disconnect = "Disconnect",
+	// Additional DDL
+	Rename = "Rename",
+	Truncate = "Truncate",
+	Comment = "Comment",
+	Transfer = "Transfer",
+	// Additional DCL
+	Grant = "Grant",
+	Revoke = "Revoke",
+	// Cursor Management
+	Allocate = "Allocate",
+	// IBM i Specific
+	Refresh = "Refresh",
+	Values = "Values",
+	// SQL PL Additions
+	Case = "Case",
+	When = "When",
+	Undo = "Undo",
+	Continue = "Continue",
+	Exit = "Exit",
+	Associate = "Associate",
+	Free = "Free"
 }
 
 export const StatementTypeWord = {
