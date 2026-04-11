@@ -127,6 +127,13 @@
         "icon": "$(gear)"
       },
       {
+        "command": "vscode-db2i.resultset.retrieveMoreRows",
+        "title": "Retrieve More Rows",
+        "category": "Db2 for i",
+        "icon": "$(git-stash)",
+        "enablement": "vscode-db2i:canRetrieveMoreRows"
+      },
+      {
         "command": "vscode-db2i.resultset.clear",
         "title": "Clear Results",
         "category": "Db2 for i",
@@ -204,13 +211,18 @@
       ],
       "view/title": [
         {
-          "command": "vscode-db2i.resultset.settings",
-          "group": "navigation@10",
+          "command": "vscode-db2i.resultset.retrieveMoreRows",
+          "group": "navigation@01",
           "when": "view == vscode-db2i.resultset"
         },
         {
           "command": "vscode-db2i.resultset.clear",
-          "group": "navigation@01",
+          "group": "navigation@02",
+          "when": "view == vscode-db2i.resultset"
+        },
+        {
+          "command": "vscode-db2i.resultset.settings",
+          "group": "navigation@10",
           "when": "view == vscode-db2i.resultset"
         }
       ]

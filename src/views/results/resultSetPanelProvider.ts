@@ -45,6 +45,16 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
   }
 
+  retrieveMoreRows() {
+    if (this._view) {
+      const queryId = this.currentQuery?.getId();
+      this._view.webview.postMessage({
+        command: `fetch`,
+        queryId: queryId
+      });
+    }
+  }
+
   resolveWebviewView(webviewView: WebviewView | WebviewPanel, context?: WebviewViewResolveContext, _token?: CancellationToken) {
     this._view = webviewView;
 
@@ -100,6 +110,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         default:
           if (message.query) {
             let canClear = false;
+            let canRetrieveMoreRows = false;
             if (this.currentQuery) {
               // If we get a request for a new query, then we need to close the old one
               if (this.currentQuery.getId() === undefined || this.currentQuery.getId() !== message.queryId) {
@@ -149,6 +160,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 });
 
                 canClear = true;
+                canRetrieveMoreRows = !queryResults.is_done;
               }
 
             } catch (e) {
@@ -164,6 +176,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             setCancelButtonVisibility(false);
             updateStatusBar();
             commands.executeCommand(`setContext`, `vscode-db2i:canClear`, canClear);
+            commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, canRetrieveMoreRows);
           }
           break;
       }
@@ -319,6 +332,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   clear(){
     this._view.webview.html = ``;
     commands.executeCommand(`setContext`, `vscode-db2i:canClear`, false);
+    commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, false);
   }
 }
 

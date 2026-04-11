@@ -95,6 +95,8 @@ export function initialise(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.resultsets');
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveMoreRows`, () => resultSetProvider.retrieveMoreRows()),
+
     vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, () => resultSetProvider.clear()),
 
     vscode.workspace.onDidChangeConfiguration(e => {
