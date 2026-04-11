@@ -1635,8 +1635,8 @@
       },
       {
         "command": "vscode-db2i.editorExplain.withoutRun",
-        "key": "ctrl+e",
-        "mac": "cmd+e",
+        "key": "ctrl+alt+u",
+        "mac": "cmd+alt+u",
         "when": "editorLangId == sql && resourceExtname != .inb"
       },
       {
