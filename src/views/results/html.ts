@@ -359,6 +359,9 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
           let totalRows = 0;
           let noMoreRows = false;
           let isFetching = false;
+          let currentSortColumn = null;
+          let currentSortDirection = 'asc';
+          let allRows = [];
 
           function isNumeric(str) {
             if (typeof str != "string") return false // we only process strings!  
@@ -408,6 +411,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
 
                   if (data.rows && data.rows.length > 0) {
                     totalRows += data.rows.length;
+                    allRows.push(...data.rows);
                     appendRows(data.rows);
                   }
 
@@ -476,17 +480,36 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
               const cell = document.createElement("div");
               const col = i++;
               cell.classList.add("header");
+              
+              const textSpan = document.createElement("span");
               switch(columnHeadings) {
                 case 'Name':
-                  cell.innerText = column.name;
+                  textSpan.innerText = column.name;
                   break;
                 case 'Both':
-                  cell.innerHTML = escapeHTML(column.name)+'<br>'+escapeHTML(column.label);
+                  textSpan.innerHTML = escapeHTML(column.name)+'<br>'+escapeHTML(column.label);
                   break;
                 default:
-                  cell.innerText = column.label;
+                  textSpan.innerText = column.label;
               }
+              cell.appendChild(textSpan);
+              
               cell.title = getTooltip(column, columnHeadings);
+              
+              // Add sort icon
+              const sortIcon = document.createElement("span");
+              sortIcon.classList.add("sort-icon");
+              sortIcon.textContent = '▲';
+              cell.appendChild(sortIcon);
+              
+              // Add click handler for sorting
+              cell.addEventListener("click", (e) => {
+                // Don't sort if clicking on the grip
+                if (!e.target.classList.contains('grip')) {
+                  sortByColumn(col);
+                }
+              });
+              
               const grip = document.createElement("div");
               grip.innerHtml="&nbsp;";
               grip.classList.add("grip");
@@ -588,21 +611,92 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
             }
           }
 
+          function sortByColumn(columnIndex) {
+            // Toggle sort direction if clicking the same column
+            if (currentSortColumn === columnIndex) {
+              currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+              currentSortColumn = columnIndex;
+              currentSortDirection = 'asc';
+            }
+
+            // Sort the rows
+            allRows.sort((a, b) => {
+              let valA = a[columnIndex];
+              let valB = b[columnIndex];
+
+              // NULLs come first for ASC, come last for DESC
+              const isANull = valA === null || valA === undefined;
+              const isBNull = valB === null || valB === undefined;
+              if (isANull && isBNull) return 0;
+              if (isANull) return currentSortDirection === 'asc' ? -1 : 1;
+              if (isBNull) return currentSortDirection === 'asc' ? 1 : -1;
+
+              // Convert to string and do case-insensitive comparison
+              const strA = String(valA).toLowerCase();
+              const strB = String(valB).toLowerCase();
+              if (currentSortDirection === 'asc') {
+                return strA.localeCompare(strB);
+              } else {
+                return strB.localeCompare(strA);
+              }
+            });
+
+            // Clear existing rows
+            const resultSetDiv = document.getElementById(htmlTableId);
+            const rowDivs = resultSetDiv.querySelectorAll('.row');
+            rowDivs.forEach(row => row.remove());
+
+            // Re-render rows
+            appendRows(allRows);
+
+            // Update chevron icons
+            updateSortIcons();
+          }
+
+          function updateSortIcons() {
+            const headerCells = document.getElementById(htmlTableId).querySelectorAll(':scope > div.header');
+            headerCells.forEach((header, index) => {
+              const sortIcon = header.querySelector('.sort-icon');
+              if (sortIcon) {
+                if (index === currentSortColumn) {
+                  sortIcon.classList.add('active');
+                  sortIcon.textContent = currentSortDirection === 'asc' ? '▲' : '▼';
+                } else {
+                  sortIcon.classList.remove('active');
+                  sortIcon.textContent = '▲';
+                }
+              }
+            });
+          }
+
           // columnHeadings parameter is the value of the "vscode-db2i.resultsets.columnHeadings" setting, either 'Name', 'Label' or 'Both'
           function updateHeader(columnHeadings) {
             if (columnMetaData) {
               var headerCells = document.getElementById(htmlTableId).querySelectorAll(':scope > div.header');
               for (let x = 0; x < columnMetaData.length; ++x) {
                 const grip = headerCells[x].querySelector('div.grip');
+                const sortIcon = headerCells[x].querySelector('.sort-icon');
+                
+                // Clear existing content but preserve elements
+                const textSpan = headerCells[x].querySelector('span:not(.sort-icon)') || document.createElement('span');
+                
                 switch(columnHeadings) {
                   case 'Name':
-                    headerCells[x].innerText = columnMetaData[x].name;
+                    textSpan.innerText = columnMetaData[x].name;
                     break;
                   case 'Both':
-                    headerCells[x].innerHTML = escapeHTML(columnMetaData[x].name)+'<br>'+escapeHTML(columnMetaData[x].label);
+                    textSpan.innerHTML = escapeHTML(columnMetaData[x].name)+'<br>'+escapeHTML(columnMetaData[x].label);
                     break;
                   default:
-                    headerCells[x].innerText = columnMetaData[x].label;
+                    textSpan.innerText = columnMetaData[x].label;
+                }
+                
+                // Rebuild the header cell content
+                headerCells[x].innerHTML = '';
+                headerCells[x].appendChild(textSpan);
+                if (sortIcon) {
+                  headerCells[x].appendChild(sortIcon);
                 }
                 headerCells[x].appendChild(grip);
                 headerCells[x].title = getTooltip(columnMetaData[x], columnHeadings);

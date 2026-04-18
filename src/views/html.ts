@@ -60,6 +60,24 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      cursor: pointer;
+      position: relative;
+      padding-right: 30px;
+    }
+
+    .header .sort-icon {
+      position: absolute;
+      right: 5px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8em;
+      opacity: 1;
+      user-select: none;
+      display: none;
+    }
+
+    .header .sort-icon.active {
+      display: inline;
     }
 
     .hoverable {
