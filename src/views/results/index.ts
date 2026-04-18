@@ -97,6 +97,8 @@ export function initialise(context: vscode.ExtensionContext) {
 
     vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveMoreRows`, () => resultSetProvider.retrieveMoreRows()),
 
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveAllRows`, () => resultSetProvider.retrieveMoreRows(true)),
+
     vscode.commands.registerCommand(`vscode-db2i.resultset.refresh`, async () => await resultSetProvider.refresh()),
 
     vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, () => resultSetProvider.clear()),

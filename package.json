@@ -688,7 +688,12 @@
         "command": "vscode-db2i.resultset.retrieveMoreRows",
         "title": "Retrieve More Rows",
         "category": "Db2 for i",
-        "icon": "$(git-stash)",
+        "enablement": "vscode-db2i:canRetrieveMoreRows"
+      },
+      {
+        "command": "vscode-db2i.resultset.retrieveAllRows",
+        "title": "Retrieve All Rows",
+        "category": "Db2 for i",
         "enablement": "vscode-db2i:canRetrieveMoreRows"
       },
       {
@@ -1208,7 +1213,7 @@
           "when": "view == schemaBrowser"
         },
         {
-          "command": "vscode-db2i.resultset.retrieveMoreRows",
+          "submenu": "vscode-db2i.resultset.retrieve",
           "group": "navigation@01",
           "when": "view == vscode-db2i.resultset"
         },
@@ -1593,6 +1598,16 @@
           "group": "navigation_notebook@1"
         }
       ],
+      "vscode-db2i.resultset.retrieve": [
+        {
+          "command": "vscode-db2i.resultset.retrieveMoreRows",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.resultset.retrieveAllRows",
+          "group": "navigation@1"
+        }
+      ],
       "vscode-db2i.jobManager.defaultSettings": [
         {
           "command": "vscode-db2i.jobManager.editDefaultJobProps",
@@ -1626,6 +1641,11 @@
         "icon": "$(notebook-execute)",
         "id": "sql/editor/context",
         "label": "Run SQL statement"
+      },
+      {
+        "id": "vscode-db2i.resultset.retrieve",
+        "label": "Retrieve...",
+        "icon": "$(git-stash)"
       },
       {
         "id": "vscode-db2i.jobManager.defaultSettings",

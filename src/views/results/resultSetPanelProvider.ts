@@ -46,12 +46,13 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
   }
 
-  retrieveMoreRows() {
+  retrieveMoreRows(allRows?: boolean) {
     if (this._view) {
       const queryId = this.currentQuery?.getId();
       this._view.webview.postMessage({
         command: `fetch`,
-        queryId: queryId
+        queryId: queryId,
+        allRows: allRows === true
       });
     }
   }
@@ -147,7 +148,10 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 let executionTime: number | undefined;
 
                 if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
-                  queryResults = await this.currentQuery.fetchMore();
+                  // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
+                  // int. This is the largest number available without overflow (Integer.MAX_VALUE)
+                  const rowsToFetch = message.allRows === true ? 2147483647 : undefined;
+                  queryResults = await this.currentQuery.fetchMore(rowsToFetch);
                 }
                 else {
                   startTime = performance.now();
