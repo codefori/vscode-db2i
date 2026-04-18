@@ -29,6 +29,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel;
   loadingState: boolean;
   currentQuery: Query<any>;
+  lastScrollerOptions: ScrollerOptions | undefined;
   constructor() {
     this._view = undefined;
     this.loadingState = false;
@@ -52,6 +53,18 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         command: `fetch`,
         queryId: queryId
       });
+    }
+  }
+
+  async refresh() {
+    if (this.lastScrollerOptions) {
+      // Close the current query if it exists
+      if (this.currentQuery) {
+        await this.currentQuery.close();
+        this.currentQuery = undefined;
+      }
+      // Re-run the query with the same options
+      await this.setScrolling(this.lastScrollerOptions);
     }
   }
 
@@ -111,6 +124,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           if (message.query) {
             let canClear = false;
             let canRetrieveMoreRows = false;
+            let canRefresh = false;
             if (this.currentQuery) {
               // If we get a request for a new query, then we need to close the old one
               if (this.currentQuery.getId() === undefined || this.currentQuery.getId() !== message.queryId) {
@@ -161,6 +175,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
                 canClear = true;
                 canRetrieveMoreRows = !queryResults.is_done;
+                canRefresh = true;
               }
 
             } catch (e) {
@@ -177,6 +192,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             updateStatusBar();
             commands.executeCommand(`setContext`, `vscode-db2i:canClear`, canClear);
             commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, canRetrieveMoreRows);
+            commands.executeCommand(`setContext`, `vscode-db2i:canRefresh`, canRefresh);
           }
           break;
       }
@@ -231,6 +247,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   async setScrolling(options: ScrollerOptions) {
+    this.lastScrollerOptions = { ...options };
+    
     this.loadingState = false;
     await this.focus();
 
@@ -331,8 +349,13 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
   clear(){
     this._view.webview.html = ``;
+    this.resetContext();
+  }
+
+  resetContext() {
     commands.executeCommand(`setContext`, `vscode-db2i:canClear`, false);
     commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, false);
+    commands.executeCommand(`setContext`, `vscode-db2i:canRefresh`, false);
   }
 }
 
