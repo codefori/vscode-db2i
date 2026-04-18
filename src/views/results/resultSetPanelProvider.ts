@@ -147,15 +147,16 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 let endTime = 0;
                 let executionTime: number | undefined;
 
+                let rowsToFetch = Configuration.get<number>('resultsets.rowsToFetch') || 100;
                 if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
                   // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
                   // int. This is the largest number available without overflow (Integer.MAX_VALUE)
-                  const rowsToFetch = message.allRows === true ? 2147483647 : undefined;
+                  rowsToFetch = message.allRows === true ? 2147483647 : rowsToFetch;
                   queryResults = await this.currentQuery.fetchMore(rowsToFetch);
                 }
                 else {
                   startTime = performance.now();
-                  queryResults = await this.currentQuery.execute();
+                  queryResults = await this.currentQuery.execute(rowsToFetch);
                   endTime = performance.now();
                   executionTime = (endTime - startTime);
 

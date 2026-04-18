@@ -231,9 +231,15 @@
         "id": "vscode-db2i.resultsets",
         "title": "Viewing Data",
         "properties": {
+          "vscode-db2i.resultsets.rowsToFetch": {
+            "type": "integer",
+            "order": 0,
+            "description": "Number of rows to retrieve at a time",
+            "default": 100
+          },
           "vscode-db2i.resultsets.columnHeadings": {
             "type": "string",
-            "order": 0,
+            "order": 1,
             "description": "Descriptor to use for column headings when viewing data",
             "default": "Name",
             "enum": [
@@ -248,11 +254,13 @@
           },
           "vscode-db2i.collapsedResultSet": {
             "type": "boolean",
+            "order": 2,
             "description": "Make larger cells collapsed by default",
             "default": false
           },
           "vscode-db2i.resultsets.outputDecorations": {
             "type": "boolean",
+            "order": 3,
             "description": "Show INOUT and OUT parameters inside the editor",
             "default": true
           }
