@@ -484,7 +484,11 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
                   cell.innerText = column.name;
                   break;
                 case 'Both':
-                  cell.innerHTML = escapeHTML(column.name)+'<br>'+escapeHTML(column.label);
+                  if (column.name === column.label) {
+                    cell.innerText = column.name;
+                  } else {
+                    cell.innerHTML = escapeHTML(column.name)+'<br>'+escapeHTML(column.label);
+                  }
                   break;
                 default:
                   cell.innerText = column.label;
@@ -602,7 +606,11 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
                     headerCells[x].innerText = columnMetaData[x].name;
                     break;
                   case 'Both':
-                    headerCells[x].innerHTML = escapeHTML(columnMetaData[x].name)+'<br>'+escapeHTML(columnMetaData[x].label);
+                    if (columnMetaData[x].name === columnMetaData[x].label) {
+                      headerCells[x].innerText = columnMetaData[x].name;
+                    } else {
+                      headerCells[x].innerHTML = escapeHTML(columnMetaData[x].name)+'<br>'+escapeHTML(columnMetaData[x].label);
+                    }
                     break;
                   default:
                     headerCells[x].innerText = columnMetaData[x].label;
