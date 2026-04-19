@@ -95,6 +95,12 @@ export function initialise(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.resultsets');
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveMoreRows`, () => resultSetProvider.retrieveMoreRows()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveAllRows`, () => resultSetProvider.retrieveMoreRows(true)),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.refresh`, async () => await resultSetProvider.refresh()),
+
     vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, () => resultSetProvider.clear()),
 
     vscode.workspace.onDidChangeConfiguration(e => {
@@ -257,6 +263,8 @@ async function runHandler(options?: StatementInfo) {
   if (options === undefined || options.viewColumn === undefined) {
     await resultSetProvider.ensureActivation();
   }
+
+  resultSetProvider.resetContext();
 
   // Options here can be a vscode.Uri when called from editor context.
   // But that isn't valid here.

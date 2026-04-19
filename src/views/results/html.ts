@@ -359,6 +359,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
           let totalRows = 0;
           let noMoreRows = false;
           let isFetching = false;
+          let allRows = false;
 
           function isNumeric(str) {
             if (typeof str != "string") return false // we only process strings!  
@@ -427,6 +428,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
 
                 case 'fetch':
                   // Set loading here....
+                  allRows = data.allRows === true;
                   fetchNextPage();
                   break;
 
@@ -455,7 +457,8 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
               query: basicSelect,
               parameters: ${JSON.stringify(parameters)},
               isCL: ${isCL},
-              queryId: myQueryId
+              queryId: myQueryId,
+              allRows: allRows
             });
           }
 
