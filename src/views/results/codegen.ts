@@ -162,6 +162,10 @@ export function columnToSqlDefinition(column: ColumnMetaData): string {
     case 'BOOLEAN':
       return `BOOLEAN`;
     default:
-      return `-- type:${column.type} precision:${column.precision} scale:${column.scale} */`;
+      if(column.type.includes(`/`)) {
+        return column.type;
+      } else {
+        return `-- type:${column.type} precision:${column.precision} scale:${column.scale} */`;
+      }
   }
 }
