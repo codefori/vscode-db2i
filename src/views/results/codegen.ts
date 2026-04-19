@@ -79,10 +79,11 @@ export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string
     tokenIs(tokens[1], `colon`, `:`) &&
     tokenIs(tokens[2], `statementType`, `SELECT`) &&
     tokenIs(tokens[3], `asterisk`, `*`)) {
-    const prefixEnd = (tokens[3].range.start - tokens[0].range.start) - (tokens[1].range.start - tokens[0].range.start) - 2;
-    const suffixStart = (tokens[3].range.start - tokens[0].range.start) - (tokens[1].range.start - tokens[0].range.start);
+    const adjustment = tokens[2].range.start;
+    const prefixEnd = tokens[3].range.start - adjustment;
+    const suffixStart = tokens[3].range.end - adjustment;
     const columns = result.metadata.columns.map(column => column.name).join(`,\n                  `)
-    sqlStatement = `${sqlStatement.substring(0, prefixEnd)}${columns}\n            ${sqlStatement.substring(suffixStart)}`;
+    sqlStatement = `${sqlStatement.substring(0, prefixEnd).trimEnd()} ${columns}\n            ${sqlStatement.substring(suffixStart).trimStart()}`;
   }
 
   return `CREATE OR REPLACE FUNCTION MyFunction()\n`
@@ -161,6 +162,10 @@ export function columnToSqlDefinition(column: ColumnMetaData): string {
     case 'BOOLEAN':
       return `BOOLEAN`;
     default:
-      return `-- type:${column.type} precision:${column.precision} scale:${column.scale} */`;
+      if(column.type.includes(`/`)) {
+        return column.type;
+      } else {
+        return `-- type:${column.type} precision:${column.precision} scale:${column.scale} */`;
+      }
   }
 }
