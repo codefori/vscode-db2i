@@ -11,6 +11,7 @@ import { getSqlDocument } from "../../language/providers/logic/parse";
 import Document from "../../language/sql/document";
 import Statement from "../../language/sql/statement";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
+import { VisualExplainData } from "../../types";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { getLiteralsFromStatement, getPriorBindableStatement } from "./binding";
 import { queryResultToRpgDs, queryResultToUdtf } from "./codegen";
@@ -410,7 +411,7 @@ async function runHandler(options?: StatementInfo) {
             const explainType: ExplainType = onlyExplain ? ExplainType.DO_NOT_RUN : ExplainType.RUN;
 
             setCancelButtonVisibility(true);
-            const explained = await selectedJob.job.explain(statementDetail.content, explainType); // Can throw
+            const explained = await selectedJob.job.explain<VisualExplainData[]>(statementDetail.content, explainType); // Can throw
             setCancelButtonVisibility(false);
 
             if (onlyExplain) {
