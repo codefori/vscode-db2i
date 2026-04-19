@@ -166,8 +166,16 @@ export class ConfigManager {
     return Configuration.set(`jobConfigs`, configs);
   };
 
+  private static getSavedDefaultJobConfig() {
+    const configs = Configuration.get<JobConfigs>(`jobManager.defaultJobConfig`); // Returns a proxy
+    if (configs) {
+      return Object.assign({}, configs);
+    }
+  }
+
   static getDefaultConfig(): JDBCOptions {
-    const defaultJobConfig = Configuration.get<JDBCOptions>(`jobManager.defaultJobConfig`) || {
+    const savedDefaultJobConfig = ConfigManager.getSavedDefaultJobConfig();
+    const defaultJobConfig: JDBCOptions = savedDefaultJobConfig || {
       "naming": "system",
       "full open": false,
       "transaction isolation": "none",
