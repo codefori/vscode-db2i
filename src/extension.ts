@@ -7,6 +7,9 @@ import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
+import { registerDb2iTablesProvider } from "./aiProviders/continue/listTablesContextProvider";
+import { registerCopilotProvider } from "./aiProviders/copilot";
 import { getInstance, loadBase } from "./base";
 import { JobManager, initConfig, onConnectOrServerInstall } from "./config";
 import Configuration from "./configuration";
@@ -15,18 +18,15 @@ import { ServerComponent } from "./connection/serverComponent";
 import { OldSQLJob } from "./connection/sqlJob";
 import { languageInit } from "./language/providers";
 import { DbCache } from "./language/providers/logic/cache";
+import { setCheckerAvailableContext } from "./language/providers/problemProvider";
 import { notebookInit } from "./notebooks/IBMiSerializer";
 import { initialiseTestSuite } from "./testing";
 import { Db2iUriHandler, getStatementUri } from "./uriHandler";
+import { SQLExamples } from "./views/examples";
 import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
-import { SelfTreeDecorationProvider, SelfCodesResultsView } from "./views/jobManager/selfCodes/selfCodesResultsView";
-import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
+import { SelfCodesResultsView, SelfTreeDecorationProvider } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import { QueryHistory } from "./views/queryHistoryView";
-import { registerCopilotProvider } from "./aiProviders/copilot";
-import { registerDb2iTablesProvider } from "./aiProviders/continue/listTablesContextProvider";
-import { setCheckerAvailableContext } from "./language/providers/problemProvider";
-import { SQLExamples } from "./views/examples";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -94,7 +94,9 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     setCheckerAvailableContext();
     // Refresh the examples when we have it, so we only display certain examples
     onConnectOrServerInstall().then(() => {
+      schemaBrowser.clearCacheAndRefresh();
       exampleBrowser.refresh();
+      queryHistory.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
       // register list tables
       const currentJob = JobManager.getSelection();

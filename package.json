@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.16.0",
+  "version": "1.16.1",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -231,9 +231,17 @@
         "id": "vscode-db2i.resultsets",
         "title": "Viewing Data",
         "properties": {
+          "vscode-db2i.resultsets.rowsToFetch": {
+            "type": "integer",
+            "order": 0,
+            "description": "Number of rows to retrieve at a time",
+            "default": 100,
+            "minimum": 1,
+            "maximum": 2147483647
+          },
           "vscode-db2i.resultsets.columnHeadings": {
             "type": "string",
-            "order": 0,
+            "order": 1,
             "description": "Descriptor to use for column headings when viewing data",
             "default": "Name",
             "enum": [
@@ -248,11 +256,13 @@
           },
           "vscode-db2i.collapsedResultSet": {
             "type": "boolean",
+            "order": 2,
             "description": "Make larger cells collapsed by default",
             "default": false
           },
           "vscode-db2i.resultsets.outputDecorations": {
             "type": "boolean",
+            "order": 3,
             "description": "Show INOUT and OUT parameters inside the editor",
             "default": true
           }
@@ -683,6 +693,32 @@
         "title": "Settings",
         "category": "Db2 for i",
         "icon": "$(gear)"
+      },
+      {
+        "command": "vscode-db2i.resultset.retrieveMoreRows",
+        "title": "Retrieve More Rows",
+        "category": "Db2 for i",
+        "enablement": "vscode-db2i:canRetrieveMoreRows"
+      },
+      {
+        "command": "vscode-db2i.resultset.retrieveAllRows",
+        "title": "Retrieve All Rows",
+        "category": "Db2 for i",
+        "enablement": "vscode-db2i:canRetrieveMoreRows"
+      },
+      {
+        "command": "vscode-db2i.resultset.refresh",
+        "title": "Refresh",
+        "category": "Db2 for i",
+        "icon": "$(refresh)",
+        "enablement": "vscode-db2i:canRefresh"
+      },
+      {
+        "command": "vscode-db2i.resultset.clear",
+        "title": "Clear Results",
+        "category": "Db2 for i",
+        "icon": "$(clear-all)",
+        "enablement": "vscode-db2i:canClear"
       },
       {
         "command": "vscode-db2i.dove.close",
@@ -1187,8 +1223,23 @@
           "when": "view == schemaBrowser"
         },
         {
+          "submenu": "vscode-db2i.resultset.retrieve",
+          "group": "navigation@01",
+          "when": "view == vscode-db2i.resultset"
+        },
+        {
+          "command": "vscode-db2i.resultset.refresh",
+          "group": "navigation@02",
+          "when": "view == vscode-db2i.resultset"
+        },
+        {
+          "command": "vscode-db2i.resultset.clear",
+          "group": "navigation@03",
+          "when": "view == vscode-db2i.resultset"
+        },
+        {
           "command": "vscode-db2i.resultset.settings",
-          "group": "navigation",
+          "group": "navigation@10",
           "when": "view == vscode-db2i.resultset"
         },
         {
@@ -1355,12 +1406,12 @@
         },
         {
           "command": "vscode-db2i.getAuthorities",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
           "group": "db2workWith@4"
         },
         {
           "command": "vscode-db2i.getObjectLocks",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
           "group": "db2workWith@5"
         },
         {
@@ -1380,12 +1431,12 @@
         },
         {
           "command": "vscode-db2i.deleteObject",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
           "group": "db2data@3"
         },
         {
           "command": "vscode-db2i.renameObject",
-          "when": "viewItem == table || viewItem == view || viewItem == index",
+          "when": "viewItem == table || viewItem == view || viewItem == index || viewItem == logical",
           "group": "db2data@4"
         },
         {
@@ -1557,6 +1608,16 @@
           "group": "navigation_notebook@1"
         }
       ],
+      "vscode-db2i.resultset.retrieve": [
+        {
+          "command": "vscode-db2i.resultset.retrieveMoreRows",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.resultset.retrieveAllRows",
+          "group": "navigation@1"
+        }
+      ],
       "vscode-db2i.jobManager.defaultSettings": [
         {
           "command": "vscode-db2i.jobManager.editDefaultJobProps",
@@ -1590,6 +1651,11 @@
         "icon": "$(notebook-execute)",
         "id": "sql/editor/context",
         "label": "Run SQL statement"
+      },
+      {
+        "id": "vscode-db2i.resultset.retrieve",
+        "label": "Retrieve...",
+        "icon": "$(git-stash)"
       },
       {
         "id": "vscode-db2i.jobManager.defaultSettings",

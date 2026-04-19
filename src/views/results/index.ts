@@ -96,6 +96,14 @@ export function initialise(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.resultsets');
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveMoreRows`, () => resultSetProvider.retrieveMoreRows()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveAllRows`, () => resultSetProvider.retrieveMoreRows(true)),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.refresh`, async () => await resultSetProvider.refresh()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, () => resultSetProvider.clear()),
+
     vscode.workspace.onDidChangeConfiguration(e => {
       // If the result set column headings setting has changed, update the header of the current result set
       if (e.affectsConfiguration('vscode-db2i.resultsets.columnHeadings')) {
@@ -256,6 +264,8 @@ async function runHandler(options?: StatementInfo) {
   if (options === undefined || options.viewColumn === undefined) {
     await resultSetProvider.ensureActivation();
   }
+
+  resultSetProvider.resetContext();
 
   // Options here can be a vscode.Uri when called from editor context.
   // But that isn't valid here.
@@ -422,9 +432,9 @@ async function runHandler(options?: StatementInfo) {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
 
-        } else if (statementDetail.qualifier === `rpg`) {
-          if (statementDetail.statement.type !== StatementType.Select) {
-            vscode.window.showErrorMessage('RPG qualifier only supported for select statements');
+        } else if (['rpg', 'udtf'].includes(statementDetail.qualifier)) {
+          if (![StatementType.Select, StatementType.With].includes(statementDetail.statement.type)) {
+            vscode.window.showErrorMessage(`${statementDetail.qualifier.toLocaleUpperCase()} qualifier only supported for select statements`);
           } else {
             chosenView.setLoadingText(`Executing SQL statement...`, false);
             setCancelButtonVisibility(true);
@@ -432,36 +442,32 @@ async function runHandler(options?: StatementInfo) {
             const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
             setCancelButtonVisibility(false);
             updateStatusBar({ executing: false });
-            let content = `**free\n\n`
-              + `// statement:\n`
-              + `// ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n// ')}\n\n`
-              + `// Row data structure\n`
-              + queryResultToRpgDs(result, Configuration.get(`codegen.rpgSymbolicNameSource`));
-            const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
+
+            let language: string;
+            let content: string;
+            let label: string;
+            if (statementDetail.qualifier === 'rpg') {
+              label = 'RPG data structure';
+              language = 'rpgle';
+              content = `**free\n\n`
+                + `// statement:\n`
+                + `// ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n// ')}\n\n`
+                + `// Row data structure\n`
+                + queryResultToRpgDs(result, Configuration.get(`codegen.rpgSymbolicNameSource`));
+            }
+            else {
+              label = 'User-defined table function';
+              language = 'sql';
+              content = `-- statement:\n`
+                + `-- ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n-- ')}\n\n`
+                + `-- User-defined table function\n`
+                + queryResultToUdtf(result, statementDetail.content, statementDetail.statement.tokens);
+            }
+
+            const textDoc = await vscode.workspace.openTextDocument({ language, content });
             await vscode.window.showTextDocument(textDoc);
-            chosenView.setLoadingText(`RPG data structure generated.`, false);
+            chosenView.setLoadingText(`${label} generated.`, false);
           }
-
-        } else if (statementDetail.qualifier === `udtf`) {
-          if (statementDetail.statement.type !== StatementType.Select) {
-            vscode.window.showErrorMessage('UDTF qualifier only supported for select statements');
-          } else {
-            chosenView.setLoadingText(`Executing SQL statement...`, false);
-            setCancelButtonVisibility(true);
-            updateStatusBar({ executing: true });
-            const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
-            setCancelButtonVisibility(false);
-            updateStatusBar({ executing: false });
-            let content = `-- statement:\n`
-              + `-- ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n-- ')}\n\n`
-              + `-- User-defined table function\n`
-              + queryResultToUdtf(result, statementDetail.content, statementDetail.statement.tokens);
-
-            const textDoc = await vscode.workspace.openTextDocument({ language: 'sql', content });
-            await vscode.window.showTextDocument(textDoc);
-            chosenView.setLoadingText(`User-defined table function generated.`, false);
-          }
-
         } else {
           // Otherwise... it's a bit complicated.
           chosenView.setLoadingText(`Executing SQL statement...`, false);

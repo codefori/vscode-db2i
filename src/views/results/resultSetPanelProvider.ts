@@ -1,17 +1,17 @@
-import { window, CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
+import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, window } from "vscode";
 
+import { QueryResult } from "@ibm/mapepire-js";
+import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
-import { updateStatusBar } from "../jobManager/statusBar";
 import Configuration from "../../configuration";
-import * as html from "./html";
-import { Query } from "@ibm/mapepire-js/dist/src/query";
-import { ObjectRef } from "../../language/sql/types";
-import Table from "../../database/table";
 import Statement from "../../database/statement";
+import Table from "../../database/table";
+import { ObjectRef } from "../../language/sql/types";
 import { TableColumn } from "../../types";
+import { updateStatusBar } from "../jobManager/statusBar";
 import { statementDone } from "./editorUi";
-import { QueryResult } from "@ibm/mapepire-js";
+import * as html from "./html";
 
 export type SqlParameter = string | number;
 
@@ -29,6 +29,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel;
   loadingState: boolean;
   currentQuery: Query<any>;
+  lastScrollerOptions: ScrollerOptions | undefined;
   constructor() {
     this._view = undefined;
     this.loadingState = false;
@@ -42,6 +43,29 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         commands.executeCommand(`vscode-db2i.statement.cancel`, hostJob.id);
       }
       this.currentQuery.close();
+    }
+  }
+
+  retrieveMoreRows(allRows?: boolean) {
+    if (this._view) {
+      const queryId = this.currentQuery?.getId();
+      this._view.webview.postMessage({
+        command: `fetch`,
+        queryId: queryId,
+        allRows: allRows === true
+      });
+    }
+  }
+
+  async refresh() {
+    if (this.lastScrollerOptions) {
+      // Close the current query if it exists
+      if (this.currentQuery) {
+        await this.currentQuery.close();
+        this.currentQuery = undefined;
+      }
+      // Re-run the query with the same options
+      await this.setScrolling(this.lastScrollerOptions);
     }
   }
 
@@ -99,6 +123,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
         default:
           if (message.query) {
+            let canClear = false;
+            let canRetrieveMoreRows = false;
+            let canRefresh = false;
             if (this.currentQuery) {
               // If we get a request for a new query, then we need to close the old one
               if (this.currentQuery.getId() === undefined || this.currentQuery.getId() !== message.queryId) {
@@ -120,12 +147,16 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 let endTime = 0;
                 let executionTime: number | undefined;
 
+                let rowsToFetch = Configuration.get<number>('resultsets.rowsToFetch') || 100;
                 if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
-                  queryResults = await this.currentQuery.fetchMore();
+                  // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
+                  // int. This is the largest number available without overflow (Integer.MAX_VALUE)
+                  rowsToFetch = message.allRows === true ? 2147483647 : rowsToFetch;
+                  queryResults = await this.currentQuery.fetchMore(rowsToFetch);
                 }
                 else {
                   startTime = performance.now();
-                  queryResults = await this.currentQuery.execute();
+                  queryResults = await this.currentQuery.execute(rowsToFetch);
                   endTime = performance.now();
                   executionTime = (endTime - startTime);
 
@@ -146,6 +177,10 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   isDone: queryResults.is_done,
                   executionTime
                 });
+
+                canClear = true;
+                canRetrieveMoreRows = !queryResults.is_done;
+                canRefresh = true;
               }
 
             } catch (e) {
@@ -160,6 +195,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
             setCancelButtonVisibility(false);
             updateStatusBar();
+            commands.executeCommand(`setContext`, `vscode-db2i:canClear`, canClear);
+            commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, canRetrieveMoreRows);
+            commands.executeCommand(`setContext`, `vscode-db2i:canRefresh`, canRefresh);
           }
           break;
       }
@@ -214,6 +252,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   async setScrolling(options: ScrollerOptions) {
+    this.lastScrollerOptions = { ...options };
+    
     this.loadingState = false;
     await this.focus();
 
@@ -310,6 +350,17 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     this.loadingState = false;
     // TODO: pretty error
     this._view.webview.html = `<p>${error}</p>`;
+  }
+
+  clear(){
+    this._view.webview.html = ``;
+    this.resetContext();
+  }
+
+  resetContext() {
+    commands.executeCommand(`setContext`, `vscode-db2i:canClear`, false);
+    commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, false);
+    commands.executeCommand(`setContext`, `vscode-db2i:canRefresh`, false);
   }
 }
 
