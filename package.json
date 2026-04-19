@@ -235,7 +235,9 @@
             "type": "integer",
             "order": 0,
             "description": "Number of rows to retrieve at a time",
-            "default": 100
+            "default": 100,
+            "minimum": 1,
+            "maximum": 2147483647
           },
           "vscode-db2i.resultsets.columnHeadings": {
             "type": "string",
