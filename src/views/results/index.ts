@@ -23,7 +23,7 @@ import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider
 import { ExplainTree } from "./explain/nodes";
 import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 
-export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg" | "udtf";
+export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "md" | "cl" | "sql" | "rpg" | "udtf";
 
 export interface StatementInfo {
   content: string,
@@ -172,7 +172,7 @@ export function initialise(context: vscode.ExtensionContext) {
   )
 }
 
-const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] = [`cl`, `json`, `csv`, `sql`, `statement`, `bind`];
+const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] = [`cl`, `json`, `csv`, `md`, `sql`, `statement`, `bind`];
 
 function isStop(statement: Statement) {
   return (statement.type === StatementType.Unknown && statement.tokens.length === 1 && statement.tokens[0].value.toUpperCase() === `STOP`);
@@ -482,6 +482,7 @@ async function runHandler(options?: StatementInfo) {
 
               case `csv`:
               case `json`:
+              case `md`:
               case `sql`:
                 let content = ``;
                 switch (statementDetail.qualifier) {
@@ -493,6 +494,36 @@ async function runHandler(options?: StatementInfo) {
                     });
                     break;
                   case `json`: content = JSON.stringify(data, null, 2); break;
+
+                  case `md`:
+                    const mdKeys = Object.keys(data[0]);
+
+                    // Calculate column widths
+                    const columnWidths = mdKeys.map(key => {
+                      const headerWidth = key.length;
+                      const dataWidth = Math.max(...data.map(row => {
+                        if (row[key] === null) return 4; // 'NULL'.length
+                        return String(row[key]).replace(/\|/g, `\\|`).replace(/\n/g, ` `).length;
+                      }));
+                      return Math.max(headerWidth, dataWidth);
+                    });
+
+                    // Generate aligned header
+                    const header = `| ${mdKeys.map((key, i) => key.padEnd(columnWidths[i])).join(` | `)} |`;
+                    const separator = `| ${columnWidths.map(width => `-`.repeat(width)).join(` | `)} |`;
+
+                    // Generate aligned rows
+                    const rows = data.map(row =>
+                      `| ${mdKeys.map((key, i) => {
+                        const value = row[key] === null ?
+                          `NULL` :
+                          String(row[key]).replace(/\|/g, `\\|`).replace(/\n/g, ` `);
+                        return value.padEnd(columnWidths[i]);
+                      }).join(` | `)} |`
+                    ).join(`\n`);
+
+                    content = `${header}\n${separator}\n${rows}`;
+                    break;
 
                   case `sql`:
                     const keys = Object.keys(data[0]);
@@ -524,7 +555,13 @@ async function runHandler(options?: StatementInfo) {
                     break;
                 }
 
-                const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
+                const languageMap: { [key: string]: string } = {
+                  'md': 'markdown',
+                  'csv': 'csv',
+                  'json': 'json',
+                  'sql': 'sql'
+                };
+                const textDoc = await vscode.workspace.openTextDocument({ language: languageMap[statementDetail.qualifier] || statementDetail.qualifier, content });
                 await vscode.window.showTextDocument(textDoc);
                 chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
                 break;
@@ -619,7 +656,7 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   }
 
   if (statementInfo.content) {
-    [`cl`, `json`, `csv`, `sql`, `explain`, `update`, `rpg`, `udtf`, `bind`].forEach(mode => {
+    [`cl`, `json`, `csv`, `md`, `sql`, `explain`, `update`, `rpg`, `udtf`, `bind`].forEach(mode => {
       if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
         statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 
