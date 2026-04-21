@@ -22,6 +22,7 @@ import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ExplainTree } from "./explain/nodes";
 import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
+import { VisualExplainPanel } from "./visualExplain/panel";
 
 export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "md" | "cl" | "sql" | "rpg" | "udtf";
 
@@ -428,6 +429,9 @@ async function runHandler(options?: StatementInfo) {
             const rootNode = doveResultsView.setRootNode(topLevel);
             doveNodeView.setNode(rootNode.explainNode);
             doveTreeDecorationProvider.updateTreeItems(rootNode);
+
+            const initialState = {}
+            VisualExplainPanel.render(initialState);
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }

@@ -7,9 +7,10 @@
 		"lib": [
 			"ES2019"
 		],
-		"outDir": "./dist",
+		"outDir": "./dist"
 	},
 	"exclude": [
-		"node_modules"
+		"node_modules",
+		"webview-ui"
 	]
 }

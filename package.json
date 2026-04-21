@@ -36,8 +36,12 @@
     "dsc": "npx tsx src/dsc",
     "package": "vsce package",
     "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
-    "webpack": "vscd --clean && webpack --mode development",
-    "webpack-dev": "vscd --clean && webpack --mode development",
+    "webpack": "vscd --clean && npm run build:web && webpack --mode development",
+    "webpack-dev": "vscd --clean && npm run build:web && webpack --mode development",
+    "install:web": "cd web && npm install",
+    "dev:web": "cd web && npm run dev",
+    "build:web": "cd web && npm run build",
+    "preinstall": "npm run install:web & cd ..",
     "typings": "npx -p typescript tsc ./src/extension.ts --excludeDirectories '**/node_modules' --allowJs --noEmit --esModuleInterop -t es2019 --moduleResolution node --skipLibCheck"
   },
   "contributes": {

@@ -27,6 +27,7 @@ import { ExampleBrowser } from "./views/examples/exampleBrowser";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
 import { SelfCodesResultsView, SelfTreeDecorationProvider } from "./views/jobManager/selfCodes/selfCodesResultsView";
 import { QueryHistory } from "./views/queryHistoryView";
+import { VisualExplainPanel } from "./views/results/visualExplain/panel";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
@@ -74,6 +75,7 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   JSONServices.initialise(context);
   resultsProvider.initialise(context);
+  VisualExplainPanel.initialize(context);
 
   initConfig(context);
 
