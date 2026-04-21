@@ -1,4 +1,5 @@
 export interface InitialState {
+  // Color mode
 }
 
 export interface WebviewRequestMessageBase {
