@@ -431,8 +431,8 @@ async function runHandler(options?: StatementInfo) {
             doveTreeDecorationProvider.updateTreeItems(topLevelTreeItem);
 
             const initialState = { topLevelNode };
-            VisualExplainPanel.render(initialState);
-            vscode.commands.executeCommand(`ibmi-panel.focus`);
+            VisualExplainPanel.render(initialState, doveNodeView);
+            vscode.commands.executeCommand(`vscode-db2i.dove.nodes.focus`);
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }

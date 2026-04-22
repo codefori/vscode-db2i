@@ -1,79 +1,120 @@
-import { useCallback,  useLayoutEffect } from 'react';
-import { ReactFlow, Background, Controls, MiniMap, useNodesState, useEdgesState, useReactFlow, ReactFlowProvider } from '@xyflow/react';
+import { useCallback, useLayoutEffect } from 'react';
+import { ReactFlow, Background, Controls, useNodesState, useEdgesState, useReactFlow, ReactFlowProvider, type Node, type Edge, MiniMap } from '@xyflow/react';
 import { VISUAL_EXPLAIN_NODE, VisualExplainNode } from './components/visual-explain-node';
-import { type InitialState } from './utils/explainTreeConverter';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import '@xyflow/react/dist/style.css';
 
-const position = { x: 0, y: 0 };
+// Types for ExplainNode
+export interface ExplainNode {
+  id: number;
+  title: string;
+  objectSchema: string;
+  objectName: string;
+  childrenIds: number[];
+  children: ExplainNode[];
+  props: ExplainProperty[];
+  tooltipProps: ExplainProperty[];
+  highlights: NodeHighlights;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  contextObjects: any[];
+  nodeContext: string;
+}
 
-const initialNodes = [
-  {
-    id: '1',
-    type: 'input',
-    data: { label: 'input' },
-    position,
-  },
-  {
-    id: '2',
-    data: { label: 'node 2' },
-    position,
-  },
-  {
-    id: '2a',
-    data: { label: 'node 2a' },
-    position,
-  },
-  {
-    id: '2b',
-    data: { label: 'node 2b' },
-    position,
-  },
-  {
-    id: '2c',
-    data: { label: 'node 2c' },
-    position,
-  },
-  {
-    id: '2d',
-    data: { label: 'node 2d' },
-    position,
-  },
-  {
-    id: '3',
-    data: { label: 'node 3' },
-    position,
-  },
-  {
-    id: '4',
-    data: { label: 'node 4' },
-    position,
-  },
-  {
-    id: '5',
-    data: { label: 'node 5' },
-    position,
-  },
-  {
-    id: '6',
-    type: 'output',
-    data: { label: 'output' },
-    position,
-  },
-  { id: '7', type: 'output', data: { label: 'output' }, position },
-];
- 
-const initialEdges = [
-  { id: 'e12', source: '1', target: '2', type: 'smoothstep' },
-  { id: 'e13', source: '1', target: '3', type: 'smoothstep' },
-  { id: 'e22a', source: '2', target: '2a', type: 'smoothstep' },
-  { id: 'e22b', source: '2', target: '2b', type: 'smoothstep' },
-  { id: 'e22c', source: '2', target: '2c', type: 'smoothstep' },
-  { id: 'e2c2d', source: '2c', target: '2d', type: 'smoothstep' },
-  { id: 'e45', source: '4', target: '5', type: 'smoothstep' },
-  { id: 'e56', source: '5', target: '6', type: 'smoothstep' },
-  { id: 'e57', source: '5', target: '7', type: 'smoothstep' },
-];
+export interface ExplainProperty {
+  type: number;
+  title: string;
+  value: string | number;
+}
+
+export interface NodeHighlights {
+  formatValue: number;
+}
+
+export interface InitialState {
+  topLevelNode?: ExplainNode | null;
+}
+
+// Highlight color mappings (from package.json theme colors)
+const HIGHLIGHT_COLORS: { [key: number]: string } = {
+  1: '#dbdb01', // ESTIMATED_ROW_EXPENSIVE (dark theme)
+  2: '#f2bdbd', // ESTIMATED_TIME_EXPENSIVE
+  3: '#8c8cbd', // INDEX_ADVISED
+  5: '#00ff00', // LOOKAHEAD_PREDICATE_GENERATION
+  6: '#ff8400', // MATERIALIZED_QUERY_TABLE
+  7: '#cc9933', // ACTUAL_ROWS_EXPENSIVE
+  8: '#bc0f0f', // ACTUAL_TIME_EXPENSIVE
+};
+
+// Priority order for highlights (higher priority = more important)
+const HIGHLIGHT_PRIORITY = [3, 7, 8, 1, 2, 5, 6]; // INDEX_ADVISED first, then ACTUAL_ROWS, etc.
+
+function getHighlightColor(highlights: NodeHighlights): string | undefined {
+  if (!highlights || !highlights.formatValue || highlights.formatValue === 0) {
+    return undefined;
+  }
+
+  // Check each highlight in priority order
+  for (const priority of HIGHLIGHT_PRIORITY) {
+    const mask = 1 << (priority - 1);
+    if (highlights.formatValue & mask) {
+      return HIGHLIGHT_COLORS[priority];
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Converts an ExplainNode tree to React Flow nodes and edges
+ */
+function convertExplainTreeToFlow(topLevelNode: ExplainNode): { nodes: Node[], edges: Edge[] } {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+  const position = { x: 0, y: 0 };
+
+  // Traverse the tree to create nodes and edges
+  function traverse(node: ExplainNode) {
+    const highlightColor = getHighlightColor(node.highlights);
+
+    nodes.push({
+      id: String(node.id),
+      position,
+      data: {
+        label: node.title,
+        tooltipProps: node.tooltipProps || [],
+        nodeId: node.id,
+        highlightColor,
+        objectSchema: node.objectSchema,
+        objectName: node.objectName
+      },
+      type: VISUAL_EXPLAIN_NODE
+    });
+
+    // Create edges to children
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(child => {
+        edges.push({
+          id: `${child.id}-${node.id}`,
+          source: String(child.id),
+          target: String(node.id),
+          type: 'smoothstep',
+          markerEnd: {
+            type: 'arrowclosed'
+          },
+          style: {
+            strokeWidth: 2
+          }
+        });
+
+        traverse(child);
+      });
+    }
+  }
+
+  traverse(topLevelNode);
+
+  return { nodes, edges };
+}
 
 const nodeTypes = {
     [VISUAL_EXPLAIN_NODE]: VisualExplainNode,
@@ -89,6 +130,16 @@ const initialState: InitialState = window.initialState ?? {
     topLevelNode: null
 };
 
+// Convert the explain tree to React Flow format
+let initialNodes: Node[] = [];
+let initialEdges: Edge[] = [];
+
+if (initialState.topLevelNode) {
+    const converted = convertExplainTreeToFlow(initialState.topLevelNode);
+    initialNodes = converted.nodes;
+    initialEdges = converted.edges;
+}
+
 const elk = new ELK();
 
 // Elk has a *huge* amount of options to configure. To see everything you can
@@ -102,7 +153,7 @@ const elkOptions = {
     'elk.spacing.nodeNode': '80',
 };
 
-const getLayoutedElements = (nodes, edges, options = {}) => {
+const getLayoutedElements = (nodes: Node[], edges: Edge[], options = {}) => {
     const isHorizontal = options?.['elk.direction'] === 'RIGHT';
     const graph = {
         id: 'root',
@@ -122,21 +173,22 @@ const getLayoutedElements = (nodes, edges, options = {}) => {
     };
 
     return elk
-        .layout(graph)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .layout(graph as any)
         .then((layoutedGraph) => ({
             nodes: layoutedGraph.children?.map((node) => ({
                 ...node,
                 // React Flow expects a position property on the node instead of `x` and `y` fields.
                 position: { x: node.x, y: node.y },
-            })),
+            })) as Node[],
 
-            edges: layoutedGraph.edges,
+            edges: layoutedGraph.edges as unknown as Edge[],
         }));
 };
 
 function LayoutFlow() {
-    const [nodes, setNodes, onNodesChange] = useNodesState([]);
-    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const { fitView } = useReactFlow();
 
     const onLayout = useCallback(
@@ -147,8 +199,8 @@ function LayoutFlow() {
 
             getLayoutedElements(ns, es, opts).then(
                 ({ nodes: layoutedNodes, edges: layoutedEdges }) => {
-                    setNodes(layoutedNodes);
-                    setEdges(layoutedEdges);
+                    setNodes(layoutedNodes || []);
+                    setEdges(layoutedEdges || []);
                     fitView();
                 },
             );
@@ -158,14 +210,15 @@ function LayoutFlow() {
 
     // Calculate the initial layout on mount.
     useLayoutEffect(() => {
-        onLayout({ direction: 'DOWN', useInitialNodes: true });
+        onLayout({ direction: 'RIGHT', useInitialNodes: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
 
     return (
         <div style={{ width: '100vw', height: '100vh' }}>
             <ReactFlow
-                colorMode="dark"
+                colorMode="light"
                 nodes={nodes}
                 nodeTypes={nodeTypes}
                 edges={edges}
@@ -175,7 +228,7 @@ function LayoutFlow() {
             >
                 <Background />
                 <Controls />
-                <MiniMap zoomable pannable />
+                <MiniMap/>
             </ReactFlow>
         </div>
     );

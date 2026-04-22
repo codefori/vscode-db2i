@@ -1,24 +1,35 @@
 import { Disposable, Webview, WebviewPanel, window, Uri, ViewColumn, commands, workspace, ProgressLocation, Range, TextEditorRevealType, Selection, ExtensionContext } from "vscode";
-import { InitialState, WebviewRequestMessageBase, WebviewRequestTypes } from "./types";
+import { InitialState, WebviewRequestMessageBase, WebviewRequestTypes, NodeSelectedRequest } from "./types";
+import { DoveNodeView } from "../explain/doveNodeView";
+import { ExplainNode } from "../explain/nodes";
 
 export class VisualExplainPanel {
     private static webRoot: Uri;
     public static currentPanel: VisualExplainPanel | undefined;
     private readonly panel: WebviewPanel;
     private disposables: Disposable[] = [];
+    private static doveNodeView: DoveNodeView | undefined;
+    private static explainTree: Map<number, ExplainNode> | undefined;
 
     private constructor(panel: WebviewPanel, initialState: InitialState) {
         this.panel = panel;
         this.panel.webview.html = this.getWebviewContent(this.panel.webview, initialState);
         this.setWebviewMessageListener(this.panel.webview);
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
+        
+        // Build a map of node IDs to nodes for quick lookup
+        if (initialState.topLevelNode) {
+            VisualExplainPanel.explainTree = this.buildNodeMap(initialState.topLevelNode);
+        }
     }
 
     public static initialize(context: ExtensionContext) {
         VisualExplainPanel.webRoot = Uri.joinPath(context.extensionUri, `dist`, `web`);
     }
 
-    public static render(initialState: InitialState) {
+    public static render(initialState: InitialState, doveNodeView: DoveNodeView) {
+        VisualExplainPanel.doveNodeView = doveNodeView;
+        
         if (VisualExplainPanel.currentPanel) {
             VisualExplainPanel.currentPanel.panel.reveal(ViewColumn.One);
         } else {
@@ -85,8 +96,12 @@ export class VisualExplainPanel {
     private setWebviewMessageListener(webview: Webview) {
         webview.onDidReceiveMessage(async (message: WebviewRequestMessageBase) => {
             switch (message.type) {
-                case WebviewRequestTypes.A: {
-                    // TODO:
+                case WebviewRequestTypes.NODE_SELECTED: {
+                    const request = message as NodeSelectedRequest;
+                    const node = VisualExplainPanel.explainTree?.get(request.nodeId);
+                    if (node && VisualExplainPanel.doveNodeView) {
+                        VisualExplainPanel.doveNodeView.setNode(node);
+                    }
                     break;
                 }
             }
@@ -94,6 +109,20 @@ export class VisualExplainPanel {
             undefined,
             this.disposables
         );
+    }
+
+    private buildNodeMap(node: ExplainNode): Map<number, ExplainNode> {
+        const map = new Map<number, ExplainNode>();
+        
+        function traverse(n: ExplainNode) {
+            map.set(n.id, n);
+            if (n.children && n.children.length > 0) {
+                n.children.forEach(child => traverse(child));
+            }
+        }
+        
+        traverse(node);
+        return map;
     }
 
 

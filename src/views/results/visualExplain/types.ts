@@ -1,5 +1,10 @@
 import { ExplainNode } from "../explain/nodes";
 
+export interface HighlightColor {
+  highlight: number;
+  color: string;
+}
+
 export interface InitialState {
   topLevelNode?: ExplainNode | null;
 }
@@ -9,12 +14,12 @@ export interface WebviewRequestMessageBase {
 }
 
 export enum WebviewRequestTypes {
-  A = 'A'
+  NODE_SELECTED = 'NODE_SELECTED'
 }
 
-export interface ARequest extends WebviewRequestMessageBase {
-    type: WebviewRequestTypes.A;
-    paramA: string;
+export interface NodeSelectedRequest extends WebviewRequestMessageBase {
+    type: WebviewRequestTypes.NODE_SELECTED;
+    nodeId: number;
 }
 
 export interface ExtensionRequestMessageBase {
