@@ -1,5 +1,7 @@
+import { ExplainNode } from "../explain/nodes";
+
 export interface InitialState {
-  // Color mode
+  topLevelNode?: ExplainNode | null;
 }
 
 export interface WebviewRequestMessageBase {

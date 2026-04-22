@@ -5,6 +5,7 @@
       "@/*": ["./src/*"]
     },
     "allowImportingTsExtensions": true,
+    "noImplicitAny": false
   },
   "files": [],
   "references": [

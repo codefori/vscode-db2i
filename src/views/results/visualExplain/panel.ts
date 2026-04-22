@@ -73,9 +73,10 @@ export class VisualExplainPanel {
             </head>
             <body>
                 <div id="root"></div>
-                <script type="module" nonce="${nonce}" src="${scriptUri}">
+                <script nonce="${nonce}">
                     window.initialState = ${stateJson};
                 </script>
+                <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
             </body>
         </html>
         `;
