@@ -425,10 +425,10 @@ async function runHandler(options?: StatementInfo) {
             }
 
             explainTree = new ExplainTree(explained.vedata);
-            const topLevel = explainTree.get();
-            const rootNode = doveResultsView.setRootNode(topLevel);
-            doveNodeView.setNode(rootNode.explainNode);
-            doveTreeDecorationProvider.updateTreeItems(rootNode);
+            const topLevelNode = explainTree.get();
+            const topLevelTreeItem = doveResultsView.setRootNode(topLevelNode);
+            doveNodeView.setNode(topLevelTreeItem.explainNode);
+            doveTreeDecorationProvider.updateTreeItems(topLevelTreeItem);
 
             const initialState = {}
             VisualExplainPanel.render(initialState);

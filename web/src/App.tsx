@@ -1,11 +1,36 @@
 import { useState, useCallback } from 'react';
-import { ReactFlow, applyNodeChanges, applyEdgeChanges, addEdge, Background, Controls, MiniMap } from '@xyflow/react';
+import { ReactFlow, applyNodeChanges, applyEdgeChanges, addEdge, Background, Controls, MiniMap, Position } from '@xyflow/react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
+import { BaseNode, BaseNodeContent } from "@/components/base-node";
+import {
+  NodeTooltip,
+  NodeTooltipContent,
+  NodeTooltipTrigger,
+} from "@/components/node-tooltip";
 import '@xyflow/react/dist/style.css';
 
+function Tooltip() {
+  return (
+    <NodeTooltip>
+      <NodeTooltipContent position={Position.Top}>
+        Hidden Content
+      </NodeTooltipContent>
+      <BaseNode>
+        <BaseNodeContent>
+          <NodeTooltipTrigger>Hover</NodeTooltipTrigger>
+        </BaseNodeContent>
+      </BaseNode>
+    </NodeTooltip>
+  );
+}
+
+const nodeTypes = {
+  tooltip: Tooltip,
+};
+
 const initialNodes: Node[] = [
-    { id: 'n1', position: { x: 0, y: 0 }, data: { label: 'Node 1' } },
-    { id: 'n2', position: { x: 0, y: 100 }, data: { label: 'Node 2' } },
+    { id: 'n1', position: { x: 0, y: 0 }, data: { label: 'Node 1' }, type: "tooltip" },
+    { id: 'n2', position: { x: 0, y: 100 }, data: { label: 'Node 2' }, type: "tooltip" },
 ];
 const initialEdges: Edge[] = [{ id: 'n1-n2', source: 'n1', target: 'n2' }];
 
@@ -31,6 +56,7 @@ export default function App() {
             <ReactFlow
                 colorMode="dark"
                 nodes={nodes}
+                nodeTypes={nodeTypes}
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
