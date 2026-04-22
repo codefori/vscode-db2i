@@ -59,6 +59,12 @@ let doveResultsTreeView: TreeView<ExplainTreeItem> = doveResultsView.getTreeView
 let doveNodeView = new DoveNodeView();
 let doveNodeTreeView: TreeView<PropertyNode> = doveNodeView.getTreeView();
 let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration provider
+const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] =
+  [`json`, `csv`, `md`, `cl`, `sql`, `rpg`, `udtf`, `statement`, `bind`];
+const ALLOWED_PREFIXES_FOR_HISTORY: StatementQualifier[] =
+  [`json`, `csv`, `cl`, `md`, `sql`, `rpg`, `udtf`];
+const ALLOWED_PREFIXES_EXCLUDE_QUALIFIER_FOR_HISTORY: StatementQualifier[] =
+  [`statement`, `explain`];
 
 export function initialise(context: vscode.ExtensionContext) {
   setCancelButtonVisibility(false);
@@ -171,8 +177,6 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, (options?: StatementInfo) => { runHandler(options) })
   )
 }
-
-const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] = [`cl`, `json`, `csv`, `md`, `sql`, `statement`, `bind`];
 
 function isStop(statement: Statement) {
   return (statement.type === StatementType.Unknown && statement.tokens.length === 1 && statement.tokens[0].value.toUpperCase() === `STOP`);
@@ -578,7 +582,9 @@ async function runHandler(options?: StatementInfo) {
           statementDetail.history = false;
         }
 
-        if ((statementDetail.qualifier === `statement` || statementDetail.qualifier === `explain`) && statementDetail.history !== false) {
+        if (ALLOWED_PREFIXES_FOR_HISTORY.includes(statementDetail.qualifier) && statementDetail.history !== false) {
+          vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, `${statementDetail.qualifier}: ${statementDetail.content}`);
+        } else if (ALLOWED_PREFIXES_EXCLUDE_QUALIFIER_FOR_HISTORY.includes(statementDetail.qualifier) && statementDetail.history !== false) {
           vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
         }
 
