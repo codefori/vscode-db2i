@@ -1404,6 +1404,35 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
     expect(blockParent.parentRef.object.name).toBe(`MEDIAN_RESULT_SET`);
   });
 
+  test(`CREATE PROCEDURE after syntax error`, () => {
+    const lines = [
+      `-- SELECT with syntax error (extra closing brackets)`,
+      `select * from table(qsys2.ifs_object_statistics('/home/scottf/'))));`,
+      ``,
+      `--CREATE parsing should not be impacted`,
+      `create or replace procedure coolstuff.proc1()`,
+      `begin`,
+      `    declare v1 integer;`,
+      `    declare v2 integer;`,
+      `    select 1+1, 2+2, 3+3 into v1, v2 from sysibm.sysdummy1;`,
+      `end;`
+    ].join(`\r\n`);
+
+    const document = newDoc(lines);
+    const statements = document.statements;
+
+    expect(statements.length).toBe(6);
+    expect(statements[0].tokens.length).toBe(14);
+    expect(statements[1].tokens.length).toBe(10);
+    expect(statements[2].tokens.length).toBe(3);
+    expect(statements[3].tokens.length).toBe(3);
+    expect(statements[4].tokens.length).toBe(20);
+    expect(statements[5].tokens.length).toBe(1);
+
+    const groups = document.getStatementGroups();
+    expect(groups.length).toBe(2);
+  });
+
   test(`WITH: no explicit columns`, () => {
     const lines = [
       `with Temp01 as`,
