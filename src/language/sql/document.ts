@@ -59,6 +59,7 @@ export default class Document {
           this.addStatement(statementTokens);
 
           statementStart = i + 1;
+          bracketDepth = 0;
           break;
 
         case `statementType`:
