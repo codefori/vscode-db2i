@@ -124,6 +124,11 @@
             "type": "boolean",
             "description": "Provide Schema definition as additional context in Continue and Copilot",
             "default": true
+          },
+          "vscode-db2i.ai.useSystemMessage": {
+            "type": "boolean",
+            "description": "Include system messages in Continue Context Items",
+            "default": true
           }
         }
       },

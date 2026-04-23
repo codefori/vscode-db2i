@@ -37,6 +37,7 @@ export async function getContextItems(input: string, options: PromptOptions = {}
   if (currentJob) {
     const currentSchema = currentJob?.job.options.libraries[0] || "QGPL";
     const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
+    const useSystemMessage: boolean = Configuration.get<boolean>(`ai.useSystemMessage`);
 
     // TODO: self?
 
@@ -116,7 +117,8 @@ export async function getContextItems(input: string, options: PromptOptions = {}
       }
     }
 
-    if (options.withDb2Prompt) {
+    // check if option is defined first via API, then check user settings
+    if (options.withDb2Prompt !== undefined ? options.withDb2Prompt : useSystemMessage) {
       contextItems.push({
         name: `system prompt`,
         content: DB2_SYSTEM_PROMPT,
