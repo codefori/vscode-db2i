@@ -1,19 +1,26 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
+import * as crypto from "crypto";
 
 //@ts-ignore
-import * as mdTable from 'json-to-markdown-table';
+import * as mdTable from "json-to-markdown-table";
 
-import { getInstance } from '../base';
-import { JobManager } from '../config';
-import { ChartJsType, chartJsTypes, generateChartHTMLCell } from './logic/chartJs';
-import { ChartDetail, generateChart } from './logic/chart';
-import { getStatementDetail } from './logic/statement';
+import { getInstance } from "../base";
+import { JobManager } from "../config";
+import {
+  ChartJsType,
+  chartJsTypes,
+  generateChartHTMLCell,
+} from "./logic/chartJs";
+import { ChartDetail, generateChart } from "./logic/chart";
+import { getStatementDetail } from "./logic/statement";
+import Configuration from "../configuration";
+import { renderRpgleResults, RpgleResultRow } from "./logic/rpgleRender";
 
 export class IBMiController {
   readonly controllerId = `db2i-notebook-controller-id`;
   readonly notebookType = `db2i-notebook`;
   readonly label = `IBM i Notebook`;
-  readonly supportedLanguages = [`sql`, `cl`, `shellscript`];
+  readonly supportedLanguages = [`sql`, `cl`, `shellscript`, `rpgle`];
 
   private readonly _controller: vscode.NotebookController;
   private globalCancel = false;
@@ -23,7 +30,7 @@ export class IBMiController {
     this._controller = vscode.notebooks.createNotebookController(
       this.controllerId,
       this.notebookType,
-      this.label
+      this.label,
     );
 
     this._controller.supportedLanguages = this.supportedLanguages;
@@ -35,12 +42,10 @@ export class IBMiController {
     this._controller.dispose();
   }
 
-
-
   private async _execute(
     cells: vscode.NotebookCell[],
     _notebook: vscode.NotebookDocument,
-    _controller: vscode.NotebookController
+    _controller: vscode.NotebookController,
   ) {
     this.globalCancel = false;
 
@@ -74,8 +79,9 @@ export class IBMiController {
         case `sql`:
           try {
             if (selected) {
-              const eol = cell.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
-              
+              const eol =
+                cell.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+
               let content = cell.document.getText().trim();
               let chartDetail: ChartDetail | undefined;
 
@@ -86,19 +92,30 @@ export class IBMiController {
               const results = await query.execute(1000);
 
               const table = results.data;
-              const columnNames = results.metadata.columns.map(c => c.name);
+              const columnNames = results.metadata.columns.map((c) => c.name);
 
-              if (table === undefined && results.success && !results.has_results) {
-                items.push(vscode.NotebookCellOutputItem.text(`Statement executed successfully. ${results.update_count ? `${results.update_count} rows affected.` : ``}`, `text/markdown`));
+              if (
+                table === undefined &&
+                results.success &&
+                !results.has_results
+              ) {
+                items.push(
+                  vscode.NotebookCellOutputItem.text(
+                    `Statement executed successfully. ${results.update_count ? `${results.update_count} rows affected.` : ``}`,
+                    `text/markdown`,
+                  ),
+                );
                 break;
               }
 
               if (table.length > 0) {
                 // Add `-` for blanks.
-                table.forEach(row => {
-                  columnNames.forEach(key => {
+                table.forEach((row) => {
+                  columnNames.forEach((key) => {
                     //@ts-ignore
-                    if (row[key] === null) { row[key] = `-`; }
+                    if (row[key] === null) {
+                      row[key] = `-`;
+                    }
                   });
                 });
 
@@ -106,23 +123,46 @@ export class IBMiController {
 
                 if (chartDetail.type) {
                   if (chartJsTypes.includes(chartDetail.type as ChartJsType)) {
-                    const possibleChart = generateChart(execution.executionOrder, chartDetail, columnNames, table, generateChartHTMLCell);
+                    const possibleChart = generateChart(
+                      execution.executionOrder,
+                      chartDetail,
+                      columnNames,
+                      table,
+                      generateChartHTMLCell,
+                    );
                     if (possibleChart) {
-                      items.push(vscode.NotebookCellOutputItem.text(possibleChart, `text/html`));
+                      items.push(
+                        vscode.NotebookCellOutputItem.text(
+                          possibleChart,
+                          `text/html`,
+                        ),
+                      );
                       fallbackToTable = false;
                     }
                   }
                 }
 
                 if (fallbackToTable) {
-                  items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columnNames), `text/markdown`));
+                  items.push(
+                    vscode.NotebookCellOutputItem.text(
+                      mdTable(table, columnNames),
+                      `text/markdown`,
+                    ),
+                  );
                 }
               } else {
-                items.push(vscode.NotebookCellOutputItem.stderr(`No rows returned from statement.`));
+                items.push(
+                  vscode.NotebookCellOutputItem.stderr(
+                    `No rows returned from statement.`,
+                  ),
+                );
               }
-              
             } else {
-              items.push(vscode.NotebookCellOutputItem.stderr(`No job selected in SQL Job Manager.`));
+              items.push(
+                vscode.NotebookCellOutputItem.stderr(
+                  `No job selected in SQL Job Manager.`,
+                ),
+              );
             }
           } catch (e) {
             items.push(vscode.NotebookCellOutputItem.stderr(e.message));
@@ -133,28 +173,32 @@ export class IBMiController {
           try {
             const command = await connection.runCommand({
               command: cell.document.getText(),
-              environment: `ile`
+              environment: `ile`,
             });
 
             if (command.stdout) {
-              items.push(vscode.NotebookCellOutputItem.text([
-                `\`\`\``,
-                command.stdout,
-                `\`\`\``
-              ].join(`\n`), `text/markdown`));
+              items.push(
+                vscode.NotebookCellOutputItem.text(
+                  [`\`\`\``, command.stdout, `\`\`\``].join(`\n`),
+                  `text/markdown`,
+                ),
+              );
             }
 
             if (command.stderr) {
-              items.push(vscode.NotebookCellOutputItem.text([
-                `\`\`\``,
-                command.stderr,
-                `\`\`\``
-              ].join(`\n`), `text/markdown`));
+              items.push(
+                vscode.NotebookCellOutputItem.text(
+                  [`\`\`\``, command.stderr, `\`\`\``].join(`\n`),
+                  `text/markdown`,
+                ),
+              );
             }
           } catch (e) {
             items.push(
-              vscode.NotebookCellOutputItem.stderr(`Failed to run command. Are you connected?`),
-              vscode.NotebookCellOutputItem.stderr(e.message)
+              vscode.NotebookCellOutputItem.stderr(
+                `Failed to run command. Are you connected?`,
+              ),
+              vscode.NotebookCellOutputItem.stderr(e.message),
             );
           }
           break;
@@ -163,46 +207,107 @@ export class IBMiController {
           try {
             const command = await connection.runCommand({
               command: cell.document.getText(),
-              environment: `pase`
+              environment: `pase`,
             });
 
             if (command.stdout) {
-              items.push(vscode.NotebookCellOutputItem.text([
-                `\`\`\``,
-                command.stdout,
-                `\`\`\``
-              ].join(`\n`), `text/markdown`));
+              items.push(
+                vscode.NotebookCellOutputItem.text(
+                  [`\`\`\``, command.stdout, `\`\`\``].join(`\n`),
+                  `text/markdown`,
+                ),
+              );
             }
 
             if (command.stderr) {
-              items.push(vscode.NotebookCellOutputItem.text([
-                `\`\`\``,
-                command.stderr,
-                `\`\`\``
-              ].join(`\n`), `text/markdown`));
+              items.push(
+                vscode.NotebookCellOutputItem.text(
+                  [`\`\`\``, command.stderr, `\`\`\``].join(`\n`),
+                  `text/markdown`,
+                ),
+              );
             }
           } catch (e) {
             items.push(
-              vscode.NotebookCellOutputItem.stderr(`Failed to runCommand. Are you connected?`),
+              vscode.NotebookCellOutputItem.stderr(
+                `Failed to runCommand. Are you connected?`,
+              ),
               //@ts-ignore
-              vscode.NotebookCellOutputItem.stderr(e.message)
+              vscode.NotebookCellOutputItem.stderr(e.message),
             );
           }
           break;
-      }
 
+        case `rpgle`:
+          try {
+            const lib = Configuration.get<string>(`rpgleRepl.library`);
+            if (!lib) {
+              items.push(
+                vscode.NotebookCellOutputItem.stderr(
+                  `RPG notebook cells require RPGLE-REPL. Set the \`vscode-db2i.rpgleRepl.library\` setting to the library containing RPGLE-REPL, or visit https://github.com/tom-writes-code/rpgle-repl for installation instructions.`,
+                ),
+              );
+              break;
+            }
+
+            if (selected) {
+              const sessionId = `NB-${crypto.randomUUID().substring(0, 22)}`;
+              const cellSource = cell.document.getText();
+
+              // Ensure the RPGLE-REPL library is in the job's library list
+              try {
+                await selected.job.execute(
+                  `CALL QSYS2.QCMDEXC('ADDLIBLE LIB(${lib}) POSITION(*LAST)')`,
+                );
+              } catch {
+                // CPF2103: library already in list — safe to ignore
+              }
+
+              const query = selected.job.query<RpgleResultRow>(
+                `CALL ${lib}.REPL_EXECUTE(?, ?)`,
+                { parameters: [cellSource, sessionId] },
+              );
+              const results = await query.execute();
+
+              if (results.success && results.data && results.data.length > 0) {
+                const html = renderRpgleResults(cellSource, results.data);
+                items.push(
+                  vscode.NotebookCellOutputItem.text(html, `text/html`),
+                );
+              } else if (results.success) {
+                items.push(
+                  vscode.NotebookCellOutputItem.text(
+                    `Snippet compiled and ran successfully (no output).`,
+                    `text/markdown`,
+                  ),
+                );
+              } else {
+                items.push(
+                  vscode.NotebookCellOutputItem.stderr(`RPG execution failed.`),
+                );
+              }
+            } else {
+              items.push(
+                vscode.NotebookCellOutputItem.stderr(
+                  `No job selected in SQL Job Manager.`,
+                ),
+              );
+            }
+          } catch (e) {
+            items.push(vscode.NotebookCellOutputItem.stderr(e.message));
+          }
+          break;
+      }
     } else {
       items.push(
-        vscode.NotebookCellOutputItem.stderr(`Failed to execute. Are you connected?`)
-      )
+        vscode.NotebookCellOutputItem.stderr(
+          `Failed to execute. Are you connected?`,
+        ),
+      );
     }
 
-    execution.replaceOutput([
-      new vscode.NotebookCellOutput(items)
-    ]);
+    execution.replaceOutput([new vscode.NotebookCellOutput(items)]);
 
     execution.end(true, Date.now());
   }
-
-
 }

@@ -128,6 +128,17 @@
         }
       },
       {
+        "id": "vscode-db2i.rpgleRepl",
+        "title": "RPGLE REPL",
+        "properties": {
+          "vscode-db2i.rpgleRepl.library": {
+            "type": "string",
+            "markdownDescription": "Library containing RPGLE-REPL objects. Leave empty to disable RPG notebook cells. Install RPGLE-REPL from [rpgle-repl](https://github.com/tom-writes-code/rpgle-repl).",
+            "default": ""
+          }
+        }
+      },
+      {
         "id": "vscode-db2i.schemaBrowser",
         "title": "Schema Browser",
         "properties": {
@@ -1714,7 +1725,7 @@
         "command": "notebook.cell.execute",
         "key": "ctrl+r",
         "mac": "cmd+r",
-        "when": "editorLangId == sql && resourceExtname == .inb"
+        "when": "(editorLangId == sql || editorLangId == rpgle) && resourceExtname == .inb"
       }
     ],
     "colors": [

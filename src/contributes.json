@@ -85,6 +85,17 @@
             "default": true
           }
         }
+      },
+      {
+        "id": "vscode-db2i.rpgleRepl",
+        "title": "RPGLE REPL",
+        "properties": {
+          "vscode-db2i.rpgleRepl.library": {
+            "type": "string",
+            "markdownDescription": "Library containing RPGLE-REPL objects. Leave empty to disable RPG notebook cells. Install RPGLE-REPL from [rpgle-repl](https://github.com/tom-writes-code/rpgle-repl).",
+            "default": ""
+          }
+        }
       }
     ],
     "viewsContainers": {
