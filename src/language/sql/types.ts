@@ -55,7 +55,6 @@ export enum StatementType {
 	Refresh = "Refresh",
 	Values = "Values",
 	Continue = "Continue",
-	Exit = "Exit",
 	Associate = "Associate",
 	Lock = "Lock",
 }
@@ -112,7 +111,6 @@ export const StatementTypeWord = {
 	'REFRESH': StatementType.Refresh,
 	'VALUES': StatementType.Values,
 	'CONTINUE': StatementType.Continue,
-	'EXIT': StatementType.Exit,
 	'ASSOCIATE': StatementType.Associate,
 	'LOCK': StatementType.Lock,
 	'OPEN': StatementType.Open,

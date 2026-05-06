@@ -2493,12 +2493,6 @@ parserScenarios(`Control Flow Statements`, ({newDoc}) => {
     expect(document.statements[0].type).toBe(StatementType.Continue);
   });
 
-  test('EXIT: Exit statement', () => {
-    const document = newDoc(`EXIT;`);
-
-    expect(document.statements.length).toBe(1);
-    expect(document.statements[0].type).toBe(StatementType.Exit);
-  });
 });
 
 parserScenarios(`Cursor Operation Statements`, ({newDoc}) => {
