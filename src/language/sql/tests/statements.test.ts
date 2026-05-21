@@ -1213,7 +1213,7 @@ parserScenarios(`Object references`, ({newDoc}) => {
       'Create',  'Declare',
       'Declare', 'Call',
       'Loop', 'Set',
-      'Unknown', 'Unknown',
+      'Prepare', 'Execute',
       'If', 'Call',
       'Leave', 'End',
       'Call',    'End',
@@ -2165,6 +2165,404 @@ describe(`Parameter statement tests`, () => {
     expect(positionDataA.currentCount).toBe(3);
   });
 });
+parserScenarios(`Transaction Control Statements`, ({newDoc}) => {
+  test('COMMIT: Basic commit', () => {
+    const document = newDoc(`COMMIT;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Commit);
+  });
+
+  test('ROLLBACK: Basic rollback', () => {
+    const document = newDoc(`ROLLBACK;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Rollback);
+  });
+
+  test('ROLLBACK: Rollback to savepoint', () => {
+    const document = newDoc(`ROLLBACK TO SAVEPOINT sp1;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Rollback);
+  });
+
+  test('SAVEPOINT: Create savepoint', () => {
+    const document = newDoc(`SAVEPOINT sp1 ON ROLLBACK RETAIN CURSORS;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Savepoint);
+  });
+
+  test('RELEASE: Release savepoint', () => {
+    const document = newDoc(`RELEASE SAVEPOINT sp1;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Release);
+  });
+});
+
+parserScenarios(`Dynamic SQL Statements`, ({newDoc}) => {
+  test('PREPARE: Basic prepare', () => {
+    const document = newDoc(`PREPARE stmt1 FROM 'SELECT * FROM employees';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Prepare);
+  });
+
+  test('PREPARE: Prepare with variable', () => {
+    const document = newDoc(`PREPARE stmt1 FROM :sql_string;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Prepare);
+  });
+
+  test('EXECUTE: Execute prepared statement', () => {
+    const document = newDoc(`EXECUTE stmt1;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Execute);
+  });
+
+  test('EXECUTE: Execute immediate', () => {
+    const document = newDoc(`EXECUTE IMMEDIATE 'DROP TABLE temp_table';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Execute);
+  });
+
+  test('DESCRIBE: Describe statement', () => {
+    const document = newDoc(`DESCRIBE stmt1 INTO :sqlda;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Describe);
+  });
+});
+
+parserScenarios(`Connection Statements`, ({newDoc}) => {
+  test('CONNECT: Basic connect', () => {
+    const document = newDoc(`CONNECT TO mydb;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Connect);
+  });
+
+  test('CONNECT: Connect with user', () => {
+    const document = newDoc(`CONNECT TO mydb USER :userid USING :password;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Connect);
+  });
+
+  test('DISCONNECT: Basic disconnect', () => {
+    const document = newDoc(`DISCONNECT CURRENT;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Disconnect);
+  });
+
+  test('DISCONNECT: Disconnect specific connection', () => {
+    const document = newDoc(`DISCONNECT mydb;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Disconnect);
+  });
+});
+
+parserScenarios(`DDL Statements`, ({newDoc}) => {
+  test('RENAME: Rename table', () => {
+    const document = newDoc(`RENAME TABLE old_table TO new_table;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Rename);
+  });
+
+  test('RENAME: Rename with schema', () => {
+    const document = newDoc(`RENAME TABLE myschema.old_table TO myschema.new_table;`);
+
+    expect(document.statements.length).toBe(1);
+    const statement = document.statements[0];
+    expect(statement.type).toBe(StatementType.Rename);
+  });
+
+  test('TRUNCATE: Basic truncate', () => {
+    const document = newDoc(`TRUNCATE TABLE employees;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Truncate);
+  });
+
+  test('TRUNCATE: Truncate with options', () => {
+    const document = newDoc(`TRUNCATE TABLE employees IMMEDIATE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Truncate);
+  });
+
+  test('COMMENT: Comment on table', () => {
+    const document = newDoc(`COMMENT ON TABLE employees IS 'Employee information';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Comment);
+  });
+
+  test('COMMENT: Comment on column', () => {
+    const document = newDoc(`COMMENT ON COLUMN employees.name IS 'Employee name';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Comment);
+  });
+});
+
+parserScenarios(`Data Transfer and Security Statements`, ({newDoc}) => {
+  test('TRANSFER: Transfer ownership', () => {
+    const document = newDoc(`TRANSFER OWNERSHIP OF TABLE employees TO USER newowner;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Transfer);
+  });
+
+  test('GRANT: Grant privileges', () => {
+    const document = newDoc(`GRANT SELECT, INSERT ON TABLE employees TO PUBLIC;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Grant);
+  });
+
+  test('GRANT: Grant with schema', () => {
+    const document = newDoc(`GRANT ALL PRIVILEGES ON myschema.employees TO USER john;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Grant);
+  });
+
+  test('REVOKE: Revoke privileges', () => {
+    const document = newDoc(`REVOKE SELECT ON TABLE employees FROM PUBLIC;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Revoke);
+  });
+
+  test('REVOKE: Revoke with schema', () => {
+    const document = newDoc(`REVOKE ALL PRIVILEGES ON myschema.employees FROM USER john;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Revoke);
+  });
+});
+
+parserScenarios(`Cursor and Locator Statements`, ({newDoc}) => {
+  test('ALLOCATE: Allocate cursor', () => {
+    const document = newDoc(`ALLOCATE cursor1 CURSOR FOR RESULT SET :rs1;`);
+    // console.log(document.statements[0]);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Allocate);
+  });
+
+  test('ALLOCATE: Allocate cursor', () => {
+    const document = newDoc(`ALLOCATE loc1 LOCATORS;`);
+
+    expect(document.statements.length).toBe(1);
+    // console.log(document.statements[0]);
+
+    expect(document.statements[0].type).toBe(StatementType.Allocate);
+  });
+
+  test('ASSOCIATE: Associate locators', () => {
+    const document = newDoc(`ASSOCIATE LOCATORS (:loc1, :loc2) WITH PROCEDURE myproc;`);
+    // console.log("helloo");
+    // console.log(document.statements[0]);
+
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Associate);
+  });
+
+  test('LOCK: Lock table', () => {
+    const document = newDoc(`LOCK TABLE employees IN EXCLUSIVE MODE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Lock);
+  });
+
+  test('LOCK: Lock with schema', () => {
+    const document = newDoc(`LOCK TABLE myschema.employees IN SHARE MODE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Lock);
+  });
+});
+
+parserScenarios(`Materialized View Statements`, ({newDoc}) => {
+  test('REFRESH: Refresh materialized view', () => {
+    const document = newDoc(`REFRESH TABLE mv_employees;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Refresh);
+  });
+
+  test('REFRESH: Refresh with schema', () => {
+    const document = newDoc(`REFRESH TABLE myschema.mv_employees;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Refresh);
+  });
+});
+
+parserScenarios(`SET Statements`, ({newDoc}) => {
+  test('SET: Set connection', () => {
+    const document = newDoc(`SET CONNECTION mydb;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set encryption password', () => {
+    const document = newDoc(`SET ENCRYPTION PASSWORD = 'mypassword';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set path', () => {
+    const document = newDoc(`SET PATH = CURRENT PATH, myschema;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set schema', () => {
+    const document = newDoc(`SET SCHEMA myschema;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set session authorization', () => {
+    const document = newDoc(`SET SESSION AUTHORIZATION USER john;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set transaction', () => {
+    const document = newDoc(`SET TRANSACTION ISOLATION LEVEL READ COMMITTED;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set option', () => {
+    const document = newDoc(`SET OPTION COMMIT = *NONE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+});
+
+parserScenarios(`GET Diagnostics Statement`, ({newDoc}) => {
+  test('GET: Get diagnostics', () => {
+    const document = newDoc(`GET DIAGNOSTICS :count = ROW_COUNT;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Get);
+  });
+
+  test('GET: Get diagnostics with condition', () => {
+    const document = newDoc(`GET DIAGNOSTICS CONDITION 1 :sqlstate = RETURNED_SQLSTATE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Get);
+  });
+});
+
+parserScenarios(`Control Flow Statements`, ({newDoc}) => {
+  test('LABEL: Label statement', () => {
+    const document = newDoc(`LABEL ON TABLE MYLIB.MYTABLE IS 'Employee master table';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Label);
+  });
+
+  test('IF: If statement', () => {
+    const document = newDoc(`IF v_count > 0 THEN SET v_result = 1; END IF;`);
+
+    // IF statement contains nested statements (IF, SET, END)
+    expect(document.statements.length).toBe(3);
+    expect(document.statements[0].type).toBe(StatementType.If);
+    expect(document.statements[1].type).toBe(StatementType.Set);
+    expect(document.statements[2].type).toBe(StatementType.End);
+  });
+
+  test('FOR: For statement', () => {
+    const document = newDoc(`FOR v_row AS SELECT * FROM employees DO SET v_count = v_count + 1; END FOR;`);
+
+    // FOR statement contains nested statements (FOR, SET, END)
+    expect(document.statements.length).toBe(3);
+    expect(document.statements[0].type).toBe(StatementType.For);
+    expect(document.statements[1].type).toBe(StatementType.Set);
+    expect(document.statements[2].type).toBe(StatementType.End);
+  });
+
+  test('WHILE: While statement', () => {
+    const document = newDoc(`WHILE v_counter < 10 DO SET v_counter = v_counter + 1; END WHILE;`);
+
+    // WHILE statement contains nested statements (WHILE, SET, END)
+    expect(document.statements.length).toBe(3);
+    expect(document.statements[0].type).toBe(StatementType.While);
+    expect(document.statements[1].type).toBe(StatementType.Set);
+    expect(document.statements[2].type).toBe(StatementType.End);
+  });
+
+  test('CONTINUE: Continue statement', () => {
+    const document = newDoc(`CONTINUE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Continue);
+  });
+
+});
+
+parserScenarios(`Cursor Operation Statements`, ({newDoc}) => {
+  test('OPEN: Open cursor', () => {
+    const document = newDoc(`OPEN cursor1;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Open);
+  });
+
+  test('CLOSE: Close cursor', () => {
+    const document = newDoc(`CLOSE cursor1;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Close);
+  });
+});
+
+parserScenarios(`VALUES Statement`, ({newDoc}) => {
+  test('VALUES: Standalone values statement', () => {
+    const document = newDoc(`VALUES (1, 2, 3);`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Values);
+  });
+
+  test('VALUES: Values with multiple rows', () => {
+    const document = newDoc(`VALUES (1, 'A'), (2, 'B'), (3, 'C');`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Values);
+  });
+
+  test('VALUES: Values with expressions', () => {
+    const document = newDoc(`VALUES CURRENT TIMESTAMP, CURRENT USER;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Values);
+  });
+});
+
 
 describe(`Prefix tests`, () => {
   test('CL prefix', () => {
