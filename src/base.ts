@@ -1,7 +1,8 @@
 import { CodeForIBMi } from "@halcyontech/vscode-ibmi-types";
 import Instance from "@halcyontech/vscode-ibmi-types/Instance";
 import { Extension, ExtensionContext, extensions } from "vscode";
-import { SQLStatementChecker } from "./connection/syntaxChecker";
+import { CheckStatementComponent } from "./connection/components/checkStatement";
+import { ValidateStatementComponent } from "./connection/components/validateStatement";
 
 let baseExtension: Extension<CodeForIBMi>|undefined;
 
@@ -11,7 +12,8 @@ export function loadBase(context: ExtensionContext): CodeForIBMi|undefined {
 
     if (baseExtension) {
       baseExtension.activate().then(() => {
-        baseExtension.exports.componentRegistry.registerComponent(context, new SQLStatementChecker());
+        baseExtension.exports.componentRegistry.registerComponent(context, new CheckStatementComponent());
+        baseExtension.exports.componentRegistry.registerComponent(context, new ValidateStatementComponent());
       });
     }
   }
