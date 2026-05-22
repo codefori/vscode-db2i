@@ -16,6 +16,7 @@ import Configuration from "./configuration";
 import { SQLJobManager } from "./connection/manager";
 import { ServerComponent } from "./connection/serverComponent";
 import { OldSQLJob } from "./connection/sqlJob";
+import Statement from "./database/statement";
 import { languageInit } from "./language/providers";
 import { DbCache } from "./language/providers/logic/cache";
 import { setCheckerAvailableContext } from "./language/providers/problemProvider";
@@ -32,6 +33,8 @@ export interface Db2i {
   sqlJobManager: SQLJobManager,
   sqlJob: (options?: JDBCOptions) => OldSQLJob
   sqlExamples: typeof SQLExamples,
+  statement: typeof Statement,
+  dbCache: typeof DbCache,
 }
 
 // this method is called when your extension is activated
@@ -121,7 +124,9 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   return {
     sqlJobManager: JobManager,
     sqlJob: (options?: JDBCOptions) => new OldSQLJob(options),
-    sqlExamples: SQLExamples
+    sqlExamples: SQLExamples,
+    statement: Statement,
+    dbCache: DbCache
   };
 }
 

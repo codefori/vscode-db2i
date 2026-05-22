@@ -1,7 +1,6 @@
 
 import { getInstance } from "../base";
 import Configuration from "../configuration";
-import { JobManager } from "../config";
 
 import {format, FormatOptionsWithLanguage, IdentifierCase, KeywordCase} from "sql-formatter"
 
