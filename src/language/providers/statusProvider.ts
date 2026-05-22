@@ -12,9 +12,9 @@ export class Db2StatusProvider extends Disposable {
     this.setState(false);
   }
 
-  setState(hasJob: Boolean) {
+  async setState(hasJob: Boolean) {
     if (hasJob) {
-      const checker = SQLStatementChecker.get();
+      const checker = await SQLStatementChecker.get();
       const checkerTimeout = getCheckerTimeout() / 1000;
       this.item.text = `SQL assistance available. ${checker ? `Syntax checking enabled (every ${checkerTimeout}s after editing)` : `Syntax checking not available.`}`;
       this.item.detail = `You're connected to an IBM i. ${checker ? `You can use the advanced SQL language tooling.` : `Syntax checking not available. This means that the syntax checker did not install when connecting to this system.`}`;
