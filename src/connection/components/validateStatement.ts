@@ -85,7 +85,7 @@ export class ValidateStatementComponent implements IBMiComponent {
 
   async update(connection: IBMi): Promise<SecureComponentState> {
     return connection.withTempDirectory(async tempDir => {
-      const tempSourcePath = Tools.ensureFullPath(posix.join(tempDir, `sqlvalidator.sql`), connection?.getConfig().homeDirectory);
+      const tempSourcePath = posix.join(tempDir, `sqlvalidator.sql`);
       const library = connection?.getConfig()?.tempLibrary.toUpperCase() || `ILEDITOR`;
       await connection.getContent().writeStreamfileRaw(tempSourcePath, this.getSource(library, ValidateStatementComponent.VERSION));
       const result = await connection.runCommand({
