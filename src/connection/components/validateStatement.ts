@@ -1,10 +1,10 @@
 import { IBMiComponent, SecureComponentState } from "@halcyontech/vscode-ibmi-types/api/components/component";
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
+import { Tools } from "@halcyontech/vscode-ibmi-types/api/Tools";
 import { posix } from "path";
 import { CheckStatementComponent } from "./checkStatement";
-import { getInstance } from "../../base";
+import { getInstance, getBase } from "../../base";
 import { JobInfo } from "../manager";
-import { Tools } from "@halcyontech/vscode-ibmi-types/api/Tools";
 
 export const VALID_STATEMENT_LENGTH = 32740;
 export const MAX_STATEMENT_COUNT = 200;
@@ -48,8 +48,8 @@ export class ValidateStatementComponent implements IBMiComponent {
   private static readonly FUNCTION_NAME = `VALIDATE_STATEMENT${ValidateStatementComponent.VERSION.toString().padStart(4, "0")}`;
   private static readonly TYPE = "FUNCTION";
 
-  static get(): ValidateStatementComponent|undefined {
-    return getInstance()?.getConnection()?.getComponent<ValidateStatementComponent>(ValidateStatementComponent.ID);
+  static async get(): Promise<ValidateStatementComponent|undefined> {
+    return await getInstance()?.getConnection()?.getComponent<ValidateStatementComponent>(ValidateStatementComponent.ID);
   }
 
   private getLibrary(connection: IBMi) {
