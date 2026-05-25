@@ -1,9 +1,8 @@
 import { IBMiComponent, SecureComponentState } from "@halcyontech/vscode-ibmi-types/api/components/component";
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
-import { Tools } from "@halcyontech/vscode-ibmi-types/api/Tools";
 import { posix } from "path";
 import { CheckStatementComponent } from "./checkStatement";
-import { getInstance, getBase } from "../../base";
+import { getInstance, getBase, getVSCodeTools } from "../../base";
 import { JobInfo } from "../manager";
 
 export const VALID_STATEMENT_LENGTH = 32740;
@@ -44,7 +43,7 @@ export interface SqlSyntaxError {
 export class ValidateStatementComponent implements IBMiComponent {
   static ID = "ValidateStatement";
   private static readonly VERSION = 1;
-  private static readonly SIGNATURE = "C799B8A4E27AB3220529AA9A3F26B029B2ACB19DEE770A05792B11D944614077";
+  private static readonly SIGNATURE = "4DA5046C8080EC338A7516B9589CACDBED20A44C7D4BAFFEEC605FFB7C2EDD47";
   private static readonly FUNCTION_NAME = `VALIDATE_STATEMENT${ValidateStatementComponent.VERSION.toString().padStart(4, "0")}`;
   private static readonly TYPE = "FUNCTION";
 
@@ -64,7 +63,7 @@ export class ValidateStatementComponent implements IBMiComponent {
     };
   }
 
-  async getRemoteState(connection: IBMi): Promise<SecureComponentState> {
+  async getRemoteState(connection: IBMi, installDirectory: string): Promise<SecureComponentState> {
     const remoteSignature = await this.getSQLRoutineSignature(
       connection,
       connection.getConfig().tempLibrary.toUpperCase(),
@@ -83,9 +82,9 @@ export class ValidateStatementComponent implements IBMiComponent {
     )).at(0)?.SIGNATURE as string;
   }
 
-  async update(connection: IBMi): Promise<SecureComponentState> {
+  async update(connection: IBMi, installDirectory: string): Promise<SecureComponentState> {
     return connection.withTempDirectory(async tempDir => {
-      const tempSourcePath = posix.join(tempDir, `sqlvalidator.sql`);
+      const tempSourcePath = getVSCodeTools().ensureFullPath(posix.join(tempDir, `sqlvalidator.sql`), connection?.getConfig()?.homeDirectory);
       const library = connection?.getConfig()?.tempLibrary.toUpperCase() || `ILEDITOR`;
       await connection.getContent().writeStreamfileRaw(tempSourcePath, this.getSource(library, ValidateStatementComponent.VERSION));
       const result = await connection.runCommand({
@@ -99,7 +98,7 @@ export class ValidateStatementComponent implements IBMiComponent {
         throw Error(result.stderr || result.stdout);
       }
 
-      return this.getRemoteState(connection);
+      return this.getRemoteState(connection, installDirectory);
     });
   }
 

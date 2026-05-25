@@ -3,6 +3,7 @@ import Instance from "@halcyontech/vscode-ibmi-types/Instance";
 import { Extension, ExtensionContext, extensions } from "vscode";
 import { CheckStatementComponent } from "./connection/components/checkStatement";
 import { ValidateStatementComponent } from "./connection/components/validateStatement";
+import { VscodeTools } from "@halcyontech/vscode-ibmi-types/ui/Tools";
 
 let baseExtension: Extension<CodeForIBMi>|undefined;
 
@@ -27,4 +28,12 @@ export function getBase(): CodeForIBMi|undefined {
 
 export function getInstance(): Instance|undefined {
   return (baseExtension && baseExtension.isActive && baseExtension.exports ? baseExtension.exports.instance : undefined);
+}
+
+/**
+ * Get the VS Code tools from the base extension
+ * @returns The VscodeTools if available, undefined otherwise
+ */
+export function getVSCodeTools(): typeof VscodeTools | undefined {
+  return (baseExtension && baseExtension.isActive && baseExtension.exports ? baseExtension.exports.tools : undefined);
 }

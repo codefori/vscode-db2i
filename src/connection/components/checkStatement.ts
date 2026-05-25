@@ -1,6 +1,7 @@
 import { IBMiComponent, SecureComponentState } from "@halcyontech/vscode-ibmi-types/api/components/component";
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
 import { posix } from "path";
+import { getVSCodeTools } from "../../base";
 
 export class CheckStatementComponent implements IBMiComponent {
   static ID = "CheckStatementComponent";
@@ -22,7 +23,7 @@ export class CheckStatementComponent implements IBMiComponent {
     };
   }
 
-  async getRemoteState(connection: IBMi): Promise<SecureComponentState> {
+  async getRemoteState(connection: IBMi, installDirectory: string): Promise<SecureComponentState> {
     const remoteSignature = await this.getSQLRoutineSignature(
       connection,
       connection.getConfig().tempLibrary.toUpperCase(),
@@ -44,9 +45,9 @@ export class CheckStatementComponent implements IBMiComponent {
     )).at(0)?.SIGNATURE as string;
   }
 
-  async update(connection: IBMi): Promise<SecureComponentState> {
+  async update(connection: IBMi, installDirectory: string): Promise<SecureComponentState> {
     return connection.withTempDirectory(async tempDir => {
-      const tempSourcePath = posix.join(tempDir, `sqlchecker.sql`);
+      const tempSourcePath = getVSCodeTools().ensureFullPath(posix.join(tempDir, `sqlchecker.sql`), connection?.getConfig()?.homeDirectory);
       const library = connection?.getConfig()?.tempLibrary.toUpperCase() || `ILEDITOR`;
       await connection.getContent().writeStreamfileRaw(tempSourcePath, this.getSource(library, CheckStatementComponent.FUNCTION_NAME, CheckStatementComponent.VERSION));
       const result = await connection.runCommand({
@@ -60,7 +61,7 @@ export class CheckStatementComponent implements IBMiComponent {
         throw Error(result.stderr || result.stdout);
       }
 
-      return this.getRemoteState(connection);
+      return this.getRemoteState(connection, installDirectory);
     });
   }
 
