@@ -503,8 +503,11 @@ export default class Schemas {
   /**
    * @param schema Not user input
    * @param object Not user input
+   * @param internalType The type of object
+   * @param isBasic Whether to generate basic SQL (deprecated, use inlineConstraints instead)
+   * @param inlineConstraints Whether to include constraints inline in CREATE statement (true) or as separate ALTER statements (false)
    */
-  static async generateSQL(schema: string, object: string, internalType: string, isBasic?: boolean): Promise<string> {
+  static async generateSQL(schema: string, object: string, internalType: string, isBasic?: boolean, inlineConstraints?: boolean): Promise<string> {
     const instance = getInstance();
     const connection = instance.getConnection();
 
@@ -533,6 +536,16 @@ export default class Schemas {
           `CONSTRAINT_OPTION => '0'`,
           `MASK_AND_PERMISSION_OPTION => '0'`,
         );
+      } else if (inlineConstraints !== undefined) {
+        // Handle the new inlineConstraints parameter (only when not using isBasic)
+        // 0 = No constraints, 1 = Separate ALTER statements (default), 2 = Inline in CREATE TABLE
+        if (inlineConstraints) {
+          // Generate with inline constraints (constraints in CREATE TABLE statement)
+          options.push(`CONSTRAINT_OPTION => '2'`);
+        } else {
+          // Generate with separate ALTER statements for constraints (default behavior)
+          options.push(`CONSTRAINT_OPTION => '1'`);
+        }
       }
 
       await JobManager.runSQL<{ SRCDTA: string }>([
