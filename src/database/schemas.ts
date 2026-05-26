@@ -556,7 +556,8 @@ export default class Schemas {
       const contents = (
         await connection.content.downloadStreamfileRaw(tempFilePath)
       ).toString();
-      return contents;
+      // Replace TAB characters with spaces
+      return contents.replace(/\t/g, '  ');
     }
     );
 
