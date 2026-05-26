@@ -79,21 +79,69 @@ export class IBMiController {
               let content = cell.document.getText().trim();
               let chartDetail: ChartDetail | undefined;
 
-              ({ chartDetail, content } = getStatementDetail(content, eol));
+              // Parse bind parameters BEFORE any other processing
+              let parameters: any[] | undefined;
+              const bindMatch = content.match(/bind:\s*\((.*?)\)\s*;?\s*$/s);
+              if (bindMatch) {
+                // Remove the bind statement from content
+                content = content.substring(0, bindMatch.index).trim();
+                
+                // Parse the parameters
+                try {
+                  const paramString = bindMatch[1];
+                  // Simple parsing: split by comma, handle strings and numbers
+                  parameters = paramString.split(',').map(p => {
+                    p = p.trim();
+                    // String literal
+                    if ((p.startsWith("'") && p.endsWith("'")) || (p.startsWith('"') && p.endsWith('"'))) {
+                      return p.substring(1, p.length - 1);
+                    }
+                    // Number
+                    if (!isNaN(Number(p))) {
+                      return Number(p);
+                    }
+                    // Null
+                    if (p.toLowerCase() === 'null') {
+                      return null;
+                    }
+                    // Default to string
+                    return p;
+                  });
+                } catch (e) {
+                  items.push(vscode.NotebookCellOutputItem.stderr(`Failed to parse bind parameters: ${e.message}`));
+                  break;
+                }
+              }
 
+              // For CREATE statements, keep the content as-is (they need semicolons)
+              // For other statements, use getStatementDetail to handle chart settings
+              const isCreateStatement = content.trim().toUpperCase().startsWith('CREATE');
+              
+              if (!isCreateStatement) {
+                ({ chartDetail, content } = getStatementDetail(content, eol));
+              }
+              
               // Execute the query
-              const query = selected.job.query(content);
+              const query = selected.job.query(content, parameters ? { parameters } : undefined);
               const results = await query.execute(1000);
 
               const table = results.data;
-              const columnNames = results.metadata.columns.map(c => c.name);
+              const columnNames = results.metadata?.columns?.map(c => c.name) || [];
+
+              // Check for OUT/INOUT parameters and display them
+              if (results.output_parms && results.output_parms.length > 0) {
+                const paramOutput = results.output_parms.map((param, index) => {
+                  const paramName = param.name ? `**${param.name}**` : `**Parameter ${index + 1}**`;
+                  const paramValue = param.value !== undefined && param.value !== null ? param.value : '-';
+                  return `${paramName}: \`${paramValue}\``;
+                }).join('\n\n');
+                
+                items.push(vscode.NotebookCellOutputItem.text(`### Output Parameters\n\n${paramOutput}`, `text/markdown`));
+              }
 
               if (table === undefined && results.success && !results.has_results) {
                 items.push(vscode.NotebookCellOutputItem.text(`Statement executed successfully. ${results.update_count ? `${results.update_count} rows affected.` : ``}`, `text/markdown`));
-                break;
-              }
-
-              if (table.length > 0) {
+              } else if (table && table.length > 0) {
                 // Add `-` for blanks.
                 table.forEach(row => {
                   columnNames.forEach(key => {
@@ -104,7 +152,7 @@ export class IBMiController {
 
                 let fallbackToTable = true;
 
-                if (chartDetail.type) {
+                if (chartDetail && chartDetail.type) {
                   if (chartJsTypes.includes(chartDetail.type as ChartJsType)) {
                     const possibleChart = generateChart(execution.executionOrder, chartDetail, columnNames, table, generateChartHTMLCell);
                     if (possibleChart) {
@@ -117,7 +165,7 @@ export class IBMiController {
                 if (fallbackToTable) {
                   items.push(vscode.NotebookCellOutputItem.text(mdTable(table, columnNames), `text/markdown`));
                 }
-              } else {
+              } else if (table && table.length === 0 && results.has_results) {
                 items.push(vscode.NotebookCellOutputItem.stderr(`No rows returned from statement.`));
               }
               

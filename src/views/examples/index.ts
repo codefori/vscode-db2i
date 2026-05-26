@@ -27,6 +27,55 @@ export const ServiceInfoLabel = `IBM i (SQL) Services`;
 export const Examples: SQLExamplesList = {
   "Notebooks": [
     {
+      name: "Bind Parameters with OUT Parameters",
+      content: [
+        `## `.concat([
+          `This notebook demonstrates how to use bind parameters with stored procedures that have OUT or INOUT parameters.`,
+          `Use the \`bind:()\` syntax at the end of a CALL statement to pass parameter values.`,
+          `OUT and INOUT parameters will be displayed after execution.`,
+        ].join('\n\n')),
+
+        `## Create a simple procedure with OUT parameter`,
+        [
+          `CREATE OR REPLACE PROCEDURE MYLIB.GREET_USER (`,
+          `    IN  USER_NAME  VARCHAR(50),`,
+          `    OUT GREETING   VARCHAR(100)`,
+          `)`,
+          `LANGUAGE SQL`,
+          `BEGIN`,
+          `    SET GREETING = 'Hello, ' || USER_NAME || '! Welcome to IBM i.';`,
+          `END`,
+        ].join('\n'),
+
+        `## Call the procedure with bind parameters`,
+        [
+          `CALL MYLIB.GREET_USER(?, ?);`,
+          `bind:('Alice', ' ');`,
+        ].join('\n'),
+
+        `## Create a procedure with multiple OUT parameters`,
+        [
+          `CREATE OR REPLACE PROCEDURE MYLIB.CALCULATE_VALUES (`,
+          `    IN  INPUT_NUM    INTEGER,`,
+          `    OUT DOUBLED      INTEGER,`,
+          `    OUT SQUARED      INTEGER`,
+          `)`,
+          `LANGUAGE SQL`,
+          `BEGIN`,
+          `    SET DOUBLED = INPUT_NUM * 2;`,
+          `    SET SQUARED = INPUT_NUM * INPUT_NUM;`,
+          `END`,
+        ].join('\n'),
+
+        `## Call with multiple OUT parameters`,
+        [
+          `CALL MYLIB.CALCULATE_VALUES(?, ?, ?);`,
+          `bind:(5, 0, 0);`,
+        ].join('\n'),
+      ],
+      isNotebook: true
+    },
+    {
       name: "IBM i History",
       content: [
         `## `.concat([
