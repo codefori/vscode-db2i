@@ -77,7 +77,7 @@ export class OldSQLJob extends SQLJob {
 
       ServerComponent.writeOutput(startingCommand);
 
-      const a = connection.client.connection.exec(startingCommand, (err: any, stream: any, options: {encoding: `binary`}) => {
+      const a = connection.client.connection.exec(startingCommand, {}, (err: any, stream: any) => {
         if (err) {
           reject(err);
           ServerComponent.writeOutput(err);

@@ -4,9 +4,8 @@ import {
 } from "../../database/schemas";
 import { remoteAssistIsEnabled } from "./logic/available";
 import Configuration from "../../configuration";
-import { SQLStatementChecker, SqlSyntaxError } from "../../connection/syntaxChecker";
+import { ValidateStatementComponent, SqlSyntaxError, MAX_STATEMENT_COUNT, VALID_STATEMENT_LENGTH } from "../../connection/components/validateStatement";
 import { StatementGroup, StatementType } from "../sql/types";
-import { MAX_STATEMENT_COUNT, VALID_STATEMENT_LENGTH } from "../../connection/syntaxChecker/checker";
 import { getSqlDocument, isSafeDocument } from "./logic/parse";
 import path from "path";
 
@@ -51,10 +50,10 @@ function shouldShowWarnings() {
 const CHECKER_AVAILABLE_CONTEXT = `vscode-db2i.syntax.checkerAvailable`;
 const CHECKER_RUNNING_CONTEXT = `vscode-db2i.syntax.checkerRunning`;
 
-const checkerAvailable = () => (SQLStatementChecker.get() !== undefined);
+const checkerAvailable = async () => (await ValidateStatementComponent.get() !== undefined);
 
-export function setCheckerAvailableContext(additionalState = true) {
-  const available = checkerAvailable() && additionalState;
+export async function setCheckerAvailableContext(additionalState = true) {
+  const available = await checkerAvailable() && additionalState;
   commands.executeCommand(`setContext`, CHECKER_AVAILABLE_CONTEXT, available);
 }
 
@@ -81,10 +80,10 @@ export const problemProvider: Disposable[] = [
     }
   }),
 
-  workspace.onDidOpenTextDocument(e => {
+  workspace.onDidOpenTextDocument(async e => {
     const isSql = e.languageId === `sql`;
     if (isSql) {
-      if (checkerAvailable() && !isSafeDocument(e)) {
+      if (await checkerAvailable() && !isSafeDocument(e)) {
         const basename = e.fileName ? path.basename(e.fileName) : `Untitled`;
         documentLargeError(basename);
       }
@@ -119,7 +118,7 @@ interface SqlDiagnostic extends Diagnostic {
 }
 
 async function validateSqlDocument(document: TextDocument, specificStatement?: number) {
-  const checker = SQLStatementChecker.get();
+  const checker = await ValidateStatementComponent.get();
   const job = remoteAssistIsEnabled(true);
   if (checker && job) {
     const basename = document.fileName ? path.basename(document.fileName) : `Untitled`;

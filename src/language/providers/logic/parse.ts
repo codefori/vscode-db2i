@@ -1,6 +1,6 @@
 import { TextDocument } from "vscode";
 import Document from "../../sql/document";
-import { VALID_STATEMENT_LENGTH } from "../../../connection/syntaxChecker/checker";
+import { VALID_STATEMENT_LENGTH } from "../../../connection/components/validateStatement";
 
 let cached: Map<string, {ast, version}> = new Map();
 
