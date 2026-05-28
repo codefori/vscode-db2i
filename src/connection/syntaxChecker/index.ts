@@ -100,7 +100,7 @@ export class SQLStatementChecker implements IBMiComponent {
       const tempSourcePath = posix.join(tempDir, `sqlchecker.sql`);
       await connection.getContent().writeStreamfileRaw(tempSourcePath, Buffer.from(this.getSource(connection), "utf-8"));
       const result = await connection.runCommand({
-        command: `RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SYS)`,
+        command: `QSYS/RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SYS)`,
         noLibList: true
       });
 
