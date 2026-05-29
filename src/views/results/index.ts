@@ -478,7 +478,8 @@ async function runHandler(options?: StatementInfo) {
 
           setCancelButtonVisibility(true);
           updateStatusBar({ executing: true });
-          const data = await JobManager.runSQL(statementDetail.content);
+          const result = await JobManager.runSQLVerbose(statementDetail.content);
+          const data = result.data;
           setCancelButtonVisibility(false);
 
           if (data.length > 0) {
@@ -491,11 +492,38 @@ async function runHandler(options?: StatementInfo) {
                 let content = ``;
                 switch (statementDetail.qualifier) {
                   case `csv`:
-                    content = csv.stringify(data, {
-                      header: true,
-                      quoted_string: true,
-                      delimiter: DelimValue[Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`]
-                    });
+                    // Use metadata to handle duplicate column names properly
+                    if (result.metadata && result.metadata.columns) {
+                      const delimiter = DelimValue[Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`];
+                      const columnNames = result.metadata.columns.map(col => col.name);
+                      
+                      // Build CSV manually to preserve duplicate column names
+                      const rows: string[][] = [];
+                      
+                      // Add header row
+                      rows.push(columnNames.map(name => `"${String(name).replace(/"/g, '""')}"`));
+                      
+                      // Add data rows - use column index to get values in correct order
+                      for (const row of data) {
+                        const values = columnNames.map(name => {
+                          const value = row[name];
+                          if (value === null || value === undefined) {
+                            return '';
+                          }
+                          return `"${String(value).replace(/"/g, '""')}"`;
+                        });
+                        rows.push(values);
+                      }
+                      
+                      content = rows.map(row => row.join(delimiter)).join('\n');
+                    } else {
+                      // Fallback to original method if no metadata
+                      content = csv.stringify(data, {
+                        header: true,
+                        quoted_string: true,
+                        delimiter: DelimValue[Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`]
+                      });
+                    }
                     break;
                   case `json`: content = JSON.stringify(data, null, 2); break;
 
