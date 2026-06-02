@@ -42,14 +42,15 @@ export class CheckStatementComponent implements IBMiComponent {
   private async getSQLRoutineSignature(connection: IBMi, library: string, name: string, type: "PROCEDURE" | "FUNCTION") {
     return (await connection.runSQL(
       /* sql */`select HASH_SHA256(EXTERNAL_NAME) SIGNATURE from qsys2.sysroutines where routine_type = '${type}' and rtnschema = '${library}' and RTNNAME = '${name}' fetch first row only`
-    )).at(0)?.SIGNATURE as string;
+    )).pop()?.SIGNATURE as string;    
   }
 
   async update(connection: IBMi, installDirectory: string): Promise<SecureComponentState> {
     return connection.withTempDirectory(async tempDir => {
-      const tempSourcePath = getVSCodeTools().ensureFullPath(posix.join(tempDir, `sqlchecker.sql`), connection?.getConfig()?.homeDirectory);
+      const tempSourcePath = getVSCodeTools()?.ensureFullPath(posix.join(tempDir, `sqlchecker.sql`), connection?.getConfig()?.homeDirectory);
+      const srcPath = tempSourcePath ? tempSourcePath : '';
       const library = connection?.getConfig()?.tempLibrary.toUpperCase() || `ILEDITOR`;
-      await connection.getContent().writeStreamfileRaw(tempSourcePath, this.getSource(library, CheckStatementComponent.FUNCTION_NAME, CheckStatementComponent.VERSION));
+      await connection.getContent().writeStreamfileRaw(srcPath, this.getSource(library, CheckStatementComponent.FUNCTION_NAME, CheckStatementComponent.VERSION));
       const result = await connection.runCommand({
         command: `QSYS/RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SYS) DFTRDBCOL(${library})`,
         cwd: `/`,
