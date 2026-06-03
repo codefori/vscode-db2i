@@ -5,8 +5,8 @@ import * as mdTable from 'json-to-markdown-table';
 
 import { getInstance } from '../base';
 import { JobManager } from '../config';
-import { ChartJsType, chartJsTypes, generateChartHTMLCell } from './logic/chartJs';
 import { ChartDetail, generateChart } from './logic/chart';
+import { ChartJsType, chartJsTypes, generateChartHTMLCell } from './logic/chartJs';
 import { getStatementDetail } from './logic/statement';
 
 export class IBMiController {
@@ -82,22 +82,21 @@ export class IBMiController {
               ({ chartDetail, content } = getStatementDetail(content, eol));
 
               // Execute the query
-              const query = selected.job.query(content);
+              const query = selected.job.query<any>(content);
               const results = await query.execute(1000);
 
               const table = results.data;
-              const columnNames = results.metadata.columns.map(c => c.name);
+              const columnNames = results.metadata.columns?.map(c => c.name);
 
               if (table === undefined && results.success && !results.has_results) {
                 items.push(vscode.NotebookCellOutputItem.text(`Statement executed successfully. ${results.update_count ? `${results.update_count} rows affected.` : ``}`, `text/markdown`));
                 break;
               }
 
-              if (table.length > 0) {
+              if (table.length && columnNames) {
                 // Add `-` for blanks.
                 table.forEach(row => {
                   columnNames.forEach(key => {
-                    //@ts-ignore
                     if (row[key] === null) { row[key] = `-`; }
                   });
                 });
@@ -125,15 +124,18 @@ export class IBMiController {
               items.push(vscode.NotebookCellOutputItem.stderr(`No job selected in SQL Job Manager.`));
             }
           } catch (e) {
-            items.push(vscode.NotebookCellOutputItem.stderr(e.message));
+            items.push(vscode.NotebookCellOutputItem.stderr(e instanceof Error ? e.message : String(e)));
           }
           break;
 
         case `cl`:
           try {
+
             const command = await connection.runCommand({
               command: cell.document.getText(),
-              environment: `ile`
+              environment: `ile`,
+              //@ts-ignore (remove comment when Code for i v3 is released)
+              getSpooledFiles: true
             });
 
             if (command.stdout) {
@@ -154,7 +156,7 @@ export class IBMiController {
           } catch (e) {
             items.push(
               vscode.NotebookCellOutputItem.stderr(`Failed to run command. Are you connected?`),
-              vscode.NotebookCellOutputItem.stderr(e.message)
+              vscode.NotebookCellOutputItem.stderr(e instanceof Error ? e.message : String(e))
             );
           }
           break;

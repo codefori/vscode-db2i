@@ -1,17 +1,15 @@
-import * as vscode from 'vscode';
 import { TextDecoder, TextEncoder } from 'util';
+import * as vscode from 'vscode';
 import { IBMiController } from './Controller';
-import { notebookFromSqlUri } from './logic/openAsNotebook';
 import { Cell, CodeCell, MarkdownCell, Notebook, Output } from './jupyter';
 import { exportNotebookAsHtml } from './logic/export';
+import { notebookFromSqlUri } from './logic/openAsNotebook';
 
 interface RawNotebookCell {
   language: string;
   value: string;
   kind: vscode.NotebookCellKind;
 }
-
-let newNotebookCount = 1;
 
 export function notebookInit() {
   const openBlankNotebook = vscode.commands.registerCommand(`vscode-db2i.notebook.open`, () => {
@@ -40,7 +38,7 @@ export class IBMiSerializer implements vscode.NotebookSerializer {
   ): Promise<vscode.NotebookData> {
     let contents = new TextDecoder().decode(content);
 
-    let asNb: Notebook;
+    let asNb: Notebook | undefined;
     try {
       asNb = <Notebook>JSON.parse(contents);
     } catch {
@@ -80,8 +78,9 @@ export class IBMiSerializer implements vscode.NotebookSerializer {
     
                 return new vscode.NotebookCellOutput(items);
             }
-
-          });
+            return new vscode.NotebookCellOutput([]);
+          })
+          .filter(output => output.items.length);
         }
         
         return newCell;
@@ -118,7 +117,7 @@ export class IBMiSerializer implements vscode.NotebookSerializer {
 }
 
 function nbCellToJupyterCell(cell: vscode.NotebookCellData): Cell {
-  if (cell.kind === vscode.NotebookCellKind.Code) {
+  if (cell.kind === vscode.NotebookCellKind.Code && cell.outputs) {
     const codeBase: CodeCell = {
       cell_type: `code`,
       execution_count: null,
