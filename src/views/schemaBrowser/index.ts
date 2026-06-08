@@ -164,6 +164,34 @@ export default class SchemaBrowser {
         }
       }),
 
+      vscode.commands.registerCommand(`vscode-db2i.generateSQLWithConstraints`, async (object: SQLObject) => {
+        if (object) {
+          vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL with Inline Constraints` }, async () => {
+            try {
+              const content = await Schemas.generateSQL(object.schema, object.uniqueName(), object.type.toUpperCase(), false, true);
+              const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+              await vscode.window.showTextDocument(textDoc);
+            } catch (e) {
+              vscode.window.showErrorMessage(e.message);
+            }
+          });
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.generateSQLWithoutConstraints`, async (object: SQLObject) => {
+        if (object) {
+          vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL with Separate ALTER Statements` }, async () => {
+            try {
+              const content = await Schemas.generateSQL(object.schema, object.uniqueName(), object.type.toUpperCase(), false, false);
+              const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+              await vscode.window.showTextDocument(textDoc);
+            } catch (e) {
+              vscode.window.showErrorMessage(e.message);
+            }
+          });
+        }
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.getRelatedObjects`, async (object: SQLObject) => {
         if (object) {
           const content = getRelatedObjects(object.schema, object.name);

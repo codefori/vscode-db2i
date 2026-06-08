@@ -107,9 +107,9 @@ export const problemProvider: Disposable[] = [
     }
   }),
 
-  window.onDidChangeActiveTextEditor(e => {
+  window.onDidChangeActiveTextEditor(async e => {
     const canRun = e && e.document.languageId === `sql` && isSafeDocument(e.document);
-    setCheckerAvailableContext(canRun);
+    await setCheckerAvailableContext(canRun);
   }),
 ];
 

@@ -41,6 +41,16 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.generateSQLWithConstraints",
+        "title": "With Inline Constraints",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateSQLWithoutConstraints",
+        "title": "With Separate ALTER Statements",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.getRelatedObjects",
         "title": "Get Related Objects",
         "category": "Db2 for i"
@@ -113,7 +123,23 @@
         "icon": "$(search)"
       }
     ],
+    "submenus": [
+      {
+        "id": "generateSQLSubmenu",
+        "label": "Generate SQL"
+      }
+    ],
     "menus": {
+      "generateSQLSubmenu": [
+        {
+          "command": "vscode-db2i.generateSQLWithConstraints",
+          "group": "1_generate"
+        },
+        {
+          "command": "vscode-db2i.generateSQLWithoutConstraints",
+          "group": "1_generate"
+        }
+      ],
       "commandPalette": [
         {
           "command": "vscode-db2i.filterDatabaseObjectTypes",
@@ -125,6 +151,14 @@
         },
         {
           "command": "vscode-db2i.generateSQL",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateSQLWithConstraints",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateSQLWithoutConstraints",
           "when": "never"
         },
         {
@@ -205,7 +239,7 @@
           "group": "inline"
         },
         {
-          "command": "vscode-db2i.generateSQL",
+          "submenu": "generateSQLSubmenu",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == trigger || viewItem == type",
           "group": "db2@2"
         },
