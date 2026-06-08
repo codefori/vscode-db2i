@@ -80,7 +80,7 @@ export default class Table {
   }
 
   static async clearFile(library: string, objectName: string): Promise<void> {
-    const command = `CLRPFM ${Statement.escapeString(library)}/${Statement.escapeString(objectName)}`;
+    const command = `QSYS/CLRPFM ${Statement.escapeString(library)}/${Statement.escapeString(objectName)}`;
               
     const commandResult = await getInstance().getConnection().runCommand({
       command: command,
@@ -94,7 +94,7 @@ export default class Table {
 
   static async copyFile(library: string, objectName: string, options: CPYFOptions): Promise<void> {
     const command = [
-      `CPYF FROMFILE(${Statement.escapeString(library)}/${Statement.escapeString(objectName)}) TOFILE(${options.toLib}/${options.toFile})`,
+      `QSYS/CPYF FROMFILE(${Statement.escapeString(library)}/${Statement.escapeString(objectName)}) TOFILE(${options.toLib}/${options.toFile})`,
       `FROMMBR(${options.fromMbr}) TOMBR(${options.toMbr}) MBROPT(${options.mbrOpt})`,
       `CRTFILE(${options.crtFile}) OUTFMT(${options.outFmt})`
     ].join(` `);
