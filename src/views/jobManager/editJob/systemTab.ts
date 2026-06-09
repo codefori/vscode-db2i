@@ -1,6 +1,5 @@
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
-import { getBase, getInstance, loadBase } from "../../../base";
-import { formatDescription } from ".";
+import { getBase, getInstance } from "../../../base";
 
 const dbNameText = `
 	
@@ -120,10 +119,7 @@ export default function getSystemTab(options: JDBCOptions) {
     //   ],
     //   formatDescription(autoCommitText)
     // )
-    .addSelect(`database name`, `Database name`, [
-      {text: `System Base`, description: `*SYSBAS`, value: ``, selected: options["database name"] === ``},
-      ...Object.values(connection.getAllIAsps()).map(asp => ({text: asp.name, description: asp.name, value: asp.rdbName, selected: options["database name"] === asp.rdbName}))
-    ], formatDescription(dbNameText))
+    .addInput(`database name`, `Database name`, undefined, { default: options["database name"] })
     .addSelect(
       `decfloat rounding mode`,
       `Decfloat rounding mode`,

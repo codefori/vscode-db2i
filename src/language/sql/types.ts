@@ -59,7 +59,7 @@ export enum StatementType {
 	Lock = "Lock",
 }
 
-export const StatementTypeWord = {
+export const StatementTypeWord = new Map(Object.entries({
 	'CREATE': StatementType.Create,
 	'SELECT': StatementType.Select,
 	'WITH': StatementType.With,
@@ -115,7 +115,7 @@ export const StatementTypeWord = {
 	'LOCK': StatementType.Lock,
 	'OPEN': StatementType.Open,
 	'CLOSE': StatementType.Close,
-};
+}));
 
 export enum ClauseType {
 	Unknown = "Unknown",

@@ -1,19 +1,19 @@
 import { commands } from "vscode";
 import { getInstance } from "./base";
-import { ServerComponent } from "./connection/serverComponent";
+import { Db2foriOutput } from "./extension";
 
 export type Db2FeatureIds = `SELF`;
 
-const featureRequirements: { [id in Db2FeatureIds]: { [osVersion: number]: number } } = {
+const featureRequirements: { [id in Db2FeatureIds]: { [osVersion: string]: number } } = {
   'SELF': {
-    7.4: 26,
-    7.5: 5,
-    7.6: 1
+    '7.4': 26,
+    '7.5': 5,
+    '7.6': 1
   }
 };
 
 export class IBMiDetail {
-  private version: number = 0;
+  private version = '';
   private db2Level: number = 0;
   private features: { [id in Db2FeatureIds]: boolean } = {
     'SELF': false
@@ -42,10 +42,10 @@ export class IBMiDetail {
     const connection = getInstance().getConnection();
 
     let levelCheckFailed = false;
-    
+
     const versionResults = await connection.runSQL(`select OS_VERSION concat '.' concat OS_RELEASE as VERSION from sysibmadm.env_sys_info`);
-    this.version = Number(versionResults[0].VERSION);
-  
+    this.version = String(versionResults[0].VERSION);
+
     try {
       const db2LevelResults = await connection.runSQL([
         `select max(ptf_group_level) as HIGHEST_DB2_PTF_GROUP_LEVEL`,
@@ -53,16 +53,16 @@ export class IBMiDetail {
         `where PTF_GROUP_DESCRIPTION like 'DB2 FOR IBM I%' and`,
         `ptf_group_status = 'INSTALLED';`
       ].join(` `));
-  
+
       this.db2Level = Number(db2LevelResults[0].HIGHEST_DB2_PTF_GROUP_LEVEL);
-    } catch (e) {
-      ServerComponent.writeOutput(`Failed to get Db2 level. User does not have enough authority: ${e.message}`);
+    } catch (e : any) {
+      Db2foriOutput.writeOutput(`Failed to get Db2 level. User does not have enough authority: ${e.message}`);
       levelCheckFailed = true;
     }
 
     for (const featureId of features) {
-      const requiredLevelForFeature = featureRequirements[featureId][String(this.version)];
-      const supported = requiredLevelForFeature && this.db2Level >= requiredLevelForFeature;
+      const requiredLevelForFeature = featureRequirements[featureId][this.version];
+      const supported = requiredLevelForFeature !== undefined && this.db2Level >= requiredLevelForFeature;
       this.setFeatureSupport(featureId, supported);
     }
 

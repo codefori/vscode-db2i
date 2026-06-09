@@ -6,17 +6,16 @@ import {
   ProviderResult,
   TreeDataProvider,
   TreeItem,
-  Uri,
-  Disposable
+  Uri
 } from "vscode";
-import { JobManager, osDetail } from "../../../config";
-import { SelfCodeNode, SelfIleStackFrame } from "./nodes";
-import { openExampleCommand } from "../../examples/exampleBrowser";
-import { SQLExample } from "../../examples";
-import { JobInfo } from "../../../connection/manager";
-import { OldSQLJob } from "../../../connection/sqlJob";
-import { JobLogEntry } from "../../../connection/types";
 import { isContinueActive } from "../../../aiProviders/continue/continueContextProvider";
+import { JobManager, osDetail } from "../../../config";
+import { ExtendedSQLJob } from "../../../connection/extendedSQLJob";
+import { JobInfo } from "../../../connection/manager";
+import { JobLogEntry } from "../../../connection/types";
+import { SQLExample } from "../../examples";
+import { openExampleCommand } from "../../examples/exampleBrowser";
+import { SelfCodeNode, SelfIleStackFrame } from "./nodes";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -92,7 +91,7 @@ export class SelfCodesResultsView implements TreeDataProvider<any> {
           await vscode.window.showTextDocument(document, {
             selection: range
           });
-          
+
           vscode.commands.executeCommand(`continue.focusContinueInput`);
         }
       }),
@@ -134,7 +133,7 @@ export class SelfCodesResultsView implements TreeDataProvider<any> {
     this.refresh();
   }
 
-  async getSelfCodes(selected: JobInfo, onlySelected?: boolean): Promise<SelfCodeNode[]|undefined> {
+  async getSelfCodes(selected: JobInfo, onlySelected?: boolean): Promise<SelfCodeNode[] | undefined> {
     const content = `SELECT 
                       job_name, user_name, reason_code, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, message_text, message_second_level_text,
                       program_library, program_name, program_type, module_name, client_applname, client_programid, initial_stack
@@ -151,7 +150,7 @@ export class SelfCodesResultsView implements TreeDataProvider<any> {
           INITIAL_STACK: JSON.parse(row.INITIAL_STACK as unknown as string)
         }));
 
-      
+
         return data;
       }
     } catch (e) {
@@ -169,7 +168,7 @@ export class SelfCodesResultsView implements TreeDataProvider<any> {
     return element;
   }
 
-  async getChildren(element?: SelfCodeTreeItem|SelfErrorStackItem): Promise<any[]> {
+  async getChildren(element?: SelfCodeTreeItem | SelfErrorStackItem): Promise<any[]> {
     if (element && 'getChildren' in element) {
       const children = await element.getChildren();
       return children;
@@ -231,10 +230,7 @@ class SelfCodeItems extends ExtendedTreeItem {
 
   async getChildren(): Promise<ExtendedTreeItem[]> {
     const selfCodes = await this.selfView.getSelfCodes(this.selected, true);
-
-    if (selfCodes) {
-      return selfCodes.map((error) => new SelfCodeTreeItem(error));
-    }
+    return selfCodes?.map((error) => new SelfCodeTreeItem(error)) || [];
   }
 }
 
@@ -272,7 +268,7 @@ export class SelfCodeTreeItem extends ExtendedTreeItem {
       path: error.MATCHES.toString()
     })
 
-    this.iconPath = error.LOGGED_SQLCODE < 0 ? new vscode.ThemeIcon(`error`): new vscode.ThemeIcon(`warning`);
+    this.iconPath = error.LOGGED_SQLCODE < 0 ? new vscode.ThemeIcon(`error`) : new vscode.ThemeIcon(`warning`);
     this.contextValue = `selfCodeNode`;
   }
 
@@ -298,7 +294,7 @@ export class SelfCodeTreeItem extends ExtendedTreeItem {
 }
 
 class JobLogEntiresItem extends ExtendedTreeItem {
-  constructor(private selected: OldSQLJob) {
+  constructor(private selected: ExtendedSQLJob) {
     super(`Job Log`, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.iconPath = new vscode.ThemeIcon(`info`);
@@ -309,15 +305,17 @@ class JobLogEntiresItem extends ExtendedTreeItem {
     if (log.has_results) {
       return log.data.reverse().map((entry) => new JobLogEntryItem(entry));
     }
+
+    return [];
   }
 }
 
-const JOB_LOG_ENTRY_ICONS = {
+const JOB_LOG_ENTRY_ICONS = new Map(Object.entries({
   '0': new vscode.ThemeIcon(`info`),
   '10': new vscode.ThemeIcon(`info`),
   '20': new vscode.ThemeIcon(`warning`),
-  '30': new vscode.ThemeIcon(`error`),
-}
+  '30': new vscode.ThemeIcon(`error`)
+}));
 
 class JobLogEntryItem extends ExtendedTreeItem {
   constructor(private entry: JobLogEntry) {
@@ -330,7 +328,7 @@ class JobLogEntryItem extends ExtendedTreeItem {
     hoverable.appendText(items.filter(i => i).join(`\n\n`));
     this.tooltip = hoverable;
 
-    this.iconPath = JOB_LOG_ENTRY_ICONS[entry.SEVERITY];
+    this.iconPath = JOB_LOG_ENTRY_ICONS.get(entry.SEVERITY);
   }
 
   async getChildren(): Promise<ExtendedTreeItem[]> {
@@ -352,7 +350,7 @@ class SelfErrorStatementItem extends ExtendedTreeItem {
       name: `Statement`,
       content: [statement]
     }
-    
+
     this.command = {
       command: openExampleCommand,
       title: `Open example`,
@@ -408,18 +406,13 @@ class SelfErrorStackFrameItem extends ExtendedTreeItem {
 
 // maybe can be used for showing node details
 export class SelfTreeDecorationProvider implements FileDecorationProvider {
-  private disposables: Array<Disposable> = [];
-
   readonly _onDidChangeFileDecorations: EventEmitter<Uri | Uri[]> = new EventEmitter<Uri | Uri[]>();
   readonly onDidChangeFileDecorations: Event<Uri | Uri[]> = this._onDidChangeFileDecorations.event;
 
-  constructor() {
-      this.disposables = [];
-  }
   provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<vscode.FileDecoration> {
     if (uri.scheme === `selfCodeTreeView`) {
       const errorCount = parseInt(uri.path);
-      
+
       if (!isNaN(errorCount) && errorCount > 0) {
         return {
           badge: errorCount < 100 ? errorCount.toString() : '💯'
@@ -431,6 +424,8 @@ export class SelfTreeDecorationProvider implements FileDecorationProvider {
   }
 
   async updateTreeItems(treeItem: TreeItem): Promise<void> {
+    if (treeItem.resourceUri) {
       this._onDidChangeFileDecorations.fire(treeItem.resourceUri);
+    }
   }
 }

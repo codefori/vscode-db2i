@@ -1,20 +1,19 @@
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import * as vscode from "vscode";
 import { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
+import { registerDb2iTablesProvider } from "../../aiProviders/continue/listTablesContextProvider";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
-import { ServerComponent } from "../../connection/serverComponent";
-import { OldSQLJob } from "../../connection/sqlJob";
+import { TransactionEndType } from "../../connection/types";
+import { Db2foriOutput } from "../../extension";
+import { sqlLanguageStatus } from "../../language/providers";
+import { setCancelButtonVisibility } from "../results";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
 import { displayJobLog } from "./jobLog";
 import { SelfValue, selfCodesMap } from "./selfCodes/nodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
-import { setCancelButtonVisibility } from "../results";
-import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
-import { registerDb2iTablesProvider } from "../../aiProviders/continue/listTablesContextProvider";
-import { sqlLanguageStatus } from "../../language/providers";
-import { TransactionEndType } from "../../connection/types";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
@@ -25,9 +24,7 @@ export class JobManagerView implements TreeDataProvider<any> {
 
   constructor(context: vscode.ExtensionContext) {
     context.subscriptions.push(
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.refresh`, async () => {
-        this.refresh();
-      }),
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.refresh`, () => this.refresh()),
 
       ...ConfigManager.initialiseSaveCommands(),
 
@@ -43,13 +40,8 @@ export class JobManagerView implements TreeDataProvider<any> {
 
         try {
           updateStatusBar({ newJob: true });
-          await window.withProgress({ location: { viewId: `jobManager` } }, async () => {
-            await JobManager.newJob(
-              (options ? new OldSQLJob(options) : undefined),
-              name
-            );
-          });
-        } catch (e) {
+          await window.withProgress({ location: { viewId: `jobManager` } }, async () => await JobManager.newJob(options, name));
+        } catch (e: any) {
           window.showErrorMessage(e.message);
         }
 
@@ -108,9 +100,8 @@ export class JobManagerView implements TreeDataProvider<any> {
       vscode.commands.registerCommand(`vscode-db2i.jobManager.copyJobId`, async (node?: SQLJobItem) => {
         if (node) {
           const id = node.label as string;
-          const selected = await JobManager.getJob(id);
-
-          if (selected) {
+          const selected = JobManager.getJob(id);
+          if (selected?.job.id) {
             await env.clipboard.writeText(selected.job.id);
             window.showInformationMessage(`Copied ${selected.job.id} to clipboard.`);
           }
@@ -126,14 +117,12 @@ export class JobManagerView implements TreeDataProvider<any> {
               window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
                 progress.report({ message: `Ending current job` });
 
-                await selected.job.close();
+                await JobManager.closeJobById(selected.job);
 
                 progress.report({ message: `Starting new job` });
 
-                selected.job.options = newOptions;
-
                 try {
-                  await selected.job.connect();
+                  selected.job = await JobManager.newJob(newOptions);
                 } catch (e) {
                   window.showErrorMessage(`Failed to start new job with updated properties.`);
                 }
@@ -198,7 +187,7 @@ export class JobManagerView implements TreeDataProvider<any> {
               }
             });
             quickPick.show();
-          } catch (e) {
+          } catch (e: any) {
             vscode.window.showErrorMessage(e.message);
           }
         }
@@ -207,43 +196,43 @@ export class JobManagerView implements TreeDataProvider<any> {
       vscode.commands.registerCommand(`vscode-db2i.jobManager.enableTracing`, async (node?: SQLJobItem) => {
         if (node) {
           const id = node.label as string;
-          const selected = await JobManager.getJob(id);
-
-          ServerComponent.writeOutput(`Enabling tracing for ${selected.name} (${selected.job.id})`, true);
-
-          selected.job.setTraceConfig("IN_MEM", "DATASTREAM");
+          const selected = JobManager.getJob(id);
+          if (selected) {
+            Db2foriOutput.writeOutput(`Enabling tracing for ${selected.name} (${selected.job.id})`, true);
+            selected.job.setTraceConfig("IN_MEM", "DATASTREAM");
+          }
         }
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.getTrace`, async (node?: SQLJobItem) => {
         if (node) {
           const id = node.label as string;
-          const selected = await JobManager.getJob(id);
-
-          const possibleFile = selected.job.getTraceFilePath();
-
-          if (possibleFile) {
-            // Trace was written to a file
-            vscode.workspace.openTextDocument(Uri.from({
-              scheme: `streamfile`,
-              path: possibleFile
-            })).then(doc => {
-              vscode.window.showTextDocument(doc);
-            });
-
-          } else {
-            // This likely means IN_MEM was used
-            const trace = await selected.job.getTraceData();
-            if (trace.success) {
-              vscode.workspace.openTextDocument({
-                content: trace.tracedata.trim()
-              }).then(doc => {
+          const selected = JobManager.getJob(id);
+          if (selected) {
+            const possibleFile = selected.job.getTraceFilePath();
+            if (possibleFile) {
+              // Trace was written to a file
+              vscode.workspace.openTextDocument(Uri.from({
+                scheme: `streamfile`,
+                path: possibleFile
+              })).then(doc => {
                 vscode.window.showTextDocument(doc);
-              })
+              });
 
             } else {
-              ServerComponent.writeOutput(`Unable to get trace data for ${selected.name} (${selected.job.id}):`, true);
-              ServerComponent.writeOutput(trace.error);
+              // This likely means IN_MEM was used
+              const trace = await selected.job.getTraceData();
+              if (trace.success) {
+                vscode.workspace.openTextDocument({
+                  content: trace.tracedata.trim()
+                }).then(doc => {
+                  vscode.window.showTextDocument(doc);
+                })
+
+              } else {
+                Db2foriOutput.writeOutput(`Unable to get trace data for ${selected.name} (${selected.job.id}):`, true);
+                Db2foriOutput.writeOutput(trace.error);
+              }
             }
           }
         }
@@ -273,7 +262,7 @@ export class JobManagerView implements TreeDataProvider<any> {
               if (!result.success) {
                 vscode.window.showErrorMessage(`Failed to rollback. ` + result.error);
               }
-            } catch (e) {
+            } catch (e: any) {
               vscode.window.showErrorMessage(`Failed to rollback. ` + e.message);
             }
 
@@ -284,7 +273,7 @@ export class JobManagerView implements TreeDataProvider<any> {
 
       vscode.commands.registerCommand(selectJobCommand, async (selectedName: string) => {
         if (selectedName) {
-          await JobManager.setSelection(selectedName);
+          JobManager.setSelection(selectedName);
           this.refresh();
         }
       }),
@@ -314,17 +303,9 @@ export class JobManagerView implements TreeDataProvider<any> {
     const selectedJob = JobManager.getSelection();
 
     // re-register db2i tables context provider with current schema
-    const selectedSchema = selectedJob?.job.options.libraries[0];
-    if (
-      selectedJob &&
-      selectedSchema
-    ) {
-      registerDb2iTablesProvider(selectedSchema);
-    }
+    selectedJob?.job.getCurrentSchema().then(selectedSchema => registerDb2iTablesProvider(selectedSchema));
 
-    setCancelButtonVisibility(
-      selectedJob && selectedJob.job.getStatus() === "busy"
-    );
+    setCancelButtonVisibility(selectedJob?.job.getStatus() === "busy");
     sqlLanguageStatus.setState(selectedJob !== undefined);
     commands.executeCommand(
       `setContext`,
