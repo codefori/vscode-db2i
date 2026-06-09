@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.17.0",
+  "version": "2.0.0-dev.0",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -33,9 +33,8 @@
   "main": "./dist/extension.js",
   "scripts": {
     "test": "vitest",
-    "dsc": "npx tsx src/dsc",
     "package": "vsce package",
-    "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
+    "vscode:prepublish": "rm -rf dist && npm run webpack",
     "webpack": "vscd --clean && webpack --mode development",
     "webpack-dev": "vscd --clean && webpack --mode development",
     "typings": "npx -p typescript tsc ./src/extension.ts --excludeDirectories '**/node_modules' --allowJs --noEmit --esModuleInterop -t es2019 --moduleResolution node --skipLibCheck"
