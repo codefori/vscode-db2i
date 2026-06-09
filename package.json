@@ -1914,6 +1914,7 @@
   "devDependencies": {
     "@continuedev/core": "^1.0.13",
     "@halcyontech/vscode-ibmi-types": "^3.0.9",
+    "@ibm/mapepire-js": "^0.5.0",
     "@types/glob": "^7.1.3",
     "@types/node": "25.x",
     "@types/vscode": "^1.95.0",
@@ -1929,14 +1930,10 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
-    "@ibm/mapepire-js": "^0.5.0",
-    "@octokit/rest": "^21.1.1",
     "chart.js": "^4.4.2",
     "csv": "^6.1.3",
     "json-to-markdown-table": "^1.0.0",
     "lru-cache": "^6.0.0",
-    "node-fetch": "^3.3.1",
-    "octokit": "^5.0.3",
     "showdown": "^2.1.0",
     "sql-formatter": "^14.0.0"
   }
