@@ -321,7 +321,7 @@ async function runHandler(options?: StatementInfo) {
 
     if (ref && (statement?.type === StatementType.Create || statement?.type === StatementType.Alter)) {
       const databaseObj =
-        statement.type === StatementType.Create && ref?.createType?.toUpperCase() === `schema`
+        statement.type === StatementType.Create && ref.createType?.toUpperCase() === `schema`
           ? ref.object.schema || ``
           : ref.object.schema || `` + ref.object.name || ``;
 
