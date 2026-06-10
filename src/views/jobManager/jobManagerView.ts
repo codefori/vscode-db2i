@@ -242,9 +242,9 @@ export class JobManagerView implements TreeDataProvider<any> {
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
           if (selected.job.underCommitControl()) {
-            const result = await selected.job.endTransaction(TransactionEndType.ROLLBACK);
+            const result = await selected.job.endTransaction(TransactionEndType.COMMIT);
             if (!result.success) {
-              vscode.window.showErrorMessage(`Failed to commit.` + result.error);
+              vscode.window.showErrorMessage(`Failed to commit. ` + result.error);
             }
 
             this.refresh();
