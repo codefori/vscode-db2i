@@ -310,7 +310,7 @@ export default class SQLTokeniser {
           }
         }
 
-        if (i > 0 && i < tokens.length - 2 && tokens[i].value.toLowerCase() === 'for' && tokens[i - 1].type === 'closebracket' && tokens[i + 2].value.toLowerCase() === 'data') {
+        if (i > 0 && i < tokens.length - 2 && tokens[i].value?.toLowerCase() === 'for' && tokens[i - 1].type === 'closebracket' && tokens[i + 2].value?.toLowerCase() === 'data') {
           goodMatch = false; // data-type with FOR BIT/SBCS/MIXED DATA
         }
 

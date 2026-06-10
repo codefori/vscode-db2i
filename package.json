@@ -34,9 +34,9 @@
   "scripts": {
     "test": "vitest",
     "package": "vsce package",
-    "vscode:prepublish": "rm -rf dist && npm run webpack",
-    "webpack": "vscd --clean && webpack --mode development",
-    "webpack-dev": "vscd --clean && webpack --mode development",
+    "vscode:prepublish": "npm run webpack",
+    "webpack": "vscd --clean && webpack --mode production",
+    "webpack-dev": "vscd --clean && webpack --mode development --watch",
     "typings": "npx -p typescript tsc ./src/extension.ts --excludeDirectories '**/node_modules' --allowJs --noEmit --esModuleInterop -t es2019 --moduleResolution node --skipLibCheck"
   },
   "contributes": {
