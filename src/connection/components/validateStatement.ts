@@ -1,9 +1,9 @@
 import { IBMiComponent, SecureComponentState } from "@halcyontech/vscode-ibmi-types/api/components/component";
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
 import { posix } from "path";
-import { CheckStatementComponent } from "./checkStatement";
-import { getInstance, getBase, getVSCodeTools } from "../../base";
+import { getInstance } from "../../base";
 import { JobInfo } from "../manager";
+import { CheckStatementComponent } from "./checkStatement";
 
 export const VALID_STATEMENT_LENGTH = 32740;
 export const MAX_STATEMENT_COUNT = 200;
@@ -25,9 +25,9 @@ interface SqlCheckError {
   NUMBEROFSTATEMENTSBACK: number;
 }
 
-type SqlErrorType = "error"|"warning"|"none";
+type SqlErrorType = "error" | "warning" | "none";
 
-const ERROR_STATE_MAP: {[state: string]: SqlErrorType} = {
+const ERROR_STATE_MAP: { [state: string]: SqlErrorType } = {
   '00': 'none',
   '01': 'warning',
 }
@@ -45,9 +45,8 @@ export class ValidateStatementComponent implements IBMiComponent {
   private static readonly VERSION = 1;
   private static readonly SIGNATURE = "4DA5046C8080EC338A7516B9589CACDBED20A44C7D4BAFFEEC605FFB7C2EDD47";
   private static readonly FUNCTION_NAME = `VALIDATE_STATEMENT${ValidateStatementComponent.VERSION.toString().padStart(4, "0")}`;
-  private static readonly TYPE = "FUNCTION";
 
-  static async get(): Promise<ValidateStatementComponent|undefined> {
+  static async get(): Promise<ValidateStatementComponent | undefined> {
     return await getInstance()?.getConnection()?.getComponent<ValidateStatementComponent>(ValidateStatementComponent.ID);
   }
 
@@ -64,11 +63,10 @@ export class ValidateStatementComponent implements IBMiComponent {
   }
 
   async getRemoteState(connection: IBMi, installDirectory: string): Promise<SecureComponentState> {
-    const remoteSignature = await this.getSQLRoutineSignature(
-      connection,
+    const remoteSignature = await connection.getContent().getSQLRoutineSignature(
       this.getLibrary(connection),
       ValidateStatementComponent.FUNCTION_NAME,
-      ValidateStatementComponent.TYPE,
+      "FUNCTION"
     );
     return {
       status: remoteSignature ? "Installed" : "NotInstalled",
@@ -76,15 +74,9 @@ export class ValidateStatementComponent implements IBMiComponent {
     };
   }
 
-  private async getSQLRoutineSignature(connection: IBMi, library: string, name: string, type: "PROCEDURE" | "FUNCTION") {
-    return (await connection.runSQL(
-      /* sql */`select HASH_SHA256(ROUTINEDEF) SIGNATURE from qsys2.sysroutines where routine_type = '${type}' and rtnschema = '${library}' and RTNNAME = '${name}' fetch first row only`
-    )).pop()?.SIGNATURE as string;   
-  }
-
   async update(connection: IBMi, installDirectory: string): Promise<SecureComponentState> {
     return connection.withTempDirectory(async tempDir => {
-      const tempSourcePath = getVSCodeTools()?.ensureFullPath(posix.join(tempDir, `sqlvalidator.sql`), connection?.getConfig()?.homeDirectory);
+      const tempSourcePath = posix.join(tempDir, `sqlvalidator.sql`);
       const srcPath = tempSourcePath ? tempSourcePath : '';
       const library = this.getLibrary(connection);
       await connection.getContent().writeStreamfileRaw(srcPath, this.getSource(library, ValidateStatementComponent.VERSION));
@@ -103,7 +95,7 @@ export class ValidateStatementComponent implements IBMiComponent {
     });
   }
 
-  async checkMultipleStatements(currentJob: JobInfo, statements: string[]): Promise<SqlSyntaxError[]|undefined> {
+  async checkMultipleStatements(currentJob: JobInfo, statements: string[]): Promise<SqlSyntaxError[] | undefined> {
     const connection = getInstance()?.getConnection();
     if (!connection) return undefined;
 
@@ -111,10 +103,10 @@ export class ValidateStatementComponent implements IBMiComponent {
 
     if (library) {
       const checks = statements.map(stmt => `select * from table(${library}.${ValidateStatementComponent.FUNCTION_NAME}(?)) x`).join(` union all `);
-      const stmt = currentJob.job.query<SqlCheckError>(checks, {parameters: statements});
+      const stmt = currentJob.job.query<SqlCheckError>(checks, { parameters: statements });
       const result = await stmt.execute(statements.length);
       stmt.close();
-    
+
       if (!result.success || result.data.length === 0) return [];
 
       return result.data.map(sqlError => niceError(sqlError));
@@ -123,7 +115,7 @@ export class ValidateStatementComponent implements IBMiComponent {
     return undefined;
   }
 
-  
+
 
   private getSource(library: string, version: number) {
     return /*sql*/`
@@ -243,7 +235,7 @@ function niceError(sqlError: SqlCheckError): SqlSyntaxError {
 
   let text = sqlError.MESSAGETEXT || `Unknown error message ${sqlError.ERRORSQLMESSAGEID ? `(${sqlError.ERRORSQLMESSAGEID})` : `(No message ID)`}`;
   replaceTokens.forEach((token, index) => {
-    text = text.replace(`&${index+1}`, token);
+    text = text.replace(`&${index + 1}`, token);
   });
 
   const sqlState = sqlError.ERRORSQLSTATE.substring(0, 2);
@@ -259,34 +251,34 @@ function niceError(sqlError: SqlCheckError): SqlSyntaxError {
 }
 
 function splitReplaceText(input: string) {
-    const firstGoodChar = input.split('').findIndex(c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126);
+  const firstGoodChar = input.split('').findIndex(c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126);
 
-    let replacements: string[] = [];    
-    let inReplacement = false;
-    let currentReplacement = ``;
+  let replacements: string[] = [];
+  let inReplacement = false;
+  let currentReplacement = ``;
 
-    for (let i = firstGoodChar; i < input.length; i++) {
-      const isGoodChar = input.charCodeAt(i) >= 32 && input.charCodeAt(i) <= 126;
+  for (let i = firstGoodChar; i < input.length; i++) {
+    const isGoodChar = input.charCodeAt(i) >= 32 && input.charCodeAt(i) <= 126;
 
-      if (isGoodChar) {
-        inReplacement = true;
+    if (isGoodChar) {
+      inReplacement = true;
 
-        if (inReplacement) {
-          currentReplacement += input[i];
-        }
-      } else {
-        if (inReplacement) {
-          replacements.push(currentReplacement);
-          currentReplacement = ``;
-        }
-        
-        inReplacement = false;
+      if (inReplacement) {
+        currentReplacement += input[i];
       }
-    }
+    } else {
+      if (inReplacement) {
+        replacements.push(currentReplacement);
+        currentReplacement = ``;
+      }
 
-    if (currentReplacement) {
-      replacements.push(currentReplacement);
+      inReplacement = false;
     }
-
-    return replacements;
   }
+
+  if (currentReplacement) {
+    replacements.push(currentReplacement);
+  }
+
+  return replacements;
+}
