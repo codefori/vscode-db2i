@@ -1,5 +1,6 @@
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import { getBase, getInstance } from "../../../base";
+import { formatDescription } from ".";
 
 const dbNameText = `
 	
