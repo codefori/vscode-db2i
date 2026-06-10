@@ -1,7 +1,6 @@
-import { assert, describe, expect, test } from 'vitest'
-import SQLTokeniser from '../tokens'
+import { describe, expect, test } from 'vitest';
 import Document, { getPositionData } from '../document';
-import { CallableReference, ClauseType, StatementType } from '../types';
+import { ClauseType, StatementType } from '../types';
 
 const parserScenarios = describe.each([
   {newDoc: (content: string) => new Document(content)},
@@ -1249,8 +1248,8 @@ parserScenarios(`Offset reference tests`, ({newDoc}) => {
 
     const ref = statement.getReferenceByOffset(21);
     expect(ref).toBeDefined();
-    expect(ref.object.schema).toBe(`sample`);
-    expect(ref.object.name).toBeUndefined();
+    expect(ref!.object.schema).toBe(`sample`);
+    expect(ref!.object.name).toBeUndefined();
   });
 
   test(`Writing select, invalid middle`, () => {
@@ -1268,8 +1267,8 @@ parserScenarios(`Offset reference tests`, ({newDoc}) => {
 
     const ref = statement.getReferenceByOffset(9);
     expect(ref).toBeDefined();
-    expect(ref.object.schema).toBe(`b`);
-    expect(ref.object.name).toBeUndefined();
+    expect(ref!.object.schema).toBe(`b`);
+    expect(ref!.object.name).toBeUndefined();
   });
 });
 
@@ -1400,8 +1399,8 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const blockParent = callStatement.getCallableDetail(callStatement.tokens[3].range.start);
     expect(blockParent).toBeDefined();
-    expect(blockParent.tokens.length).toBe(3);
-    expect(blockParent.parentRef.object.name).toBe(`MEDIAN_RESULT_SET`);
+    expect(blockParent!.tokens.length).toBe(3);
+    expect(blockParent!.parentRef.object.name).toBe(`MEDIAN_RESULT_SET`);
   });
 
   test(`CREATE PROCEDURE after syntax error`, () => {
@@ -2037,26 +2036,26 @@ describe(`Parameter statement tests`, () => {
   
     const callableA = a.getCallableDetail(23);
     expect(callableA).toBeDefined();
-    expect(callableA.parentRef.object.schema).toBe(`qsys2`);
-    expect(callableA.parentRef.object.name).toBe(`create_abcd`);
+    expect(callableA!.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableA!.parentRef.object.name).toBe(`create_abcd`);
   
     const blockB = a.getBlockRangeAt(24);
     expect(blockB).toMatchObject({ start: 5, end: 5 });
   
     const callableB = a.getCallableDetail(24);
     expect(callableB).toBeDefined();
-    expect(callableB.parentRef.object.schema).toBe(`qsys2`);
-    expect(callableB.parentRef.object.name).toBe(`create_abcd`);
+    expect(callableB!.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableB!.parentRef.object.name).toBe(`create_abcd`);
   
     const blockC = b.getBlockRangeAt(49);
     expect(blockC).toMatchObject({ start: 5, end: 13 });
   
     const callableC = b.getCallableDetail(49, true);
     expect(callableC).toBeDefined();
-    expect(callableC.tokens.length).toBe(4);
-    expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
-    expect(callableC.parentRef.object.schema).toBe(`qsys2`);
-    expect(callableC.parentRef.object.name).toBe(`create_abcd`);
+    expect(callableC!.tokens.length).toBe(4);
+    expect(callableC!.tokens.some(t => t.type === `block` && t.block?.length === 3)).toBeTruthy();
+    expect(callableC!.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableC!.parentRef.object.name).toBe(`create_abcd`);
   });
 
   test('Partial parameters 1: Position data for procedure call', () => {
@@ -2067,12 +2066,12 @@ describe(`Parameter statement tests`, () => {
   
     expect(statements.length).toBe(1);
 
-    const callableReference: CallableReference = statements[0].getCallableDetail(29);
+    const callableReference = statements[0].getCallableDetail(29);
     expect(callableReference).toBeDefined();
-    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
-    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableReference!.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference!.parentRef.object.schema).toBe(`qsys2`);
 
-    const positionData = getPositionData(callableReference, 29);
+    const positionData = getPositionData(callableReference!, 29);
     expect(positionData).toBeDefined();
 
     expect(positionData.currentParm).toBe(1);
@@ -2087,12 +2086,12 @@ describe(`Parameter statement tests`, () => {
   
     expect(statements.length).toBe(1);
 
-    const callableReference: CallableReference = statements[0].getCallableDetail(31);
+    const callableReference = statements[0].getCallableDetail(31);
     expect(callableReference).toBeDefined();
-    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
-    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableReference!.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference!.parentRef.object.schema).toBe(`qsys2`);
 
-    const positionData = getPositionData(callableReference, 31);
+    const positionData = getPositionData(callableReference!, 31);
     expect(positionData).toBeDefined();
 
     expect(positionData.currentParm).toBe(1);
@@ -2107,12 +2106,12 @@ describe(`Parameter statement tests`, () => {
   
     expect(statements.length).toBe(1);
 
-    const callableReference: CallableReference = statements[0].getCallableDetail(25);
+    const callableReference = statements[0].getCallableDetail(25);
     expect(callableReference).toBeDefined();
-    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
-    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableReference!.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference!.parentRef.object.schema).toBe(`qsys2`);
 
-    const positionData = getPositionData(callableReference, 25);
+    const positionData = getPositionData(callableReference!, 25);
     expect(positionData).toBeDefined();
 
     expect(positionData.currentParm).toBe(0);
@@ -2127,18 +2126,18 @@ describe(`Parameter statement tests`, () => {
   
     expect(statements.length).toBe(1);
 
-    const callableReference: CallableReference = statements[0].getCallableDetail(25);
+    const callableReference = statements[0].getCallableDetail(25);
     expect(callableReference).toBeDefined();
-    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
-    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableReference!.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference!.parentRef.object.schema).toBe(`qsys2`);
 
-    const positionDataA = getPositionData(callableReference, 25);
+    const positionDataA = getPositionData(callableReference!, 25);
     expect(positionDataA).toBeDefined();
 
     expect(positionDataA.currentParm).toBe(0);
     expect(positionDataA.currentCount).toBe(3);
 
-    const positionDataB = getPositionData(callableReference, 29);
+    const positionDataB = getPositionData(callableReference!, 29);
     expect(positionDataB).toBeDefined();
 
     expect(positionDataB.currentParm).toBe(1);
@@ -2153,12 +2152,12 @@ describe(`Parameter statement tests`, () => {
   
     expect(statements.length).toBe(1);
 
-    const callableReference: CallableReference = statements[0].getCallableDetail(50);
+    const callableReference = statements[0].getCallableDetail(50);
     expect(callableReference).toBeDefined();
-    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
-    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableReference!.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference!.parentRef.object.schema).toBe(`qsys2`);
 
-    const positionDataA = getPositionData(callableReference, 50);
+    const positionDataA = getPositionData(callableReference!, 50);
     expect(positionDataA).toBeDefined();
 
     expect(positionDataA.currentParm).toBe(2);

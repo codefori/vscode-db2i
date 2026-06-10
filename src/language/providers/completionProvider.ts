@@ -1,19 +1,19 @@
 import { CompletionItem, CompletionItemKind, languages } from "vscode";
 import { JobManager } from "../../config";
+import { CallableType } from "../../database/callable";
 import {
   SQLType,
 } from "../../database/schemas";
 import Statement from "../../database/statement";
+import { BasicSQLObject, TableColumn } from "../../types";
 import Document from "../sql/document";
 import * as LanguageStatement from "../sql/statement";
 import { CTEReference, ClauseType, ObjectRef, StatementType } from "../sql/types";
-import { CallableType } from "../../database/callable";
-import { prepareParamType, createCompletionItem, getParmAttributes } from "./logic/completion";
-import { isCallableType, getCallableParameters } from "./logic/callable";
 import { localAssistIsEnabled, remoteAssistIsEnabled, useSystemNames } from "./logic/available";
 import { DbCache } from "./logic/cache";
+import { getCallableParameters, isCallableType } from "./logic/callable";
+import { createCompletionItem, getParmAttributes, prepareParamType } from "./logic/completion";
 import { getSqlDocument } from "./logic/parse";
-import { TableColumn, BasicSQLObject } from "../../types";
 
 export interface CompletionType {
   order: string;
@@ -44,7 +44,7 @@ const completionTypes: { [index: string]: CompletionType } = {
   functions: {
     order: `e`,
     label: `function`,
-    type: `functions`, 
+    type: `functions`,
     icon: CompletionItemKind.Method
   },
   variables: {
@@ -76,7 +76,7 @@ function getAllColumns(name: string, schema: string, items: CompletionItem[]) {
     `Schema: ${schema}`,
     `a@allCols`
   );
-  
+
   allCols.sortText = 'a@allCols';
   allCols.insertText = items.map(item => item.label).join(", ");
   return allCols;
@@ -91,18 +91,18 @@ async function getObjectColumns(
 
   let completionItems: CompletionItem[];
 
-    schema = Statement.noQuotes(Statement.delimName(schema, true));
-    name = Statement.noQuotes(Statement.delimName(name, true));
-    
+  schema = Statement.noQuotes(Statement.delimName(schema, true));
+  name = Statement.noQuotes(Statement.delimName(name, true));
+
   if (isUDTF) {
     const resultSet = await DbCache.getCachedSignatures(schema, name);
-    
+
     if (!resultSet?.length ? true : false) {
       return [];
     }
 
-    const chosenSig = resultSet[resultSet.length-1];
-    
+    const chosenSig = resultSet[resultSet.length - 1];
+
     completionItems = chosenSig.returns.map((i) =>
       createCompletionItem(
         Statement.prettyName(i.PARAMETER_NAME),
@@ -130,7 +130,7 @@ async function getObjectColumns(
       )
     );
   }
-  
+
   const allCols = getAllColumns(name, schema, completionItems);
   completionItems.push(allCols);
 
@@ -148,15 +148,15 @@ async function getObjectCompletions(
   const allObjects = await DbCache.getObjects(forSchema, Object.values(sqlTypes).map(k => k.type));
 
   return allObjects.map((value) => {
-      const completionData = completionTypes[value.type];
-      return createCompletionItem(
-        Statement.prettyName(value.name),
-        completionData.icon,
-        completionData.label,
-        `Schema: ${value.schema}`,
-        completionData.order
-      )
-    }
+    const completionData = completionTypes[value.type];
+    return createCompletionItem(
+      Statement.prettyName(value.name),
+      completionData.icon,
+      completionData.label,
+      `Schema: ${value.schema}`,
+      completionData.order
+    )
+  }
   );
 }
 
@@ -191,7 +191,7 @@ async function getProcedures(
 
   // Handle the general case
   const promises = refs.map(async (ref) => {
-    const schema = ref.object.schema || defaultSchema;
+    const schema = ref.object.schema || defaultSchema || "";
     const sanitizedSchema = Statement.noQuotes(
       Statement.delimName(schema, true)
     );
@@ -210,25 +210,25 @@ async function getProcedures(
 async function getCompletionItemsForTriggerDot(
   currentStatement: LanguageStatement.default, // Statement from ../../database/statement
   offset: number,
-  trigger: string
+  trigger: string | undefined
 ): Promise<CompletionItem[]> {
   const defaultLibrary = await getDefaultSchema();
   let list: CompletionItem[] = [];
 
   const curRef = currentStatement.getReferenceByOffset(offset);
   if (curRef === undefined) {
-    return;
+    return [];
   }
 
   //select * from sample.data as a, sample.
-  const curSchema = curRef.object.schema;
+  const curSchema = curRef.object.schema || '';
 
-  let curRefIdentifier: ObjectRef;
+  let curRefIdentifier: ObjectRef | undefined;
 
   const objectRefs = currentStatement.getObjectReferences();
 
   // Set the default schema for all references without one
-  for (let ref of objectRefs) {
+  for (const ref of objectRefs) {
     if (!ref.object.schema) {
       ref.object.schema = defaultLibrary;
     }
@@ -238,27 +238,27 @@ async function getCompletionItemsForTriggerDot(
     (ref) =>
       ref.alias &&
       ref.object.name &&
-      ref.alias.toUpperCase() === curSchema.toUpperCase()
+      ref.alias.toUpperCase() === curSchema?.toUpperCase()
   );
 
   // grab completion items (column names) if alias and name are defined
-  if (curRefIdentifier) {
+  if (curRefIdentifier?.object.name) {
     // invalid case: select DDD/thecolumn from sample/department as DDD
     if (trigger === "/") {
-      return;
+      return [];
     }
 
-    let currentCte: CTEReference;
+    let currentCte: CTEReference | undefined;
     // If we're writing a SELECT/WITH, then also make suggestions based on the CTE
     if (currentStatement.type === StatementType.With) {
       const cteList = currentStatement.getCTEReferences();
-      currentCte = cteList.find(cte => cte.name.toUpperCase() === curRefIdentifier.object.name.toUpperCase());
+      currentCte = cteList.find(cte => cte.name.toUpperCase() === curRefIdentifier.object.name?.toUpperCase());
 
       if (currentCte) {
         list.push(...currentCte.columns.map(col => createCompletionItem(
           col,
           CompletionItemKind.Property,
-          `CTE: ${currentCte.name}`,
+          `CTE: ${currentCte?.name}`,
           undefined,
           `a@cte`
         )));
@@ -268,16 +268,16 @@ async function getCompletionItemsForTriggerDot(
     // Else.. go do a table lookup
     if (!currentCte) {
       const completionItems = await getObjectColumns(
-        curRefIdentifier.object.schema,
+        curRefIdentifier.object.schema!,
         curRefIdentifier.object.name,
-        curRefIdentifier.isUDTF,
+        curRefIdentifier.isUDTF === true,
         useSystemNames()
       );
 
       list.push(...completionItems);
     }
   } else {
-    
+
     if (currentStatement.type === StatementType.Call) {
       const procs = await getProcedures([curRef], defaultLibrary);
       list.push(...procs);
@@ -296,7 +296,7 @@ async function getCompletionItemsForTriggerDot(
 
 async function getCachedSchemas() {
   const allSchemas: BasicSQLObject[] = await DbCache.getObjects(
-    undefined,
+    '',
     [`schemas`]
   );
   const completionItems: CompletionItem[] = allSchemas.map((schema) =>
@@ -313,7 +313,7 @@ async function getCachedSchemas() {
 
 function createCompletionItemForAlias(ref: ObjectRef) {
   return createCompletionItem(
-    ref.alias,
+    ref.alias || '',
     CompletionItemKind.Reference,
     "Correlation Name",
     [
@@ -335,11 +335,11 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
 
   const curClause = currentStatement.getClauseForOffset(offset);
   const tokenAtOffset = currentStatement.getTokenByOffset(offset);
-  
-    // Get all the schemas
-    if (objectRefs.length === 0 && cteList.length === 0) {
-      completionItems.push(...(await getCachedSchemas()));
-    }
+
+  // Get all the schemas
+  if (objectRefs.length === 0 && cteList.length === 0) {
+    completionItems.push(...(await getCachedSchemas()));
+  }
   // Set the default schema for all references without one
   for (let ref of objectRefs) {
     if (!ref.object.schema) {
@@ -350,7 +350,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   // Fetch all the columns for tables that have references in the statement
   const tableItemPromises = objectRefs.map((ref) =>
     ref.object.name && ref.object.schema
-      ? getObjectColumns(ref.object.schema, ref.object.name, ref.isUDTF, useSystemNames())
+      ? getObjectColumns(ref.object.schema, ref.object.name, ref.isUDTF === true, useSystemNames())
       : Promise.resolve([])
   );
   const results = await Promise.allSettled(tableItemPromises);
@@ -395,7 +395,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
     // example: select * from sample.emp
     // --                               |
     if (objectRefs[objectRefs.length - 1]) {
-      const curSchema: string = objectRefs[objectRefs.length - 1].object.schema;
+      const curSchema = objectRefs[objectRefs.length - 1].object.schema;
       if (curClause !== ClauseType.Unknown && tokenAtOffset && curSchema) {
         completionItems.push(
           ...(await getObjectCompletions(curSchema, completionTypes))
@@ -418,7 +418,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
     for (const cte of cteList) {
       const hasAlias = objectRefs.some(
         (ref) =>
-          ref.object.name.toUpperCase() === cte.name.toUpperCase() &&
+          ref.object?.name?.toUpperCase() === cte.name.toUpperCase() &&
           ref.alias !== undefined
       );
 
@@ -442,12 +442,12 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
 }
 
 async function getCompletionItems(
-  trigger: string,
-  currentStatement: LanguageStatement.default|undefined,
-  offset?: number
+  trigger: string | undefined,
+  currentStatement: LanguageStatement.default,
+  offset: number
 ) {
   const defaultSchema = await getDefaultSchema();
-  const s = currentStatement ? currentStatement.getTokenByOffset(offset) : null;
+  const s = currentStatement.getTokenByOffset(offset) || null;
 
   if (trigger === "." || (s && s.type === `dot`) || trigger === "/") {
     return getCompletionItemsForTriggerDot(
@@ -457,15 +457,13 @@ async function getCompletionItems(
     );
   }
 
-  if (currentStatement) {
-    const callableRef = currentStatement.getCallableDetail(offset, true);
-    // TODO: check the function actually exists before returning
-    if (callableRef) {
-      const routineType: CallableType = currentStatement.type === StatementType.Call ? `PROCEDURE` : `FUNCTION`;
-      const isValid = await isCallableType(callableRef.parentRef, routineType);
-      if (isValid) {
-        return await getCallableParameters(callableRef, offset);
-      }
+  const callableRef = currentStatement.getCallableDetail(offset, true);
+  // TODO: check the function actually exists before returning
+  if (callableRef) {
+    const routineType: CallableType = currentStatement.type === StatementType.Call ? `PROCEDURE` : `FUNCTION`;
+    const isValid = await isCallableType(callableRef.parentRef, routineType);
+    if (isValid) {
+      return await getCallableParameters(callableRef, offset);
     }
   }
 
@@ -477,7 +475,7 @@ async function getCompletionItems(
   }
 
   // Determine if writing a statement inside of a CTE, if they are, set that as the current statement
-  let insideCte: CTEReference|undefined;
+  let insideCte: CTEReference | undefined;
   if (offset && currentStatement.type === StatementType.With) {
     let ctes = currentStatement.getCTEReferences();
     insideCte = ctes.find(cte => offset >= cte.statement.range.start && offset <= cte.statement.range.end);
@@ -539,7 +537,7 @@ function getLocalDefs(sqlDoc: Document, offset: number) {
         case StatementType.Create:
           const [currentCreate] = statement.getObjectReferences();
           if (currentCreate) {
-            items.push(createCompletionItem(currentCreate.object.schema ? `${currentCreate.object.schema}.${currentCreate.object.name}` : currentCreate.object.name, getCompletionItemKindFromSqlType(currentCreate.createType), `Local ${currentCreate.createType || `creation`}`));
+            items.push(createCompletionItem(currentCreate.object.schema ? `${currentCreate.object.schema}.${currentCreate.object.name}` : currentCreate.object.name || '', getCompletionItemKindFromSqlType(currentCreate.createType), `Local ${currentCreate.createType || `creation`}`));
           }
           break;
       }
@@ -550,11 +548,11 @@ function getLocalDefs(sqlDoc: Document, offset: number) {
       // We only care about create statements when there is a body
       if (statement.type === StatementType.Create) {
         const [groupDef] = statement.getObjectReferences();
-        
+
         // We only care about certain create types
         if (groupDef) {
-          const currentType = groupDef.createType.toLowerCase();
-          if (groupDef.createType && VALID_CREATE_TYPES.includes(currentType) && groupDef.object.name) {
+          const currentType = groupDef.createType?.toLowerCase();
+          if (groupDef.createType && currentType && VALID_CREATE_TYPES.includes(currentType) && groupDef.object.name) {
             items.push(createCompletionItem(groupDef.object.schema ? `${groupDef.object.schema}.${groupDef.object.name}` : groupDef.object.name, getCompletionItemKindFromSqlType(groupDef.createType), `Local ${currentType}`));
           }
         }
@@ -563,14 +561,14 @@ function getLocalDefs(sqlDoc: Document, offset: number) {
         if (inGroupRange) {
           // Show parameters to the routine
           const localParams = statement.getRoutineParameters();
-          items.push(...localParams.map(param => createCompletionItem(param.alias, CompletionItemKind.Property, param.createType)));
+          items.push(...localParams.map(param => createCompletionItem(param.alias || '', CompletionItemKind.Property, param.createType)));
 
           // Show all the local definitions
           for (let i = 1; i < groupStatements.length; i++) {
             const subStatement = groupStatements[i];
             if (subStatement.type === StatementType.Declare) {
               const [def] = subStatement.getObjectReferences();
-              if (def) {
+              if (def.object.name) {
                 items.push(createCompletionItem(def.object.name, CompletionItemKind.Variable, def.createType));
               }
             }
@@ -589,7 +587,6 @@ export const completionProvider = languages.registerCompletionItemProvider(
     async provideCompletionItems(document, position, token, context) {
       if (localAssistIsEnabled()) {
         const trigger = context.triggerCharacter;
-        const content = document.getText();
         const offset = document.offsetAt(position);
 
         const sqlDoc = getSqlDocument(document);

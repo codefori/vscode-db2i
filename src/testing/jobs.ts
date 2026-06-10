@@ -1,44 +1,17 @@
 import assert from "assert";
 import { TestSuite } from ".";
 import { getInstance } from "../base";
-import { ServerComponent } from "../connection/serverComponent";
-import { OldSQLJob } from "../connection/sqlJob";
+import { JobManager } from "../config";
 import { VisualExplainData } from "../types";
 import { ExplainTree } from "../views/results/explain/nodes";
 
 export const JobsSuite: TestSuite = {
   name: `Connection tests`,
   tests: [
-    {name: `Backend check`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise();
-  
-      // To run these tests, we need the backend server. If this test fails. Don't bother
-      assert.strictEqual(backendInstalled, true);
-
-      console.log(`Starting command: ${ServerComponent.getInitCommand()}`);
-    }},
-
-    {name: `Backend version check`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-  
-      let newJob = new OldSQLJob();
-      await newJob.connect();
-
-      let ver = await newJob.getVersion();
-      console.log(`backend version: `+ver.version);
-      console.log(`backend build date: `+ver.build_date);
-      assert.notEqual(ver.version, ``);
-      assert.notEqual(ver.build_date, ``);
-      assert.ok(`backend build date: `+ver.build_date);
-      newJob.close();
-    }},
-    
     {name: `Verify client special registers are set`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-      let newJob = new OldSQLJob();
-      await newJob.connect();
+      const newJob = await JobManager.newJob();
 
-      let qry = newJob.query(`SELECT V_CLIENT_APPLNAME, V_CLIENT_PROGRAMID FROM TABLE(QSYS2.GET_JOB_INFO('*')) limit 1`);
+      let qry = newJob.query<any>(`SELECT V_CLIENT_APPLNAME, V_CLIENT_PROGRAMID FROM TABLE(QSYS2.GET_JOB_INFO('*')) limit 1`);
       let qryResults = await qry.execute();
       assert.equal(qryResults.success, true);
       assert.equal(qryResults.data.length, 1);
@@ -46,14 +19,11 @@ export const JobsSuite: TestSuite = {
       assert.equal((``+dataRow['V_CLIENT_APPLNAME']).startsWith(`vscode-db2i`), true);
       assert.equal((``+dataRow['V_CLIENT_PROGRAMID']).startsWith(`VSCode`), true);
 
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
 
-    {name: `Backend set trace options and retrieve`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-  
-      let newJob = new OldSQLJob();
-      await newJob.connect();
+    {name: `Backend set trace options and retrieve`, test: async () => {  
+      const newJob = await JobManager.newJob();
 
       let rpy = await newJob.setTraceConfig("IN_MEM", "DATASTREAM");
       assert.equal(rpy.success, true);
@@ -62,24 +32,19 @@ export const JobsSuite: TestSuite = {
       let trace = await newJob.getTraceData();
       assert.notEqual(``, trace.tracedata);
       console.log(trace.tracedata);
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
 
     {name: `Backend retrieve trace data without turning on trace`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
+      const newJob = await JobManager.newJob();
 
-      let newJob = new OldSQLJob();
-      await newJob.connect();
       let trace = await newJob.getTraceData();
       assert.notEqual(undefined, trace.tracedata);
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
     
     {name: `Paging query`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      let newJob = new OldSQLJob({libraries: [`QIWS`], naming: `system`});
-      await newJob.connect();
+      const newJob = await JobManager.newJob({libraries: [`QIWS`], naming: `system`});
 
       let rowsAtATime = 4;
       let qry = newJob.query(`select * from QIWS.QCUSTCDT`);
@@ -97,16 +62,13 @@ export const JobsSuite: TestSuite = {
         }
       }
 
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
     {name: `Query with non-terse results`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      let newJob = new OldSQLJob({libraries: [`QIWS`], naming: `system`});
-      await newJob.connect();
+      const newJob = await JobManager.newJob({libraries: [`QIWS`], naming: `system`});
 
       let rowsAtATime = 4;
-      let qry = newJob.query(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: false});
+      let qry = newJob.query<any>(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: false});
       let qryResults = await qry.execute(rowsAtATime);
 
       assert.equal(qryResults.success, true);
@@ -114,13 +76,10 @@ export const JobsSuite: TestSuite = {
       let cusnum = firstRow[`CUSNUM`];
       assert.equal(cusnum === undefined, false);
       assert.equal(Array.isArray(firstRow), false);
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
     {name: `Query with terse results`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      let newJob = new OldSQLJob({libraries: [`QIWS`], naming: `system`});
-      await newJob.connect();
+      const newJob = await JobManager.newJob({libraries: [`QIWS`], naming: `system`});
 
       let rowsAtATime = 4;
       let qry = newJob.query(`select * from QIWS.QCUSTCDT limit 1`,{isTerseResults: true});
@@ -129,30 +88,25 @@ export const JobsSuite: TestSuite = {
       assert.equal(qryResults.success, true);
       let firstRow = qryResults.data[0];
       assert.equal(Array.isArray(firstRow), true);
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
     {name: `Can round-trip Extended characters`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
       let testString = `¯\\_(ツ)_/¯`
-      let newJob = new OldSQLJob();
-      await newJob.connect();
-      let qryResults = await newJob.query(`create table qtemp.weewoo (col1 varchar(1208) ccsid 1208)`).execute();
+      const newJob = await JobManager.newJob();
+
+      let qryResults = await newJob.query<any>(`create table qtemp.weewoo (col1 varchar(1208) ccsid 1208)`).execute();
       assert.equal(qryResults.success, true);
-      qryResults = await newJob.query(`insert into qtemp.weewoo values('${testString}')`).execute();
+      qryResults = await newJob.query<any>(`insert into qtemp.weewoo values('${testString}')`).execute();
       assert.equal(qryResults.success, true);
-      qryResults = await newJob.query(`select COL1 from qtemp.weewoo`).execute();
+      qryResults = await newJob.query<any>(`select COL1 from qtemp.weewoo`).execute();
       assert.equal(qryResults.success, true);
       let resultData = qryResults.data[0]['COL1'];
       assert.equal(resultData, testString);
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
 
-    {name: `CL Command (success)`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-  
-      let newJob = new OldSQLJob();
-      await newJob.connect();
+    {name: `CL Command (success)`, test: async () => {  
+      const newJob = await JobManager.newJob();
 
       let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVSNAKES)  CRTFILE(*YES) `).execute();
       assert.equal(clRes.success, true);
@@ -166,14 +120,11 @@ export const JobsSuite: TestSuite = {
         }
       }
       assert.equal(CPF2880, true);
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
 
     {name: `CL Command (error)`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      let newJob = new OldSQLJob();
-      await newJob.connect();
+      const newJob = await JobManager.newJob();
 
       let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVDB2) MBROPT(*UPDADD) CRTFILE(*YES) `).execute();
       console.log(JSON.stringify(clRes));
@@ -187,16 +138,11 @@ export const JobsSuite: TestSuite = {
         }
       }
       assert.equal(CPD2825, true);
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
 
     {name: `Retrieve job log`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      let newJob = new OldSQLJob();
-      await newJob.connect();
-
-      
+      const newJob = await JobManager.newJob();      
 
       await newJob.clcommand(`DLTLIB QTEMP`).execute();
       let joblog = await newJob.getJobLog();
@@ -210,60 +156,43 @@ export const JobsSuite: TestSuite = {
         }
       }
       assert.equal(CPD2165, true);
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
 
     {name: `Creating a job`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      const newJob = new OldSQLJob();
-
-      assert.strictEqual(newJob.getStatus(), "notStarted");
-
-      assert.strictEqual(newJob.id, undefined);
-
-      await newJob.connect();
-
+      const newJob = await JobManager.newJob();
       assert.strictEqual(newJob.getStatus(), "ready");
-
       assert.notStrictEqual(newJob.id, undefined);
 
-      await newJob.close();
-
+      await JobManager.closeJobById(newJob);
       const lastStatus = newJob.getStatus();
       assert.strictEqual(lastStatus, "ended");
     }},
 
     {name: `Jobs have different job IDs`, test: async () => {
-      const jobA = new OldSQLJob();
-      const jobB = new OldSQLJob();
-
-      await jobA.connect();
-      await jobB.connect();
-
+      const jobA = await JobManager.newJob();
+      const jobB = await JobManager.newJob();
+      
       assert.notStrictEqual(jobA.id, jobB.id);
 
-      await jobA.close();
-      await jobB.close();
+      await JobManager.closeJobById(jobA);
+      await JobManager.closeJobById(jobB);
     }},
 
     {name: `Job can run many queries`, test: async () => {
-      const newJob = new OldSQLJob();
+      const newJob = await JobManager.newJob();
 
-      await newJob.connect();
-
-      const resultA = await newJob.query(`values (job_name, current_timestamp)`).execute();
-      const resultB = await newJob.query(`values (job_name, current_timestamp)`).execute();
+      const resultA = await newJob.query<any>(`values (job_name, current_timestamp)`).execute();
+      const resultB = await newJob.query<any>(`values (job_name, current_timestamp)`).execute();
 
       assert.strictEqual(resultA.data[0][`00001`], resultB.data[0][`00001`]);
 
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
     
     {name: `Job can run many queries at once `, test: async () => {
-      const newJob = new OldSQLJob();
+      const newJob = await JobManager.newJob();
 
-      await newJob.connect();
       let stmt = `select * from QIWS.QCUSTCDT`;
       let stmt2 = `values (job_name)`;
       const resultAPromise = newJob.query(stmt).execute();
@@ -286,38 +215,30 @@ export const JobsSuite: TestSuite = {
       assert.deepEqual(values[0].data, values[3].data);
       assert.deepEqual(values[1].data, values[4].data);
       assert.notDeepEqual(values[0].data, values[1].data);
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
 
     {name: `Library list is used`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      let newJob = new OldSQLJob({libraries: [`QSYS`, `SYSTOOLS`], naming: `system`});
-      await newJob.connect();
+      let newJob = await JobManager.newJob({libraries: [`QSYS`, `SYSTOOLS`], naming: `system`});
 
       try {
         await newJob.query(`select * from qcustcdt`).execute();
         assert.fail(`Query should not have worked. Library list issue`);
-      } catch (e) {
+      } catch (e: any) {
         assert.notStrictEqual(e.message, undefined);
       }
+      JobManager.closeJobById(newJob);
 
-      newJob.close();
-
-      newJob = new OldSQLJob({libraries: [`QSYS`, `QIWS`], naming: `system`});
-      await newJob.connect();
+      newJob = await JobManager.newJob({libraries: [`QSYS`, `QIWS`], naming: `system`});
 
       const rows = await newJob.query(`select * from qcustcdt`).execute();
       assert.notStrictEqual(rows.data.length, 0);
-
-      newJob.close();
+      
+      JobManager.closeJobById(newJob);
     }},
 
     {name: `Binding parameters`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
-      let newJob = new OldSQLJob({libraries: [`QIWS`], naming: `system`});
-      await newJob.connect();
+      let newJob = await JobManager.newJob({libraries: [`QIWS`], naming: `system`});
 
       try {
         const rows = await newJob.query(`select * from qcustcdt where cusnum = ? and zipcod = ?`, {isClCommand: false, parameters: [938485, 30545]}).execute();
@@ -326,35 +247,29 @@ export const JobsSuite: TestSuite = {
         assert.fail(`Should not have errored.`);
       }
 
-      newJob.close();
+      JobManager.closeJobById(newJob);
     }},
 
     {name: `Ensure API compatability`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
       const instance = getInstance();
       const content = instance.getContent();
 
-      const newJob = new OldSQLJob({naming: `sql`});
-      await newJob.connect();
+      const newJob = await JobManager.newJob({naming: `sql`});
 
       const query = `select * from qiws.qcustcdt`;
       const rowsA = await newJob.query(query).execute();
       const rowsB = await content.runSQL(query);
 
-      newJob.close();
+      JobManager.closeJobById(newJob);
 
       assert.deepStrictEqual(rowsA.data, rowsB);
     }},
 
-    {name: `Performance measuring`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-      
+    {name: `Performance measuring`, test: async () => {      
       const instance = getInstance();
       const content = instance.getContent();
 
-      const newJob = new OldSQLJob({naming: `sql`});
-      await newJob.connect();
+      const newJob = await JobManager.newJob({naming: `sql`});
 
       const query = `select * from qiws.qcustcdt`;
 
@@ -368,7 +283,7 @@ export const JobsSuite: TestSuite = {
 
       console.log(`New query method took ${ne - ns} milliseconds.`);
 
-      newJob.close();
+      JobManager.closeJobById(newJob);
 
       const os = performance.now();
       await content.runSQL(query);
@@ -381,8 +296,7 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Explain API`, test: async () => {
-      const newJob = new OldSQLJob({"full open": true});
-      await newJob.connect();
+      const newJob = await JobManager.newJob({"full open": true});
 
       const query = `select * from qiws.qcustcdt`;
 

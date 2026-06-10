@@ -1,14 +1,14 @@
 import SQLTokeniser, { NameTypes } from "./tokens";
-import { CTEReference, CallableReference, ClauseType, ClauseTypeWord, IRange, ObjectRef, QualifiedObject, StatementType, StatementTypeWord, Token } from "./types";
+import { CTEReference, ClauseType, ClauseTypeWord, IRange, ObjectRef, StatementType, StatementTypeWord, Token } from "./types";
 
-export const tokenIs = (token: Token|undefined, type: string, value?: string) => {
+export const tokenIs = (token: Token | undefined, type: string, value?: string) => {
 	return (token && token.type === type && (value ? token.value?.toUpperCase() === value : true));
 }
 
 export default class Statement {
 	public type: StatementType = StatementType.Unknown;
-	private label: string|undefined;
-	private _blockTokens: Token[]|undefined;
+	private label: string | undefined;
+	private _blockTokens: Token[] | undefined;
 
 	private get blockTokens() {
 		if (!this._blockTokens) {
@@ -18,9 +18,9 @@ export default class Statement {
 		return this._blockTokens;
 	}
 
-  constructor(public tokens: Token[], public range: IRange) {
+	constructor(public tokens: Token[], public range: IRange) {
 		this.tokens = this.tokens.filter(newToken => newToken.type !== `newline`);
-		
+
 		let first = this.tokens[0];
 
 		if (tokenIs(first, `word`, `EXEC`) && tokenIs(this.tokens[1], `word`, `SQL`)) {
@@ -31,20 +31,21 @@ export default class Statement {
 		}
 
 		const wordValue = first?.value?.toUpperCase();
+		if (wordValue) {
+			this.type = StatementTypeWord.get(wordValue) || StatementType.Unknown;
 
-		this.type = StatementTypeWord[wordValue] || StatementType.Unknown;
-		
-		switch (this.type) {
-			case StatementType.Create:
-				// No scalar transformation here..
-				break;
-			default:
-				this.tokens = SQLTokeniser.findScalars(this.tokens);
-				break;
+			switch (this.type) {
+				case StatementType.Create:
+					// No scalar transformation here..
+					break;
+				default:
+					this.tokens = SQLTokeniser.findScalars(this.tokens);
+					break;
+			}
 		}
 	}
 
-	getLabel(): string|undefined {
+	getLabel(): string | undefined {
 		return this.label;
 	}
 
@@ -55,7 +56,7 @@ export default class Statement {
 
 		// These statements can end with BEGIN, which signifies a block starter
 		if ([StatementType.Create, StatementType.Declare].includes(this.type)) {
-			const last = this.tokens[this.tokens.length-1];
+			const last = this.tokens[this.tokens.length - 1];
 			if (tokenIs(last, `keyword`, `BEGIN`)) {
 				return true;
 			}
@@ -81,9 +82,9 @@ export default class Statement {
 	}
 
 	getTokenByOffset(offset: number) {
-		const blockSearch = (tokens: Token[]): Token|undefined => {
+		const blockSearch = (tokens: Token[]): Token | undefined => {
 			const token = tokens.find(token => offset >= token.range.start && offset <= token.range.end);
-			
+
 			if (token?.type === `block` && token.block) {
 				return blockSearch(token.block);
 			}
@@ -96,22 +97,22 @@ export default class Statement {
 
 	getClauseForOffset(offset: number): ClauseType {
 		let currentClause = ClauseType.Unknown;
-		
+
 		for (let i = 0; i < this.tokens.length; i++) {
 			if (offset < this.tokens[i].range.start) {
 				break;
 			}
-			
+
 			if (tokenIs(this.tokens[i], `clause`)) {
-				currentClause = ClauseTypeWord[this.tokens[i].value!.toUpperCase()]
+				currentClause = ClauseTypeWord.get(this.tokens[i].value!.toUpperCase()) || ClauseType.Unknown;
 			}
 		}
 
 		return currentClause;
 	}
 
-	getBlockRangeAt(offset: number): IRange|undefined {
-		const blockContainsOffset = (cOffset: number, block: Token[]): IRange|undefined => {
+	getBlockRangeAt(offset: number): IRange | undefined {
+		const blockContainsOffset = (cOffset: number, block: Token[]): IRange | undefined => {
 			const tokenInOffset = block.find(token => cOffset >= token.range.start && cOffset <= token.range.end);
 			if (tokenInOffset) {
 				if (tokenInOffset.type === `block`) {
@@ -125,7 +126,7 @@ export default class Statement {
 						}
 
 						return blockRange;
-						
+
 					} else {
 						const rawEnd = this.tokens.findIndex(token => token.range.end === tokenInOffset.range.end);
 						return {
@@ -135,10 +136,10 @@ export default class Statement {
 					}
 				} else {
 					const rawStart = this.tokens.findIndex(token => token.range.start === block[0].range.start);
-					const rawEnd = this.tokens.findIndex(token => token.range.end === block[block.length-1].range.end);
+					const rawEnd = this.tokens.findIndex(token => token.range.end === block[block.length - 1].range.end);
 					return {
 						start: rawStart,
-						end: rawEnd+1
+						end: rawEnd + 1
 					};
 				}
 			}
@@ -149,12 +150,12 @@ export default class Statement {
 		return blockContainsOffset(offset, this.blockTokens);
 	}
 
-	getCallableDetail(offset: number, withBlocks = false): CallableReference {
+	getCallableDetail(offset: number, withBlocks = false) {
 		const range = this.getBlockRangeAt(offset);
 
 		if (range) {
-			const hasDot = (tokenIs(this.tokens[range.start-4], `word`) || tokenIs(this.tokens[range.start-4], `sqlName`)) && tokenIs(this.tokens[range.start-3], `dot`);
-				const parentRef = hasDot ? this.getRefAtToken(range.start-4) : this.getRefAtToken(range.start-2);
+			const hasDot = (tokenIs(this.tokens[range.start - 4], `word`) || tokenIs(this.tokens[range.start - 4], `sqlName`)) && tokenIs(this.tokens[range.start - 3], `dot`);
+			const parentRef = hasDot ? this.getRefAtToken(range.start - 4) : this.getRefAtToken(range.start - 2);
 
 			if (parentRef) {
 				return {
@@ -188,7 +189,7 @@ export default class Statement {
 		let i = this.tokens.findIndex(token => offset >= token.range.start && offset <= token.range.end);
 
 		let currentType;
-		let prevMustBe: "dot"|"name";
+		let prevMustBe: "dot" | "name" | undefined;
 
 		// Reset to end
 		if (i >= 0) {
@@ -196,29 +197,31 @@ export default class Statement {
 			if (currentType === `dot` || currentType === `forwardslash`) prevMustBe = `name`;
 			else if (NameTypes.includes(currentType)) prevMustBe = `dot`;
 		} else {
-			i = this.tokens.length-1;
+			i = this.tokens.length - 1;
 			prevMustBe = `name`;
 		}
 
-		while (i >= 0 && this.tokens[i-1]) {
-			i--;
-			currentType = this.tokens[i].type;
+		if (prevMustBe) {
+			while (i >= 0 && this.tokens[i - 1]) {
+				i--;
+				currentType = this.tokens[i].type;
 
-			switch (prevMustBe) {
-				case `dot`:
-					if (currentType === `dot`) {
-						prevMustBe = `name`;
-					} else {
-						return this.getRefAtToken(i+1);
-					}
-					break;
-				case `name`:
-					if (NameTypes.includes(currentType)) {
-						prevMustBe = `dot`;
-					} else {
-						return this.getRefAtToken(i+1);
-					}
-					break;
+				switch (prevMustBe) {
+					case `dot`:
+						if (currentType === `dot`) {
+							prevMustBe = `name`;
+						} else {
+							return this.getRefAtToken(i + 1);
+						}
+						break;
+					case `name`:
+						if (NameTypes.includes(currentType)) {
+							prevMustBe = `dot`;
+						} else {
+							return this.getRefAtToken(i + 1);
+						}
+						break;
+				}
 			}
 		}
 	}
@@ -227,20 +230,20 @@ export default class Statement {
 		if (this.type !== StatementType.With) return [];
 
 		const withBlocks = this.blockTokens;
-		
+
 		let cteList: CTEReference[] = [];
 
 		for (let i = 0; i < withBlocks.length; i++) {
 			if (tokenIs(withBlocks[i], `word`) || tokenIs(withBlocks[i], `function`)) {
 				let cteName = withBlocks[i].value!;
 				let parameters: string[] = [];
-				let statementBlockI = i+1;
+				let statementBlockI = i + 1;
 
-				if (tokenIs(withBlocks[i+1], `block`) && tokenIs(withBlocks[i+2], `keyword`, `AS`)) {
-					parameters = withBlocks[i+1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
-					statementBlockI = i+3;
-				} else if (tokenIs(withBlocks[i+1], `keyword`, `AS`)) {
-					statementBlockI = i+2;
+				if (tokenIs(withBlocks[i + 1], `block`) && tokenIs(withBlocks[i + 2], `keyword`, `AS`)) {
+					parameters = withBlocks[i + 1].block!.filter(blockToken => blockToken.type === `word`).map(blockToken => blockToken.value!)
+					statementBlockI = i + 3;
+				} else if (tokenIs(withBlocks[i + 1], `keyword`, `AS`)) {
+					statementBlockI = i + 2;
 				}
 
 				const statementBlock = withBlocks[statementBlockI];
@@ -248,7 +251,7 @@ export default class Statement {
 					cteList.push({
 						name: cteName,
 						columns: parameters,
-						statement: new Statement(Statement.trimTokens(statementBlock.block), statementBlock.range)
+						statement: new Statement(Statement.trimTokens(statementBlock.block || []), statementBlock.range)
 					})
 				}
 
@@ -302,11 +305,11 @@ export default class Statement {
 			for (const parameter of parameters) {
 				// If the first token is the parm type, then the name follows
 				if (tokenIs(parameter[0], `keyword`)) continue;
-				
+
 				let nameIndex = tokenIs(parameter[0], `parmType`) ? 1 : 0;
 				const name = parameter[nameIndex].value!;
 				// Include parmType if it is provided
-				const definitionTokens = (nameIndex === 1 ? [parameter[0]] : []).concat(parameter.slice(nameIndex+1));
+				const definitionTokens = (nameIndex === 1 ? [parameter[0]] : []).concat(parameter.slice(nameIndex + 1));
 
 				list.push({
 					tokens: parameter,
@@ -336,7 +339,7 @@ export default class Statement {
 		}
 
 		const basicQueryFinder = (startIndex: number): void => {
-			let currentClause: undefined|"select"|"from";
+			let currentClause: undefined | "select" | "from";
 			for (let i = startIndex; i < this.tokens.length; i++) {
 				if (tokenIs(this.tokens[i], `clause`, `FROM`)) {
 					currentClause = `from`;
@@ -347,12 +350,12 @@ export default class Statement {
 					currentClause = undefined;
 				}
 
-				if (tokenIs(this.tokens[i], `clause`, `FROM`) || 
-					 (this.type !== StatementType.Select && tokenIs(this.tokens[i], `clause`, `INTO`)) || 
-					 tokenIs(this.tokens[i], `join`) || 
-					 (currentClause === `from` && tokenIs(this.tokens[i], `comma`)
-				)) {
-					const sqlObj = this.getRefAtToken(i+1);
+				if (tokenIs(this.tokens[i], `clause`, `FROM`) ||
+					(this.type !== StatementType.Select && tokenIs(this.tokens[i], `clause`, `INTO`)) ||
+					tokenIs(this.tokens[i], `join`) ||
+					(currentClause === `from` && tokenIs(this.tokens[i], `comma`)
+					)) {
+					const sqlObj = this.getRefAtToken(i + 1);
 					if (sqlObj) {
 						doAdd(sqlObj);
 						i += sqlObj.tokens.length;
@@ -370,7 +373,7 @@ export default class Statement {
 						}
 					}
 				} else if (currentClause === `from` && tokenIs(this.tokens[i], `function`)) {
-					const sqlObj = this.getRefAtToken(i, {includeParameters: true});
+					const sqlObj = this.getRefAtToken(i, { includeParameters: true });
 					if (sqlObj) {
 						i += sqlObj.tokens.length;
 						if (sqlObj.isUDTF || sqlObj.fromLateral) {
@@ -380,27 +383,27 @@ export default class Statement {
 				}
 			}
 		}
-		
+
 		let inFromClause = false;
 
 		switch (this.type) {
 			case StatementType.Call:
 				// CALL X()
-				doAdd(this.getRefAtToken(1, {includeParameters: true}));
+				doAdd(this.getRefAtToken(1, { includeParameters: true }));
 				break;
 
 			case StatementType.Alter:
 				if (this.tokens.length >= 3) {
-					let object = this.getRefAtToken(2, {withSystemName: true});
+					let object = this.getRefAtToken(2, { withSystemName: true });
 
 					if (object) {
 						object.createType = this.tokens[1].value;
 
 						doAdd(object);
 
-						for (let i = object.tokens.length+2; i < this.tokens.length; i++) {
+						for (let i = object.tokens.length + 2; i < this.tokens.length; i++) {
 							if (tokenIs(this.tokens[i], `keyword`, `REFERENCES`)) {
-								doAdd(this.getRefAtToken(i+1, {withSystemName: true}));
+								doAdd(this.getRefAtToken(i + 1, { withSystemName: true }));
 							}
 						}
 					}
@@ -418,30 +421,30 @@ export default class Statement {
 				break;
 
 			case StatementType.Create:
-				let object: ObjectRef;
-				let postName: number|undefined;
+				let object: ObjectRef | undefined;
+				let postName: number | undefined;
 
 				if (tokenIs(this.tokens[1], `keyword`, `OR`) && tokenIs(this.tokens[2], `keyword`, `REPLACE`)) {
-					object = this.getRefAtToken(4, {withSystemName: true});
+					object = this.getRefAtToken(4, { withSystemName: true });
 					if (object) {
-						postName = object.tokens.length+4;
+						postName = object.tokens.length + 4;
 						object.createType = this.tokens[3].value;
 					}
 				} else
-				if (tokenIs(this.tokens[1], `keyword`, `UNIQUE`)) {
-					object = this.getRefAtToken(3, {withSystemName: true});
-					if (object) {
-						postName = object.tokens.length+3;
-						object.createType = this.tokens[2].value;
+					if (tokenIs(this.tokens[1], `keyword`, `UNIQUE`)) {
+						object = this.getRefAtToken(3, { withSystemName: true });
+						if (object) {
+							postName = object.tokens.length + 3;
+							object.createType = this.tokens[2].value;
+						}
+
+					} else {
+						object = this.getRefAtToken(2, { withSystemName: true });
+						if (object) {
+							postName = object.tokens.length + 2;
+							object.createType = this.tokens[1].value
+						}
 					}
-				
-				} else {
-					object = this.getRefAtToken(2, {withSystemName: true});
-					if (object) {
-						postName = object.tokens.length+2;
-						object.createType = this.tokens[1].value
-					}
-				}
 
 				doAdd(object);
 
@@ -451,14 +454,14 @@ export default class Statement {
 						case `PROCEDURE`:
 							// For functions, perhaps we can use the SPECIFIC keyword for the system name
 							for (let i = postName; i < this.tokens.length; i++) {
-								if (tokenIs(this.tokens[i], `keyword`, `SPECIFIC`) && this.tokens[i+1]) {
-									object.object.system = this.tokens[i+1].value;
+								if (tokenIs(this.tokens[i], `keyword`, `SPECIFIC`) && this.tokens[i + 1]) {
+									object.object.system = this.tokens[i + 1].value;
 									i++;
 								}
 
 								// Support for external name
-								if (tokenIs(this.tokens[i], `keyword`, `EXTERNAL`) && tokenIs(this.tokens[i+1], `word`, `NAME`) && this.tokens[i+2]) {
-									const externalRef = this.getRefAtToken(i+2);
+								if (tokenIs(this.tokens[i], `keyword`, `EXTERNAL`) && tokenIs(this.tokens[i + 1], `word`, `NAME`) && this.tokens[i + 2]) {
+									const externalRef = this.getRefAtToken(i + 2);
 									if (externalRef) {
 										externalRef.createType = `external`;
 										externalRef.alias = undefined;
@@ -474,7 +477,7 @@ export default class Statement {
 							// If the type is `INDEX`, the next reference is the `ON` keyword
 							for (let i = postName; i < this.tokens.length; i++) {
 								if (tokenIs(this.tokens[i], `keyword`, `ON`)) {
-									doAdd(this.getRefAtToken(i+1));
+									doAdd(this.getRefAtToken(i + 1));
 									break;
 								}
 							}
@@ -502,7 +505,7 @@ export default class Statement {
 				if (tokenIs(this.tokens[2], `keyword`, `HANDLER`)) {
 					// DECLARE XX HANDLER FOR....
 					let def: ObjectRef = {
-						object: {name: this.tokens[1].value},
+						object: { name: this.tokens[1].value },
 						tokens: this.tokens.slice(1, 3)
 					}
 
@@ -510,62 +513,63 @@ export default class Statement {
 					doAdd(def);
 
 				} else
-				if (tokenIs(this.tokens[2], `word`, `PROCEDURE`)) {
-					// DECLARE XX PROCEDURE..
-					
-				} else
-				if (tokenIs(this.tokens[1], `word`, `GLOBAL`) && tokenIs(this.tokens[2], `word`, `TEMPORARY`), tokenIs(this.tokens[3], `word`, `TABLE`)) {
-					// Handle DECLARE GLOBAL TEMP TABLE x.x ()...
-					let def: ObjectRef = this.getRefAtToken(4);
-					def.createType = `Temporary Table`;
-					doAdd(def);
+					if (tokenIs(this.tokens[2], `word`, `PROCEDURE`)) {
+						// DECLARE XX PROCEDURE..
 
-				} else
-				if (tokenIs(this.tokens[1], `word`)) {
-					// DECLARE XX TYPE DEFAULT ..
-					let def: ObjectRef = {
-						object: {name: this.tokens[1].value},
-						tokens: this.tokens.slice(1)
-					}
+					} else
+						if (tokenIs(this.tokens[1], `word`, `GLOBAL`) && tokenIs(this.tokens[2], `word`, `TEMPORARY`), tokenIs(this.tokens[3], `word`, `TABLE`)) {
+							// Handle DECLARE GLOBAL TEMP TABLE x.x ()...
+							const def = this.getRefAtToken(4);
+							if (def) {
+								def.createType = `Temporary Table`;
+								doAdd(def);
+							}
+						} else
+							if (tokenIs(this.tokens[1], `word`)) {
+								// DECLARE XX TYPE DEFAULT ..
+								let def: ObjectRef = {
+									object: { name: this.tokens[1].value },
+									tokens: this.tokens.slice(1)
+								}
 
-					if (tokenIs(this.tokens[2], `keyword`, `CURSOR`)) {
-						def.createType = `Cursor`;
-					} else {
-						let defaultIndex = this.tokens.findIndex(t => tokenIs(t, `keyword`, `DEFAULT`));
+								if (tokenIs(this.tokens[2], `keyword`, `CURSOR`)) {
+									def.createType = `Cursor`;
+								} else {
+									let defaultIndex = this.tokens.findIndex(t => tokenIs(t, `keyword`, `DEFAULT`));
 
-						const valueTokens = this.tokens
-							.slice(
-								2, 
-								defaultIndex >= 0 ? defaultIndex : undefined
-							);
+									const valueTokens = this.tokens
+										.slice(
+											2,
+											defaultIndex >= 0 ? defaultIndex : undefined
+										);
 
-						def.createType = Statement.formatSimpleTokens(valueTokens);
-					}
+									def.createType = Statement.formatSimpleTokens(valueTokens);
+								}
 
-					doAdd(def);
-				}
+								doAdd(def);
+							}
 				break;
 		}
 
 		return list;
 	}
 
-	private getRefAtToken(i: number, options: {withSystemName?: boolean, includeParameters?: boolean} = {}): ObjectRef|undefined {
-		let sqlObj: ObjectRef;
+	private getRefAtToken(i: number, options: { withSystemName?: boolean, includeParameters?: boolean } = {}): ObjectRef | undefined {
+		let sqlObj: ObjectRef | undefined;
 
 		let nextIndex = i;
-		let nextToken = this.tokens[i];
+		let nextToken: Token | undefined = this.tokens[i];
 
 		let endIndex = i;
 
 		const isSubSelect = (tokenIs(nextToken, `function`, `TABLE`) || tokenIs(nextToken, `function`, `LATERAL`) || (options.includeParameters && tokenIs(nextToken, `function`)) && this.type !== StatementType.Call);
 
 		if (isSubSelect) {
-			sqlObj = this.getRefAtToken(i+2);
+			sqlObj = this.getRefAtToken(i + 2);
 			if (sqlObj) {
 				sqlObj.isUDTF = true;
 				const blockTokens = this.getBlockAt(sqlObj.tokens[0].range.end);
-				
+
 				sqlObj.tokens = blockTokens;
 				nextIndex = i + 2 + blockTokens.length;
 				nextToken = this.tokens[nextIndex];
@@ -574,7 +578,7 @@ export default class Statement {
 				nextIndex = -1;
 				nextToken = undefined;
 			}
-		
+
 		} else {
 			if (nextToken && NameTypes.includes(nextToken.type)) {
 				nextIndex = i;
@@ -587,11 +591,11 @@ export default class Statement {
 					}
 				}
 
-				if (tokenIs(this.tokens[i+1], `dot`) || tokenIs(this.tokens[i+1], `forwardslash`)) {
-					nextIndex = i+2;
+				if (tokenIs(this.tokens[i + 1], `dot`) || tokenIs(this.tokens[i + 1], `forwardslash`)) {
+					nextIndex = i + 2;
 					nextToken = this.tokens[nextIndex];
 
-					endIndex = nextToken ? nextIndex : i+1;
+					endIndex = nextToken ? nextIndex : i + 1;
 
 					sqlObj = {
 						tokens: [],
@@ -604,42 +608,42 @@ export default class Statement {
 				}
 			};
 		}
-			
+
 		if (sqlObj) {
 			if (options.withSystemName !== true) {
 				// If the next token is not a clause.. we might have the alias
-				if (nextToken && this.tokens[nextIndex+1]) {
-					if (tokenIs(this.tokens[nextIndex+1], `keyword`, `AS`) && tokenIs(this.tokens[nextIndex+2], `word`)) {
-						endIndex = nextIndex+2;
-						sqlObj.alias = this.tokens[nextIndex+2].value;
+				if (nextToken && this.tokens[nextIndex + 1]) {
+					if (tokenIs(this.tokens[nextIndex + 1], `keyword`, `AS`) && tokenIs(this.tokens[nextIndex + 2], `word`)) {
+						endIndex = nextIndex + 2;
+						sqlObj.alias = this.tokens[nextIndex + 2].value;
 					} else
-					if (tokenIs(this.tokens[nextIndex+1], `word`)) {
-						endIndex = nextIndex+1;
-						sqlObj.alias = this.tokens[nextIndex+1].value;
-					}
+						if (tokenIs(this.tokens[nextIndex + 1], `word`)) {
+							endIndex = nextIndex + 1;
+							sqlObj.alias = this.tokens[nextIndex + 1].value;
+						}
 				}
 			}
 
 			if (!isSubSelect && !sqlObj.isUDTF) {
-				sqlObj.tokens = this.tokens.slice(i, endIndex+1);
+				sqlObj.tokens = this.tokens.slice(i, endIndex + 1);
 
-				if (options.includeParameters && tokenIs(this.tokens[endIndex+1], `openbracket`)) {
-					const blockTokens = this.getBlockAt(this.tokens[endIndex+1].range.end+1);
+				if (options.includeParameters && tokenIs(this.tokens[endIndex + 1], `openbracket`)) {
+					const blockTokens = this.getBlockAt(this.tokens[endIndex + 1].range.end + 1);
 
 					if (blockTokens.length > 0) {
 						sqlObj.tokens = sqlObj.tokens.concat([
-							{type: `openbracket`, value: `(`, range: {start: this.tokens[endIndex+1].range.start, end: this.tokens[endIndex+1].range.end}},
+							{ type: `openbracket`, value: `(`, range: { start: this.tokens[endIndex + 1].range.start, end: this.tokens[endIndex + 1].range.end } },
 							...blockTokens,
-							{type: `closebracket`, value: `)`, range: {start: blockTokens[blockTokens.length-1].range.end, end: blockTokens[blockTokens.length-1].range.end}}
+							{ type: `closebracket`, value: `)`, range: { start: blockTokens[blockTokens.length - 1].range.end, end: blockTokens[blockTokens.length - 1].range.end } }
 						]);
 					}
 				}
 			}
 
 			if (options.withSystemName) {
-				if (tokenIs(this.tokens[endIndex+1], `statementType`, `FOR`) && tokenIs(this.tokens[endIndex+2], `word`, `SYSTEM`) && tokenIs(this.tokens[endIndex+3], `word`, `NAME`)) {
-					if (this.tokens[endIndex+4] && NameTypes.includes(this.tokens[endIndex+4].type)) {
-						sqlObj.object.system = this.tokens[endIndex+4].value;
+				if (tokenIs(this.tokens[endIndex + 1], `statementType`, `FOR`) && tokenIs(this.tokens[endIndex + 2], `word`, `SYSTEM`) && tokenIs(this.tokens[endIndex + 3], `word`, `NAME`)) {
+					if (this.tokens[endIndex + 4] && NameTypes.includes(this.tokens[endIndex + 4].type)) {
+						sqlObj.object.system = this.tokens[endIndex + 4].value;
 					}
 				}
 			}
@@ -659,13 +663,13 @@ export default class Statement {
 		// Only these statements support the INTO clause in embedded SQL really
 		const validIntoStatements: StatementType[] = [StatementType.Unknown, StatementType.With, StatementType.Select];
 
-		let ranges: {type: "remove"|"marker", range: IRange, named?: string}[] = [];
-		let intoClause: Token|undefined;
-		let declareStmt: Token|undefined;
+		let ranges: { type: "remove" | "marker", range: IRange, named?: string }[] = [];
+		let intoClause: Token | undefined;
+		let declareStmt: Token | undefined;
 		let lastTokenWasMarker = false;
 
 		for (let i = 0; i < this.tokens.length; i++) {
-			const prevToken = this.tokens[i-1];
+			const prevToken = this.tokens[i - 1];
 			const currentToken = this.tokens[i];
 
 			if (!tokenIs(currentToken, `colon`)) {
@@ -674,7 +678,7 @@ export default class Statement {
 
 			switch (currentToken.type) {
 				case `statementType`:
-					const currentValue = currentToken.value.toLowerCase();
+					const currentValue = currentToken.value?.toLowerCase();
 					if (declareStmt) {
 						if (currentValue === `for`) {
 							ranges.push({
@@ -684,7 +688,7 @@ export default class Statement {
 									end: currentToken.range.end
 								}
 							});
-	
+
 							declareStmt = undefined;
 						}
 
@@ -702,10 +706,10 @@ export default class Statement {
 					if (declareStmt) continue;
 
 					// We need to remove the INTO clause completely.
-					if (currentToken.value.toLowerCase() === `into`) {
+					if (currentToken.value?.toLowerCase() === `into`) {
 						intoClause = currentToken;
 					} else if (intoClause) {
-						const endToken = this.tokens[i-1];
+						const endToken = this.tokens[i - 1];
 
 						ranges.push({
 							type: `remove`,
@@ -734,9 +738,9 @@ export default class Statement {
 					if (declareStmt) continue;
 					if (prevToken && prevToken.type === `string`) continue;
 
-					let nextMustBe: "word"|"dot" = `word`;
-					let followingTokenI = i+1;
-					let endToken: Token;
+					let nextMustBe: "word" | "dot" = `word`;
+					let followingTokenI = i + 1;
+					let endToken: Token | undefined;
 
 					// Handles when we have a host variable
 					// This logic supports qualified host variables
@@ -766,7 +770,7 @@ export default class Statement {
 						});
 
 						lastTokenWasMarker = true;
-						i = (followingTokenI-1);
+						i = (followingTokenI - 1);
 					}
 
 					break;
@@ -774,12 +778,12 @@ export default class Statement {
 				default:
 					if (i === 0 && tokenIs(currentToken, `word`, `EXEC`)) {
 						// We check and remove the starting `EXEC SQL`
-						if (tokenIs(this.tokens[i+1], `word`, `SQL`)) {
+						if (tokenIs(this.tokens[i + 1], `word`, `SQL`)) {
 							ranges.push({
 								type: `remove`,
 								range: {
 									start: currentToken.range.start,
-									end: this.tokens[i+1].range.end
+									end: this.tokens[i + 1].range.end
 								}
 							});
 						}
@@ -792,31 +796,31 @@ export default class Statement {
 	}
 
 	static trimTokens(tokens: Token[]) {
-    if (tokens.length > 0) {
-      let realFirstToken = tokens.findIndex(t => t.type !== `newline`);
-      if (realFirstToken < 0) realFirstToken = 0;
+		if (tokens.length > 0) {
+			let realFirstToken = tokens.findIndex(t => t.type !== `newline`);
+			if (realFirstToken < 0) realFirstToken = 0;
 
-      let realLastToken = 0;
+			let realLastToken = 0;
 
-      for (let i = tokens.length - 1; i >= 0; i--) {
-        if (tokens[i].type !== `newline`) {
-          realLastToken = i + 1;
-          break;
-        }
-      }
+			for (let i = tokens.length - 1; i >= 0; i--) {
+				if (tokens[i].type !== `newline`) {
+					realLastToken = i + 1;
+					break;
+				}
+			}
 
-      tokens = tokens.slice(realFirstToken, realLastToken);
-    }
-    return tokens;
-  }
+			tokens = tokens.slice(realFirstToken, realLastToken);
+		}
+		return tokens;
+	}
 
 	public static formatSimpleTokens(tokens: Token[]) {
 		let outString = ``;
 		for (let i = 0; i < tokens.length; i++) {
 			const cT = tokens[i];
-			const nT = tokens[i+1];
-			const pT = tokens[i-1];
-	
+			const nT = tokens[i + 1];
+			const pT = tokens[i - 1];
+
 			switch (cT.type) {
 				case `block`:
 					outString += `(${Statement.formatSimpleTokens(cT.block!)})`;
@@ -830,7 +834,7 @@ export default class Statement {
 					break;
 				case `closebracket`:
 					outString += cT.value
-					
+
 					if (nT && nT.type !== cT.type) {
 						outString += ` `
 					}

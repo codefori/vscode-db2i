@@ -1,5 +1,5 @@
-import { assert, expect, test } from 'vitest'
-import SQLTokeniser from '../tokens'
+import { expect, test } from 'vitest';
+import SQLTokeniser from '../tokens';
 
 // Edit an assertion and save to see HMR in action
 
@@ -120,5 +120,5 @@ test('For in data-type (issue #315)', () => {
 
   expect(tokens.length).toBe(35);
   expect(tokens[9].type).toBe(`word`);
-  expect(tokens[9].value.toLowerCase()).toBe(`for`);
+  expect(tokens[9].value?.toLowerCase()).toBe(`for`);
 });

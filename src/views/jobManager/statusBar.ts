@@ -1,7 +1,6 @@
-import { MarkdownString, StatusBarAlignment, ThemeColor, languages, window } from "vscode";
-import { ServerComponent } from "../../connection/serverComponent";
-import { JobManager } from "../../config";
+import { MarkdownString, StatusBarAlignment, ThemeColor, window } from "vscode";
 import { getInstance } from "../../base";
+import { JobManager } from "../../config";
 import Statement from "../../database/statement";
 
 const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Left);
@@ -10,7 +9,7 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
   const instance = getInstance();
   const connection = instance.getConnection();
 
-  if (connection && ServerComponent.isInstalled()) {
+  if (connection) {
     const selected = JobManager.getSelection();
 
     let text;
@@ -42,7 +41,7 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
           ``,
           `Configured user library list for job:`,
           ``,
-          ...job.options.libraries.map((lib, i) => `${i+1}. \`${lib}\``)
+          ...(job.options?.libraries?.map((lib, i) => `${i+1}. \`${lib}\``) || ['N/A'])
         ].join(`\n`));
       }
 

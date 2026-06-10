@@ -2,7 +2,7 @@
 import path from "path";
 import { getInstance } from "../base";
 import { JobManager } from "../config";
-import { ResolvedSqlObject, BasicSQLObject } from "../types";
+import { BasicSQLObject, ResolvedSqlObject } from "../types";
 import Statement from "./statement";
 
 export type SQLType = "schemas" | "tables" | "views" | "aliases" | "masks" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "receivers" | "journals" | "permissions" | "sequences" | "packages" | "triggers" | "types" | "logicals";
@@ -42,7 +42,7 @@ export const SQL_ESCAPE_CHAR = `\\`;
 type BasicColumnType = string | number;
 interface PartStatementInfo { clause: string, parameters: BasicColumnType[] };
 
-function getFilterClause(againstColumn: string, filter: string, noAnd?: boolean): PartStatementInfo {
+function getFilterClause(againstColumn: string, filter?: string, noAnd?: boolean): PartStatementInfo {
   if (!filter) {
     return { clause: ``, parameters: [] };
   }
@@ -174,7 +174,7 @@ export default class Schemas {
           .map((obj) => `(s.routine_name = ? AND s.routine_schema = ?)`)
           .join(` OR `);
         baseStatement += ` and (${qualifiedClause})`;
-        parameters.push(...qualified.flatMap((obj) => [obj.name, obj.schema]));
+        parameters.push(...qualified.flatMap((obj) => [obj.name, obj.schema || '']));
       }
 
       statements.push(baseStatement);

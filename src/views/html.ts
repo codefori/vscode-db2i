@@ -205,11 +205,11 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
   `;
 }
 
-export const escapeHTML = str => str.replace(/[&<>'"]/g,
+export const escapeHTML = (str: string) => str.replace(/[&<>'"]/g,
   tag => ({
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
     "'": '&#39;',
     '"': '&quot;'
-  }[tag]));
+  }[tag] ?? tag));

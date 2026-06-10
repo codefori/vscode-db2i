@@ -1,11 +1,11 @@
 {
 	"compilerOptions": {
 		"module": "commonjs",
-		"target": "ES2019",
+		"target": "ES2022",
 		"checkJs": true,  /* Typecheck .js files. */
 		"esModuleInterop": true,
 		"lib": [
-			"ES2019"
+			"ES2022"
 		],
 		"outDir": "./dist",
 	},

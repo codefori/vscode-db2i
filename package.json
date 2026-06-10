@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.17.0",
+  "version": "2.0.0-dev.0",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -33,11 +33,10 @@
   "main": "./dist/extension.js",
   "scripts": {
     "test": "vitest",
-    "dsc": "npx tsx src/dsc",
     "package": "vsce package",
-    "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
-    "webpack": "vscd --clean && webpack --mode development",
-    "webpack-dev": "vscd --clean && webpack --mode development",
+    "vscode:prepublish": "npm run webpack",
+    "webpack": "vscd --clean && webpack --mode production",
+    "webpack-dev": "vscd --clean && webpack --mode development --watch",
     "typings": "npx -p typescript tsc ./src/extension.ts --excludeDirectories '**/node_modules' --allowJs --noEmit --esModuleInterop -t es2019 --moduleResolution node --skipLibCheck"
   },
   "contributes": {
@@ -1914,9 +1913,10 @@
   },
   "devDependencies": {
     "@continuedev/core": "^1.0.13",
-    "@halcyontech/vscode-ibmi-types": "^2.17.0",
+    "@halcyontech/vscode-ibmi-types": "^3.0.9",
+    "@ibm/mapepire-js": "^0.5.0",
     "@types/glob": "^7.1.3",
-    "@types/node": "18.x",
+    "@types/node": "25.x",
     "@types/vscode": "^1.95.0",
     "esbuild-loader": "^4.3.0",
     "glob": "^7.1.7",
@@ -1930,14 +1930,10 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
-    "@ibm/mapepire-js": "^0.5.0",
-    "@octokit/rest": "^21.1.1",
     "chart.js": "^4.4.2",
     "csv": "^6.1.3",
     "json-to-markdown-table": "^1.0.0",
     "lru-cache": "^6.0.0",
-    "node-fetch": "^3.3.1",
-    "octokit": "^5.0.3",
     "showdown": "^2.1.0",
     "sql-formatter": "^14.0.0"
   }

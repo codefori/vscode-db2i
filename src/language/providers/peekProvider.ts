@@ -1,9 +1,9 @@
 import { languages, workspace } from "vscode";
-import { getSqlDocument } from "./logic/parse";
 import { JobManager } from "../../config";
+import Schemas from "../../database/schemas";
 import Statement from "../../database/statement";
 import { remoteAssistIsEnabled } from "./logic/available";
-import Schemas, {  } from "../../database/schemas";
+import { getSqlDocument } from "./logic/parse";
 
 
 export const peekProvider = languages.registerDefinitionProvider({ language: `sql` }, {
@@ -20,15 +20,15 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
     const sqlDoc = getSqlDocument(document);
     const offset = document.offsetAt(position);
 
-    const tokAt = sqlDoc.getTokenByOffset(offset);
-    const statementAt = sqlDoc.getStatementByOffset(offset);
+    const tokAt = sqlDoc?.getTokenByOffset(offset);
+    const statementAt = sqlDoc?.getStatementByOffset(offset);
 
     if (statementAt) {
       const refs = statementAt.getObjectReferences();
 
       const ref = refs.find(ref => ref.tokens[0].range.start && offset <= ref.tokens[ref.tokens.length - 1].range.end);
 
-      if (ref) {
+      if (ref?.object.name) {
         const name = Statement.delimName(ref.object.name, true);
 
         // Schema is based on a few things:

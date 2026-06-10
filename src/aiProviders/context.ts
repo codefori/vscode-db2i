@@ -1,21 +1,13 @@
 import { ContextItem } from "@continuedev/core";
-import * as vscode from "vscode";
 import { JobManager } from "../config";
-import Schemas, { AllSQLTypes, SQLType } from "../database/schemas";
+import Schemas, { AllSQLTypes } from "../database/schemas";
 import Statement from "../database/statement";
-import { DB2_SYSTEM_PROMPT } from "./prompts";
+import { BasicSQLObject, ResolvedSqlObject, TableColumn } from "../types";
 import { Db2ContextItems } from "./prompt";
-import { TableColumn, BasicSQLObject, ResolvedSqlObject } from "../types";
+import { DB2_SYSTEM_PROMPT } from "./prompts";
 
 export function canTalkToDb() {
   return JobManager.getSelection() !== undefined;
-}
-
-export function getCurrentSchema(): string {
-  const currentJob = JobManager.getSelection();
-  return currentJob && currentJob.job.options.libraries[0]
-    ? currentJob.job.options.libraries[0]
-    : `QGPL`;
 }
 
 export type TableRefs = { [key: string]: TableColumn[] };
@@ -149,7 +141,7 @@ function splitUpUserInput(input: string): string[] {
         break;
     }
   }
-  
+
   addPart();
 
   return parts;
@@ -163,7 +155,7 @@ function splitUpUserInput(input: string): string[] {
  *
  * @param {string} input - A string that may contain table references.
  */
-export async function getSqlContextItems(input: string): Promise<{items: Db2ContextItems[], refs: ResolvedSqlObject[]}> {
+export async function getSqlContextItems(input: string): Promise<{ items: Db2ContextItems[], refs: ResolvedSqlObject[] }> {
   // Parse all SCHEMA.TABLE references first
   const tokens = splitUpUserInput(input);
 
@@ -174,11 +166,11 @@ export async function getSqlContextItems(input: string): Promise<{items: Db2Cont
       .map((word) => word.slice(0, -1))
   );
 
-  let possibleRefs: {name: string, schema?: string}[] = [];
+  let possibleRefs: { name: string, schema?: string }[] = [];
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
-    
-    if (tokens[i+1] && [`.`, `/`].includes(tokens[i+1]) && tokens[i + 2]) {
+
+    if (tokens[i + 1] && [`.`, `/`].includes(tokens[i + 1]) && tokens[i + 2]) {
       const nextToken = tokens[i + 2];
 
       possibleRefs.push({
@@ -205,7 +197,7 @@ export async function getSqlContextItems(input: string): Promise<{items: Db2Cont
 }
 
 export async function getContentItemsForRefs(allObjects: ResolvedSqlObject[]): Promise<Db2ContextItems[]> {
-  const items: (Db2ContextItems|undefined)[] = await Promise.all(
+  const items: (Db2ContextItems | undefined)[] = await Promise.all(
     allObjects.map(async (o) => {
       try {
         if (o.sqlType === `SCHEMA`) {
@@ -270,15 +262,12 @@ export function refsToMarkdown(refs: TableRefs): MarkdownRef[] {
       COLUMN_INFO: refs[tableName]
         .map((column) => {
           const lengthPrecision = column.CHARACTER_MAXIMUM_LENGTH
-            ? `(${column.CHARACTER_MAXIMUM_LENGTH}${
-                column.NUMERIC_PRECISION ? `:${column.NUMERIC_PRECISION}` : ``
-              })`
+            ? `(${column.CHARACTER_MAXIMUM_LENGTH}${column.NUMERIC_PRECISION ? `:${column.NUMERIC_PRECISION}` : ``
+            })`
             : ``;
-          return `${column.COLUMN_NAME}${
-            column.COLUMN_TEXT ? ` - ${column.COLUMN_TEXT}` : ``
-          } ${column.DATA_TYPE}${lengthPrecision} is_identity: ${
-            column.IS_IDENTITY
-          } is_nullable: ${column.IS_NULLABLE}`;
+          return `${column.COLUMN_NAME}${column.COLUMN_TEXT ? ` - ${column.COLUMN_TEXT}` : ``
+            } ${column.DATA_TYPE}${lengthPrecision} is_identity: ${column.IS_IDENTITY
+            } is_nullable: ${column.IS_NULLABLE}`;
         })
         .join(`\n`),
     };
@@ -291,22 +280,24 @@ export function refsToMarkdown(refs: TableRefs): MarkdownRef[] {
 export function createContinueContextItems(refs: MarkdownRef[]) {
   const contextItems: ContextItem[] = [];
   const job = JobManager.getSelection();
-  if (refs.length === 0) {
-    contextItems.push({
-      name: `SYSTEM PROMPT`,
-      description: `system prompt context`,
-      content: DB2_SYSTEM_PROMPT + `\n\nNo references found`,
-    });
-  } else {
-    for (const tableRef of refs) {
-      let prompt = `Table: ${tableRef.TABLE_NAME} (Schema: ${tableRef.SCHMEA}) Column Information:\n`;
-      prompt += `Format: column_name (column_text) type(length:precision) is_identity is_nullable\n`;
-      prompt += `${tableRef.COLUMN_INFO}`;
+  if (job) {
+    if (refs.length === 0) {
       contextItems.push({
-        name: `${job.name}-${tableRef.SCHMEA}-${tableRef.TABLE_NAME}`,
-        description: `Column information for ${tableRef.TABLE_NAME}`,
-        content: DB2_SYSTEM_PROMPT + prompt,
+        name: `SYSTEM PROMPT`,
+        description: `system prompt context`,
+        content: DB2_SYSTEM_PROMPT + `\n\nNo references found`,
       });
+    } else {
+      for (const tableRef of refs) {
+        let prompt = `Table: ${tableRef.TABLE_NAME} (Schema: ${tableRef.SCHMEA}) Column Information:\n`;
+        prompt += `Format: column_name (column_text) type(length:precision) is_identity is_nullable\n`;
+        prompt += `${tableRef.COLUMN_INFO}`;
+        contextItems.push({
+          name: `${job.name}-${tableRef.SCHMEA}-${tableRef.TABLE_NAME}`,
+          description: `Column information for ${tableRef.TABLE_NAME}`,
+          content: DB2_SYSTEM_PROMPT + prompt,
+        });
+      }
     }
   }
 

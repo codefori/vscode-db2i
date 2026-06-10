@@ -1,11 +1,11 @@
 import { CompletionItem, CompletionItemKind, SnippetString } from "vscode";
-import { CallableSignature, CallableType } from "../../../database/callable";
-import { ObjectRef, CallableReference } from "../../sql/types";
+import { CallableType } from "../../../database/callable";
 import Statement from "../../../database/statement";
-import { createCompletionItem, getParmAttributes } from "./completion";
-import { DbCache } from "./cache";
 import { SQLParm } from "../../../types";
 import { getPositionData } from "../../sql/document";
+import { CallableReference, ObjectRef } from "../../sql/types";
+import { DbCache } from "./cache";
+import { createCompletionItem, getParmAttributes } from "./completion";
 
 /**
  * Checks if the ref exists as a procedure or function. Then,
@@ -34,12 +34,12 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
  * that are stored in the cache for a specific procedure
  */
 export function getCallableParameters(ref: CallableReference, offset: number): CompletionItem[] {
-  const signatures = DbCache.getCachedSignatures(ref.parentRef.object.schema, ref.parentRef.object.name)
+  const signatures = DbCache.getCachedSignatures(ref.parentRef.object.schema, ref.parentRef.object.name);
   if (signatures) {
     const { firstNamedParameter, currentCount } = getPositionData(ref, offset);
 
-    const allParms = signatures.reduce((acc, val) => acc.concat(val.parms), []);
-    const usedParms = ref.tokens.filter((token) => allParms.some((parm) => parm.PARAMETER_NAME.toUpperCase() === Statement.noQuotes(token.value?.toUpperCase()))).map(token => Statement.noQuotes(token.value.toUpperCase()));
+    const allParms = signatures.flatMap(s => s.parms);
+    const usedParms = ref.tokens.filter((token) => allParms.some((parm) => parm.PARAMETER_NAME.toUpperCase() === Statement.noQuotes(token.value?.toUpperCase() || ''))).map(token => Statement.noQuotes(token.value?.toUpperCase() || ''));
 
     let validParms: SQLParm[] = [];
 
@@ -62,7 +62,7 @@ export function getCallableParameters(ref: CallableReference, offset: number): C
     // Get a list of the available parameters
     const availableParms = validParms.filter((parm, i) =>
       (!usedParms.some((usedParm) => usedParm === parm.PARAMETER_NAME.toUpperCase())) && // Hide parameters that have already been named
-      parm.ORDINAL_POSITION >= ((firstNamedParameter + 1) || currentCount) // Hide parameters that are before the first named parameter
+      parm.ORDINAL_POSITION >= (((firstNamedParameter || 0) + 1) || currentCount) // Hide parameters that are before the first named parameter
     );
 
     return availableParms.map((parm) => {

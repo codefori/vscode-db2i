@@ -1,6 +1,6 @@
-import { OldSQLJob } from "../../../connection/sqlJob";
-import { TestCase } from "../../../testing";
 import assert from "assert";
+import { JobManager } from "../../../config";
+import { TestCase } from "../../../testing";
 import { SelfValue } from "./nodes";
 
 export const selfCodeTests = [
@@ -19,19 +19,18 @@ export const selfCodeTests = [
 export function testSelfCodes(): TestCase[] {
   let tests: TestCase[] = [];
   const content = `SELECT job_name, matches FROM qsys2.sql_error_log where job_name = ?`;
-  let before: string;
-  let after: string;
+
   for (const test of selfCodeTests) {
     const testCase: TestCase = {
       name: `Self code Error for test ${test.name}`,
       test: async () => {
-        let newJob = new OldSQLJob();
-        await newJob.connect();
+        const newJob = await JobManager.newJob();
+        assert.ok(newJob.id);
         await newJob.setSelfState(test.code as SelfValue);
         try {
           await newJob.query(test.sql).execute();
         } catch (e) {}
-        let result = await newJob.query(content, {parameters: [newJob.id]}).execute();
+        const result = await newJob.query<any>(content, {parameters: [newJob.id]}).execute();
         assert(result.data[0]['MATCHES'] >= 1);
         
         newJob.close();

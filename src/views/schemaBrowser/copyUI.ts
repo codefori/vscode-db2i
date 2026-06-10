@@ -1,4 +1,4 @@
-import { getBase, getInstance, loadBase } from "../../base";
+import { getBase } from "../../base";
 
 export function getCopyUi() {
   return getBase()!.customUI()

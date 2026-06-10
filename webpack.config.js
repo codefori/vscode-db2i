@@ -19,6 +19,9 @@ if (isProduction) {
   exclude = path.resolve(__dirname, `src`, `testing`)
 }
 
+const dist = path.resolve(__dirname, `dist`);
+fs.mkdirSync(dist, {recursive: true});
+
 // We need to hack our chart.js copy and remove the hardcoded exports for our build.
 const chartJsPackagePath = path.resolve(__dirname, `node_modules`, `chart.js`, `package.json`);
 let chartJsPackage = JSON.parse(fs.readFileSync(chartJsPackagePath, `utf8`));
@@ -32,7 +35,7 @@ const config = {
   entry: `./src/extension.ts`, // the entry point of this extension, 📖 -> https://webpack.js.org/configuration/entry-context/
   output: {
     // the bundle is stored in the 'dist' folder (check package.json), 📖 -> https://webpack.js.org/configuration/output/
-    path: path.resolve(__dirname, `dist`),
+    path: dist,
     filename: `extension.js`,
     libraryTarget: `commonjs2`,
     devtoolModuleFilenameTemplate: `../[resource-path]`,
@@ -66,11 +69,7 @@ const config = {
         exclude: /node_modules/,
         use: [
           {
-            loader: `esbuild-loader`,
-            options: {
-              // JavaScript version to transpile to
-              target: 'node18'
-            }
+            loader: `esbuild-loader`
           }
         ]
       },

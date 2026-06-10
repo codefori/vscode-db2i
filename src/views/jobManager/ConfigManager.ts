@@ -1,10 +1,10 @@
-import { Disposable, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, window } from "vscode";
-import Configuration from "../../configuration";
-import { SQLJobItem } from "./jobManagerView";
-import { Config, JobManager } from "../../config";
-import { editJobUi } from "./editJob";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { Disposable, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState, commands, window } from "vscode";
 import { getInstance } from "../../base";
+import { Config, JobManager } from "../../config";
+import Configuration from "../../configuration";
+import { editJobUi } from "./editJob";
+import { SQLJobItem } from "./jobManagerView";
 
 interface JobConfigs {
   [name: string]: JDBCOptions
@@ -128,6 +128,7 @@ export class ConfigManager {
 
   static hasSavedItems() {
     const saved = ConfigManager.getSavedConfigs();
+    //@ts-ignore
     const names = Object.keys(saved);
     return names.length > 0;
   }
@@ -136,6 +137,7 @@ export class ConfigManager {
     // TODO: add profiles in here?
 
     const saved = ConfigManager.getSavedConfigs();
+    //@ts-ignore
     const names = Object.keys(saved);
     return names.map(name => new SavedConfig(name));
   }
@@ -146,6 +148,7 @@ export class ConfigManager {
 
   static getConfig(name: string): JDBCOptions | undefined {
     const configs = this.getSavedConfigs(); // Returns a proxy
+    //@ts-ignore
     return Object.assign({}, configs[name]);
   }
 
@@ -160,7 +163,7 @@ export class ConfigManager {
 
   private static deleteConfig(name: string) {
     let configs = ConfigManager.getSavedConfigs();
-
+    //@ts-ignore
     configs[name] = undefined;
 
     return Configuration.set(`jobConfigs`, configs);

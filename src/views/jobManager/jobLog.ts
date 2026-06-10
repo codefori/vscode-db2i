@@ -1,15 +1,14 @@
 import { ViewColumn, window } from "vscode";
 import { JobInfo } from "../../connection/manager";
-import { escapeHTML, getHeader } from "../html";
 import { JobLogEntry } from "../../connection/types";
-import { JobManager } from "../../config";
+import { escapeHTML, getHeader } from "../html";
 
 
 export async function displayJobLog(selected: JobInfo) {
   const jobLog = await selected.job.getJobLog();
 
   if (jobLog.data.length > 0) {
-    const panel = window.createWebviewPanel(`tab`, selected.job.id, {viewColumn: ViewColumn.Active}, {enableScripts: true});
+    const panel = window.createWebviewPanel(`tab`, selected.job.id!, {viewColumn: ViewColumn.Active}, {enableScripts: true});
     panel.webview.html = generatePage(jobLog.data);
     panel.reveal();
   } else {

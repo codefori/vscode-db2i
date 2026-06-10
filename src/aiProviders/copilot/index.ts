@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import {
   canTalkToDb,
 } from "../context";
-import { getContextItems, Db2ContextItems } from "../prompt";
+import { getContextItems } from "../prompt";
 import { registerSqlRunTool, RUN_SQL_TOOL_ID } from "./sqlTool";
 
 const CHAT_ID = `vscode-db2i.chat`;
@@ -106,7 +106,7 @@ export function activateChat(context: vscode.ExtensionContext) {
           let result = await doRequest(tools);
 
           // Then, if there is a tool request, we do the logic to invoke the tool
-          if (result.toolCalls.length > 0) {
+          if (result && result.toolCalls.length > 0) {
             for (const toolcall of result.toolCalls) {
               if (toolcall.name === RUN_SQL_TOOL_ID) {
                 const result = await vscode.lm.invokeTool(toolcall.name, { toolInvocationToken: request.toolInvocationToken, input: toolcall.input });
@@ -125,7 +125,7 @@ export function activateChat(context: vscode.ExtensionContext) {
             result = await doRequest();
           }
 
-          return { metadata: { command: "build", followUps: contextItems.followUps, statement: result.sqlCodeBlock } };
+          return { metadata: { command: "build", followUps: contextItems.followUps, statement: result?.sqlCodeBlock } };
       }
     } else {
       throw new Error(

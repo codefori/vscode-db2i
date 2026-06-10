@@ -1,12 +1,12 @@
-import { getBase } from "../../../base";
-import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import { ComplexTab } from "@halcyontech/vscode-ibmi-types/webviews/CustomUI";
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { getBase } from "../../../base";
 
-import getPerfTab from "./perfTab";
 import getFormatTab from "./formatTab";
-import getSystemTab from "./systemTab";
-import getSortTab from "./sortTab";
 import getOtherTab from "./otherTab";
+import getPerfTab from "./perfTab";
+import getSortTab from "./sortTab";
+import getSystemTab from "./systemTab";
 
 export function formatDescription(text: string): string {
   return text
@@ -70,10 +70,13 @@ export async function editJobUi(
             break;
 
           default:
-            // Handle of true/false values back into boolean types
+            // Handle of true/false values back into boolean types            
             switch (page.data[key]) {
+              //@ts-ignore
               case `true`: options[key] = true; break;
+              //@ts-ignore
               case `false`: options[key] = false; break;
+              //@ts-ignore
               default: options[key] = page.data[key]; break;
             }
         }

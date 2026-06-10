@@ -2,7 +2,7 @@
 import { getInstance } from "../base";
 import Configuration from "../configuration";
 
-import {format, FormatOptionsWithLanguage, IdentifierCase, KeywordCase} from "sql-formatter"
+import { format, FormatOptionsWithLanguage, IdentifierCase, KeywordCase } from "sql-formatter";
 
 export default class Statement {
   static format(sql: string, options: FormatOptionsWithLanguage = {}) {
@@ -63,32 +63,28 @@ export default class Statement {
    * Converts a catalog name to a pretty name for UI purposes
    * @param name Catalog name
    */
-  static prettyName(name: string) {
-      // If the name contains characters other than the valid variants, uppercase, digits, or underscores, it must be delimited
-      if (Statement.validQsysName(name)) return name.toLowerCase();
-      else {
-        // Delimited name
-        if (name.includes(` `) || name.includes(`.`) || name !== name.toUpperCase()) {
-          return `"${name}"`;
-        } else {
-          return name.toLowerCase();
-        }
+  static prettyName(name?: string) {
+    if(!name){
+      return '';
+    }
+    // If the name contains characters other than the valid variants, uppercase, digits, or underscores, it must be delimited
+    if (Statement.validQsysName(name)) return name.toLowerCase();
+    else {
+      // Delimited name
+      if (name.includes(` `) || name.includes(`.`) || name !== name.toUpperCase()) {
+        return `"${name}"`;
+      } else {
+        return name.toLowerCase();
       }
+    }
   }
 
   static noQuotes(name: string) {
-    if (name.startsWith(`"`) && name.endsWith(`"`)) return name.substring(1, name.length-1);
+    if (name.startsWith(`"`) && name.endsWith(`"`)) return name.substring(1, name.length - 1);
     return name;
   }
 
   static escapeString(value: string) {
-    value = value.replace(/'/g, function (s) {
-      switch (s) {
-        case `'`:
-          return `''`;
-      }
-    });
-  
-    return value;
+    return value.replace(/'/g, () => `''`);
   }
 }

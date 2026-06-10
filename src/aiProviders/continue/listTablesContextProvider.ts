@@ -7,13 +7,14 @@ import {
   LoadSubmenuItemsArgs,
 } from "@continuedev/core";
 import * as vscode from "vscode";
+import Configuration from "../../configuration";
 import Schemas from "../../database/schemas";
 import Table from "../../database/table";
+import { BasicSQLObject, TableColumn } from "../../types";
 import {
-  buildSchemaDefinition} from "../context";
-import Configuration from "../../configuration";
+  buildSchemaDefinition
+} from "../context";
 import { getContextItems } from "../prompt";
-import { TableColumn, BasicSQLObject } from "../../types";
 
 const listDb2Table: ContextProviderDescription = {
   title: "list Db2i Tables",
@@ -69,7 +70,7 @@ class ListDb2iTables implements IContextProvider {
     let contextItems: ContextItem[] = [];
     if (query.toUpperCase() === this.schema.toUpperCase()) {
 
-      const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
+      const useSchemaDef = Configuration.get<boolean>(`ai.useSchemaDefinition`);
         if (useSchemaDef) {
         const schemaSemantic = await buildSchemaDefinition(this.schema);
         if (schemaSemantic) {
@@ -124,8 +125,8 @@ export async function registerDb2iTablesProvider(schema?: string) {
       await continueEx.activate();
     }
 
-    const existingProvider: SchemaContextProvider = providers.find(p => p.schema === schema);
-    if (existingProvider !== undefined) {
+    const existingProvider = providers.find(p => p.schema === schema);
+    if (existingProvider) {
       return;
     } else {
       const continueAPI = continueEx?.exports;

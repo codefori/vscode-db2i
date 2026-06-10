@@ -11,13 +11,10 @@ import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { SelfCodeNode } from "../../views/jobManager/selfCodes/nodes";
 import {
-  buildSchemaDefinition,
-  canTalkToDb,
-  getSqlContextItems
+  canTalkToDb
 } from "../context";
-import { DB2_SELF_PROMPT, DB2_SYSTEM_PROMPT } from "../prompts";
-import Configuration from "../../configuration";
 import { getContextItems } from "../prompt";
+import { DB2_SELF_PROMPT } from "../prompts";
 
 export let isContinueActive = false;
 
@@ -38,15 +35,9 @@ export class db2ContextProvider implements IContextProvider {
     return db2ContextProviderDesc;
   }
 
-  getCurrentJob(): JobInfo {
-    const currentJob: JobInfo = JobManager.getSelection();
-    return currentJob;
+  getCurrentJob() {
+    return JobManager.getSelection();
   }
-
-  private getDefaultSchema = (): string => {
-    const currentJob: JobInfo = this.getCurrentJob();
-    return currentJob?.job.options.libraries[0] || "QGPL";
-  };
 
   tryParseJson(row: SelfCodeNode) {
     try {
@@ -142,7 +133,7 @@ export class db2ContextProvider implements IContextProvider {
       const job = this.getCurrentJob();
       const fullInput = extras.fullInput;
 
-      if (job && fullInput.includes(`*SELF`) || query?.includes(`*SELF`)) {
+      if (job && (fullInput.includes(`*SELF`) || query?.includes(`*SELF`))) {
         // get current self code errors in job
         // build promt with error information
         // add to contextItems

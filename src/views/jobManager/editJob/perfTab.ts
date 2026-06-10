@@ -1,5 +1,5 @@
-import { getBase } from "../../../base";
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
+import { getBase } from "../../../base";
 
 export default function getPerfTab(options: JDBCOptions) {
   const base = getBase();
@@ -326,12 +326,14 @@ export default function getPerfTab(options: JDBCOptions) {
         value: `true`,
         text: `Use variable field compression`,
         description: `True`,
+        //@ts-ignore remove when https://github.com/Mapepire-IBMi/mapepire-js/pull/80 is merged
         selected: options["variable field compression"] === true,
       },
       {
         value: `false`,
         text: `Do not use variable field compression`,
         description: `False`,
+        //@ts-ignore remove when https://github.com/Mapepire-IBMi/mapepire-js/pull/80 is merged
         selected: options["variable field compression"] === false,
       },
     ]);
