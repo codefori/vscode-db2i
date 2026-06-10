@@ -210,7 +210,7 @@ async function getProcedures(
 async function getCompletionItemsForTriggerDot(
   currentStatement: LanguageStatement.default, // Statement from ../../database/statement
   offset: number,
-  trigger: string
+  trigger: string | undefined
 ): Promise<CompletionItem[]> {
   const defaultLibrary = await getDefaultSchema();
   let list: CompletionItem[] = [];
@@ -442,7 +442,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
 }
 
 async function getCompletionItems(
-  trigger: string,
+  trigger: string | undefined,
   currentStatement: LanguageStatement.default,
   offset: number
 ) {
@@ -601,7 +601,7 @@ export const completionProvider = languages.registerCompletionItemProvider(
           allItems.push(...getLocalDefs(sqlDoc, offset))
         }
 
-        if (remoteAssistIsEnabled(false) && currentStatement && trigger) {
+        if (remoteAssistIsEnabled(false) && currentStatement) {
           allItems.push(...await getCompletionItems(trigger, currentStatement, offset))
         }
 

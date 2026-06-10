@@ -24,7 +24,7 @@ export const actionProvider = languages.registerCodeActionsProvider({ language: 
       const currentStatement = sqlDoc.getStatementByOffset(offset);
       const label = currentStatement?.getLabel()?.toLowerCase();
 
-      if (currentStatement && label && !invalidBindingLabels.includes(label)) {
+      if (currentStatement && (!label || !invalidBindingLabels.includes(label))) {
         const markers = currentStatement.getEmbeddedStatementAreas().filter(a => a.type === `marker`);
         const codeActions: SqlCodeAction[] = [];
 
