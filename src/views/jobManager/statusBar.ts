@@ -41,7 +41,7 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
           ``,
           `Configured user library list for job:`,
           ``,
-          ...job.options?.libraries?.map((lib, i) => `${i+1}. \`${lib}\``) || 'none'
+          ...(job.options?.libraries?.map((lib, i) => `${i+1}. \`${lib}\``) || ['N/A'])
         ].join(`\n`));
       }
 
