@@ -1,4 +1,4 @@
-import { Disposable, Event, EventEmitter, FileDecoration, FileDecorationProvider, ThemeColor, TreeItem, Uri, window } from "vscode";
+import { Disposable, Event, EventEmitter, FileDecoration, FileDecorationProvider, TreeItem, Uri, window } from "vscode";
 import { Highlighting, NodeHighlights } from "./nodes";
 
 /**
@@ -42,9 +42,9 @@ export class DoveTreeDecorationProvider implements FileDecorationProvider {
             const value: number = Number(uri.fsPath);
             if (!isNaN(value) && value > 0) {
                 const nodeHighlights = new NodeHighlights(value);
-                let color: ThemeColor;
-                let badge: string;
-                let tooltip: string;
+                let color;
+                let badge;
+                let tooltip;
                 // For attribute section headings, only the color needs to be applied, which is not controlled by the highlight preferences
                 if (nodeHighlights.isSet(Highlighting.ATTRIBUTE_SECTION_HEADING)) {
                     color = Highlighting.Colors[Highlighting.ATTRIBUTE_SECTION_HEADING];
@@ -54,8 +54,11 @@ export class DoveTreeDecorationProvider implements FileDecorationProvider {
                     //@ts-ignore
                     tooltip = "\n" + nodeHighlights.getNames().map(h => "🔥 " + Highlighting.Descriptions[Highlighting[h]]).join("\n");
                 }
+
                 return {
-                    color: color
+                    color: color,
+                    badge,
+                    tooltip
                 }
             }
         }
