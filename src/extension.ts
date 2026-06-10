@@ -37,7 +37,7 @@ export interface Db2i {
 }
 
 export namespace Db2foriOutput {
-  const outputChannel = vscode.window.createOutputChannel(`Db2 for i Server Component`, `json`);
+  const outputChannel = vscode.window.createOutputChannel(`Db2 for IBM i`, `json`);
   export function writeOutput(jsonString?: string, show = false) {
     if (show) {
       outputChannel.show();
