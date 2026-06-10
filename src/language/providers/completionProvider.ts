@@ -58,8 +58,11 @@ const completionTypes: { [index: string]: CompletionType } = {
 
 
 function getColumnAttributes(column: TableColumn, useSystemName: boolean): string {
+  const shownName = useSystemName ? column.SYSTEM_COLUMN_NAME : column.COLUMN_NAME;
+  const alternateName = useSystemName ? column.COLUMN_NAME : column.SYSTEM_COLUMN_NAME;
   const lines: string[] = [
-    `Column: ${useSystemName ? column.SYSTEM_COLUMN_NAME : column.COLUMN_NAME}`,
+    `Column: ${shownName}`,
+    `${useSystemName ? `SQL name` : `System name`}: ${alternateName}`,
     `Type: ${prepareParamType(column)}`,
     `HAS_DEFAULT: ${column.HAS_DEFAULT}`,
     `IS_IDENTITY: ${column.IS_IDENTITY}`,
