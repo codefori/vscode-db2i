@@ -66,7 +66,7 @@ export class ValidateStatementComponent implements IBMiComponent {
   async getRemoteState(connection: IBMi, installDirectory: string): Promise<SecureComponentState> {
     const remoteSignature = await this.getSQLRoutineSignature(
       connection,
-      connection.getConfig().tempLibrary.toUpperCase(),
+      this.getLibrary(connection),
       ValidateStatementComponent.FUNCTION_NAME,
       ValidateStatementComponent.TYPE,
     );
@@ -86,7 +86,7 @@ export class ValidateStatementComponent implements IBMiComponent {
     return connection.withTempDirectory(async tempDir => {
       const tempSourcePath = getVSCodeTools()?.ensureFullPath(posix.join(tempDir, `sqlvalidator.sql`), connection?.getConfig()?.homeDirectory);
       const srcPath = tempSourcePath ? tempSourcePath : '';
-      const library = connection?.getConfig()?.tempLibrary.toUpperCase() || `ILEDITOR`;
+      const library = this.getLibrary(connection);
       await connection.getContent().writeStreamfileRaw(srcPath, this.getSource(library, ValidateStatementComponent.VERSION));
       const result = await connection.runCommand({
         command: `QSYS/RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SYS) DFTRDBCOL(${library})`,
