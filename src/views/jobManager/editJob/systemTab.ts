@@ -119,7 +119,7 @@ export default function getSystemTab(options: JDBCOptions) {
     //   ],
     //   formatDescription(autoCommitText)
     // )
-    .addInput(`database name`, `Database name`, undefined, { default: options["database name"] })
+    .addInput(`database name`, `Database name`, formatDescription(dbNameText), { default: options["database name"] })
     .addSelect(
       `decfloat rounding mode`,
       `Decfloat rounding mode`,
