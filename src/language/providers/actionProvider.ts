@@ -1,4 +1,4 @@
-import { CodeAction, CodeActionKind, languages, TextDocument, Uri, WorkspaceEdit } from "vscode";
+import { CodeAction, CodeActionKind, languages, TextDocument, WorkspaceEdit } from "vscode";
 import { remoteAssistIsEnabled } from "./logic/available";
 import { getSqlDocument } from "./logic/parse";
 
@@ -22,9 +22,9 @@ export const actionProvider = languages.registerCodeActionsProvider({ language: 
       if (!sqlDoc) return;
 
       const currentStatement = sqlDoc.getStatementByOffset(offset);
-      const label = currentStatement.getLabel()?.toLowerCase() || ``;
+      const label = currentStatement?.getLabel()?.toLowerCase();
 
-      if (currentStatement && !invalidBindingLabels.includes(label)) {
+      if (currentStatement && label && !invalidBindingLabels.includes(label)) {
         const markers = currentStatement.getEmbeddedStatementAreas().filter(a => a.type === `marker`);
         const codeActions: SqlCodeAction[] = [];
 

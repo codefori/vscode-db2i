@@ -1,10 +1,10 @@
 import { TextDocument } from "vscode";
-import Document from "../../sql/document";
 import { VALID_STATEMENT_LENGTH } from "../../../connection/components/validateStatement";
+import Document from "../../sql/document";
 
-let cached: Map<string, {ast, version}> = new Map();
+const cached: Map<string, { ast: Document, version: number }> = new Map();
 
-export function getSqlDocument(document: TextDocument): Document|undefined {
+export function getSqlDocument(document: TextDocument): Document | undefined {
   if (!isSafeDocument(document)) return undefined;
 
   const uri = document.uri.toString();
@@ -17,7 +17,7 @@ export function getSqlDocument(document: TextDocument): Document|undefined {
       return ast;
     }
   }
-  
+
   const newAsp = new Document(document.getText(), false);
   cached.set(uri, { ast: newAsp, version: document.version });
 

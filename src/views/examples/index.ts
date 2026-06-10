@@ -1,6 +1,6 @@
+import * as path from "path";
 import { EndOfLine, FileType, TextDocument, Uri, workspace } from "vscode";
 import Configuration from "../../configuration";
-import * as path from "path";
 import { getServiceInfo } from "../../database/serviceInfo";
 import { getStatementDetail } from "../../notebooks/logic/statement";
 
@@ -8722,7 +8722,7 @@ export namespace SQLExamples {
             continue;
           }
         } else if (type === FileType.Directory && depth > 0) {
-          const subContents = await this.getSqlTextDocumentsFromDirectory(uri, depth - 1);
+          const subContents = await getSqlTextDocumentsFromDirectory(uri, depth - 1);
           sqlTextDocuments.push(...subContents);
         }
       }

@@ -1,7 +1,7 @@
-import { ParsedStatementInfo } from ".";
-import crypto from "crypto";
 import { ParameterResult } from "@ibm/mapepire-js";
-import { DecorationOptions, ThemeColor, window, Range, MarkdownString, DecorationRangeBehavior } from "vscode";
+import crypto from "crypto";
+import { DecorationOptions, DecorationRangeBehavior, MarkdownString, Range, ThemeColor, window } from "vscode";
+import { ParsedStatementInfo } from ".";
 import Configuration from "../../configuration";
 
 let priorStatements: { [uniqueHash: string]: ParsedStatementInfo } = {};
@@ -32,7 +32,7 @@ export function statementDone(uniqueId: string, options: { paramsOut?: Parameter
     return v || `-`;
   };
 
-  if (existingStatement) {
+  if (existingStatement && existingStatement.group) {
     // Huge assumption here the statement is in the active editor
 
     // TODO: feature flag
@@ -47,7 +47,7 @@ export function statementDone(uniqueId: string, options: { paramsOut?: Parameter
           options.paramsOut.forEach((p, i) => {
             markdownString.appendMarkdown(`**Parameter ${i + 1}${p.name ? ` - ${p.name}` : ``}**:\n\n\`\`\`\n${p.value !== undefined ? p.value : `-`}\n\`\`\``);
 
-            if (i !== options.paramsOut.length - 1) {
+            if (i !== options.paramsOut!.length - 1) {
               markdownString.appendMarkdown(`\n\n---\n\n`);
             }
           });

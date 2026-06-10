@@ -129,7 +129,7 @@ export enum ClauseType {
 	Order = "Order"
 }
 
-export const ClauseTypeWord = {
+export const ClauseTypeWord = new Map(Object.entries({
 	'FROM': ClauseType.From,
 	'INTO': ClauseType.Into,
 	'WHERE': ClauseType.Where,
@@ -138,7 +138,7 @@ export const ClauseTypeWord = {
 	'LIMIT': ClauseType.Limit,
 	'OFFSET': ClauseType.Offset,
 	'ORDER': ClauseType.Order
-}
+}));
 
 export interface CTEReference {
 	name: string;

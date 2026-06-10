@@ -1,13 +1,13 @@
-import { commands, CompletionItemKind, Diagnostic, Disposable, DiagnosticSeverity, languages, ProgressLocation, Range, TextDocument, Uri, window, workspace } from "vscode";
+import path from "path";
+import { commands, CompletionItemKind, Diagnostic, DiagnosticSeverity, Disposable, languages, ProgressLocation, Range, TextDocument, Uri, window, workspace } from "vscode";
+import Configuration from "../../configuration";
+import { MAX_STATEMENT_COUNT, SqlSyntaxError, VALID_STATEMENT_LENGTH, ValidateStatementComponent } from "../../connection/components/validateStatement";
 import {
   SQLType,
 } from "../../database/schemas";
-import { remoteAssistIsEnabled } from "./logic/available";
-import Configuration from "../../configuration";
-import { ValidateStatementComponent, SqlSyntaxError, MAX_STATEMENT_COUNT, VALID_STATEMENT_LENGTH } from "../../connection/components/validateStatement";
 import { StatementGroup, StatementType } from "../sql/types";
+import { remoteAssistIsEnabled } from "./logic/available";
 import { getSqlDocument, isSafeDocument } from "./logic/parse";
-import path from "path";
 
 export interface CompletionType {
   order: string;
@@ -71,7 +71,7 @@ export const checkDocumentDefintion = commands.registerCommand(CHECK_DOCUMENT_CO
 });
 
 export const problemProvider: Disposable[] = [
-  sqlDiagnosticCollection, 
+  sqlDiagnosticCollection,
 
   workspace.onDidCloseTextDocument(e => {
     // Only clear errors from unsaved files.
@@ -182,7 +182,7 @@ async function validateSqlDocument(document: TextDocument, specificStatement?: n
               let syntaxChecked: SqlSyntaxError[] | undefined;
               try {
                 syntaxChecked = await window.withProgress({ location: ProgressLocation.Window, title: `$(sync-spin) Checking SQL Syntax` }, () => { return checker.checkMultipleStatements(job, sqlStatementContents) });
-              } catch (e) {
+              } catch (e: any) {
                 window.showErrorMessage(`${basename}: the SQL syntax checker failed to run. ${e.message}`);
                 syntaxChecked = undefined;
               }
@@ -273,13 +273,13 @@ function shouldShowError(error: SqlSyntaxError) {
 }
 
 function getStatementRangeFromGroup(currentGroup: StatementGroup, groupId: number): StatementRange | undefined {
-  let statementRange: StatementRange;
+  let statementRange: StatementRange | undefined;
   const firstStatement = currentGroup.statements[0];
   if (firstStatement) {
     statementRange = { groupId, start: firstStatement.range.start, end: currentGroup.range.end, validate: true };
 
     // Support for ACS' STOP statement.
-    if (firstStatement.type === StatementType.Unknown && firstStatement.tokens.length === 1 && firstStatement.tokens[0].value.toUpperCase() === `STOP`) {
+    if (firstStatement.type === StatementType.Unknown && firstStatement.tokens.length === 1 && firstStatement.tokens[0].value?.toUpperCase() === `STOP`) {
       statementRange.validate = false;
       return;
     }
@@ -294,13 +294,15 @@ function getStatementRangeFromGroup(currentGroup: StatementGroup, groupId: numbe
     }
   }
 
-  const stmtLength = currentGroup.range.end - statementRange.start;
-  if (stmtLength >= VALID_STATEMENT_LENGTH) {
-    // Just too long for our API.
-    statementRange.validate = false;
-  }
+  if (statementRange) {
+    const stmtLength = currentGroup.range.end - statementRange.start;
+    if (stmtLength >= VALID_STATEMENT_LENGTH) {
+      // Just too long for our API.
+      statementRange.validate = false;
+    }
 
-  return statementRange;
+    return statementRange;
+  }
 }
 
 function documentLargeError(basename: string) {
