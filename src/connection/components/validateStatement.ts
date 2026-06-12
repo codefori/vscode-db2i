@@ -42,8 +42,8 @@ export interface SqlSyntaxError {
 
 export class ValidateStatementComponent implements IBMiComponent {
   static ID = "ValidateStatement";
-  private static readonly VERSION = 1;
-  private static readonly SIGNATURE = "4DA5046C8080EC338A7516B9589CACDBED20A44C7D4BAFFEEC605FFB7C2EDD47";
+  private static readonly VERSION = 2;
+  private static readonly SIGNATURE = "6EBAA79B92569974227D1A9CCFBF78439DBA1E2EABBAB3CABFC8962C25BC6647";
   private static readonly FUNCTION_NAME = `VALIDATE_STATEMENT${ValidateStatementComponent.VERSION.toString().padStart(4, "0")}`;
 
   static async get(): Promise<ValidateStatementComponent | undefined> {
@@ -79,7 +79,8 @@ export class ValidateStatementComponent implements IBMiComponent {
       const tempSourcePath = posix.join(tempDir, `sqlvalidator.sql`);
       const srcPath = tempSourcePath ? tempSourcePath : '';
       const library = this.getLibrary(connection);
-      await connection.getContent().writeStreamfileRaw(srcPath, this.getSource(library, ValidateStatementComponent.VERSION));
+      const oldLib = (await connection.runSQL('VALUES CURRENT PATH'))[0]['00001'] as string;
+      await connection.getContent().writeStreamfileRaw(srcPath, this.getSource(library, ValidateStatementComponent.VERSION, oldLib));
       const result = await connection.runCommand({
         command: `QSYS/RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SYS) DFTRDBCOL(${library})`,
         cwd: `/`,
@@ -117,8 +118,9 @@ export class ValidateStatementComponent implements IBMiComponent {
 
 
 
-  private getSource(library: string, version: number) {
+  private getSource(library: string, version: number, oldLib: string) {
     return /*sql*/`
+    SET PATH = ${library};
     create or replace function ${library}.${ValidateStatementComponent.FUNCTION_NAME}(statementText char(${VALID_STATEMENT_LENGTH}) FOR SBCS DATA)
     returns table (
       messageFileName char(10),
@@ -174,7 +176,7 @@ export class ValidateStatementComponent implements IBMiComponent {
       set options = x'00000001' concat x'00000001' concat x'0000000A' concat '*NONE     '; --No naming convention
       -- set options = x'00000001' concat x'00000008' concat x'00000004' concat x'000004B0'; -- ccsid
       
-      call ${library}.${CheckStatementComponent.FUNCTION_NAME}( statementText, stmtLength, recordsProvided, statementLanguage, options, statementInfo, statementInfoLength, recordsProcessed, errorCode);
+      call ${CheckStatementComponent.FUNCTION_NAME}( statementText, stmtLength, recordsProvided, statementLanguage, options, statementInfo, statementInfoLength, recordsProcessed, errorCode);
     
       -- Parse the output
       set messageFileName = rtrim(substr(statementInfo, 1, 10));
@@ -226,6 +228,8 @@ export class ValidateStatementComponent implements IBMiComponent {
     end;
   
     comment on function ${library}/${ValidateStatementComponent.FUNCTION_NAME} is '${version} - SQL Syntax Checker';
+
+    SET PATH = ${oldLib};
     `;
   }
 }
