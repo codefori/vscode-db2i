@@ -11,7 +11,7 @@ export default class Table {
    * @returns {Promise<TableColumn[]>}
    */
   static async getItems(schema: string, table?: string): Promise<TableColumn[]> {
-    const params = table ? [schema, table] : [schema];
+    const params = table ? [schema, table, table] : [schema];
     const sql = [
       `SELECT `,
       `  column.TABLE_SCHEMA,`,
@@ -36,7 +36,7 @@ export default class Table {
       `    column.column_name = key.column_name`,
       `WHERE column.TABLE_SCHEMA = ?`,
       ...[
-        table ? `AND column.TABLE_NAME = ?` : ``,
+        table ? `AND (column.TABLE_NAME = ? OR column.SYSTEM_TABLE_NAME = ?)` : ``,
       ],
       `ORDER BY column.ORDINAL_POSITION`,
     ].join(` `);
