@@ -79,7 +79,8 @@ export class ValidateStatementComponent implements IBMiComponent {
       const tempSourcePath = posix.join(tempDir, `sqlvalidator.sql`);
       const srcPath = tempSourcePath ? tempSourcePath : '';
       const library = this.getLibrary(connection);
-      await connection.getContent().writeStreamfileRaw(srcPath, this.getSource(library, ValidateStatementComponent.VERSION));
+      const oldLib = (await connection.runSQL('VALUES CURRENT PATH'))[0]['00001'] as string;
+      await connection.getContent().writeStreamfileRaw(srcPath, this.getSource(library, ValidateStatementComponent.VERSION, oldLib));
       const result = await connection.runCommand({
         command: `QSYS/RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SYS) DFTRDBCOL(${library})`,
         cwd: `/`,
@@ -117,8 +118,9 @@ export class ValidateStatementComponent implements IBMiComponent {
 
 
 
-  private getSource(library: string, version: number) {
+  private getSource(library: string, version: number, oldLib: string) {
     return /*sql*/`
+    SET PATH = ${library};
     create or replace function ${library}.${ValidateStatementComponent.FUNCTION_NAME}(statementText char(${VALID_STATEMENT_LENGTH}) FOR SBCS DATA)
     returns table (
       messageFileName char(10),
@@ -226,6 +228,8 @@ export class ValidateStatementComponent implements IBMiComponent {
     end;
   
     comment on function ${library}/${ValidateStatementComponent.FUNCTION_NAME} is '${version} - SQL Syntax Checker';
+
+    SET PATH = ${oldLib};
     `;
   }
 }
