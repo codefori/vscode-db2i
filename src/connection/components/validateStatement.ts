@@ -42,8 +42,8 @@ export interface SqlSyntaxError {
 
 export class ValidateStatementComponent implements IBMiComponent {
   static ID = "ValidateStatement";
-  private static readonly VERSION = 1;
-  private static readonly SIGNATURE = "4DA5046C8080EC338A7516B9589CACDBED20A44C7D4BAFFEEC605FFB7C2EDD47";
+  private static readonly VERSION = 2;
+  private static readonly SIGNATURE = "6EBAA79B92569974227D1A9CCFBF78439DBA1E2EABBAB3CABFC8962C25BC6647";
   private static readonly FUNCTION_NAME = `VALIDATE_STATEMENT${ValidateStatementComponent.VERSION.toString().padStart(4, "0")}`;
 
   static async get(): Promise<ValidateStatementComponent | undefined> {
@@ -174,7 +174,7 @@ export class ValidateStatementComponent implements IBMiComponent {
       set options = x'00000001' concat x'00000001' concat x'0000000A' concat '*NONE     '; --No naming convention
       -- set options = x'00000001' concat x'00000008' concat x'00000004' concat x'000004B0'; -- ccsid
       
-      call ${library}.${CheckStatementComponent.FUNCTION_NAME}( statementText, stmtLength, recordsProvided, statementLanguage, options, statementInfo, statementInfoLength, recordsProcessed, errorCode);
+      call ${CheckStatementComponent.FUNCTION_NAME}( statementText, stmtLength, recordsProvided, statementLanguage, options, statementInfo, statementInfoLength, recordsProcessed, errorCode);
     
       -- Parse the output
       set messageFileName = rtrim(substr(statementInfo, 1, 10));
