@@ -42,8 +42,8 @@ export interface SqlSyntaxError {
 
 export class ValidateStatementComponent implements IBMiComponent {
   static ID = "ValidateStatement";
-  private static readonly VERSION = 1;
-  private static readonly SIGNATURE = "4DA5046C8080EC338A7516B9589CACDBED20A44C7D4BAFFEEC605FFB7C2EDD47";
+  private static readonly VERSION = 2;
+  private static readonly SIGNATURE = "6CF675A07B1AD50F384E4FE2AF4CC6C246058FC20C5DC1642AC01C24D24C39E0";
   private static readonly FUNCTION_NAME = `VALIDATE_STATEMENT${ValidateStatementComponent.VERSION.toString().padStart(4, "0")}`;
 
   static async get(): Promise<ValidateStatementComponent | undefined> {
@@ -81,7 +81,7 @@ export class ValidateStatementComponent implements IBMiComponent {
       const library = this.getLibrary(connection);
       await connection.getContent().writeStreamfileRaw(srcPath, this.getSource(library, ValidateStatementComponent.VERSION));
       const result = await connection.runCommand({
-        command: `QSYS/RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SYS) DFTRDBCOL(${library})`,
+        command: `QSYS/RUNSQLSTM SRCSTMF('${tempSourcePath}') COMMIT(*NONE) NAMING(*SQL) DFTRDBCOL(${library})`,
         cwd: `/`,
         noLibList: true,
         getSpooledFiles: true
@@ -96,30 +96,22 @@ export class ValidateStatementComponent implements IBMiComponent {
   }
 
   async checkMultipleStatements(currentJob: JobInfo, statements: string[]): Promise<SqlSyntaxError[] | undefined> {
-    const connection = getInstance()?.getConnection();
-    if (!connection) return undefined;
-
+    const connection = getInstance().getConnection();
+    
     const library = this.getLibrary(connection);
+    const checks = statements.map(stmt => `select * from table(${library}.${ValidateStatementComponent.FUNCTION_NAME}('${library}', ?))`).join(` union all `);
+    const stmt = currentJob.job.query<SqlCheckError>(checks, { parameters: statements });
+    const result = await stmt.execute(statements.length);
+    await stmt.close();
 
-    if (library) {
-      const checks = statements.map(stmt => `select * from table(${library}.${ValidateStatementComponent.FUNCTION_NAME}(?)) x`).join(` union all `);
-      const stmt = currentJob.job.query<SqlCheckError>(checks, { parameters: statements });
-      const result = await stmt.execute(statements.length);
-      stmt.close();
+    if (!result.success || result.data.length === 0) return [];
 
-      if (!result.success || result.data.length === 0) return [];
-
-      return result.data.map(sqlError => niceError(sqlError));
-    }
-
-    return undefined;
+    return result.data.map(sqlError => niceError(sqlError));
   }
-
-
 
   private getSource(library: string, version: number) {
     return /*sql*/`
-    create or replace function ${library}.${ValidateStatementComponent.FUNCTION_NAME}(statementText char(${VALID_STATEMENT_LENGTH}) FOR SBCS DATA)
+    create or replace function ${library}.${ValidateStatementComponent.FUNCTION_NAME}(pathLibrary varchar(10), statementText char(${VALID_STATEMENT_LENGTH}) FOR SBCS DATA)
     returns table (
       messageFileName char(10),
       messageFileLibrary char(10),
@@ -174,8 +166,9 @@ export class ValidateStatementComponent implements IBMiComponent {
       set options = x'00000001' concat x'00000001' concat x'0000000A' concat '*NONE     '; --No naming convention
       -- set options = x'00000001' concat x'00000008' concat x'00000004' concat x'000004B0'; -- ccsid
       
-      call ${library}.${CheckStatementComponent.FUNCTION_NAME}( statementText, stmtLength, recordsProvided, statementLanguage, options, statementInfo, statementInfoLength, recordsProcessed, errorCode);
-    
+      set path = pathLibrary;
+      call ${CheckStatementComponent.FUNCTION_NAME}( statementText, stmtLength, recordsProvided, statementLanguage, options, statementInfo, statementInfoLength, recordsProcessed, errorCode);
+
       -- Parse the output
       set messageFileName = rtrim(substr(statementInfo, 1, 10));
       set messageFileLibrary = rtrim(substr(statementInfo, 11, 10));
@@ -225,7 +218,7 @@ export class ValidateStatementComponent implements IBMiComponent {
       return;
     end;
   
-    comment on function ${library}/${ValidateStatementComponent.FUNCTION_NAME} is '${version} - SQL Syntax Checker';
+    comment on function ${library}.${ValidateStatementComponent.FUNCTION_NAME} is '${version} - SQL Syntax Checker';
     `;
   }
 }
