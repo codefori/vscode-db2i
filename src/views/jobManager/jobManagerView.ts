@@ -1,7 +1,6 @@
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import * as vscode from "vscode";
 import { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
-import { registerDb2iTablesProvider } from "../../aiProviders/continue/listTablesContextProvider";
 import { JobManager } from "../../config";
 import { JobInfo } from "../../connection/manager";
 import { TransactionEndType } from "../../connection/types";
@@ -281,9 +280,6 @@ export class JobManagerView implements TreeDataProvider<any> {
       vscode.commands.registerCommand(`vscode-db2i.jobManager.endAll`, async (node?: SQLJobItem) => {
         await JobManager.endAll();
         this.refresh();
-      }),
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.focusContinue`, async () => {
-        vscode.commands.executeCommand(`continue.focusContinueInput`);
       })
     )
   }
@@ -301,9 +297,6 @@ export class JobManagerView implements TreeDataProvider<any> {
     updateStatusBar();
 
     const selectedJob = JobManager.getSelection();
-
-    // re-register db2i tables context provider with current schema
-    selectedJob?.job.getCurrentSchema().then(selectedSchema => registerDb2iTablesProvider(selectedSchema));
 
     setCancelButtonVisibility(selectedJob?.job.getStatus() === "busy");
     sqlLanguageStatus.setState(selectedJob !== undefined);
