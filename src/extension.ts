@@ -7,8 +7,6 @@ import * as JSONServices from "./language/json";
 import * as resultsProvider from "./views/results";
 
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
-import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
-import { registerDb2iTablesProvider } from "./aiProviders/continue/listTablesContextProvider";
 import { registerCopilotProvider } from "./aiProviders/copilot";
 import { getInstance, loadBase } from "./base";
 import { JobManager, initConfig, onConnectOrServerInstall as onCode4iConnect } from "./config";
@@ -104,10 +102,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<Db2i> 
       exampleBrowser.refresh();
       queryHistory.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
-      // register list tables
-      const currentJob = JobManager.getSelection();
-      const currentSchema = await currentJob?.job.getCurrentSchema();
-      registerDb2iTablesProvider(currentSchema);
       if (devMode && runTests) {
         runTests();
       }
@@ -117,8 +111,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<Db2i> 
 
   // register copilot provider
   registerCopilotProvider(context);
-  // register continue provider
-  registerContinueProvider();
 
   console.log(`Congratulations, ${context.extension.id} is now active!`);
 

@@ -1,4 +1,3 @@
-import { ContextItem } from "@continuedev/core";
 import { JobManager } from "../config";
 import Schemas, { AllSQLTypes } from "../database/schemas";
 import Statement from "../database/statement";
@@ -275,33 +274,6 @@ export function refsToMarkdown(refs: TableRefs): MarkdownRef[] {
   }
 
   return markdownRefs;
-}
-
-export function createContinueContextItems(refs: MarkdownRef[]) {
-  const contextItems: ContextItem[] = [];
-  const job = JobManager.getSelection();
-  if (job) {
-    if (refs.length === 0) {
-      contextItems.push({
-        name: `SYSTEM PROMPT`,
-        description: `system prompt context`,
-        content: DB2_SYSTEM_PROMPT + `\n\nNo references found`,
-      });
-    } else {
-      for (const tableRef of refs) {
-        let prompt = `Table: ${tableRef.TABLE_NAME} (Schema: ${tableRef.SCHMEA}) Column Information:\n`;
-        prompt += `Format: column_name (column_text) type(length:precision) is_identity is_nullable\n`;
-        prompt += `${tableRef.COLUMN_INFO}`;
-        contextItems.push({
-          name: `${job.name}-${tableRef.SCHMEA}-${tableRef.TABLE_NAME}`,
-          description: `Column information for ${tableRef.TABLE_NAME}`,
-          content: DB2_SYSTEM_PROMPT + prompt,
-        });
-      }
-    }
-  }
-
-  return contextItems;
 }
 
 export async function getSystemStatus(): Promise<string> {

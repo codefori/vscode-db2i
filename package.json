@@ -905,13 +905,6 @@
         "icon": "$(trash)"
       },
       {
-        "command": "vscode-db2i.jobManager.focusContinue",
-        "title": "Register Continue Provider",
-        "category": "Db2 for i",
-        "icon": "$(star-full)",
-        "enablement": "vscode-db2i:continueExtensionActive"
-      },
-      {
         "command": "vscode-db2i.self.refresh",
         "title": "Refresh SELF Codes View",
         "category": "Db2 for i",
@@ -958,13 +951,6 @@
         "title": "Display SELF Code Details",
         "category": "Db2 for i",
         "icon": "$(info)"
-      },
-      {
-        "command": "vscode-db2i.self.explainSelf",
-        "title": "Explain SELF Code with continue",
-        "category": "Db2 for i",
-        "icon": "$(debug-alt)",
-        "enablement": "vscode-db2i:continueExtensionActive"
       },
       {
         "command": "vscode-db2i.self.help",
@@ -1566,11 +1552,6 @@
           "group": "navigation"
         },
         {
-          "command": "vscode-db2i.self.explainSelf",
-          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && vscode-db2i:continueExtensionActive",
-          "group": "navigation"
-        },
-        {
           "command": "vscode-db2i.examples.edit",
           "when": "view == exampleBrowser && viewItem == example.custom",
           "group": "0_open"
@@ -1912,7 +1893,6 @@
     ]
   },
   "devDependencies": {
-    "@continuedev/core": "^1.0.13",
     "@halcyontech/vscode-ibmi-types": "^3.0.9",
     "@ibm/mapepire-js": "^0.5.0",
     "@types/glob": "^7.1.3",
