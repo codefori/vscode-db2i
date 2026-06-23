@@ -43,8 +43,8 @@ export class IBMiDetail {
 
     let levelCheckFailed = false;
 
-    const versionResults = await connection.runSQL(`select OS_VERSION concat '.' concat OS_RELEASE as VERSION from sysibmadm.env_sys_info`);
-    this.version = String(versionResults[0].VERSION);
+    const versionResults = await connection.runSQL(`SELECT CAST(SUBSTR(DATA_AREA_VALUE, 2, 1) CONCAT '.' CONCAT SUBSTR(DATA_AREA_VALUE, 4, 1) AS VARCHAR(32)) AS OS_VERSION FROM TABLE (QSYS2.DATA_AREA_INFO('QSS1MRI', '*LIBL'))`);
+    this.version = String(versionResults[0].OS_VERSION);
 
     try {
       const db2LevelResults = await connection.runSQL([
