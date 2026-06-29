@@ -96,6 +96,13 @@ export class JobManagerView implements TreeDataProvider<any> {
         }
       }),
 
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.viewWrkJob`, async () => {
+        const selected = JobManager.getSelection();
+        if (selected?.job.id) {
+          await vscode.commands.executeCommand('vscode-ibmi-fs.wrkjob', selected.job.id);
+        }
+      }),
+
       vscode.commands.registerCommand(`vscode-db2i.jobManager.copyJobId`, async (node?: SQLJobItem) => {
         if (node) {
           const id = node.label as string;
