@@ -7,7 +7,7 @@ export class CheckStatementComponent implements IBMiComponent {
   static ID = "CheckStatementComponent";
   private static readonly VERSION = 1;
   static readonly FUNCTION_NAME = `CHKSTMNT${CheckStatementComponent.VERSION.toString().padStart(4, "0")}`;
-  private static readonly SIGNATURE = "7CDD7F08E0CE36EF271A81197C2D770CBBD3A3AA2E02D3217421995EA555A7F0";
+  private static readonly SIGNATURE = "QSYS/QSQCHKS";
   private static readonly VALID_STATEMENT_LENGTH = 32740;
   private static readonly TYPE = "PROCEDURE";
 
@@ -24,8 +24,7 @@ export class CheckStatementComponent implements IBMiComponent {
   }
 
   async getRemoteState(connection: IBMi, installDirectory: string): Promise<SecureComponentState> {
-    const remoteSignature = await this.getSQLRoutineSignature(
-      connection,
+    const remoteSignature = await connection.getContent().getSQLRoutineSignature(
       this.getLibrary(connection),
       CheckStatementComponent.FUNCTION_NAME,
       CheckStatementComponent.TYPE,
@@ -34,15 +33,6 @@ export class CheckStatementComponent implements IBMiComponent {
       status: remoteSignature ? "Installed" : "NotInstalled",
       remoteSignature: remoteSignature,
     };
-  }
-
-  /**
-   * Custom implementation that uses EXTERNAL_NAME instead of ROUTINEDEF
-   */
-  private async getSQLRoutineSignature(connection: IBMi, library: string, name: string, type: "PROCEDURE" | "FUNCTION") {
-    return (await connection.runSQL(
-      /* sql */`select HASH_SHA256(EXTERNAL_NAME) SIGNATURE from qsys2.sysroutines where routine_type = '${type}' and rtnschema = '${library}' and RTNNAME = '${name}' fetch first row only`
-    )).pop()?.SIGNATURE as string;    
   }
 
   async update(connection: IBMi, installDirectory: string): Promise<SecureComponentState> {

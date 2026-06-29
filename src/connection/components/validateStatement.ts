@@ -43,7 +43,7 @@ export interface SqlSyntaxError {
 export class ValidateStatementComponent implements IBMiComponent {
   static ID = "ValidateStatement";
   private static readonly VERSION = 2;
-  private static readonly SIGNATURE = "6EBAA79B92569974227D1A9CCFBF78439DBA1E2EABBAB3CABFC8962C25BC6647";
+  private static readonly SIGNATURE = "1937A5AE221BD126F8514798721DFC7F1259CAA9018443ABE38CCF735F48073C";
   private static readonly FUNCTION_NAME = `VALIDATE_STATEMENT${ValidateStatementComponent.VERSION.toString().padStart(4, "0")}`;
 
   static async get(): Promise<ValidateStatementComponent | undefined> {
