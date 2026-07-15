@@ -9,7 +9,6 @@ import { sqlLanguageStatus } from "../../language/providers";
 import { setCancelButtonVisibility } from "../results";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
-import { displayJobLog } from "./jobLog";
 import { SelfValue, selfCodesMap } from "./selfCodes/nodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
@@ -89,17 +88,9 @@ export class JobManagerView implements TreeDataProvider<any> {
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.viewJobLog`, async (node?: SQLJobItem) => {
-        const id = node ? node.label as string : undefined;
-        let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
-        if (selected) {
-          displayJobLog(selected);
-        }
-      }),
-
-      vscode.commands.registerCommand(`vscode-db2i.jobManager.viewWrkJob`, async () => {
         const selected = JobManager.getSelection();
         if (selected?.job.id) {
-          await vscode.commands.executeCommand('vscode-ibmi-fs.wrkjob', selected.job.id);
+          await vscode.commands.executeCommand('code-for-ibmi.showJobLog', selected.job.id);
         }
       }),
 
