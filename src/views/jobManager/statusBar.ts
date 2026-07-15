@@ -33,6 +33,11 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
 
       const job = selected.job;
 
+      if (job.id) {
+        toolTipItems.push(`[SQL Job: \`${job.id}\`](command:vscode-db2i.jobManager.copyJobId)`);
+        toolTipItems.push(`[$(info) View Job Log](command:vscode-db2i.jobManager.viewJobLog)`);
+      }
+
       if (job.getNaming() === `sql`) {
         toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${Statement.delimName(await job.getCurrentSchema())}\``);
       } else {
@@ -58,7 +63,6 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
         }
       }
 
-      toolTipItems.push(`[$(info) View Job Log](command:vscode-db2i.jobManager.viewJobLog)`);
       toolTipItems.push(`[$(edit) Edit Connection Settings](command:vscode-db2i.jobManager.editJobProps)`);
       toolTipItems.push(`[$(bracket-error) Edit SELF codes](command:vscode-db2i.jobManager.editSelfCodes)`);
     } else {

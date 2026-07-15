@@ -95,13 +95,11 @@ export class JobManagerView implements TreeDataProvider<any> {
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.copyJobId`, async (node?: SQLJobItem) => {
-        if (node) {
-          const id = node.label as string;
-          const selected = JobManager.getJob(id);
-          if (selected?.job.id) {
-            await env.clipboard.writeText(selected.job.id);
-            window.showInformationMessage(`Copied ${selected.job.id} to clipboard.`);
-          }
+        const id = node ? node.label as string : undefined;
+        const selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected?.job.id) {
+          await env.clipboard.writeText(selected.job.id);
+          window.showInformationMessage(`Copied ${selected.job.id} to clipboard.`);
         }
       }),
 
