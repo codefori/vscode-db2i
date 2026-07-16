@@ -2,6 +2,7 @@ import { MarkdownString, StatusBarAlignment, ThemeColor, window } from "vscode";
 import { getInstance } from "../../base";
 import { JobManager } from "../../config";
 import Statement from "../../database/statement";
+import { parseStatusBarColor } from "./statusBarColor";
 
 const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Left);
 
@@ -78,6 +79,7 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
     
     item.text = text;
     item.backgroundColor = backgroundColour;
+    item.color = parseStatusBarColor((connection.getConfig() as any).statusBarColor);
 
     item.show();
   } else {
