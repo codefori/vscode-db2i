@@ -8,7 +8,8 @@ import * as resultsProvider from "./views/results";
 
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import { registerCopilotProvider } from "./aiProviders/copilot";
-import { getInstance, loadBase } from "./base";
+import { getBase, getInstance, loadBase } from "./base";
+import { updateStatusBar } from "./views/jobManager/statusBar";
 import { JobManager, initConfig, onConnectOrServerInstall as onCode4iConnect } from "./config";
 import Configuration from "./configuration";
 import { ExtendedSQLJob } from "./connection/extendedSQLJob";
@@ -73,7 +74,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<Db2i> 
       new SelfTreeDecorationProvider()
     ),
     vscode.window.registerUriHandler(new Db2iUriHandler()),
-    getStatementUri
+    getStatementUri,
+    // Re-apply the status bar colour when the connection settings change, like the core does
+    getBase().onCodeForIBMiConfigurationChange(`connectionSettings`, () => updateStatusBar())
   );
 
   JSONServices.initialise(context);
