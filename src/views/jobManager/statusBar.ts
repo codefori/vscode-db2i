@@ -78,7 +78,8 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
     
     item.text = text;
     item.backgroundColor = backgroundColour;
-    item.color = getVSCodeTools()?.parseStatusBarColor((connection.getConfig() as any).statusBarColor);
+    const config = connection.getConfig();
+    item.color = getVSCodeTools()?.parseStatusBarColor(config.statusBarColor);
 
     item.show();
   } else {
