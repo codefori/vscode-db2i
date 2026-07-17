@@ -287,8 +287,8 @@ export default function getSystemTab(options: JDBCOptions) {
       [
         {
           value: `none`,
-          description: `No commit (*NC)`,
-          text: `no commit (*NC)`,
+          description: `None (*NC)`,
+          text: `none (*NC)`,
           selected: options["transaction isolation"] === `none`,
         },
         {
