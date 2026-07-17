@@ -287,8 +287,8 @@ export default function getSystemTab(options: JDBCOptions) {
       [
         {
           value: `none`,
-          description: `None (*NC)`,
-          text: `none (*NC)`,
+          description: `None (*NC or *NONE)`,
+          text: `none (*NC or *NONE)`,
           selected: options["transaction isolation"] === `none`,
         },
         {
@@ -299,14 +299,14 @@ export default function getSystemTab(options: JDBCOptions) {
         },
         {
           value: `read uncommitted`,
-          description: `Read uncommitted (*UR)`,
-          text: `read uncommitted (*UR)`,
+          description: `Read uncommitted (*UR or *CHG)`,
+          text: `read uncommitted (*UR or *CHG)`,
           selected: options["transaction isolation"] === `read uncommitted`,
         },
         {
           value: `repeatable read`,
-          description: `Repeatable read (*RS)`,
-          text: `repeatable read (*RS)`,
+          description: `Repeatable read (*RS or *ALL)`,
+          text: `repeatable read (*RS or *ALL)`,
           selected: options["transaction isolation"] === `repeatable read`,
         },
         {
