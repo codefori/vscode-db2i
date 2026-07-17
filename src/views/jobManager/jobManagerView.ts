@@ -88,7 +88,8 @@ export class JobManagerView implements TreeDataProvider<any> {
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.viewJobLog`, async (node?: SQLJobItem) => {
-        const selected = JobManager.getSelection();
+        const id = node ? node.label as string : undefined;
+        const selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected?.job.id) {
           await vscode.commands.executeCommand('code-for-ibmi.showJobLog', selected.job.id);
         }
