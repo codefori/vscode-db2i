@@ -9,7 +9,6 @@ import { sqlLanguageStatus } from "../../language/providers";
 import { setCancelButtonVisibility } from "../results";
 import { ConfigGroup, ConfigManager } from "./ConfigManager";
 import { editJobUi } from "./editJob";
-import { displayJobLog } from "./jobLog";
 import { SelfValue, selfCodesMap } from "./selfCodes/nodes";
 import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
@@ -90,20 +89,18 @@ export class JobManagerView implements TreeDataProvider<any> {
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.viewJobLog`, async (node?: SQLJobItem) => {
         const id = node ? node.label as string : undefined;
-        let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
-        if (selected) {
-          displayJobLog(selected);
+        const selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected?.job.id) {
+          await vscode.commands.executeCommand('code-for-ibmi.showJobLog', selected.job.id);
         }
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.copyJobId`, async (node?: SQLJobItem) => {
-        if (node) {
-          const id = node.label as string;
-          const selected = JobManager.getJob(id);
-          if (selected?.job.id) {
-            await env.clipboard.writeText(selected.job.id);
-            window.showInformationMessage(`Copied ${selected.job.id} to clipboard.`);
-          }
+        const id = node ? node.label as string : undefined;
+        const selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected?.job.id) {
+          await env.clipboard.writeText(selected.job.id);
+          window.showInformationMessage(`Copied ${selected.job.id} to clipboard.`);
         }
       }),
 
