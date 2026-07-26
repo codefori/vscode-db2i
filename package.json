@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "2.0.2-dev.0",
+  "version": "2.0.2",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -925,6 +925,13 @@
         "icon": "$(trash)"
       },
       {
+        "command": "vscode-db2i.jobManager.focusContinue",
+        "title": "Register Continue Provider",
+        "category": "Db2 for i",
+        "icon": "$(star-full)",
+        "enablement": "vscode-db2i:continueExtensionActive"
+      },
+      {
         "command": "vscode-db2i.self.refresh",
         "title": "Refresh SELF Codes View",
         "category": "Db2 for i",
@@ -971,6 +978,13 @@
         "title": "Display SELF Code Details",
         "category": "Db2 for i",
         "icon": "$(info)"
+      },
+      {
+        "command": "vscode-db2i.self.explainSelf",
+        "title": "Explain SELF Code with continue",
+        "category": "Db2 for i",
+        "icon": "$(debug-alt)",
+        "enablement": "vscode-db2i:continueExtensionActive"
       },
       {
         "command": "vscode-db2i.self.help",
@@ -1587,6 +1601,11 @@
         {
           "command": "vscode-db2i.self.displayDetails",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.self.explainSelf",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && vscode-db2i:continueExtensionActive",
           "group": "navigation"
         },
         {
