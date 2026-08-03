@@ -13,6 +13,7 @@ import Statement from "../../database/statement";
 import { BasicSQLObject } from "../../types";
 import Types from "../types";
 import { getCopyUi } from "./copyUI";
+import { pickMTIAction } from "./mti";
 import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects } from "./statements";
 
 const itemIcons = new Map(Object.entries({
@@ -211,6 +212,16 @@ export default class SchemaBrowser {
               qualifier: `statement`,
               open: false,
             });
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.mtiActions`, async (object: SQLObject | SchemaItem) => {
+        if (object) {
+          const created = await pickMTIAction(object.schema, (`name` in object ? object.name : undefined));
+
+          if (created) {
+            this.clearCacheAndRefresh();
           }
         }
       }),
