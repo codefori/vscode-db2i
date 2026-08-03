@@ -9,11 +9,12 @@ import Configuration from "../../configuration";
 
 import { parse } from "csv/sync";
 import { TextDecoder } from "util";
+import Callable from "../../database/callable";
 import Statement from "../../database/statement";
 import { BasicSQLObject } from "../../types";
 import Types from "../types";
 import { getCopyUi } from "./copyUI";
-import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects } from "./statements";
+import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects, getRoutineCallStatement, RoutineInvocation } from "./statements";
 
 const itemIcons = new Map(Object.entries({
   "table": `split-horizontal`,
@@ -186,6 +187,30 @@ export default class SchemaBrowser {
               vscode.window.showErrorMessage(e.message);
             }
           });
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.generateRoutineCall`, async (object: SQLObject) => {
+        if (object && Schemas.isRoutineType(object.type)) {
+          try {
+            const content = await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating call statement` }, async () => {
+              // The specific name resolves overloaded routines to the signature that was picked
+              const specificName = object.uniqueName();
+              const [signature] = await Callable.getSignaturesFor(object.schema, [specificName]);
+
+              let invocation: RoutineInvocation = `PROCEDURE`;
+              if (object.type === `function`) {
+                invocation = (await Callable.getFunctionType(object.schema, specificName)) === `TABLE` ? `TABLE` : `SCALAR`;
+              }
+
+              return getRoutineCallStatement(object.schema, object.name, signature ? signature.parms : [], invocation);
+            });
+
+            const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+            await vscode.window.showTextDocument(textDoc);
+          } catch (e: any) {
+            vscode.window.showErrorMessage(e.message);
+          }
         }
       }),
 
