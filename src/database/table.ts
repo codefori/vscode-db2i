@@ -87,12 +87,12 @@ export default class Table {
       `    cst.CONSTRAINT_SCHEMA = key.CONSTRAINT_SCHEMA and`,
       `    cst.CONSTRAINT_NAME = key.CONSTRAINT_NAME`,
       `WHERE cst.CONSTRAINT_TYPE in ('PRIMARY KEY', 'UNIQUE')`,
-      `  AND cst.TABLE_SCHEMA = ?`,
+      `  AND (cst.TABLE_SCHEMA = ? OR cst.SYSTEM_TABLE_SCHEMA = ?)`,
       `  AND (cst.TABLE_NAME = ? OR cst.SYSTEM_TABLE_NAME = ?)`,
       `ORDER BY case cst.CONSTRAINT_TYPE when 'PRIMARY KEY' then 0 else 1 end, cst.CONSTRAINT_NAME, key.COLUMN_POSITION`,
     ].join(` `);
 
-    const rows = await JobManager.runSQL<{ CONSTRAINT_NAME: string, COLUMN_NAME: string }>(sql, { parameters: [schema, table, table] });
+    const rows = await JobManager.runSQL<{ CONSTRAINT_NAME: string, COLUMN_NAME: string }>(sql, { parameters: [schema, schema, table, table] });
 
     if (rows.length === 0) {
       return [];

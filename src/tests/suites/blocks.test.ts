@@ -1,6 +1,6 @@
 
 import { describe, expect, test } from 'vitest'
-import Document from '../document';
+import Document from '../../language/sql/document';
 
 const parserScenarios = describe.each([
   { newDoc: (content: string) => new Document(content), isFormatted: false },
