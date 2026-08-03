@@ -2,6 +2,7 @@
 import * as vscode from "vscode";
 import { ThemeIcon, TreeItem, window, workspace } from "vscode";
 import { getInstance } from "../../base";
+import { CrudType, generateCrudStatement } from "../../database/crud";
 import Schemas, { AllSQLTypes, InternalTypes, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
 
@@ -188,6 +189,12 @@ export default class SchemaBrowser {
           });
         }
       }),
+
+      vscode.commands.registerCommand(`vscode-db2i.generateInsertStatement`, async (object: SQLObject) => this.openCrudStatement(object, `INSERT`)),
+
+      vscode.commands.registerCommand(`vscode-db2i.generateUpdateStatement`, async (object: SQLObject) => this.openCrudStatement(object, `UPDATE`)),
+
+      vscode.commands.registerCommand(`vscode-db2i.generateDeleteStatement`, async (object: SQLObject) => this.openCrudStatement(object, `DELETE`)),
 
       vscode.commands.registerCommand(`vscode-db2i.getRelatedObjects`, async (object: SQLObject) => {
         if (object) {
@@ -465,6 +472,29 @@ export default class SchemaBrowser {
         }
       })
     )
+  }
+
+  /** Opens a new SQL editor with an INSERT, UPDATE or DELETE statement for the object. It is not executed. */
+  async openCrudStatement(object: SQLObject, type: CrudType) {
+    if (object) {
+      await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating ${type} statement` }, async () => {
+        try {
+          const columns = await Table.getItems(object.schema, object.name);
+
+          if (columns.length === 0) {
+            throw new Error(`No columns found for ${object.schema}.${object.name}`);
+          }
+
+          const keyColumns = type === `INSERT` ? [] : await Table.getKeyColumns(object.schema, object.name);
+          const content = generateCrudStatement(type, object.schema, object.name, columns, keyColumns);
+
+          const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+          await vscode.window.showTextDocument(textDoc);
+        } catch (e: any) {
+          vscode.window.showErrorMessage(e.message);
+        }
+      });
+    }
   }
 
   async pickFile(): Promise<vscode.Uri | undefined> {

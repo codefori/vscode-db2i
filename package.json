@@ -601,6 +601,21 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.generateInsertStatement",
+        "title": "INSERT Statement",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateUpdateStatement",
+        "title": "UPDATE Statement",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateDeleteStatement",
+        "title": "DELETE Statement",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.getRelatedObjects",
         "title": "Get Related Objects",
         "category": "Db2 for i"
@@ -1090,6 +1105,18 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.generateInsertStatement",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateUpdateStatement",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateDeleteStatement",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.getRelatedObjects",
           "when": "never"
         },
@@ -1269,6 +1296,21 @@
         {
           "command": "vscode-db2i.generateSQLWithoutConstraints",
           "group": "1_generate"
+        },
+        {
+          "command": "vscode-db2i.generateInsertStatement",
+          "when": "viewItem == table || viewItem == view",
+          "group": "2_dml@1"
+        },
+        {
+          "command": "vscode-db2i.generateUpdateStatement",
+          "when": "viewItem == table || viewItem == view",
+          "group": "2_dml@2"
+        },
+        {
+          "command": "vscode-db2i.generateDeleteStatement",
+          "when": "viewItem == table || viewItem == view",
+          "group": "2_dml@3"
         }
       ],
       "view/title": [

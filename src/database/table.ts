@@ -71,6 +71,38 @@ export default class Table {
     return JobManager.runSQL(sql, {parameters: [name]});
   }
 
+  /**
+   * Returns the primary key columns, or those of the first unique constraint when there is no primary key
+   * @param {string} schema Not user input
+   * @param {string} table Not user input
+   */
+  static async getKeyColumns(schema: string, table: string): Promise<string[]> {
+    const sql = [
+      `SELECT`,
+      `  cst.CONSTRAINT_NAME,`,
+      `  key.COLUMN_NAME`,
+      `FROM QSYS2.SYSCST as cst`,
+      `JOIN QSYS2.SYSKEYCST as key`,
+      `  on`,
+      `    cst.CONSTRAINT_SCHEMA = key.CONSTRAINT_SCHEMA and`,
+      `    cst.CONSTRAINT_NAME = key.CONSTRAINT_NAME`,
+      `WHERE cst.CONSTRAINT_TYPE in ('PRIMARY KEY', 'UNIQUE')`,
+      `  AND cst.TABLE_SCHEMA = ?`,
+      `  AND (cst.TABLE_NAME = ? OR cst.SYSTEM_TABLE_NAME = ?)`,
+      `ORDER BY case cst.CONSTRAINT_TYPE when 'PRIMARY KEY' then 0 else 1 end, cst.CONSTRAINT_NAME, key.COLUMN_POSITION`,
+    ].join(` `);
+
+    const rows = await JobManager.runSQL<{ CONSTRAINT_NAME: string, COLUMN_NAME: string }>(sql, { parameters: [schema, table, table] });
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    // The ordering puts the primary key first
+    const constraint = rows[0].CONSTRAINT_NAME;
+    return rows.filter(row => row.CONSTRAINT_NAME === constraint).map(row => row.COLUMN_NAME);
+  }
+
   static async isPartitioned(schema: string, name: string): Promise<boolean> {
     const sql = `select table_name, partitioned_table from qsys2.sysfiles where ((table_schema = ? and table_name = ?) or (system_table_schema = ? and system_table_name = ?)) and partitioned_table is not null and partitioned_table = 'YES'`;
     const parameters = [schema, name, schema, name];
