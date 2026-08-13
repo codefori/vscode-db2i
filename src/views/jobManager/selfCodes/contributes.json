@@ -158,11 +158,6 @@
           "command": "vscode-db2i.self.viewJobLog",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeJob",
           "group": "inline@1"
-        },
-        {
-          "command": "vscode-db2i.self.viewJobLog",
-          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeJob",
-          "group": "navigation"
         }
       ]
     }

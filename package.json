@@ -1620,11 +1620,6 @@
           "group": "inline@1"
         },
         {
-          "command": "vscode-db2i.self.viewJobLog",
-          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeJob",
-          "group": "navigation"
-        },
-        {
           "command": "vscode-db2i.examples.edit",
           "when": "view == exampleBrowser && viewItem == example.custom",
           "group": "0_open"
