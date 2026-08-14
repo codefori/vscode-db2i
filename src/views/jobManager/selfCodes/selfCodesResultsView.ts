@@ -68,10 +68,8 @@ export class SelfCodesResultsView implements TreeDataProvider<any> {
           await vscode.window.showTextDocument(document, { preview: false });
         }
       }),
-      vscode.commands.registerCommand(`vscode-db2i.self.viewJobLog`, async (item: SelfErrorJobItem | SelfCodeTreeItem | string) => {
-        const jobName = typeof item === `string`
-          ? item
-          : (item instanceof SelfErrorJobItem ? item.jobName : item?.error?.JOB_NAME);
+      vscode.commands.registerCommand(`vscode-db2i.self.viewJobLog`, async (item: SelfErrorJobItem | string) => {
+        const jobName = typeof item === `string` ? item : item.jobName;
 
         if (jobName) {
           try {
