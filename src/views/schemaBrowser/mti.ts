@@ -14,27 +14,59 @@ interface MTIInfo {
   KEYS?: number;
   KEY_DEFINITION: string;
   STATE?: string;
+  SPARSE?: string;
+  SPARSE_DEFINITION?: string;
 }
 
 const CREATE_INDEX = `Create Index...`;
 const SHOW_STATEMENT = `Show CREATE INDEX Statement`;
 
+const SPARSE_WARNING = `This MTI is sparse, but MTI_INFO did not report its condition. The statement below creates an index over every row of the table, not the sparse subset the MTI covers.`;
+
 function qualifiedTable(mti: MTIInfo): string {
   return `${Statement.delimName(mti.TABLE_SCHEMA)}.${Statement.delimName(mti.TABLE_NAME)}`;
+}
+
+/** MTI_INFO reports YES or NO, and the column is missing on releases that do not return it */
+function isSparse(mti: MTIInfo): boolean {
+  return mti.SPARSE?.trim().toUpperCase() === `YES`;
+}
+
+/** The condition a sparse MTI is built over, which becomes the WHERE clause of the index */
+function sparseCondition(mti: MTIInfo): string | undefined {
+  const condition = mti.SPARSE_DEFINITION?.trim();
+  return isSparse(mti) && condition ? condition : undefined;
+}
+
+/** A sparse MTI whose condition is unknown can only be recreated as a full index */
+function sparseWarning(mti: MTIInfo): string | undefined {
+  return isSparse(mti) && !sparseCondition(mti) ? SPARSE_WARNING : undefined;
 }
 
 /** The key definition is already valid index key syntax, so it is used as-is */
 export function buildCreateIndexStatement(mti: MTIInfo, indexName: string): string {
   const name = Statement.delimName(indexName, true);
+  const condition = sparseCondition(mti);
 
   return [
     `CREATE INDEX ${Statement.delimName(mti.TABLE_SCHEMA)}.${name}`,
     `   ON ${qualifiedTable(mti)} (${mti.KEY_DEFINITION.trim()})`,
+    ...(condition ? [`   WHERE ${condition}`] : []),
   ].join(`\n`);
 }
 
+const MAX_NAME_LENGTH = 128;
+
+/** Every candidate ends with `_MTIxxxxx` whit zero padded five digit number */
+const SUFFIX_LENGTH = 9;
+
+function candidateName(prefix: string, suffix: number): string {
+  return `${prefix}_MTI${String(suffix).padStart(5, `0`)}`;
+}
+
 async function suggestIndexName(mti: MTIInfo): Promise<string> {
-  const prefix = `${Statement.noQuotes(mti.TABLE_NAME)}_MTI`;
+  // Truncated so that the suffix fits, since a longer name is not a valid SQL name
+  const prefix = Statement.noQuotes(mti.TABLE_NAME).slice(0, MAX_NAME_LENGTH - SUFFIX_LENGTH);
   let taken: string[] = [];
 
   try {
@@ -48,11 +80,23 @@ async function suggestIndexName(mti: MTIInfo): Promise<string> {
   }
 
   let suffix = 1;
-  while (taken.includes(`${prefix}${suffix}`)) {
+  while (taken.includes(candidateName(prefix, suffix))) {
     suffix += 1;
   }
 
-  return `${prefix}${suffix}`;
+  return candidateName(prefix, suffix);
+}
+
+const SUBMITTED_JOB_NAME = `C4ICRTIDX`;
+
+/**
+ * Creating an index over a large table can run for a long time, so it is submitted instead of
+ * being run in the SQL job, where it would block the extension until it ends.
+ */
+function buildSubmitCommand(statement: string): string {
+  const sql = statement.split(`\n`).map(line => line.trim()).join(` `).replace(/'/g, `''`);
+
+  return `SBMJOB CMD(QSYS/RUNSQL SQL('${sql}') COMMIT(*NONE)) JOB(${SUBMITTED_JOB_NAME}) JOBQ(QSYS/QUSRNOMAX) LOG(4 0 *MSG)`;
 }
 
 async function createIndex(mti: MTIInfo): Promise<boolean> {
@@ -63,7 +107,7 @@ async function createIndex(mti: MTIInfo): Promise<boolean> {
     validateInput: (value) => {
       const name = value.trim();
       if (name.length === 0) return `Index name cannot be blank`;
-      if (Statement.noQuotes(name).length > 128) return `Index name cannot be longer than 128 characters`;
+      if (Statement.noQuotes(name).length > MAX_NAME_LENGTH) return `Index name cannot be longer than ${MAX_NAME_LENGTH} characters`;
       return undefined;
     }
   });
@@ -72,18 +116,19 @@ async function createIndex(mti: MTIInfo): Promise<boolean> {
 
   const name = indexName.trim();
   const statement = buildCreateIndexStatement(mti, name);
+  const warning = sparseWarning(mti);
   const confirmation = await vscode.window.showWarningMessage(
-    `Create an index over ${qualifiedTable(mti)}?`,
-    { modal: true, detail: statement },
-    `Create`
+    `Submit a job to create an index over ${qualifiedTable(mti)}?`,
+    { modal: true, detail: [warning, statement].filter(part => part).join(`\n\n`) },
+    `Submit`
   );
 
-  if (confirmation !== `Create`) return false;
+  if (confirmation !== `Submit`) return false;
 
   try {
     await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: `Creating index ${name}...` },
-      () => JobManager.runSQL(statement)
+      { location: vscode.ProgressLocation.Notification, title: `Submitting job to create index ${name}...` },
+      () => JobManager.runSQL(buildSubmitCommand(statement), { isClCommand: true })
     );
   } catch (e: any) {
     vscode.window.showErrorMessage(e.message);
@@ -91,11 +136,11 @@ async function createIndex(mti: MTIInfo): Promise<boolean> {
   }
 
   vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement);
-  vscode.window.showInformationMessage(`Index ${name} created over ${qualifiedTable(mti)}.`);
+  vscode.window.showInformationMessage(`Job ${SUBMITTED_JOB_NAME} submitted to create index ${name} over ${qualifiedTable(mti)}. The index only appears once that job has ended.`);
   return true;
 }
 
-/** @returns whether an index was created, meaning the tree needs refreshing */
+/** @returns whether a job was submitted, meaning the tree is worth refreshing once it ends */
 export async function pickMTIAction(schema: string, table?: string): Promise<boolean> {
   const target = table ? `${Statement.delimName(schema)}.${Statement.delimName(table)}` : Statement.delimName(schema);
   let mtis: MTIInfo[];
@@ -142,7 +187,9 @@ export async function pickMTIAction(schema: string, table?: string): Promise<boo
       return createIndex(chosenMTI.mti);
 
     case SHOW_STATEMENT: {
-      const content = `${buildCreateIndexStatement(chosenMTI.mti, await suggestIndexName(chosenMTI.mti))};`;
+      const warning = sparseWarning(chosenMTI.mti);
+      const statement = `${buildCreateIndexStatement(chosenMTI.mti, await suggestIndexName(chosenMTI.mti))};`;
+      const content = warning ? `-- ${warning}\n${statement}` : statement;
       const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
       await vscode.window.showTextDocument(textDoc);
       return false;
@@ -169,6 +216,7 @@ class MTIQuickPickItem implements vscode.QuickPickItem {
     const description: string[] = [];
     if (withTable) description.push(qualifiedTable(mti));
     if (mti.KEYS !== undefined) description.push(`${mti.KEYS} ${mti.KEYS === 1 ? `key` : `keys`}`);
+    if (isSparse(mti)) description.push(`Sparse`);
     if (mti.STATE) description.push(prettyState(mti.STATE));
     this.description = description.join(` · `);
 
