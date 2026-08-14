@@ -14,7 +14,7 @@ import { BasicSQLObject } from "../../types";
 import Types from "../types";
 import { getCopyUi } from "./copyUI";
 import { pickMTIAction } from "./mti";
-import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects } from "./statements";
+import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects } from "./statements";
 
 const itemIcons = new Map(Object.entries({
   "table": `split-horizontal`,
@@ -202,28 +202,34 @@ export default class SchemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.getMTIs`, async (object: SQLObject | SchemaItem) => {
+      vscode.commands.registerCommand(`vscode-db2i.mtiActions`, async (object?: SQLObject | SchemaItem) => {
+        let schema: string;
+        let table: string | undefined;
+
         if (object) {
-          const content = getMTIStatement(object.schema, (`name` in object ? object.name : undefined));
+          // Invoked from the tree: the library (and, for a table row, the table) come from
+          // whatever was right-clicked.
+          schema = object.schema;
+          table = `name` in object ? object.name : undefined;
+        } else {
+          // Invoked from the Command Palette, with no tree item to take the library from - ask
+          // for one, defaulting to (and accepting blank as) every library.
+          const input = await vscode.window.showInputBox({
+            title: `Work with MTIs`,
+            prompt: `Library to work with, or *ALL for every library`,
+            placeHolder: `*ALL`,
+            value: `*ALL`
+          });
 
-          if (content) {
-            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-              content,
-              qualifier: `statement`,
-              open: false,
-            });
-          }
+          if (input === undefined) return;
+
+          schema = input.trim() || `*ALL`;
         }
-      }),
 
-      vscode.commands.registerCommand(`vscode-db2i.mtiActions`, async (object: SQLObject | SchemaItem) => {
-        if (object) {
-          const created = await pickMTIAction(object.schema, (`name` in object ? object.name : undefined));
-
-          if (created) {
-            this.clearCacheAndRefresh();
-          }
-        }
+        // The table stays open after this call returns, so the tree is refreshed from the
+        // callback once a "Create Index..." job is actually submitted, not from the (now
+        // immediate) return value of pickMTIAction.
+        await pickMTIAction(schema, table, () => this.clearCacheAndRefresh());
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.getIndexes`, async (object: SQLObject) => {

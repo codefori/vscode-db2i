@@ -56,13 +56,8 @@
         "category": "Db2 for i"
       },
       {
-        "command": "vscode-db2i.getMTIs",
-        "title": "Get MTIs",
-        "category": "Db2 for i"
-      },
-      {
         "command": "vscode-db2i.mtiActions",
-        "title": "MTI Actions...",
+        "title": "Work with MTIs...",
         "category": "Db2 for i"
       },
       {
@@ -171,14 +166,6 @@
           "when": "never"
         },
         {
-          "command": "vscode-db2i.getMTIs",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.mtiActions",
-          "when": "never"
-        },
-        {
           "command": "vscode-db2i.getIndexes",
           "when": "never"
         },
@@ -268,14 +255,9 @@
           "group": "db2workWith@2"
         },
         {
-          "command": "vscode-db2i.getMTIs",
-          "when": "viewItem == table || viewItem == schema",
-          "group": "db2workWith@3"
-        },
-        {
           "command": "vscode-db2i.mtiActions",
           "when": "viewItem == table || viewItem == schema",
-          "group": "db2workWith@4"
+          "group": "db2workWith@3"
         },
         {
           "command": "vscode-db2i.getAuthorities",

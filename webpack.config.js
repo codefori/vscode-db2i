@@ -62,7 +62,14 @@ const config = {
         test: /\.umd\.(js)$/i,
         include: path.resolve(__dirname, `node_modules`, `chart.js`, `dist`, `chart.umd.js`),
         type: `asset/source`,
-        
+
+      },
+      {
+        // Inlined as raw source (not parsed as a module) so it can be dropped straight into a
+        // <script type="module"> tag in the FastTable webview pages; see views/webviewToolkit.ts.
+        test: /\.js$/,
+        include: path.resolve(__dirname, `node_modules`, `@vscode-elements`, `elements`, `dist`, `bundled.js`),
+        type: `asset/source`
       },
       {
         test: /\.(ts|tsx)$/i,
