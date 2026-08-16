@@ -1,13 +1,7 @@
 /**
  * Minimal host page for webviews built on the base extension's FastTable API
- * (`getBase().frontendTables`, see ../base.ts).
- *
- * `generateFastTable`/`generateFastTableUpdate` return markup that assumes two things are
- * already set up on the page: the `@vscode-elements/elements` custom elements (for
- * `<vscode-table>`, `<vscode-button>`, ...) and a global `vscode` object with a delegated click
- * listener that turns a click on `[href^="action:"]` into a `postMessage`. Core's own views get
- * this from `Core/src/webviewToolkit.ts`; this is the same contract, ported locally so the Db2
- * extension can use the same FastTable views without depending on Core's internals.
+ * (`getBase().frontendTables`, see ../base.ts). Ports the same page contract as
+ * `Core/src/webviewToolkit.ts`, so Db2 can use FastTable views without depending on Core's internals.
  */
 
 const webComponents = require(`@vscode-elements/elements/dist/bundled.js`);
@@ -21,10 +15,7 @@ const footer = /*html*/`
   <script defer>
     const vscode = acquireVsCodeApi();
 
-    // Handle click events on action links (e.g. the buttons a FastTable column renders).
-    // Delegated on the document: tables replace their rows in place on refresh, so buttons
-    // bound one-by-one at load time would stop responding once a search or an action
-    // re-rendered the body.
+    // Delegated on the document, since tables replace their rows in place on refresh
     document.addEventListener('click', (event) => {
       const path = event.composedPath ? event.composedPath() : [event.target];
       let link = null;

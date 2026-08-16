@@ -207,28 +207,34 @@ export default class SchemaBrowser {
         let table: string | undefined;
 
         if (object) {
-          // Invoked from the tree: the library (and, for a table row, the table) come from
-          // whatever was right-clicked.
+          // From the tree: library (and, for a table row, table) come from what was right-clicked
           schema = object.schema;
           table = `name` in object ? object.name : undefined;
         } else {
-          // Invoked from the Command Palette, with no tree item to take the library from - ask
-          // for one, defaulting to (and accepting blank as) every library.
-          const input = await vscode.window.showInputBox({
+          // From the Command Palette: ask for a library and a table, both defaulting to *ALL
+          const libraryInput = await vscode.window.showInputBox({
             title: `Work with MTIs`,
             prompt: `Library to work with, or *ALL for every library`,
             placeHolder: `*ALL`,
             value: `*ALL`
           });
 
-          if (input === undefined) return;
+          if (libraryInput === undefined) return;
 
-          schema = input.trim() || `*ALL`;
+          const tableInput = await vscode.window.showInputBox({
+            title: `Work with MTIs`,
+            prompt: `Table to work with, or *ALL for every table`,
+            placeHolder: `*ALL`,
+            value: `*ALL`
+          });
+
+          if (tableInput === undefined) return;
+
+          schema = libraryInput.trim() || `*ALL`;
+          table = tableInput.trim() || `*ALL`;
         }
 
-        // The table stays open after this call returns, so the tree is refreshed from the
-        // callback once a "Create Index..." job is actually submitted, not from the (now
-        // immediate) return value of pickMTIAction.
+        // Refresh via the callback once a job is actually submitted, not on this call's return
         await pickMTIAction(schema, table, () => this.clearCacheAndRefresh());
       }),
 

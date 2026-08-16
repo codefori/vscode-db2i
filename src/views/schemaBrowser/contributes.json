@@ -57,7 +57,7 @@
       },
       {
         "command": "vscode-db2i.mtiActions",
-        "title": "Work with MTIs...",
+        "title": "Work with MTIs",
         "category": "Db2 for i"
       },
       {
