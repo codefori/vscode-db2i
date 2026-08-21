@@ -5,8 +5,10 @@ import Statement from "./statement";
 export type CrudType = `INSERT` | `UPDATE` | `DELETE`;
 
 /**
- * Generates an INSERT, UPDATE or DELETE statement for a table. No values are generated:
- * each value is left to the user, with the column it belongs to described in a comment.
+ * Generates an INSERT, UPDATE or DELETE statement for a table. Every value is a `?` host variable,
+ * described in a trailing comment, so the statement is valid SQL as-is. A `bind:` statement with a
+ * placeholder value per host variable is appended below it, so running the statement is as easy as
+ * editing those values first.
  * @param schema Schema name, as it comes from the catalog
  * @param name Table name, as it comes from the catalog
  * @param columns All columns of the table, in ordinal position order
@@ -36,14 +38,17 @@ function generateInsert(schema: string, name: string, columns: TableColumn[]): s
     ].join(`\n`);
   }
 
+  const values = valuesList(insertColumns);
+
   return [
     ...omissionWarnings(generatedColumns),
     `INSERT INTO ${qualify(schema, name)} (`,
     ...columnList(insertColumns),
     `)`,
     `VALUES (`,
-    ...describeAll(insertColumns),
-    `);`
+    ...values.lines,
+    `);`,
+    bindStatement(values.bindValues)
   ].join(`\n`);
 }
 
@@ -55,6 +60,7 @@ function generateUpdate(schema: string, name: string, columns: TableColumn[], ke
     throw new Error(`No columns available to update in ${qualify(schema, name)}`);
   }
 
+  const set = setList(setColumns);
   const where = whereClause(schema, name, columns, keyColumns);
 
   return [
@@ -62,10 +68,11 @@ function generateUpdate(schema: string, name: string, columns: TableColumn[], ke
     ...where.warnings,
     `UPDATE ${qualify(schema, name)}`,
     `SET`,
-    ...describeAll(setColumns),
+    ...set.lines,
     `WHERE`,
     ...where.lines,
-    `;`
+    `;`,
+    bindStatement([...set.bindValues, ...where.bindValues])
   ].join(`\n`);
 }
 
@@ -77,7 +84,8 @@ function generateDelete(schema: string, name: string, columns: TableColumn[], ke
     `DELETE FROM ${qualify(schema, name)}`,
     `WHERE`,
     ...where.lines,
-    `;`
+    `;`,
+    bindStatement(where.bindValues)
   ].join(`\n`);
 }
 
@@ -89,9 +97,12 @@ function whereClause(schema: string, name: string, columns: TableColumn[], keyCo
     throw new Error(`No columns available to identify a row in ${qualify(schema, name)}`);
   }
 
+  const predicate = wherePredicates(predicateColumns);
+
   return {
     warnings: keyColumns.length ? [] : [`-- No primary or unique key found so every column is listed to identify the row. Adjust as needed.`],
-    lines: describeAll(predicateColumns)
+    lines: predicate.lines,
+    bindValues: predicate.bindValues
   };
 }
 
@@ -143,8 +154,48 @@ function qualify(schema: string, name: string) {
   return `${Statement.delimName(schema)}.${Statement.delimName(name)}`;
 }
 
-function describeAll(columns: TableColumn[], indent = `  `): string[] {
-  return columns.map(column => `${indent}-- ${describe(column)}`);
+/** A `?` host variable per column for a VALUES list, e.g. "?,  -- COL - VARCHAR(20)" */
+function valuesList(columns: TableColumn[]): { lines: string[], bindValues: string[] } {
+  return {
+    lines: columns.map((column, index) => `  ?${index < columns.length - 1 ? `,` : ``}  -- ${describe(column)}`),
+    bindValues: columns.map(placeholderValue)
+  };
+}
+
+/** A `?` host variable assignment per column for a SET list, e.g. "COL = ?,  -- COL - VARCHAR(20)" */
+function setList(columns: TableColumn[]): { lines: string[], bindValues: string[] } {
+  return {
+    lines: columns.map((column, index) => `  ${Statement.delimName(column.COLUMN_NAME)} = ?${index < columns.length - 1 ? `,` : ``}  -- ${describe(column)}`),
+    bindValues: columns.map(placeholderValue)
+  };
+}
+
+/** A `?` host variable predicate per column for a WHERE clause, joined with AND */
+function wherePredicates(columns: TableColumn[]): { lines: string[], bindValues: string[] } {
+  return {
+    lines: columns.map((column, index) => `  ${index > 0 ? `AND ` : ``}${Statement.delimName(column.COLUMN_NAME)} = ?  -- ${describe(column)}`),
+    bindValues: columns.map(placeholderValue)
+  };
+}
+
+/**
+ * A value for the `bind:` statement. Must be a string or number literal, so date/time/timestamp
+ * columns get a valid literal string rather than an expression like CURRENT DATE.
+ */
+function placeholderValue(column: TableColumn): string {
+  const type = column.DATA_TYPE.toUpperCase();
+
+  if (type === `DATE`) return `'2024-01-01'`;
+  if (type === `TIME`) return `'00:00:00'`;
+  if (type.startsWith(`TIMESTAMP`)) return `'2024-01-01-00.00.00.000000'`;
+  if ([`DECIMAL`, `NUMERIC`, `DECFLOAT`, `FLOAT`, `REAL`, `DOUBLE`, `INTEGER`, `BIGINT`, `SMALLINT`].includes(type)) return `0`;
+
+  // Character types, and anything else not covered above, default to an empty string literal
+  return `''`;
+}
+
+function bindStatement(bindValues: string[]): string {
+  return `bind: ${bindValues.join(`, `)};`;
 }
 
 function describe(column: TableColumn): string {

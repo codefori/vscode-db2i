@@ -485,7 +485,8 @@ export default class SchemaBrowser {
             throw new Error(`No columns found for ${object.schema}.${object.name}`);
           }
 
-          const keyColumns = type === `INSERT` ? [] : await Table.getKeyColumns(object.schema, object.name);
+          const useKeyColumns = type !== `INSERT` && Configuration.get<boolean>(`schemaBrowser.crudUseKeyColumns`) !== false;
+          const keyColumns = useKeyColumns ? await Table.getKeyColumns(object.schema, object.name) : [];
           const content = generateCrudStatement(type, object.schema, object.name, columns, keyColumns);
 
           const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });

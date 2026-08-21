@@ -52,17 +52,17 @@
       },
       {
         "command": "vscode-db2i.generateInsertStatement",
-        "title": "INSERT",
+        "title": "Insert",
         "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.generateUpdateStatement",
-        "title": "UPDATE",
+        "title": "Update",
         "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.generateDeleteStatement",
-        "title": "DELETE",
+        "title": "Delete",
         "category": "Db2 for i"
       },
       {
@@ -450,6 +450,11 @@
             },
             "additionalProperties": false,
             "description": "Select which database object types should be shown in the Schema Browser"
+          },
+          "vscode-db2i.schemaBrowser.crudUseKeyColumns": {
+            "type": "boolean",
+            "default": true,
+            "description": "When generating an UPDATE or DELETE statement, use the table's primary or unique key to identify the row, if one is found. When disabled, every column is always used to identify the row, even if a key exists."
           }
         }
       }

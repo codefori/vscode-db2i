@@ -29,7 +29,7 @@ const allGenerated: TableColumn[] = [
   column(`C4`, `TIMESTAMP`, { HAS_DEFAULT: `X` }),
 ];
 
-test('Generated columns are left out of an INSERT', () => {
+test('Generated columns are left out of an INSERT, and every value is a host variable with a bind statement', () => {
   const columns = [
     ...allGenerated,
     column(`NAME`, `VARCHAR`, { CHARACTER_MAXIMUM_LENGTH: 20 }),
@@ -49,9 +49,10 @@ test('Generated columns are left out of an INSERT', () => {
     `  CREATED`,
     `)`,
     `VALUES (`,
-    `  -- NAME - VARCHAR(20) NOT NULL`,
-    `  -- CREATED - DATE NOT NULL`,
-    `);`
+    `  ?,  -- NAME - VARCHAR(20) NOT NULL`,
+    `  ?  -- CREATED - DATE NOT NULL`,
+    `);`,
+    `bind: '', '2024-01-01';`
   ].join(`\n`));
 });
 
@@ -107,7 +108,7 @@ test('An identity column is left out when HAS_DEFAULT says nothing', () => {
   expect(generateCrudStatement(`INSERT`, `RMOELLER`, `MYTABLE`, columns)).toContain(`-- C1 omitted: identity`);
 });
 
-test('Generated columns are left out of the SET list of an UPDATE', () => {
+test('Generated columns are left out of the SET list of an UPDATE, which assigns host variables', () => {
   const columns = [
     ...allGenerated,
     column(`NAME`, `VARCHAR`, { CHARACTER_MAXIMUM_LENGTH: 20 }),
@@ -122,10 +123,11 @@ test('Generated columns are left out of the SET list of an UPDATE', () => {
     `-- C4 omitted: transaction start ID`,
     `UPDATE RMOELLER.MYTABLE`,
     `SET`,
-    `  -- NAME - VARCHAR(20) NOT NULL`,
+    `  NAME = ?  -- NAME - VARCHAR(20) NOT NULL`,
     `WHERE`,
-    `  -- C1 - INTEGER`,
-    `;`
+    `  C1 = ?  -- C1 - INTEGER`,
+    `;`,
+    `bind: '', 0;`
   ].join(`\n`));
 });
 
@@ -135,7 +137,27 @@ test('A DELETE keeps generated columns in the WHERE clause', () => {
   expect(statement).toBe([
     `DELETE FROM RMOELLER.MYTABLE`,
     `WHERE`,
-    `  -- C1 - INTEGER`,
-    `;`
+    `  C1 = ?  -- C1 - INTEGER`,
+    `;`,
+    `bind: 0;`
+  ].join(`\n`));
+});
+
+test('Without a key, an UPDATE/DELETE uses every column in the WHERE clause, joined with AND, and warns about it', () => {
+  const columns = [
+    column(`C1`, `INTEGER`),
+    column(`C2`, `VARCHAR`, { CHARACTER_MAXIMUM_LENGTH: 10 }),
+  ];
+
+  const statement = generateCrudStatement(`DELETE`, `RMOELLER`, `MYTABLE`, columns);
+
+  expect(statement).toBe([
+    `-- No primary or unique key found so every column is listed to identify the row. Adjust as needed.`,
+    `DELETE FROM RMOELLER.MYTABLE`,
+    `WHERE`,
+    `  C1 = ?  -- C1 - INTEGER NOT NULL`,
+    `  AND C2 = ?  -- C2 - VARCHAR(10) NOT NULL`,
+    `;`,
+    `bind: 0, '';`
   ].join(`\n`));
 });
