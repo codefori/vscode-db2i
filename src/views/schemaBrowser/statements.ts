@@ -11,7 +11,7 @@ export function getRoutineCallStatement(schema: string, name: string, parms: SQL
 
   switch (invocation) {
     case `PROCEDURE`: return `CALL ${call};`;
-    case `TABLE`: return `SELECT * FROM TABLE(${call}) as a;`;
+    case `TABLE`: return `SELECT * FROM TABLE(${call}) AS A;`;
     default: return `VALUES ${call};`;
   }
 }
