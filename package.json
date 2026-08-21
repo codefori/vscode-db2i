@@ -602,17 +602,17 @@
       },
       {
         "command": "vscode-db2i.generateInsertStatement",
-        "title": "INSERT Statement",
+        "title": "INSERT",
         "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.generateUpdateStatement",
-        "title": "UPDATE Statement",
+        "title": "UPDATE",
         "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.generateDeleteStatement",
-        "title": "DELETE Statement",
+        "title": "DELETE",
         "category": "Db2 for i"
       },
       {

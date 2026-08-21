@@ -90,7 +90,7 @@ function whereClause(schema: string, name: string, columns: TableColumn[], keyCo
   }
 
   return {
-    warnings: keyColumns.length ? [] : [`-- No primary or unique key found: every column is listed to identify the row. Adjust as needed.`],
+    warnings: keyColumns.length ? [] : [`-- No primary or unique key found so every column is listed to identify the row. Adjust as needed.`],
     lines: describeAll(predicateColumns)
   };
 }
