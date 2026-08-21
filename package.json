@@ -624,6 +624,7 @@
         "command": "vscode-db2i.generateRoutineCall",
         "title": "Generate call statement",
         "category": "Db2 for i"
+      },
       {
         "command": "vscode-db2i.getRelatedObjects",
         "title": "Get Related Objects",

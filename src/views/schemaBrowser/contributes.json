@@ -65,6 +65,7 @@
         "title": "Delete",
          "category": "Db2 for i"
       },
+      {
         "command": "vscode-db2i.generateRoutineCall",
         "title": "Generate Call Statement",
         "category": "Db2 for i"
