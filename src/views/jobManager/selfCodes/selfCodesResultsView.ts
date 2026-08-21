@@ -68,6 +68,17 @@ export class SelfCodesResultsView implements TreeDataProvider<any> {
           await vscode.window.showTextDocument(document, { preview: false });
         }
       }),
+      vscode.commands.registerCommand(`vscode-db2i.self.viewJobLog`, async (item: SelfErrorJobItem | string) => {
+        const jobName = typeof item === `string` ? item : item.jobName;
+
+        if (jobName) {
+          try {
+            await vscode.commands.executeCommand(`code-for-ibmi.showJobLog`, jobName);
+          } catch (e) {
+            vscode.window.showErrorMessage(`Unable to open the job log for ${jobName}: ${e}`);
+          }
+        }
+      }),
       vscode.commands.registerCommand(`vscode-db2i.self.help`, async () => {
         await vscode.commands.executeCommand(`vscode.open`, `https://www.ibm.com/docs/en/i/7.5?topic=tools-sql-error-logging-facility-self`)
       }),
@@ -109,7 +120,7 @@ export class SelfCodesResultsView implements TreeDataProvider<any> {
     const content = `SELECT 
                       job_name, user_name, reason_code, logged_time, logged_sqlstate, logged_sqlcode, matches, stmttext, message_text, message_second_level_text,
                       program_library, program_name, program_type, module_name, client_applname, client_programid, initial_stack
-                    FROM qsys2.sql_error_log, lateral (select * from TABLE(SYSTOOLS.SQLCODE_INFO(logged_sqlcode)))
+                    FROM qsys2.sql_error_log x, lateral (select * from TABLE(SYSTOOLS.SQLCODE_INFO(x.logged_sqlcode)))
                     where user_name = current_user 
                     and ${onlySelected ? `job_name = '${selected.job.id}'` : `LOGGED_TIME >= (select JOB_ENTERED_SYSTEM_TIME from table(qsys2.active_job_info('NO', job_name_filter => '*', detailed_info => 'WORK')) x) `}
                     order by logged_time desc`;
@@ -251,10 +262,10 @@ export class SelfCodeTreeItem extends ExtendedTreeItem {
 
     const items: ExtendedTreeItem[] = [
       new SelfErrorStatementItem(this.error.STMTTEXT),
-      new SelfErrorNodeItem(`Job`, this.error.JOB_NAME),
-      new SelfErrorNodeItem(`Client Name`, this.error.CLIENT_APPLNAME),
-      new SelfErrorNodeItem(`Client Program`, this.error.CLIENT_PROGRAMID),
-      new SelfErrorNodeItem(`Object`, `${this.error.PROGRAM_LIBRARY}/${this.error.PROGRAM_NAME} (${this.error.PROGRAM_TYPE}, ${this.error.MODULE_NAME})`),
+      new SelfErrorJobItem(this.error.JOB_NAME),
+      new SelfErrorNodeItem(`Client Name`, this.error.CLIENT_APPLNAME, `account`),
+      new SelfErrorNodeItem(`Client Program`, this.error.CLIENT_PROGRAMID, `file-code`),
+      new SelfErrorNodeItem(`Object`, `${this.error.PROGRAM_LIBRARY}/${this.error.PROGRAM_NAME} (${this.error.PROGRAM_TYPE}, ${this.error.MODULE_NAME})`, `symbol-field`),
     ]
 
     if (validStack.length > 0) {
@@ -336,10 +347,31 @@ class SelfErrorStatementItem extends ExtendedTreeItem {
 }
 
 class SelfErrorNodeItem extends ExtendedTreeItem {
-  constructor(label: string, description: string) {
+  constructor(label: string, description: string, icon = `info`) {
     super(label, vscode.TreeItemCollapsibleState.None);
-    this.iconPath = new vscode.ThemeIcon(`info`);
+    // Explicit colour so symbol icons don't pick up their default (blue) tint
+    this.iconPath = new vscode.ThemeIcon(icon, new vscode.ThemeColor(`icon.foreground`));
     this.description = description;
+  }
+
+  async getChildren(): Promise<ExtendedTreeItem[]> {
+    return [];
+  }
+}
+
+class SelfErrorJobItem extends ExtendedTreeItem {
+  constructor(public jobName: string) {
+    super(`Job`, vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon(`briefcase`, new vscode.ThemeColor(`icon.foreground`));
+    this.description = jobName;
+    this.tooltip = new vscode.MarkdownString(`Open the job log for \`${jobName}\``);
+    this.contextValue = `selfCodeJob`;
+
+    this.command = {
+      command: `vscode-db2i.self.viewJobLog`,
+      title: `View Job Log`,
+      arguments: [jobName]
+    };
   }
 
   async getChildren(): Promise<ExtendedTreeItem[]> {

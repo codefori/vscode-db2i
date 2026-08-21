@@ -63,6 +63,10 @@
       {
         "command": "vscode-db2i.generateDeleteStatement",
         "title": "Delete",
+         "category": "Db2 for i"
+      },
+        "command": "vscode-db2i.generateRoutineCall",
+        "title": "Generate Call Statement",
         "category": "Db2 for i"
       },
       {
@@ -204,6 +208,10 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.generateRoutineCall",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.getRelatedObjects",
           "when": "never"
         },
@@ -279,6 +287,11 @@
           "command": "vscode-db2i.getResultSet",
           "when": "viewItem == table || viewItem == view || viewItem == alias",
           "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.generateRoutineCall",
+          "when": "viewItem == procedure || viewItem == function",
+          "group": "db2@1"
         },
         {
           "submenu": "generateSQLSubmenu",
