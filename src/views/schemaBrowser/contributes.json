@@ -52,7 +52,7 @@
       },
       {
         "command": "vscode-db2i.generateRoutineCall",
-        "title": "Generate call statement",
+        "title": "Generate Call Statement",
         "category": "Db2 for i"
       },
       {
