@@ -55,6 +55,7 @@ export class IBMiController {
     const instance = getInstance();
     const connection = instance?.getConnection();
     const items: vscode.NotebookCellOutputItem[] = [];
+    let success = true;
 
     const execution = this._controller.createNotebookCellExecution(cell);
     execution.executionOrder = ++this._executionOrder;
@@ -84,6 +85,7 @@ export class IBMiController {
               // Execute the query
               const query = selected.job.query<any>(content);
               const results = await query.execute(1000);
+              success = results.success;
 
               const table = results.data;
               const columnNames = results.metadata.columns?.map(c => c.name);
@@ -124,6 +126,7 @@ export class IBMiController {
               items.push(vscode.NotebookCellOutputItem.stderr(`No job selected in SQL Job Manager.`));
             }
           } catch (e) {
+            success = false;
             items.push(vscode.NotebookCellOutputItem.stderr(e instanceof Error ? e.message : String(e)));
           }
           break;
@@ -137,6 +140,7 @@ export class IBMiController {
               //@ts-ignore (remove comment when Code for i v3 is released)
               getSpooledFiles: true
             });
+            success = command.code === 0;
 
             if (command.stdout) {
               items.push(vscode.NotebookCellOutputItem.text([
@@ -154,6 +158,7 @@ export class IBMiController {
               ].join(`\n`), `text/markdown`));
             }
           } catch (e) {
+            success = false;
             items.push(
               vscode.NotebookCellOutputItem.stderr(`Failed to run command. Are you connected?`),
               vscode.NotebookCellOutputItem.stderr(e instanceof Error ? e.message : String(e))
@@ -167,6 +172,7 @@ export class IBMiController {
               command: cell.document.getText(),
               environment: `pase`
             });
+            success = command.code === 0;
 
             if (command.stdout) {
               items.push(vscode.NotebookCellOutputItem.text([
@@ -184,6 +190,7 @@ export class IBMiController {
               ].join(`\n`), `text/markdown`));
             }
           } catch (e) {
+            success = false;
             items.push(
               vscode.NotebookCellOutputItem.stderr(`Failed to runCommand. Are you connected?`),
               //@ts-ignore
@@ -203,7 +210,7 @@ export class IBMiController {
       new vscode.NotebookCellOutput(items)
     ]);
 
-    execution.end(true, Date.now());
+    execution.end(success, Date.now());
   }
 
 
