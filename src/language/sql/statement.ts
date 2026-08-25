@@ -660,11 +660,6 @@ export default class Statement {
 	 * DECLARE .. CURSOR FOR
 	 */
 	getEmbeddedStatementAreas() {
-		// WRAPPED statements have an obfuscated body that may contain colons as part of the encoding so avoid parsing them as host variables
-		if (this.tokens.some(t => tokenIs(t, `word`, `WRAPPED`))) {
-			return [];
-		}
-
 		// Only these statements support the INTO clause in embedded SQL really
 		const validIntoStatements: StatementType[] = [StatementType.Unknown, StatementType.With, StatementType.Select];
 
@@ -672,10 +667,16 @@ export default class Statement {
 		let intoClause: Token | undefined;
 		let declareStmt: Token | undefined;
 		let lastTokenWasMarker = false;
+		let inWrappedBody = false;
 
 		for (let i = 0; i < this.tokens.length; i++) {
 			const prevToken = this.tokens[i - 1];
 			const currentToken = this.tokens[i];
+
+			// WRAPPED statements have an obfuscated body that may contain colons as part of the encoding so avoid parsing them as host variables
+			if (tokenIs(currentToken, `word`, `WRAPPED`)) {
+				inWrappedBody = true;
+			}
 
 			if (!tokenIs(currentToken, `colon`)) {
 				lastTokenWasMarker = false;
@@ -739,6 +740,7 @@ export default class Statement {
 					break;
 
 				case `colon`:
+					if (inWrappedBody) continue;
 					if (intoClause) continue;
 					if (declareStmt) continue;
 					if (prevToken && prevToken.type === `string`) continue;
