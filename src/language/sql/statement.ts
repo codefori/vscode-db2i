@@ -660,6 +660,11 @@ export default class Statement {
 	 * DECLARE .. CURSOR FOR
 	 */
 	getEmbeddedStatementAreas() {
+		// WRAPPED statements have an obfuscated body that may contain colons as part of the encoding so avoid parsing them as host variables
+		if (this.tokens.some(t => tokenIs(t, `word`, `WRAPPED`))) {
+			return [];
+		}
+
 		// Only these statements support the INTO clause in embedded SQL really
 		const validIntoStatements: StatementType[] = [StatementType.Unknown, StatementType.With, StatementType.Select];
 
