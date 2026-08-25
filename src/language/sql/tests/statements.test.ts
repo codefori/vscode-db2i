@@ -1775,6 +1775,17 @@ describe(`Parameter statement tests`, () => {
     expect(markerRanges.length).toBe(2);
   });
 
+  test('WRAPPED statement body colons should not be treated as host variables', () => {
+    const document = new Document(`CREATE FUNCTION SALARY ( WAGE DECFLOAT )  WRAPPED QSQ07040 aacxW8plW8VzG8pHG8VvG8Fv68pb68FHl8:d39pl2qpdW8pdW8pdW9pjaqebaqebaCyIiKAHDATfmviU2_csLwxF1GUVlfERKBQfPcs79kF1EUT7VTiNQ_TmNQ_Sa`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(0);
+  });
+
   test('JSON_OBJECT parameters should not mark as embedded', () => {
     const document = new Document(`values json_object('model_id': 'meta-llama/llama-2-13b-chat', 'input': 'TEXT', 'parameters': json_object('max_new_tokens': 100, 'time_limit': 1000), 'space_id': 'SPACEID')`);
     const statements = document.statements;
