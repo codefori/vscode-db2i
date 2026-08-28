@@ -1,4 +1,43 @@
 import Statement from "../../database/statement";
+import { prepareParamType } from "../../language/providers/logic/completion";
+import { SQLParm } from "../../types";
+
+export type RoutineInvocation = "PROCEDURE" | "SCALAR" | "TABLE";
+
+export function getRoutineCallStatement(schema: string, name: string, parms: SQLParm[], invocation: RoutineInvocation) {
+  const qualifiedName = `${Statement.delimName(schema)}.${Statement.delimName(name)}`;
+  // The arguments of a table function sit one level deeper, inside the TABLE() clause
+  const call = `${qualifiedName}(${getArgumentList(parms, invocation === `TABLE` ? `  ` : ``)})`;
+
+  switch (invocation) {
+    case `PROCEDURE`: return `CALL ${call};`;
+    case `TABLE`: return `SELECT * FROM TABLE(${call}) AS A;`;
+    default: return `VALUES ${call};`;
+  }
+}
+
+function getArgumentList(parms: SQLParm[], indent: string) {
+  if (parms.length === 0) {
+    return ``;
+  }
+
+  // External routines can be created without naming their parameters, so only use named arguments when they all have one
+  const useNames = parms.every(parm => parm.PARAMETER_NAME);
+
+  const args = parms.map(parm => {
+    const value = parm.PARAMETER_MODE === `OUT` ? `?` : (parm.DEFAULT || `?`);
+    return useNames ? `${Statement.delimName(parm.PARAMETER_NAME)} => ${value}` : value;
+  });
+
+  const width = Math.max(...args.map(arg => arg.length)) + 1;
+
+  const lines = args.map((arg, i) => {
+    const argument = arg + (i < args.length - 1 ? `,` : ``);
+    return `${indent}  ${argument.padEnd(width)} -- ${parms[i].PARAMETER_MODE} ${prepareParamType(parms[i])}`;
+  });
+
+  return [``, ...lines, indent].join(`\n`);
+}
 
 export function getRelatedObjects(schema: string, name: string) {
   return `SELECT SQL_NAME, SYSTEM_NAME, SCHEMA_NAME, LIBRARY_NAME, SQL_OBJECT_TYPE, 

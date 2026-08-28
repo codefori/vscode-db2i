@@ -3,6 +3,7 @@ import { JobManager } from "../config";
 import { SQLParm } from "../types";
 
 export type CallableType = "PROCEDURE"|"FUNCTION";
+export type FunctionType = "SCALAR"|"COLUMN"|"TABLE";
 export interface CallableRoutine {
   schema: string;
   name: string;
@@ -35,6 +36,21 @@ export default class Callable {
     if (result.length > 0) {
       routine.specificNames = result.map(row => row.SPECIFIC_NAME);
       return routine;
+    }
+
+    return;
+  }
+
+  static async getFunctionType(schema: string, specificName: string): Promise<FunctionType|undefined> {
+    const result = await JobManager.runSQL<{FUNCTION_TYPE: string}>(
+      `select FUNCTION_TYPE from qsys2.sysfuncs where SPECIFIC_SCHEMA = ? and SPECIFIC_NAME = ?`,
+      {parameters: [schema, specificName]}
+    );
+
+    switch (result[0]?.FUNCTION_TYPE?.trim()) {
+      case `S`: return `SCALAR`;
+      case `C`: return `COLUMN`;
+      case `T`: return `TABLE`;
     }
 
     return;

@@ -615,6 +615,11 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.generateRoutineCall",
+        "title": "Generate call statement",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.getRelatedObjects",
         "title": "Get Related Objects",
         "category": "Db2 for i"
@@ -1001,6 +1006,12 @@
         "enablement": "vscode-db2i:continueExtensionActive"
       },
       {
+        "command": "vscode-db2i.self.viewJobLog",
+        "title": "View Job Log",
+        "category": "Db2 for i",
+        "icon": "$(info)"
+      },
+      {
         "command": "vscode-db2i.self.help",
         "title": "Open SELF Documentation",
         "category": "Db2 for i",
@@ -1101,6 +1112,10 @@
         },
         {
           "command": "vscode-db2i.generateSQLWithoutConstraints",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateRoutineCall",
           "when": "never"
         },
         {
@@ -1455,6 +1470,11 @@
           "group": "inline"
         },
         {
+          "command": "vscode-db2i.generateRoutineCall",
+          "when": "viewItem == procedure || viewItem == function",
+          "group": "db2@1"
+        },
+        {
           "submenu": "generateSQLSubmenu",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == trigger || viewItem == type",
           "group": "db2@2"
@@ -1617,6 +1637,11 @@
           "command": "vscode-db2i.self.explainSelf",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && vscode-db2i:continueExtensionActive",
           "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.self.viewJobLog",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeJob",
+          "group": "inline@1"
         },
         {
           "command": "vscode-db2i.examples.edit",
