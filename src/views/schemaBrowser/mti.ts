@@ -1,12 +1,9 @@
 import * as vscode from "vscode";
-import { FrontendTables } from "@halcyontech/vscode-ibmi-types/ui/frontendTables";
-import { getBase } from "../../base";
 import { JobManager } from "../../config";
 import Statement from "../../database/statement";
-import { generatePage } from "../webviewToolkit";
+import { DataTableColumn, DataTableHandlers, DataTableOptions } from "../html/dataTable";
+import { dbaResultView } from "../dba/dbaResultView";
 import { getMTIStatement } from "./statements";
-
-type FastTableColumn<T> = FrontendTables.FastTableColumn<T>;
 
 /** A row from `select * from table(qsys2.mti_info(...))`. Columns vary across IBM i releases (see `isSparse`), so only the fields actually used here are typed. */
 interface MTIInfo {
@@ -205,9 +202,6 @@ function formatColumnValue(mti: MTIInfo, column: string): string {
 /** Internal SQE job identifiers, and native library/file names already shown via TABLE_SCHEMA/TABLE_NAME */
 const HIDDEN_COLUMNS = new Set([`JOB_NAME`, `JOB_USER`, `JOB_NUMBER`, `LIBRARY_NAME`, `FILE_NAME`]);
 
-/** Explicit id so the search handler can target the right table; see FastTableUpdateOptions.tableId. */
-const MTI_TABLE_ID = `db2i-mtis`;
-
 /**
  * Fetch the MTIs for a schema (or a single table within it) and, if any are found, open a table
  * listing them with "Create Index..." and "Show Statement" actions on every row.
@@ -245,110 +239,52 @@ export async function pickMTIAction(schema: string, table?: string, onIndexCreat
   return true;
 }
 
-/** Open the table listing `mtis`, with one column per MTI_INFO column plus row actions */
+/** Show the MTI list in the shared "Db2 for i" result panel, with per-row context menu actions */
 function openMTIWebview(target: string, mtis: MTIInfo[], onIndexCreated?: () => void) {
-  const panel = vscode.window.createWebviewPanel(
-    `db2iMtis`,
-    `MTIs for ${target}`,
-    vscode.ViewColumn.Active,
-    { enableScripts: true, retainContextWhenHidden: true }
-  );
-
-  // Fetched once; search just re-filters this in memory (no re-query, no pagination)
-  let searchTerm = ``;
-
   // Every row shares the same columns, so the first one is enough to know them all
-  const dataColumns: FastTableColumn<MTIInfo>[] = Object.keys(mtis[0])
+  const columns: DataTableColumn<MTIInfo>[] = Object.keys(mtis[0])
     .filter(column => !HIDDEN_COLUMNS.has(column))
     .map(column => ({
+      id: column,
       title: prettyColumnTitle(column),
-      width: `1fr`,
-      getValue: (mti: MTIInfo) => formatColumnValue(mti, column)
+      value: (mti: MTIInfo) => formatColumnValue(mti, column),
+      align: [`MTI_SIZE`, `KEYS`].includes(column) ? `right` : `left`,
     }));
 
-  const columns: FastTableColumn<MTIInfo>[] = [
-    ...dataColumns,
-    {
-      title: `Actions`,
-      width: `2fr`,
-      getValue: (mti: MTIInfo) => {
-        // Encode the MTI row as a URL parameter so the action handler below can recover it
-        const arg = encodeURIComponent(JSON.stringify(mti));
-        return `<vscode-button appearance="primary" href="action:createIndex?entry=${arg}">${CREATE_INDEX}</vscode-button>
-                <vscode-button appearance="secondary" href="action:showStatement?entry=${arg}">${SHOW_STATEMENT}</vscode-button>`;
-      }
-    }
-  ];
-
-  const matches = (mti: MTIInfo, term: string) => {
-    if (!term) return true;
-    const haystack = `${qualifiedTable(mti)} ${mti.KEY_DEFINITION} ${mti.MTI_NAME}`.toUpperCase();
-    return haystack.includes(term.toUpperCase());
+  const showStatement = async (mti: MTIInfo) => {
+    const warning = sparseWarning(mti);
+    const statement = `${buildCreateIndexStatement(mti, await suggestIndexName(mti))};`;
+    const content = warning ? `-- ${warning}\n${statement}` : statement;
+    const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+    await vscode.window.showTextDocument(textDoc);
   };
 
-  const filtered = () => mtis.filter(mti => matches(mti, searchTerm));
-  const subtitle = (shown: number) => `${shown} of ${mtis.length} MTI${mtis.length === 1 ? `` : `s`}`;
-
-  const generateTableHtml = () => getBase().frontendTables.generateFastTable({
+  const options: DataTableOptions<MTIInfo> = {
     title: `MTIs for ${target}`,
-    subtitle: subtitle(mtis.length),
+    subtitle: (shown, total) => `${shown} of ${total} MTI${total === 1 ? `` : `s`}`,
     columns,
-    data: mtis,
-    stickyHeader: true,
-    emptyMessage: `No MTIs found.`,
-    enableSearch: true,
-    searchPlaceholder: `Search MTIs...`,
-    tableId: MTI_TABLE_ID
-  });
+    rows: mtis,
+    searchPlaceholder: `Search MTIs…`,
+    emptyMessage: `No MTIs match the search.`,
+    actions: [
+      { id: `createIndex`, label: `${CREATE_INDEX}…` },
+      { id: `showStatement`, label: SHOW_STATEMENT },
+    ],
+  };
 
-  panel.webview.html = generatePage(generateTableHtml());
-
-  panel.webview.onDidReceiveMessage(async (message) => {
-    if (message.command === `search`) {
-      searchTerm = message.searchTerm ?? ``;
-      const rows = filtered();
-
-      await panel.webview.postMessage(getBase().frontendTables.generateFastTableUpdate({
-        columns,
-        data: rows,
-        totalItems: rows.length,
-        currentPage: 1,
-        subtitle: subtitle(rows.length),
-        tableId: MTI_TABLE_ID
-      }));
-      return;
-    }
-
-    // The message contains the href attribute from the clicked action button
-    const href = message.href;
-    if (!href) {
-      return;
-    }
-
-    const uri = vscode.Uri.parse(href);
-    const params = new URLSearchParams(uri.query);
-    const entryJson = params.get(`entry`);
-    if (!entryJson) {
-      return;
-    }
-
-    const mti: MTIInfo = JSON.parse(decodeURIComponent(entryJson));
-
-    switch (uri.path) {
-      case `createIndex`:
+  const handlers: DataTableHandlers<MTIInfo> = {
+    onAction: async (actionId, mti) => {
+      if (actionId === `createIndex`) {
         if (await createIndex(mti)) {
           onIndexCreated?.();
         }
-        break;
-
-      case `showStatement`: {
-        const warning = sparseWarning(mti);
-        const statement = `${buildCreateIndexStatement(mti, await suggestIndexName(mti))};`;
-        const content = warning ? `-- ${warning}\n${statement}` : statement;
-        const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
-        await vscode.window.showTextDocument(textDoc);
-        break;
+      } else if (actionId === `showStatement`) {
+        await showStatement(mti);
       }
-    }
-  });
+    },
+  };
+
+  dbaResultView
+    .showTable(options, handlers)
+    .catch(e => vscode.window.showErrorMessage(`Could not show the MTI list: ${e?.message ?? e}`));
 }

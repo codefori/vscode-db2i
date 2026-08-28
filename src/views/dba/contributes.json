@@ -1,0 +1,24 @@
+{
+  "contributes": {
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "db2i-dba-panel",
+          "title": "Db2 for i - DBA",
+          "icon": "$(database)"
+        }
+      ]
+    },
+    "views": {
+      "db2i-dba-panel": [
+        {
+          "type": "webview",
+          "id": "vscode-db2i.dbaResultView",
+          "name": "DBA",
+          "contextualTitle": "Db2 for i - DBA",
+          "when": "code-for-ibmi:connected == true"
+        }
+      ]
+    }
+  }
+}
