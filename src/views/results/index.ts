@@ -115,6 +115,10 @@ export function initialise(context: vscode.ExtensionContext) {
       if (e.affectsConfiguration('vscode-db2i.resultsets.columnHeadings')) {
         resultSetProvider.updateHeader();
       }
+      // The NULL cell colour is baked into the page CSS, so re-run to pick it up
+      if (e.affectsConfiguration('vscode-db2i.resultsets.nullCellColor')) {
+        resultSetProvider.refresh();
+      }
     }),
 
     vscode.commands.registerCommand(`vscode-db2i.dove.close`, () => {

@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import Configuration from "../../configuration";
+import { nullCellColor } from "../html";
 import { DataTableHandlers, DataTableOptions, handleDataTableMessage, renderDataTable } from "../html/dataTable";
 
 /**
@@ -14,6 +16,8 @@ export class DbaResultView implements vscode.WebviewViewProvider {
   private handler?: (message: any) => void | Promise<void>;
   /** Set when showTable() is called before the view has been resolved */
   private pendingHtml?: string;
+  /** The table currently on screen, kept so settings changes can re-render it */
+  private current?: DataTableOptions<any>;
 
   resolveWebviewView(view: vscode.WebviewView) {
     this.view = view;
@@ -26,9 +30,11 @@ export class DbaResultView implements vscode.WebviewViewProvider {
 
   /** Render a data table into the DBA panel, revealing the panel first. */
   async showTable<T>(options: DataTableOptions<T>, handlers: DataTableHandlers<T> = {}): Promise<void> {
-    const html = renderDataTable(options);
+    this.current = options;
     this.handler = message =>
       handleDataTableMessage(message, options, handlers, msg => this.view?.webview.postMessage(msg));
+
+    const html = this.renderCurrent();
 
     await this.reveal();
 
@@ -38,6 +44,20 @@ export class DbaResultView implements vscode.WebviewViewProvider {
     } else {
       // The view resolves asynchronously; resolveWebviewView will pick this up
       this.pendingHtml = html;
+    }
+  }
+
+  private renderCurrent(): string {
+    return renderDataTable({
+      nullColor: nullCellColor(Configuration.get<string>(`resultsets.nullCellColor`)),
+      ...this.current!,
+    });
+  }
+
+  /** Re-render the current table (the NULL colour is baked into the page CSS) */
+  refresh() {
+    if (this.current && this.view) {
+      this.view.webview.html = this.renderCurrent();
     }
   }
 
@@ -88,6 +108,11 @@ export function initialise(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(DbaResultView.viewId, dbaResultView, {
       webviewOptions: { retainContextWhenHidden: true },
+    }),
+    vscode.workspace.onDidChangeConfiguration(e => {
+      if (e.affectsConfiguration(`vscode-db2i.resultsets.nullCellColor`)) {
+        dbaResultView.refresh();
+      }
     }),
   );
 }

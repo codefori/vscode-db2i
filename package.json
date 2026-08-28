@@ -274,6 +274,21 @@
             "order": 3,
             "description": "Show INOUT and OUT parameters inside the editor",
             "default": true
+          },
+          "vscode-db2i.resultsets.nullCellColor": {
+            "type": "string",
+            "order": 4,
+            "description": "Colour for NULL values in the results grid and the DBA panel",
+            "default": "None",
+            "enum": [
+              "None",
+              "Blue",
+              "Green",
+              "Red",
+              "Orange",
+              "Yellow",
+              "Purple"
+            ]
           }
         }
       },
@@ -616,7 +631,7 @@
       },
       {
         "command": "vscode-db2i.generateRoutineCall",
-        "title": "Generate call statement",
+        "title": "Generate Call Statement",
         "category": "Db2 for i"
       },
       {
