@@ -202,15 +202,31 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script defer type="module">${webComponents}</script>
   <style>
+    /* Palette aligned with Core's FastTable (frontendTables.generateFastTable):
+       a focusBorder accent, foreground-tint overlays for surfaces/zebra/borders,
+       descriptionForeground for secondary text, list-hoverBackground on hover. */
+    :root {
+      --dt-fg-rgb: var(--vscode-editor-foreground-rgb, 204, 204, 204);
+      --dt-accent: var(--vscode-focusBorder);
+      --dt-surface: rgba(var(--dt-fg-rgb), 0.03);
+      --dt-border: rgba(var(--dt-fg-rgb), 0.08);
+      --dt-header-a: rgba(var(--dt-fg-rgb), 0.08);
+      --dt-header-b: rgba(var(--dt-fg-rgb), 0.05);
+      --dt-zebra-odd: rgba(var(--dt-fg-rgb), 0.06);
+      --dt-zebra-even: rgba(var(--dt-fg-rgb), 0.20);
+      --dt-muted: var(--vscode-descriptionForeground);
+    }
+
     html, body { height: 100%; }
     body {
       margin: 0;
       padding: 0;               /* override the webview's injected body padding */
       display: flex;
       flex-direction: column;
-      font-family: sans-serif;
+      font-family: var(--vscode-font-family);
       font-size: var(--vscode-font-size, 13px);
       color: var(--vscode-foreground);
+      background-color: var(--vscode-editor-background);
     }
 
     /* --- top bar: title + search --- */
@@ -220,8 +236,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       align-items: center;
       gap: 10px;
       padding: 4px 14px;
-      background-color: var(--vscode-multiDiffEditor-headerBackground, var(--vscode-editorWidget-background));
-      border-bottom: 1px solid var(--vscode-editorGroup-border, rgba(128,128,128,0.28));
+      background-color: var(--dt-surface);
+      border-bottom: 1px solid var(--dt-border);
     }
     #title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #search { margin-left: auto; width: min(280px, 45vw); }
@@ -243,16 +259,23 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
 
     .dt-h, .dt-c {
       padding: 5px 15px;
-      border-bottom: 1px solid var(--vscode-editorGroup-border, rgba(128,128,128,0.18));
+      border-bottom: 1px solid var(--dt-border);
     }
 
     .dt-h {
       position: sticky;
       top: 0;
       z-index: 1;
-      background-color: var(--vscode-banner-background);
-      color: var(--vscode-banner-foreground);
-      font-weight: 600;
+      background:
+        linear-gradient(180deg, var(--dt-header-a) 0%, var(--dt-header-b) 100%),
+        var(--vscode-editor-background);
+      border-bottom: 2px solid var(--dt-accent);
+      border-right: 1px solid var(--dt-border);   /* column separator */
+      color: var(--vscode-foreground);
+      font-weight: 700;
+      font-size: 0.95em;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
       white-space: nowrap;
       cursor: default;
       user-select: none;
@@ -260,7 +283,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     .dt-h.sortable { cursor: pointer; }
     .dt-h .arrow { margin-left: 5px; opacity: 0.7; font-size: 0.85em; }
 
-    /* Match the SQL results grid: sans-serif chrome, monospace cell values */
+    /* Match the SQL results grid: monospace cell values */
     .dt-c {
       font-family: monospace;
       white-space: pre-wrap;
@@ -269,6 +292,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     }
     .dt-c.right { text-align: right; }
     .dt-c.center { text-align: center; }
+    .dt-row.odd > .dt-c { background-color: var(--dt-zebra-odd); }
+    .dt-row.even > .dt-c { background-color: var(--dt-zebra-even); }
     .dt-row:hover > .dt-c { background-color: var(--vscode-list-hoverBackground); }
 
     /* Pretty-printed JSON values keep their indentation, like the results grid */
@@ -277,9 +302,9 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
 
     /* Absorbs the horizontal space left over when the columns are narrower than
        the viewport, so the header band and row hover reach the right edge. */
-    .dt-filler { padding: 0; max-width: none; }
+    .dt-filler { padding: 0; max-width: none; border-right: none; }
 
-    #empty { display: none; padding: 22px 16px; opacity: 0.7; text-align: center; }
+    #empty { display: none; padding: 22px 16px; color: var(--dt-muted); text-align: center; }
 
     /* --- bottom bar: count + pagination --- */
     #footer {
@@ -288,14 +313,14 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       align-items: center;
       gap: 8px;
       padding: 3px 14px;
-      background-color: var(--vscode-multiDiffEditor-headerBackground, var(--vscode-editorWidget-background));
-      border-top: 1px solid var(--vscode-editorGroup-border, rgba(128,128,128,0.28));
+      background-color: var(--dt-surface);
+      border-top: 1px solid var(--dt-border);
     }
-    #subtitle { opacity: 0.8; }
+    #subtitle { color: var(--dt-muted); }
     #footer .spacer { flex: 1 1 auto; }
     #pager { display: flex; align-items: center; gap: 4px; }
     #pager[hidden] { display: none; }
-    #rangeInfo { opacity: 0.6; }
+    #rangeInfo { color: var(--dt-muted); }
 
     #ctxWrap { position: fixed; z-index: 1000; display: none; }
   </style>
@@ -430,9 +455,9 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       while (grid.children.length > headerCount) grid.removeChild(grid.lastChild);
 
       const frag = document.createDocumentFragment();
-      for (const r of currentPageRows()) {
+      currentPageRows().forEach((r, rowIndex) => {
         const rowEl = document.createElement("div");
-        rowEl.className = "dt-row";
+        rowEl.className = "dt-row " + (rowIndex % 2 ? "even" : "odd");
         rowEl.dataset.i = String(r.i);
         if (MODEL.hasActions && r.a.length) rowEl.classList.add("actionable");
         r.c.forEach((cellHtml, c) => {
@@ -445,7 +470,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
         filler.className = "dt-c dt-filler";
         rowEl.appendChild(filler);
         frag.appendChild(rowEl);
-      }
+      });
       grid.appendChild(frag);
 
       el("empty").style.display = state.view.length ? "none" : "";

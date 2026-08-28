@@ -4,18 +4,40 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* Palette aligned with Core's FastTable (frontendTables.generateFastTable):
+       a focusBorder accent, foreground-tint overlays for surfaces/zebra/borders,
+       descriptionForeground for secondary text, list-hoverBackground on hover. */
+    :root {
+      --dt-fg-rgb: var(--vscode-editor-foreground-rgb, 204, 204, 204);
+      --dt-accent: var(--vscode-focusBorder);
+      --dt-surface: rgba(var(--dt-fg-rgb), 0.03);
+      --dt-border: rgba(var(--dt-fg-rgb), 0.08);
+      --dt-header-a: rgba(var(--dt-fg-rgb), 0.08);
+      --dt-header-b: rgba(var(--dt-fg-rgb), 0.05);
+      --dt-zebra-odd: rgba(var(--dt-fg-rgb), 0.06);
+      --dt-zebra-even: rgba(var(--dt-fg-rgb), 0.20);
+      --dt-muted: var(--vscode-descriptionForeground);
+    }
+
     #resultset {
       height: 100%;
       font-size: 0.9em;
-      font-family: sans-serif;
+      font-family: var(--vscode-font-family);
       min-width: 100%;
       display: grid;
       position: relative;
     }
 
     .header {
-      background-color: var(--vscode-banner-background);
-      color: var(--vscode-banner-foreground);
+      background:
+        linear-gradient(180deg, var(--dt-header-a) 0%, var(--dt-header-b) 100%),
+        var(--vscode-editor-background);
+      border-bottom: 2px solid var(--dt-accent);
+      color: var(--vscode-foreground);
+      font-weight: 700;
+      font-size: 0.95em;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
       text-align: left;
       position: sticky; /* Lock the header row to the top so it's always visible as rows are scrolled */
       top: 0;           /* Don't forget this, required for the stickiness */
@@ -27,6 +49,12 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
       display: contents;
     }
 
+    .row.odd > .cell { background-color: var(--dt-zebra-odd); }
+    .row.even > .cell { background-color: var(--dt-zebra-even); }
+
+    /* Trailing spacer column — no content, just carries the band to the edge */
+    #resultset .filler { min-width: 0; padding: 0; }
+
     .row:hover > .cell {
       background-color: var(--vscode-list-hoverBackground);
     }
@@ -34,7 +62,10 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
     #footer {
       position: sticky;
       bottom: 0;
-      background-color: var(--vscode-multiDiffEditor-headerBackground);
+      background:
+        linear-gradient(var(--dt-surface), var(--dt-surface)),
+        var(--vscode-editor-background);
+      border-top: 1px solid var(--dt-border);
       text-align: left;
       grid-column: 1 / -1;
       opacity: 1;
@@ -49,6 +80,7 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
     .cell {
       position: relative;
       white-space: pre-wrap;
+      border-bottom: 1px solid var(--dt-border);
     }
 
     .joblog > div:not(:first-child) > div.cell {
@@ -83,7 +115,7 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
     }
 
     #resultset div[contenteditable="true"].nullable:before {
-      color: var(--vscode-banner-foreground);
+      color: var(--vscode-foreground);
       position: absolute;
       top: -22px;
       content: "Shift+Enter for null";
@@ -91,7 +123,7 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
       opacity: 1;
       padding: 2px;
       font-style: normal;
-      border: 1px solid var(--vscode-banner-foreground);
+      border: 1px solid var(--dt-accent);
       width: max-content;
       z-index: 2;
     }
@@ -108,7 +140,7 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
       width: 1px;
       position: absolute;
       cursor: col-resize;
-      border-right:1px solid  #ffffff10;
+      border-right: 1px solid var(--dt-border);
     }
 
     .center-screen {

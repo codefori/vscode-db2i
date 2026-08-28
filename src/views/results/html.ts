@@ -357,6 +357,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
           let columnMetaData = undefined;
           let needToInitializeTable = true;
           let totalRows = 0;
+          let zebraRow = 0;
           let noMoreRows = false;
           let isFetching = false;
           let allRows = false;
@@ -514,6 +515,13 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
               `resultSetDiv.style.setProperty('--col-'+col,'200px');
               cell.style['max-width'] = 'var(--col-'+col+')';`:''}
             });
+            // Trailing filler column: soaks up the width left over when the data
+            // columns are narrower than the viewport, so the sticky header band
+            // and the zebra stripes reach the right edge instead of stopping short.
+            const fillerHeader = document.createElement("div");
+            fillerHeader.classList.add("header", "filler");
+            footerDiv.before(fillerHeader);
+            columnTemplate += ' 1fr';
             resultSetDiv.style["grid-template-columns"] = columnTemplate;
 
 
@@ -546,7 +554,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
               // Insert a row at the end of table
               let currentColumn = 0;
               const rowDiv = document.createElement("div");
-              rowDiv.className = "row";
+              rowDiv.className = "row " + (zebraRow++ % 2 ? "even" : "odd");
 
               for (const cell of row) {
                 const columnName = columnMetaData[currentColumn].name;
@@ -591,6 +599,10 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
                 rowDiv.appendChild(newCell);
                 currentColumn += 1;
               }
+              // Cell for the trailing filler column (see initializeTable)
+              const fillerCell = document.createElement("div");
+              fillerCell.classList.add("cell", "filler");
+              rowDiv.appendChild(fillerCell);
               footerDiv.before(rowDiv);
             }
           }
