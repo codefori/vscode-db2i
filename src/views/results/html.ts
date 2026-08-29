@@ -1,5 +1,5 @@
 import { Webview } from "vscode";
-import { getHeader, nullCellColor } from "../html";
+import { getHeader } from "../html";
 
 import Configuration from "../../configuration";
 import { SqlParameter } from "./resultSetPanelProvider";
@@ -321,13 +321,12 @@ document.getElementById('resultset').onclick = function(e){
 
 export function generateScroller(uiId: string, basicSelect: string, parameters: SqlParameter[] = [], isCL: boolean = false, withCancel: boolean = false, updatable?: UpdatableInfo): string {
   const withCollapsed = Configuration.get<boolean>('collapsedResultSet');
-  const nullColor = nullCellColor(Configuration.get<string>('resultsets.nullCellColor'));
 
   return /*html*/`
     <!DOCTYPE html>
     <html lang="en">
       <head>
-        ${getHeader({withCollapsed, nullColor})}
+        ${getHeader({withCollapsed})}
         <script>
           /* 
           ${new Date().getTime()}

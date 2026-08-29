@@ -74,8 +74,6 @@ export interface DataTableOptions<T> {
   emptyMessage?: string;
   /** Initial sort. Omit to keep the natural order of `rows`. */
   sort?: { columnId: string; direction?: "asc" | "desc" };
-  /** CSS colour for NULL values (hex, rgb()/hsl()/var(), or a colour name) */
-  nullColor?: string;
 }
 
 export interface DataTableHandlers<T> {
@@ -92,11 +90,8 @@ const escapeHtml = (value: unknown): string =>
     "'": `&#39;`,
   }[ch] as string));
 
-/** A value safe to drop straight into a CSS `color:` declaration, or undefined */
-function cssColor(value?: string): string | undefined {
-  const trimmed = (value ?? ``).trim();
-  return trimmed && /^[#a-zA-Z0-9(),.%/\s-]+$/.test(trimmed) ? trimmed : undefined;
-}
+/** Fixed colour for NULL values */
+const NULL_CELL_COLOR = `var(--vscode-charts-orange)`;
 
 /**
  * Turn a plain cell value into cell HTML. JSON-looking strings are pretty-printed
@@ -201,7 +196,6 @@ function toWire<T>(options: DataTableOptions<T>) {
  */
 export function renderDataTable<T>(options: DataTableOptions<T>): string {
   const model = toWire(options);
-  const nullColor = cssColor(options.nullColor);
   const subtitleFn = typeof options.subtitle === `function` ? options.subtitle : undefined;
   const initialSubtitle = subtitleFn
     ? subtitleFn(model.rows.length, model.rows.length)
@@ -312,11 +306,11 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     .dt-json { display: block; white-space: pre; }
     .dt-c:has(.dt-json) { max-width: none; }
 
-    /* NULL values: italic bold, colour from the nullCellColor setting if set */
+    /* NULL values: italic bold, orange */
     .dt-null {
       font-style: italic;
       font-weight: bold;
-      ${nullColor ? `color: ${nullColor};` : ``}
+      color: ${NULL_CELL_COLOR};
     }
 
     /* Absorbs the horizontal space left over when the columns are narrower than

@@ -1,23 +1,7 @@
-/**
- * The colours offered by the `vscode-db2i.resultsets.nullCellColor` setting,
- * mapped to a theme-aware CSS value. Anything else (including `"None"`) yields
- * `undefined`, meaning "leave the default foreground colour".
- */
-const NULL_CELL_COLOR_VARS: Record<string, string> = {
-  Blue: `var(--vscode-charts-blue)`,
-  Green: `var(--vscode-charts-green)`,
-  Red: `var(--vscode-charts-red)`,
-  Orange: `var(--vscode-charts-orange)`,
-  Yellow: `var(--vscode-charts-yellow)`,
-  Purple: `var(--vscode-charts-purple)`,
-};
+/** Fixed colour for NULL values in the results grid and the DBA panel */
+const NULL_CELL_COLOR = `var(--vscode-charts-orange)`;
 
-export function nullCellColor(setting: string | undefined): string | undefined {
-  return setting ? NULL_CELL_COLOR_VARS[setting] : undefined;
-}
-
-export function getHeader(options: { withCollapsed?: boolean; nullColor?: string } = {}): string {
-  const nullColor = options.nullColor;
+export function getHeader(options: { withCollapsed?: boolean } = {}): string {
   return /*html*/`
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -149,7 +133,7 @@ export function getHeader(options: { withCollapsed?: boolean; nullColor?: string
     #resultset .null {
       font-style: italic;
       font-weight: bold;
-      ${nullColor ? `color: ${nullColor};` : ``}
+      color: ${NULL_CELL_COLOR};
     }
 
     #resultset .grip {
