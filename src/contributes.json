@@ -38,6 +38,16 @@
               "Java 17",
               "Java 21"
             ]
+          },
+          "vscode-db2i.delimitedList.quoteNumbers": {
+            "type": "boolean",
+            "description": "Quote numeric values when copying a selection as a SQL list",
+            "default": true
+          },
+          "vscode-db2i.delimitedList.wrapInParentheses": {
+            "type": "boolean",
+            "description": "Wrap the SQL list in parentheses when using 'Copy as SQL List' (instant copy)",
+            "default": false
           }
         }
       },
@@ -137,6 +147,16 @@
         "command": "vscode-db2i.importDataContextMenu",
         "title": "Generate Insert from File",
         "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.copyAsDelimitedList",
+        "title": "Copy as SQL List",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.copyAsDelimitedListPrompt",
+        "title": "Copy as SQL List (Prompt Format)",
+        "category": "Db2 for i"
       }
     ],
     "menus": {
@@ -148,6 +168,14 @@
         {
           "command": "vscode-db2i.importDataContextMenu",
           "when": "false"
+        },
+        {
+          "command": "vscode-db2i.copyAsDelimitedList",
+          "when": "editorLangId == sql && editorHasSelection"
+        },
+        {
+          "command": "vscode-db2i.copyAsDelimitedListPrompt",
+          "when": "editorLangId == sql && editorHasSelection"
         }
       ],
       "editor/context": [
@@ -169,6 +197,16 @@
         {
           "command": "vscode-db2i.importDataContextMenu",
           "group": "sql@3"
+        },
+        {
+          "command": "vscode-db2i.copyAsDelimitedList",
+          "group": "sql@4",
+          "when": "editorLangId == sql && editorHasSelection"
+        },
+        {
+          "command": "vscode-db2i.copyAsDelimitedListPrompt",
+          "group": "sql@5",
+          "when": "editorLangId == sql && editorHasSelection"
         }
       ]
     }

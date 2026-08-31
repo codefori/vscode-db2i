@@ -4,18 +4,17 @@ import * as vscode from "vscode";
 import SchemaBrowser from "./views/schemaBrowser";
 
 import * as JSONServices from "./language/json";
+import * as ClipboardServices from "./language/clipboard";
 import * as resultsProvider from "./views/results";
 
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
-import { registerContinueProvider } from "./aiProviders/continue/continueContextProvider";
-import { registerDb2iTablesProvider } from "./aiProviders/continue/listTablesContextProvider";
 import { registerCopilotProvider } from "./aiProviders/copilot";
-import { getInstance, loadBase } from "./base";
-import { JobManager, initConfig, onConnectOrServerInstall } from "./config";
+import { getBase, getInstance, loadBase } from "./base";
+import { updateStatusBar } from "./views/jobManager/statusBar";
+import { JobManager, initConfig, onConnectOrServerInstall as onCode4iConnect } from "./config";
 import Configuration from "./configuration";
+import { ExtendedSQLJob } from "./connection/extendedSQLJob";
 import { SQLJobManager } from "./connection/manager";
-import { ServerComponent } from "./connection/serverComponent";
-import { OldSQLJob } from "./connection/sqlJob";
 import Statement from "./database/statement";
 import { languageInit } from "./language/providers";
 import { DbCache } from "./language/providers/logic/cache";
@@ -31,22 +30,27 @@ import { QueryHistory } from "./views/queryHistoryView";
 
 export interface Db2i {
   sqlJobManager: SQLJobManager,
-  sqlJob: (options?: JDBCOptions) => OldSQLJob
+  sqlJob: (options?: JDBCOptions) => Promise<ExtendedSQLJob>
   sqlExamples: typeof SQLExamples,
   statement: typeof Statement,
   dbCache: typeof DbCache,
 }
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
+export namespace Db2foriOutput {
+  const outputChannel = vscode.window.createOutputChannel(`Db2 for IBM i`, `json`);
+  export function writeOutput(jsonString?: string, show = false) {
+    if (show) {
+      outputChannel.show();
+    }
 
-export function activate(context: vscode.ExtensionContext): Db2i {
+    if (jsonString) {
+      outputChannel.appendLine(jsonString);
+    }
+  }
+}
 
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log(`Congratulations, your extension "vscode-db2i" is now active!`);
-
-  loadBase(context);
+export async function activate(context: vscode.ExtensionContext): Promise<Db2i> {
+  await loadBase(context);
 
   const jobManagerView = new JobManagerView(context);
   const jobManagerTreeView = vscode.window.createTreeView(`jobManager`, { treeDataProvider: jobManagerView, showCollapseAll: true });
@@ -62,7 +66,6 @@ export function activate(context: vscode.ExtensionContext): Db2i {
   context.subscriptions.push(
     ...languageInit(),
     ...notebookInit(),
-    ServerComponent.initOutputChannel(),
     jobManagerTreeView,
     schemaBrowserTreeView,
     queryHistoryTreeView,
@@ -72,10 +75,13 @@ export function activate(context: vscode.ExtensionContext): Db2i {
       new SelfTreeDecorationProvider()
     ),
     vscode.window.registerUriHandler(new Db2iUriHandler()),
-    getStatementUri
+    getStatementUri,
+    // Re-apply the status bar colour when the connection settings change, like the core does
+    getBase().onCodeForIBMiConfigurationChange(`connectionSettings`, () => updateStatusBar())
   );
 
   JSONServices.initialise(context);
+  ClipboardServices.initialise(context);
   resultsProvider.initialise(context);
 
   initConfig(context);
@@ -96,15 +102,11 @@ export function activate(context: vscode.ExtensionContext): Db2i {
     selfCodesView.setJobOnly(false);
     setCheckerAvailableContext();
     // Refresh the examples when we have it, so we only display certain examples
-    onConnectOrServerInstall().then(() => {
+    onCode4iConnect().then(async () => {
       schemaBrowser.clearCacheAndRefresh();
       exampleBrowser.refresh();
       queryHistory.refresh();
       selfCodesView.setRefreshEnabled(Configuration.get(`jobSelfViewAutoRefresh`) || false);
-      // register list tables
-      const currentJob = JobManager.getSelection();
-      const currentSchema = currentJob?.job.options.libraries[0];
-      registerDb2iTablesProvider(currentSchema);
       if (devMode && runTests) {
         runTests();
       }
@@ -114,16 +116,12 @@ export function activate(context: vscode.ExtensionContext): Db2i {
 
   // register copilot provider
   registerCopilotProvider(context);
-  // register continue provider
-  registerContinueProvider();
 
-
-
-  instance.subscribe(context, `disconnected`, `db2i-disconnected`, () => ServerComponent.reset());
+  console.log(`Congratulations, ${context.extension.id} is now active!`);
 
   return {
     sqlJobManager: JobManager,
-    sqlJob: (options?: JDBCOptions) => new OldSQLJob(options),
+    sqlJob: (options?: JDBCOptions) => JobManager.newJob(options),
     sqlExamples: SQLExamples,
     statement: Statement,
     dbCache: DbCache

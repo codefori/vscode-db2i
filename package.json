@@ -2,7 +2,7 @@
   "name": "vscode-db2i",
   "displayName": "Db2 for IBM i",
   "description": "Db2 for IBM i tools in VS Code",
-  "version": "1.17.0",
+  "version": "2.0.3-dev.0",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -33,11 +33,10 @@
   "main": "./dist/extension.js",
   "scripts": {
     "test": "vitest",
-    "dsc": "npx tsx src/dsc",
     "package": "vsce package",
-    "vscode:prepublish": "rm -rf dist && npm run webpack && npm run dsc",
-    "webpack": "vscd --clean && webpack --mode development",
-    "webpack-dev": "vscd --clean && webpack --mode development",
+    "vscode:prepublish": "npm run webpack",
+    "webpack": "vscd --clean && webpack --mode production",
+    "webpack-dev": "vscd --clean && webpack --mode development --watch",
     "typings": "npx -p typescript tsc ./src/extension.ts --excludeDirectories '**/node_modules' --allowJs --noEmit --esModuleInterop -t es2019 --moduleResolution node --skipLibCheck"
   },
   "contributes": {
@@ -79,6 +78,16 @@
               "Java 17",
               "Java 21"
             ]
+          },
+          "vscode-db2i.delimitedList.quoteNumbers": {
+            "type": "boolean",
+            "description": "Quote numeric values when copying a selection as a SQL list",
+            "default": true
+          },
+          "vscode-db2i.delimitedList.wrapInParentheses": {
+            "type": "boolean",
+            "description": "Wrap the SQL list in parentheses when using 'Copy as SQL List' (instant copy)",
+            "default": false
           }
         }
       },
@@ -543,6 +552,16 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.copyAsDelimitedList",
+        "title": "Copy as SQL List",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.copyAsDelimitedListPrompt",
+        "title": "Copy as SQL List (Prompt Format)",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.refreshSchemaBrowser",
         "title": "Refresh Schema Browser",
         "category": "Db2 for i",
@@ -569,6 +588,21 @@
       {
         "command": "vscode-db2i.generateSQL",
         "title": "Generate SQL",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateSQLWithConstraints",
+        "title": "With Inline Constraints",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateSQLWithoutConstraints",
+        "title": "With Separate ALTER Statements",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateRoutineCall",
+        "title": "Generate Call Statement",
         "category": "Db2 for i"
       },
       {
@@ -751,16 +785,28 @@
         "icon": "$(lightbulb)"
       },
       {
-        "command": "vscode-db2i.dove.editSettings",
-        "title": "Settings",
+        "command": "vscode-db2i.dove.searchVisualExplain",
+        "title": "Search",
         "category": "Db2 for i",
-        "icon": "$(gear)"
+        "icon": "$(search)"
       },
       {
         "command": "vscode-db2i.dove.export",
         "title": "Export current VE data",
         "category": "Db2 for i",
         "icon": "$(file)"
+      },
+      {
+        "command": "vscode-db2i.dove.editSettings",
+        "title": "Settings",
+        "category": "Db2 for i",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "vscode-db2i.dove.node.searchVisualExplainDetails",
+        "title": "Search",
+        "category": "Db2 for i",
+        "icon": "$(search)"
       },
       {
         "command": "vscode-db2i.dove.node.copy",
@@ -958,6 +1004,12 @@
         "enablement": "vscode-db2i:continueExtensionActive"
       },
       {
+        "command": "vscode-db2i.self.viewJobLog",
+        "title": "View Job Log",
+        "category": "Db2 for i",
+        "icon": "$(info)"
+      },
+      {
         "command": "vscode-db2i.self.help",
         "title": "Open SELF Documentation",
         "category": "Db2 for i",
@@ -1033,6 +1085,14 @@
           "when": "false"
         },
         {
+          "command": "vscode-db2i.copyAsDelimitedList",
+          "when": "editorLangId == sql && editorHasSelection"
+        },
+        {
+          "command": "vscode-db2i.copyAsDelimitedListPrompt",
+          "when": "editorLangId == sql && editorHasSelection"
+        },
+        {
           "command": "vscode-db2i.filterDatabaseObjectTypes",
           "when": "never"
         },
@@ -1042,6 +1102,18 @@
         },
         {
           "command": "vscode-db2i.generateSQL",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateSQLWithConstraints",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateSQLWithoutConstraints",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateRoutineCall",
           "when": "never"
         },
         {
@@ -1105,12 +1177,20 @@
           "when": "vscode-db2i:explaining == true"
         },
         {
-          "command": "vscode-db2i.dove.editSettings",
-          "when": "vscode-db2i:explaining == true"
+          "command": "vscode-db2i.dove.searchVisualExplain",
+          "when": "never"
         },
         {
           "command": "vscode-db2i.dove.export",
           "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.editSettings",
+          "when": "vscode-db2i:explaining == true"
+        },
+        {
+          "command": "vscode-db2i.dove.node.searchVisualExplainDetails",
+          "when": "never"
         },
         {
           "command": "vscode-db2i.dove.node.copy",
@@ -1204,6 +1284,26 @@
         {
           "command": "vscode-db2i.importDataContextMenu",
           "group": "sql@3"
+        },
+        {
+          "command": "vscode-db2i.copyAsDelimitedList",
+          "group": "sql@4",
+          "when": "editorLangId == sql && editorHasSelection"
+        },
+        {
+          "command": "vscode-db2i.copyAsDelimitedListPrompt",
+          "group": "sql@5",
+          "when": "editorLangId == sql && editorHasSelection"
+        }
+      ],
+      "generateSQLSubmenu": [
+        {
+          "command": "vscode-db2i.generateSQLWithConstraints",
+          "group": "1_generate"
+        },
+        {
+          "command": "vscode-db2i.generateSQLWithoutConstraints",
+          "group": "1_generate"
         }
       ],
       "view/title": [
@@ -1248,7 +1348,7 @@
           "when": "view == vscode-db2i.dove.nodes"
         },
         {
-          "command": "vscode-db2i.dove.editSettings",
+          "command": "vscode-db2i.dove.searchVisualExplain",
           "group": "navigation@1",
           "when": "view == vscode-db2i.dove.nodes"
         },
@@ -1258,9 +1358,19 @@
           "when": "view == vscode-db2i.dove.nodes"
         },
         {
-          "command": "vscode-db2i.dove.close",
+          "command": "vscode-db2i.dove.editSettings",
           "group": "navigation@3",
           "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.close",
+          "group": "navigation@4",
+          "when": "view == vscode-db2i.dove.nodes"
+        },
+        {
+          "command": "vscode-db2i.dove.node.searchVisualExplainDetails",
+          "group": "navigation@0",
+          "when": "view == vscode-db2i.dove.node"
         },
         {
           "command": "vscode-db2i.dove.generateSqlForAdvisedIndexes",
@@ -1380,7 +1490,12 @@
           "group": "inline"
         },
         {
-          "command": "vscode-db2i.generateSQL",
+          "command": "vscode-db2i.generateRoutineCall",
+          "when": "viewItem == procedure || viewItem == function",
+          "group": "db2@1"
+        },
+        {
+          "submenu": "generateSQLSubmenu",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == trigger || viewItem == type",
           "group": "db2@2"
         },
@@ -1544,6 +1659,11 @@
           "group": "navigation"
         },
         {
+          "command": "vscode-db2i.self.viewJobLog",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeJob",
+          "group": "inline@1"
+        },
+        {
           "command": "vscode-db2i.examples.edit",
           "when": "view == exampleBrowser && viewItem == example.custom",
           "group": "0_open"
@@ -1647,6 +1767,10 @@
       ]
     },
     "submenus": [
+      {
+        "id": "generateSQLSubmenu",
+        "label": "Generate SQL"
+      },
       {
         "icon": "$(notebook-execute)",
         "id": "sql/editor/context",
@@ -1881,10 +2005,10 @@
     ]
   },
   "devDependencies": {
-    "@continuedev/core": "^1.0.13",
-    "@halcyontech/vscode-ibmi-types": "^2.17.0",
+    "@halcyontech/vscode-ibmi-types": "^3.0.12",
+    "@ibm/mapepire-js": "^0.5.0",
     "@types/glob": "^7.1.3",
-    "@types/node": "18.x",
+    "@types/node": "25.x",
     "@types/vscode": "^1.95.0",
     "esbuild-loader": "^4.3.0",
     "glob": "^7.1.7",
@@ -1898,14 +2022,10 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
-    "@ibm/mapepire-js": "^0.5.0",
-    "@octokit/rest": "^21.1.1",
     "chart.js": "^4.4.2",
     "csv": "^6.1.3",
     "json-to-markdown-table": "^1.0.0",
     "lru-cache": "^6.0.0",
-    "node-fetch": "^3.3.1",
-    "octokit": "^5.0.3",
     "showdown": "^2.1.0",
     "sql-formatter": "^14.0.0"
   }

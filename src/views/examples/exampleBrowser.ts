@@ -1,9 +1,9 @@
-import { Event, EventEmitter, ExtensionContext, FileSystemWatcher, MarkdownString, RelativePattern, TextDocument, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, commands, window, workspace } from "vscode";
+import * as path from 'path';
+import { Event, EventEmitter, ExtensionContext, FileSystemWatcher, MarkdownString, RelativePattern, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, commands, window, workspace } from "vscode";
 import { Examples, SQLExample, SQLExamples, ServiceInfoLabel } from ".";
-import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
 import { osDetail } from "../../config";
 import Configuration from "../../configuration";
-import * as path from 'path';
+import { notebookFromStatements } from "../../notebooks/logic/openAsNotebook";
 
 export const openExampleCommand = `vscode-db2i.examples.open`;
 
@@ -259,7 +259,9 @@ function exampleWorksForOnOS(example: SQLExample): boolean {
 
     // If this example has specific system requirements defined
     if (example.requirements &&
+      //@ts-ignore
       example.requirements[myOsVersion] &&
+      //@ts-ignore
       osDetail.getDb2Level() < example.requirements[myOsVersion]) {
       return false;
     }

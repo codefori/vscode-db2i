@@ -1,9 +1,8 @@
 import { JobManager } from "../config";
 import Configuration from "../configuration";
-import { JobInfo } from "../connection/manager";
 import Schemas from "../database/schemas";
 import Statement from "../database/statement";
-import { buildSchemaDefinition, canTalkToDb, getContentItemsForRefs, getSqlContextItems } from "./context";
+import { buildSchemaDefinition, getContentItemsForRefs, getSqlContextItems } from "./context";
 import { DB2_SYSTEM_PROMPT } from "./prompts";
 
 export interface PromptOptions {
@@ -23,7 +22,7 @@ export interface BuildResult {
 }
 
 export async function getContextItems(input: string, options: PromptOptions = {}): Promise<BuildResult> {
-  const currentJob: JobInfo = JobManager.getSelection();
+  const currentJob = JobManager.getSelection();
   
   let contextItems: Db2ContextItems[] = [];
   let followUps = [];
@@ -35,8 +34,8 @@ export async function getContextItems(input: string, options: PromptOptions = {}
   };
 
   if (currentJob) {
-    const currentSchema = currentJob?.job.options.libraries[0] || "QGPL";
-    const useSchemaDef: boolean = Configuration.get<boolean>(`ai.useSchemaDefinition`);
+    const currentSchema = await currentJob?.job.getCurrentSchema();
+    const useSchemaDef = Configuration.get<boolean>(`ai.useSchemaDefinition`);
 
     // TODO: self?
 

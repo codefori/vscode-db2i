@@ -26,14 +26,10 @@ export interface ScrollerOptions {
 }
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
-  _view: WebviewView | WebviewPanel;
-  loadingState: boolean;
-  currentQuery: Query<any>;
+  _view: WebviewView | WebviewPanel | undefined;
+  loadingState: boolean = false;
+  currentQuery: Query<any> | undefined;
   lastScrollerOptions: ScrollerOptions | undefined;
-  constructor() {
-    this._view = undefined;
-    this.loadingState = false;
-  }
 
   endQuery() {
     if (this.currentQuery) {
@@ -85,7 +81,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     webviewView.webview.html = html.getLoadingHTML();
 
     const postCellResponse = (id: number, success: boolean) => {
-      this._view.webview.postMessage({
+      this._view?.webview.postMessage({
         command: `cellResponse`,
         id,
         success
@@ -102,15 +98,15 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           if (message.id && message.update && message.bindings) {
             console.log(message);
             try {
-              const result = await JobManager.runSQL(message.update, { parameters: message.bindings });
+              await JobManager.runSQL(message.update, { parameters: message.bindings });
               const substatement = message.bindings
-                ? `bind: ${message.bindings
+                ? `bind: ${(message.bindings as string[])
                   .map(binding => typeof binding === 'string' ? `'${binding}'` : String(binding))
                   .join(', ')}`
                 : undefined;
               commands.executeCommand(`vscode-db2i.queryHistory.prepend`, message.update, substatement);
               postCellResponse(message.id, true);
-            } catch (e) {
+            } catch (e: any) {
               // this.setError(e.message);
               // if (this.currentQuery) {
               //   this.currentQuery.close();
@@ -142,7 +138,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
               if (this.currentQuery.getState() !== "RUN_DONE") {
                 setCancelButtonVisibility(true);
-                let queryResults: QueryResult<any> = undefined;
+                let queryResults: QueryResult<any> | undefined = undefined;
                 let startTime = 0;
                 let endTime = 0;
                 let executionTime: number | undefined;
@@ -166,7 +162,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 }
                 const jobId = this.currentQuery.getHostJob().id;
 
-                this._view.webview.postMessage({
+                this._view?.webview.postMessage({
                   command: `rows`,
                   jobId,
                   rows: queryResults.data,
@@ -183,9 +179,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 canRefresh = true;
               }
 
-            } catch (e) {
+            } catch (e: any) {
               this.setError(e.message);
-              this._view.webview.postMessage({
+              this._view?.webview.postMessage({
                 command: `rows`,
                 rows: [],
                 queryId: ``,
@@ -233,12 +229,14 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       await this.focus();
     }
 
-    if (!this.loadingState) {
-      this._view.webview.html = html.getLoadingHTML();
-      this.loadingState = true;
-    }
+    if (this._view) {
+      if (!this.loadingState) {
+        this._view.webview.html = html.getLoadingHTML();
+        this.loadingState = true;
+      }
 
-    html.setLoadingText(this._view.webview, content);
+      html.setLoadingText(this._view.webview, content);
+    }
   }
 
   /** Update the result table column headings based on the configuration setting */
@@ -253,7 +251,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
   async setScrolling(options: ScrollerOptions) {
     this.lastScrollerOptions = { ...options };
-    
+
     this.loadingState = false;
     await this.focus();
 
@@ -263,7 +261,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       const schema = options.ref.object.schema || options.ref.object.system;
       if (schema) {
         const goodSchema = Statement.delimName(schema, true);
-        const goodName = Statement.delimName(options.ref.object.name, true);
+        const goodName = Statement.delimName(options.ref.object.name || '', true);
 
         try {
           const isPartitioned = await Table.isPartitioned(goodSchema, goodName);
@@ -332,28 +330,34 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
               };
             }
           }
-        } catch (e) {
+        } catch (e: any) {
           window.showErrorMessage(`Table may not be updatable. This sometimes happens if you're Db2 for i PTF levels are not up to date: ${e.message}`);
         }
       }
     }
 
-    this._view.webview.html = html.generateScroller(options.uiId, options.basicSelect, options.parameters, options.isCL, options.withCancel, updatable);
+    if (this._view) {
+      this._view.webview.html = html.generateScroller(options.uiId || '', options.basicSelect, options.parameters, options.isCL, options.withCancel, updatable);
 
-    this._view.webview.postMessage({
-      command: `fetch`,
-      queryId: options.queryId
-    });
+      this._view.webview.postMessage({
+        command: `fetch`,
+        queryId: options.queryId
+      });
+    }
   }
 
-  setError(error) {
+  setError(error: string) {
     this.loadingState = false;
     // TODO: pretty error
-    this._view.webview.html = `<p>${error}</p>`;
+    if (this._view) {
+      this._view.webview.html = `<p>${error}</p>`;
+    }
   }
 
-  clear(){
-    this._view.webview.html = ``;
+  clear() {
+    if (this._view) {
+      this._view.webview.html = ``;
+    }
     this.resetContext();
   }
 

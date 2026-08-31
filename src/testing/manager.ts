@@ -1,22 +1,12 @@
 import assert from "assert";
 import { TestSuite } from ".";
 import { JobManager } from "../config";
-import { ServerComponent } from "../connection/serverComponent";
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,
   tests: [
-    {name: `Backend check`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise();
-  
-      // To run these tests, we need the backend server. If this test fails. Don't bother
-      assert.strictEqual(backendInstalled, true);
-      await JobManager.endAll();
-    }},
 
     {name: `Adding a job`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
       // Ensure we have a blank manager first
       await JobManager.endAll();
       assert.strictEqual(JobManager.getRunningJobs().length, 0);
@@ -31,7 +21,7 @@ export const ManagerSuite: TestSuite = {
       
       // Check the job is really real
       const selected = JobManager.getSelection();
-      assert.notStrictEqual(selected, undefined);
+      assert.ok(selected);
       assert.notStrictEqual(selected.job.id, undefined);
       assert.strictEqual(selected.job.getStatus(), "ready");
       
@@ -45,8 +35,6 @@ export const ManagerSuite: TestSuite = {
     }},
 
     {name: `End all jobs`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-
       // Ensure we have a blank manager first
       await JobManager.endAll();
       assert.strictEqual(JobManager.getRunningJobs().length, 0);
@@ -65,9 +53,7 @@ export const ManagerSuite: TestSuite = {
       assert.strictEqual(JobManager.selectedJob, -1);
     }},
 
-    {name: `Set selected by name`, test: async () => {
-      assert.strictEqual(ServerComponent.isInstalled(), true);
-      
+    {name: `Set selected by name`, test: async () => {      
       // Ensure we have a blank manager first
       await JobManager.endAll();
       assert.strictEqual(JobManager.getRunningJobs().length, 0);
@@ -86,7 +72,7 @@ export const ManagerSuite: TestSuite = {
 
       assert.notStrictEqual(JobManager.setSelection(runningJobs[0].name), undefined);
 
-      assert.strictEqual(JobManager.getSelection().name, runningJobs[0].name);
+      assert.strictEqual(JobManager.getSelection()?.name, runningJobs[0].name);
 
       await JobManager.endAll();
     }}

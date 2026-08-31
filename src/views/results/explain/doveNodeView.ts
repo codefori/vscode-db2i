@@ -1,8 +1,8 @@
-import * as vscode from "vscode";
-import { CancellationToken, Event, EventEmitter, ProviderResult, TreeView, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands } from "vscode";
-import { ExplainNode, ExplainProperty, Highlighting, RecordType, NodeHighlights } from "./nodes";
-import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
 import * as crypto from "crypto";
+import * as vscode from "vscode";
+import { CancellationToken, Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, TreeView, commands } from "vscode";
+import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
+import { ExplainNode, ExplainProperty, Highlighting, NodeHighlights, RecordType } from "./nodes";
 
 type EventType = PropertyNode | undefined | null | void;
 
@@ -10,12 +10,12 @@ export class DoveNodeView implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<EventType> = new EventEmitter<EventType>();
   readonly onDidChangeTreeData: Event<EventType> = this._onDidChangeTreeData.event;
 
-  private currentNode: ExplainNode;
-  private propertyNodes: PropertyNode[];
+  private currentNode: ExplainNode | undefined;
+  private propertyNodes: PropertyNode[] = [];
 
   private treeView: TreeView<PropertyNode>;
   
-  private defaultTitle: string;
+  private defaultTitle: string | undefined;
 
   constructor() {
     this.treeView = vscode.window.createTreeView(`vscode-db2i.dove.node`, { treeDataProvider: this, showCollapseAll: true });
@@ -34,7 +34,7 @@ export class DoveNodeView implements TreeDataProvider<any> {
     this.currentNode = node;
     this.treeView.title = title || this.defaultTitle;
     this.propertyNodes = [];
-    let currentSection: PropertySection = null;
+    let currentSection: PropertySection | undefined;
     for (let property of node.props) {
       let node = property.type === RecordType.HEADING ? new PropertySection(property) : new PropertyNode(property);
       // If the property node is a new section, add it to the top level node list and set as the current section
@@ -61,7 +61,7 @@ export class DoveNodeView implements TreeDataProvider<any> {
     // Show the detail view and if the explain node has a context defined, set it
     this.setContext(true);
   }
-  getNode(): ExplainNode {
+  getNode() {
     return this.currentNode;
   }
 

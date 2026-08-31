@@ -1,7 +1,7 @@
 import Callable, { CallableRoutine, CallableSignature, CallableType } from "../../../database/callable";
 import Schemas, { PageData, SQLType } from "../../../database/schemas";
 import Table from "../../../database/table";
-import { SQLParm, BasicSQLObject, TableColumn } from "../../../types";
+import { BasicSQLObject, SQLParm, TableColumn } from "../../../types";
 
 export interface RoutineDetail {
   routine: CallableRoutine;
@@ -13,7 +13,7 @@ export type LookupResult = RoutineDetail | SQLParm | BasicSQLObject | TableColum
 export class DbCache {
   private static schemaObjects: Map<string, BasicSQLObject[]> = new Map();
   private static objectColumns: Map<string, TableColumn[]> = new Map();
-  private static routines: Map<string, CallableRoutine|false> = new Map();
+  private static routines: Map<string, CallableRoutine | false> = new Map();
   private static routineSignatures: Map<string, CallableSignature[]> = new Map();
 
   private static toReset: string[] = [];
@@ -41,7 +41,7 @@ export class DbCache {
     return false;
   }
 
-  static async lookupSymbol(name: string, schema: string|undefined, objectFilter: string[]): Promise<LookupResult> {
+  static async lookupSymbol(name: string, schema: string | undefined, objectFilter: string[]): Promise<LookupResult | undefined> {
     const included = (lookupName: string) => {
       if (objectFilter) {
         return objectFilter.includes(lookupName.toLowerCase());
@@ -98,7 +98,7 @@ export class DbCache {
 
   static async getObjectColumns(schema: string, name: string) {
     const key = getKey(`columns`, schema, name);
-    
+
     if (!this.objectColumns.has(key) || this.shouldReset(name)) {
       const result = await Table.getItems(schema, name);
       if (result) {
@@ -111,7 +111,7 @@ export class DbCache {
 
   static async getObjects(schema: string, types: SQLType[], details?: PageData) {
     const key = getKey(`objects`, schema, types.join(`&`));
-    
+
     if (!this.schemaObjects.has(key) || this.shouldReset(schema)) {
       const result = await Schemas.getObjects(schema, types, details);
       if (result) {
@@ -124,7 +124,7 @@ export class DbCache {
 
   static async getRoutine(schema: string, name: string, type: CallableType) {
     const key = getKey(type, schema, name);
-    
+
     if (!this.routines.has(key) || this.shouldReset(name)) {
       const result = await Callable.getType(schema, name, type);
       if (result) {
@@ -145,7 +145,7 @@ export class DbCache {
 
   static async getSignaturesFor(schema: string, name: string, specificNames: string[]) {
     const key = getKey(`signatures`, schema, name);
-    
+
     if (!this.routineSignatures.has(key) || this.shouldReset(name)) {
       const result = await Callable.getSignaturesFor(schema, specificNames);
       if (result) {
@@ -156,9 +156,12 @@ export class DbCache {
     return this.routineSignatures.get(key) || [];
   }
 
-  static getCachedSignatures(schema: string, name: string) {
-    const key = getKey(`signatures`, schema, name);
-    return this.routineSignatures.get(key) || [];
+  static getCachedSignatures(schema?: string, name?: string) {
+    if (schema && name) {
+      const key = getKey(`signatures`, schema, name);
+      return this.routineSignatures.get(key) || [];
+    }
+    return [];
   }
 }
 

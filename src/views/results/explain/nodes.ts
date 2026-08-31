@@ -27,7 +27,7 @@ export interface ExplainProperty {
 }
 
 export class ExplainTree {
-  private readonly topNode: ExplainNode;
+  private readonly topNode: ExplainNode | undefined;
 
   constructor(visualExplainData: VisualExplainData[]) {
     let topNodeId = Number.MAX_SAFE_INTEGER;
@@ -55,11 +55,11 @@ export class ExplainTree {
     this.topNode = nodesById.get(topNodeId);
 
     //Link nodes based on their children ids
-    [...nodesById.values()].forEach(node => node.children.push(...node.childrenIds.map(id => nodesById.get(id))));
+    [...nodesById.values()].forEach(node => node.children.push(...node.childrenIds.map(id => nodesById.get(id)!)));
   }
 
   /** Returns the top node */
-  public get(): ExplainNode {
+  public get() {
     return this.topNode;
   }
 
@@ -213,12 +213,12 @@ export class ExplainTree {
     // If the context data attribute relates to an advised index or statistic, squirrel it away
     if (contextType == ContextType.ADVISED_INDEX || contextType == ContextType.ADVISED_STATISTIC) {
       let attributeId: number = data.IFA_CTXORD;
-      let contextObj: ContextObject;
+      let contextObj;
       // The attributes are sequentially ordered, so for a given context type, we look to continue filling attributes of the last instance.
       // If the attribute we are adding is one that has already been set in the last context object, we start a new one.
-      let co: ContextObject = node.contextObjects.filter((co) => co.contextType == contextType).pop();
+      let co = node.contextObjects.filter((co) => co.contextType == contextType).pop();
       // If the attribute is not set, this is the context object that we will update
-      if (co != undefined && !co.hasProperty(attributeId)) {
+      if (co && !co.hasProperty(attributeId)) {
         contextObj = co;
       }
       // If we are not updating an existing context object, create one and push it onto the list
@@ -243,12 +243,14 @@ export class ExplainTree {
   /** Collects the context objects from the all the tree nodes, sorted by type */
   public getContextObjects(includeType?: number[]): ContextObject[] {
     let contextObjects: ContextObject[] = [];
-    this.topNode.contextObjects.forEach(co => contextObjects.push(co));
-    this.getAllChildNodes(this.topNode).forEach(en => en.contextObjects.forEach(co => contextObjects.push(co)));
-    if (includeType) {
-      contextObjects = contextObjects.filter(co => includeType.includes(co.contextType));
+    if (this.topNode) {
+      this.topNode.contextObjects.forEach(co => contextObjects.push(co));
+      this.getAllChildNodes(this.topNode).forEach(en => en.contextObjects.forEach(co => contextObjects.push(co)));
+      if (includeType) {
+        contextObjects = contextObjects.filter(co => includeType.includes(co.contextType));
+      }
+      contextObjects.sort((a: ContextObject, b: ContextObject) => a.contextType - b.contextType);
     }
-    contextObjects.sort((a: ContextObject, b: ContextObject) => a.contextType - b.contextType);
     return contextObjects;
   }
 
@@ -348,7 +350,7 @@ function newContextObjectProperty(propertyId: number, data: any): ContextObjectP
  */
 class ContextObjectProperty implements ExplainProperty {
   type: number;
-  title: string;
+  title: string = "";
   value: string | number;
   constructor(type: number, data: any) {
     this.type = type;
@@ -503,10 +505,10 @@ export namespace Highlighting {
   export function getFromSettings(): NodeHighlights {
     let highlights = new NodeHighlights();
     // Defined in the configuration section of package.json, managed under Db2 for IBM i->Visual Explain in VS Code Settings
-    let settings = Configuration.get(`visualExplain.highlighting`);
+    let settings = Configuration.get<Record<string, boolean>>(`visualExplain.highlighting`);
     if (settings) {
       let keys = Object.keys(settings);
-      for (let key of keys) {
+      for (const key of keys) {
         if (settings[key]) {
           switch (key) {
             case "Index Advised": highlights.set(Highlighting.INDEX_ADVISED); break;
@@ -612,6 +614,7 @@ export class NodeHighlights {
    * Returns the count of highlight bits that are set
    */
   getCount(): number {
+    //@ts-ignore
     return Object.keys(Highlighting).filter(h => isNaN(Number(h))).filter(h => this.isSet(Highlighting[h])).map(h => Highlighting[h]).length;
   }
 
@@ -631,15 +634,15 @@ export class NodeHighlights {
   /**
   * Returns the highest priority highlight color that matches the user's highlight preferences
   */
-  getPriorityColor(): ThemeColor {
+  getPriorityColor() {
     // From the user's highlight preferences, find the highest priority highlight set for this node
-    for (let name of Highlighting.getFromSettings().getNames()) {
+    for (const name of Highlighting.getFromSettings().getNames()) {
+      //@ts-ignore
       const highlight: Highlighting = Highlighting[name];
       if (this.isSet(highlight)) {
         return Highlighting.Colors[highlight];
       }
     }
-    return null;
   }
 
   /**
@@ -649,6 +652,7 @@ export class NodeHighlights {
     if (this.formatValue > 0) {
       console.log([
         "  " + this.constructor['name'] + ": " + this.formatValue,
+        //@ts-ignore
         ...Object.keys(Highlighting).filter(h => isNaN(Number(h)) && this.isSet(Highlighting[h])).map(h => "    - " + h)
       ].join("\n")
       );

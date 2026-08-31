@@ -1,5 +1,5 @@
-import { window, Event, EventEmitter, TreeItem, ThemeColor, FileDecorationProvider, FileDecoration, Uri, Disposable } from "vscode";
-import { NodeHighlights, Highlighting } from "./nodes";
+import { Disposable, Event, EventEmitter, FileDecoration, FileDecorationProvider, TreeItem, Uri, window } from "vscode";
+import { Highlighting, NodeHighlights } from "./nodes";
 
 /**
  * The Uri scheme for VE node highlights
@@ -9,8 +9,8 @@ const doveUriScheme = "db2i.dove";
 /**
  * Generates a {@link DoveTreeDecorationProvider} compatible Uri. The Uri scheme is set to {@link doveUriScheme}.
  */
-export function toDoveTreeDecorationProviderUri(highlights: NodeHighlights): Uri {
-    return highlights.formatValue != 0 ? Uri.parse(doveUriScheme + ":" + highlights.formatValue, false) : null;
+export function toDoveTreeDecorationProviderUri(highlights: NodeHighlights) {
+    return highlights.formatValue != 0 ? Uri.parse(doveUriScheme + ":" + highlights.formatValue, false) : undefined;
 }
 
 /**
@@ -28,7 +28,7 @@ export class DoveTreeDecorationProvider implements FileDecorationProvider {
     }
 
     async updateTreeItems(treeItem: TreeItem): Promise<void> {
-        this._onDidChangeFileDecorations.fire(treeItem.resourceUri);
+        this._onDidChangeFileDecorations.fire(treeItem.resourceUri!);
     }
 
     /**
@@ -42,25 +42,26 @@ export class DoveTreeDecorationProvider implements FileDecorationProvider {
             const value: number = Number(uri.fsPath);
             if (!isNaN(value) && value > 0) {
                 const nodeHighlights = new NodeHighlights(value);
-                let color: ThemeColor;
-                let badge: string;
-                let tooltip: string;
+                let color;
+                let badge;
+                let tooltip;
                 // For attribute section headings, only the color needs to be applied, which is not controlled by the highlight preferences
                 if (nodeHighlights.isSet(Highlighting.ATTRIBUTE_SECTION_HEADING)) {
                     color = Highlighting.Colors[Highlighting.ATTRIBUTE_SECTION_HEADING];
                 } else {
                     color = nodeHighlights.getPriorityColor();
                     badge = String(nodeHighlights.getCount()); // The number of highlights set for the node
+                    //@ts-ignore
                     tooltip = "\n" + nodeHighlights.getNames().map(h => "🔥 " + Highlighting.Descriptions[Highlighting[h]]).join("\n");
                 }
+
                 return {
                     color: color,
-                    badge: badge,
-                    tooltip: tooltip,
+                    badge,
+                    tooltip
                 }
             }
         }
-        return null;
     }
 
     dispose() {

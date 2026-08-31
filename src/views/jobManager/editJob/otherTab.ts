@@ -1,6 +1,6 @@
+import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import { formatDescription } from ".";
 import { getBase } from "../../../base";
-import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 
 const dataTruncationText = `
 Specifies whether truncation of character data generates warnings and exceptions. When this property is "true", the following apply:
@@ -367,21 +367,9 @@ export default function getOtherTab(options: JDBCOptions) {
       `Specifies the URL to be used for a connection on the middle-tier's DriverManager in a multiple tier environment, if it is different than already specified. This property allows you to use this driver to connect to databases other than DB2 for IBM i. Use a backslash as an escape character before backslashes and semicolons in the URL.`,
       { default: options["secondary URL"] || `` }
     )
-
-    .addSelect(`secure`, `Secure`, [
-      {
-        value: `false`,
-        text: `encrypt only the password`,
-        description: `False`,
-        selected: options["secure"] !== true,
-      },
-      {
-        value: `true`,
-        text: `encrypt all client/server communication`,
-        description: `True`,
-        selected: options["secure"] === true,
-      },
-    ])
+    .addParagraph(
+      `Other properties are those properties not easily categorized. These properties determine which JDBC driver is used, and specify options related to level of database access, bidirectional string type, data truncation and so on.`
+    )
     .addSelect(
       `server trace`,
       `Server trace`,
@@ -585,13 +573,13 @@ export default function getOtherTab(options: JDBCOptions) {
     .addInput(
       `key ring name`,
       `Key Ring Name`,
-      `Specifies the key ring class name used for SSL connections with the system. This property has no effect unless "secure" is set to true and a key ring password is set using the "key ring password" property.`,
+      `Specifies the key ring class name used for SSL connections with the system. This property has no effect unless "Use secure SQL connection" is enabled at the server connection level and a key ring password is set using the "key ring password" property.`,
       { default: options["key ring name"] || `` }
     )
     .addInput(
       `key ring password`,
       `Key Ring Password`,
-      `Specifies the password for the key ring class used for SSL communications with the system. This property has no effect unless "secure" is set to true and a key ring name is set using the "key ring name" property.`,
+      `Specifies the password for the key ring class used for SSL communications with the system. This property has no effect unless "Use secure SQL connection" is enabled at the server connection level and a key ring name is set using the "key ring name" property.`,
       { default: options["key ring password"] || `` }
     );
 

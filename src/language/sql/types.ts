@@ -59,7 +59,7 @@ export enum StatementType {
 	Lock = "Lock",
 }
 
-export const StatementTypeWord = {
+export const StatementTypeWord = new Map(Object.entries({
 	'CREATE': StatementType.Create,
 	'SELECT': StatementType.Select,
 	'WITH': StatementType.With,
@@ -115,7 +115,7 @@ export const StatementTypeWord = {
 	'LOCK': StatementType.Lock,
 	'OPEN': StatementType.Open,
 	'CLOSE': StatementType.Close,
-};
+}));
 
 export enum ClauseType {
 	Unknown = "Unknown",
@@ -129,7 +129,7 @@ export enum ClauseType {
 	Order = "Order"
 }
 
-export const ClauseTypeWord = {
+export const ClauseTypeWord = new Map(Object.entries({
 	'FROM': ClauseType.From,
 	'INTO': ClauseType.Into,
 	'WHERE': ClauseType.Where,
@@ -138,7 +138,7 @@ export const ClauseTypeWord = {
 	'LIMIT': ClauseType.Limit,
 	'OFFSET': ClauseType.Offset,
 	'ORDER': ClauseType.Order
-}
+}));
 
 export interface CTEReference {
 	name: string;

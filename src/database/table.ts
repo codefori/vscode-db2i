@@ -11,7 +11,7 @@ export default class Table {
    * @returns {Promise<TableColumn[]>}
    */
   static async getItems(schema: string, table?: string): Promise<TableColumn[]> {
-    const params = table ? [schema, table] : [schema];
+    const params = table ? [schema, table, table] : [schema];
     const sql = [
       `SELECT `,
       `  column.TABLE_SCHEMA,`,
@@ -36,7 +36,7 @@ export default class Table {
       `    column.column_name = key.column_name`,
       `WHERE column.TABLE_SCHEMA = ?`,
       ...[
-        table ? `AND column.TABLE_NAME = ?` : ``,
+        table ? `AND (column.TABLE_NAME = ? OR column.SYSTEM_TABLE_NAME = ?)` : ``,
       ],
       `ORDER BY column.ORDINAL_POSITION`,
     ].join(` `);
@@ -80,7 +80,7 @@ export default class Table {
   }
 
   static async clearFile(library: string, objectName: string): Promise<void> {
-    const command = `CLRPFM ${Statement.escapeString(library)}/${Statement.escapeString(objectName)}`;
+    const command = `QSYS/CLRPFM ${Statement.escapeString(library)}/${Statement.escapeString(objectName)}`;
               
     const commandResult = await getInstance().getConnection().runCommand({
       command: command,
@@ -94,7 +94,7 @@ export default class Table {
 
   static async copyFile(library: string, objectName: string, options: CPYFOptions): Promise<void> {
     const command = [
-      `CPYF FROMFILE(${Statement.escapeString(library)}/${Statement.escapeString(objectName)}) TOFILE(${options.toLib}/${options.toFile})`,
+      `QSYS/CPYF FROMFILE(${Statement.escapeString(library)}/${Statement.escapeString(objectName)}) TOFILE(${options.toLib}/${options.toFile})`,
       `FROMMBR(${options.fromMbr}) TOMBR(${options.toMbr}) MBROPT(${options.mbrOpt})`,
       `CRTFILE(${options.crtFile}) OUTFMT(${options.outFmt})`
     ].join(` `);

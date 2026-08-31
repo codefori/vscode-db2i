@@ -88,6 +88,12 @@
         "enablement": "vscode-db2i:continueExtensionActive"
       },
       {
+        "command": "vscode-db2i.self.viewJobLog",
+        "title": "View Job Log",
+        "category": "Db2 for i",
+        "icon": "$(info)"
+      },
+      {
         "command": "vscode-db2i.self.help",
         "title": "Open SELF Documentation",
         "category": "Db2 for i",
@@ -147,6 +153,11 @@
           "command": "vscode-db2i.self.explainSelf",
           "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeNode && vscode-db2i:continueExtensionActive",
           "group": "navigation"
+        },
+        {
+          "command": "vscode-db2i.self.viewJobLog",
+          "when": "view == vscode-db2i.self.nodes && viewItem == selfCodeJob",
+          "group": "inline@1"
         }
       ]
     }

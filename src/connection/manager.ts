@@ -1,17 +1,17 @@
 
+import { SQLJob } from "@ibm/mapepire-js";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { JDBCOptions, QueryOptions, QueryResult } from "@ibm/mapepire-js/dist/src/types";
 import { getInstance } from "../base";
-import { askAboutNewJob, Config, onConnectOrServerInstall, osDetail } from "../config";
+import { askAboutNewJob, Config, osDetail } from "../config";
 import Configuration from "../configuration";
-import { SelfValue } from "../views/jobManager/selfCodes/nodes";
-import { ServerComponent, UpdateStatus } from "./serverComponent";
-import { OldSQLJob } from "./sqlJob";
 import { ConfigManager } from "../views/jobManager/ConfigManager";
+import { SelfValue } from "../views/jobManager/selfCodes/nodes";
+import { ExtendedSQLJob, extendSQLJob } from "./extendedSQLJob";
 
 export interface JobInfo {
   name: string;
-  job: OldSQLJob;
+  job: ExtendedSQLJob;
 }
 
 export type NamingFormats = "sql" | "system";
@@ -26,60 +26,53 @@ export class SQLJobManager {
 
   constructor() { }
 
-  async newJob(predefinedJob?: OldSQLJob, name?: string) {
-    if (ServerComponent.isInstalled()) {
+  async newJob(options?: JDBCOptions, name?: string) {
+    const connection = getInstance().getConnection()!;
+    const config = connection.getConfig();
+    const mapepire = await connection.getComponent<any>("mapepire");
 
-      const instance = getInstance();
-      const connection = instance.getConnection()!;
-      const config = connection.getConfig();
-
-      let newJob: OldSQLJob;
-      if (predefinedJob) {
-        newJob = predefinedJob;
-      } else {
-        let options: JDBCOptions = ConfigManager.getDefaultConfig();
-        const startUpConfigList = Config.getStartUpConfigList();
-        const startUpConfig = startUpConfigList.find((item) => item.connectionName === connection.currentConnectionName);
-        if (startUpConfig) {
-          const savedConfig = ConfigManager.getConfig(startUpConfig.configName);
-          if (savedConfig) {
-            name = startUpConfig.configName;
-            options = savedConfig;
-          }
+    if (!options) {
+      options = ConfigManager.getDefaultConfig();
+      const startUpConfigList = Config.getStartUpConfigList();
+      const startUpConfig = startUpConfigList.find((item) => item.connectionName === connection.currentConnectionName);
+      if (startUpConfig) {
+        const savedConfig = ConfigManager.getConfig(startUpConfig.configName);
+        if (savedConfig) {
+          name = startUpConfig.configName;
+          options = savedConfig;
         }
-
-        if (!options.libraries) {
-          options.libraries = [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)];
-        }
-
-        newJob = new OldSQLJob(options);
       }
 
-      try {
-        this.creatingJobs += 1;
-        await newJob.connect();
-
-        if (osDetail) {
-          const features = osDetail.getFeatures();
-          const selfDefault = SQLJobManager.getSelfDefault();
-          if (features.SELF && selfDefault !== `*NONE`) {
-            await newJob.setSelfState(selfDefault);
-          }
-        }
-
-        this.totalJobs += 1;
-
-        this.jobs.push({
-          name: `${name || 'New job'} (${this.totalJobs})`,
-          job: newJob
-        });
-
-        this.selectedJob = this.jobs.length - 1;
-      } catch (e: any) {
-        throw e;
-      } finally {
-        this.creatingJobs -= 1;
+      if (!options.libraries) {
+        options.libraries = [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)];
       }
+    }
+
+    try {
+      this.creatingJobs += 1;
+      const newJob = extendSQLJob(await mapepire.newJob(connection, { jdbc: options }));
+
+      if (osDetail) {
+        const features = osDetail.getFeatures();
+        const selfDefault = SQLJobManager.getSelfDefault();
+        if (features.SELF && selfDefault !== `*NONE`) {
+          await newJob.setSelfState(selfDefault);
+        }
+      }
+
+      this.totalJobs += 1;
+
+      this.jobs.push({
+        name: `${name || 'New job'} (${this.totalJobs})`,
+        job: newJob
+      });
+
+      this.selectedJob = this.jobs.length - 1;
+      return newJob;
+    } catch (e: any) {
+      throw e;
+    } finally {
+      this.creatingJobs -= 1;
     }
   }
 
@@ -106,7 +99,21 @@ export class SQLJobManager {
     this.totalJobs = 0;
   }
 
-  async closeJob(index?: number) {
+  async closeJobById(job: SQLJob) {
+    const index = this.jobs.findIndex(j => j.job.id === job.id);
+    if (index > -1) {
+      return this.closeJob(index);
+    }
+  }
+
+  async closeJobByName(name: string) {
+    const index = this.jobs.findIndex(info => info.name === name);
+    if (index > -1) {
+      return this.closeJob(index);
+    }
+  }
+
+  async closeJob(index: number) {
     if (this.jobs[index]) {
       const selected: JobInfo = this.jobs[index];
 
@@ -114,11 +121,6 @@ export class SQLJobManager {
       this.jobs.splice(index, 1);
       this.selectedJob = this.selectedJob - 1;
     }
-  }
-
-  closeJobByName(name: string) {
-    const id = this.jobs.findIndex(info => info.name === name);
-    return this.closeJob(id);
   }
 
   getSelection(): JobInfo | undefined {
@@ -141,7 +143,7 @@ export class SQLJobManager {
     return this.jobs[jobExists];
   }
 
-  private resetCurrentSchema(query: string, job: OldSQLJob) {
+  private resetCurrentSchema(query: string, job: ExtendedSQLJob) {
     if (query.toUpperCase().startsWith(`SET`)) {
       const newSchema = query.split(` `)[2];
       if (newSchema) {
@@ -180,22 +182,11 @@ export class SQLJobManager {
 
   async getPagingStatement<T>(query: string, opts?: QueryOptions): Promise<Query<T>> {
     const selected = this.jobs[this.selectedJob];
-    if (ServerComponent.isInstalled() && selected) {
+    if (selected) {
       this.resetCurrentSchema(query, selected?.job);
-
       return selected.job.query<T>(query, opts);
-
-    } else if (!ServerComponent.isInstalled()) {
-      let updateResult = await ServerComponent.checkForUpdate();
-      if (UpdateStatus.JUST_UPDATED === updateResult || UpdateStatus.UP_TO_DATE === updateResult) {
-        await onConnectOrServerInstall();
-        return this.getPagingStatement(query, opts);
-      }
-      throw new Error(`Database server component is required. Please see documentation for details.`);
-
     } else {
       const hasNewJob = await askAboutNewJob();
-
       if (hasNewJob) {
         return this.getPagingStatement(query, opts);
       } else {

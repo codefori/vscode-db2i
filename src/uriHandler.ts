@@ -1,8 +1,7 @@
-import { commands, env, Selection, Uri, UriHandler, window, workspace } from "vscode";
 import querystring from "querystring";
-import Document from "./language/sql/document";
-import { ServerComponent } from "./connection/serverComponent";
+import { commands, env, Selection, Uri, UriHandler, window, workspace } from "vscode";
 import { remoteAssistIsEnabled } from "./language/providers/logic/available";
+import Document from "./language/sql/document";
 
 export class Db2iUriHandler implements UriHandler {
   handleUri(uri: Uri) {

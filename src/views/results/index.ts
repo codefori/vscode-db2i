@@ -37,16 +37,16 @@ export interface StatementInfo {
 }
 
 export interface ParsedStatementInfo extends StatementInfo {
-  statement: Statement;
-  group: StatementGroup;
-  embeddedInfo: ParsedEmbeddedStatement;
+  statement?: Statement;
+  group?: StatementGroup;
+  embeddedInfo?: ParsedEmbeddedStatement;
 }
 
-const DelimValue = {
+const DelimValue = new Map(Object.entries({
   Comma: `,`,
   Semicolon: `;`,
   Tab: `\t`
-}
+}));
 
 export function setCancelButtonVisibility(visible: boolean) {
   vscode.commands.executeCommand(`setContext`, `vscode-db2i:statementCanCancel`, visible);
@@ -139,6 +139,16 @@ export function initialise(context: vscode.ExtensionContext) {
       explainTree.showAdvisedIndexesAndStatistics(doveNodeView);
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.dove.searchVisualExplain`, () => {
+      vscode.commands.executeCommand('vscode-db2i.dove.nodes.focus');
+      vscode.commands.executeCommand('list.find');
+    }),
+
+    vscode.commands.registerCommand(`vscode-db2i.dove.node.searchVisualExplainDetails`, () => {
+      vscode.commands.executeCommand('vscode-db2i.dove.node.focus');
+      vscode.commands.executeCommand('list.find');
+    }),
+
     vscode.commands.registerCommand(`vscode-db2i.dove.editSettings`, () => {
       vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.visualExplain');
     }),
@@ -171,15 +181,15 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.multiple.selected`, () => { runMultipleHandler(`selected`) }),
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.multiple.from`, () => { runMultipleHandler(`from`) }),
 
-    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withRun`, (options?: StatementInfo) => { runHandler({ qualifier: `explain`, ...options }) }),
-    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withoutRun`, (options?: StatementInfo) => { runHandler({ qualifier: `onlyexplain`, ...options }) }),
-    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.inView`, (options?: StatementInfo) => { runHandler({ viewColumn: ViewColumn.Beside, ...options }) }),
-    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, (options?: StatementInfo) => { runHandler(options) })
+    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withRun`, (options: StatementInfo) => runHandler(Object.assign({ qualifier: `explain` }, options))),
+    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withoutRun`, (options: StatementInfo) => runHandler(Object.assign({ qualifier: `onlyexplain` }, options))),
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.inView`, (options: StatementInfo) => runHandler({ viewColumn: ViewColumn.Beside, ...options })),
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, (options?: StatementInfo) => runHandler(options))
   )
 }
 
 function isStop(statement: Statement) {
-  return (statement.type === StatementType.Unknown && statement.tokens.length === 1 && statement.tokens[0].value.toUpperCase() === `STOP`);
+  return (statement.type === StatementType.Unknown && statement.tokens.length === 1 && statement.tokens[0].value?.toUpperCase() === `STOP`);
 }
 
 async function runMultipleHandler(mode: `all` | `selected` | `from`) {
@@ -229,7 +239,7 @@ async function runMultipleHandler(mode: `all` | `selected` | `from`) {
           vscode.window.showErrorMessage(`Cannot run multiple statements with prefix ${prefix}.`);
           editor.selection = new vscode.Selection(
             editor.document.positionAt(group.range.start),
-            editor.document.positionAt(group.range.start + label.length)
+            editor.document.positionAt(group.range.start + (label?.length || 0))
           );
           return;
         }
@@ -299,30 +309,31 @@ async function runHandler(options?: StatementInfo) {
     }
 
     if (editor) {
-      let group = statementDetail.group;
-      editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
-      editor.revealRange(editor.selection);
+      const group = statementDetail.group;
+      if (group) {
+        editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
+        editor.revealRange(editor.selection);
 
-      if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed) {
-        editor.insertSnippet(new SnippetString(statementDetail.embeddedInfo.content));
-        return;
+        if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed) {
+          editor.insertSnippet(new SnippetString(statementDetail.embeddedInfo.content));
+          return;
+        }
       }
     }
 
     const statement = statementDetail.statement;
-    const refs = statement.getObjectReferences();
-    const ref = refs[0];
+    const ref = statement?.getObjectReferences()?.[0];
 
     let possibleTitle = `SQL Results`;
     if (ref && ref.object.name) {
       possibleTitle = (ref.object.schema ? ref.object.schema + `.` : ``) + ref.object.name;
     }
 
-    if (statement.type === StatementType.Create || statement.type === StatementType.Alter) {
+    if (ref && (statement?.type === StatementType.Create || statement?.type === StatementType.Alter)) {
       const databaseObj =
-        statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
+        statement.type === StatementType.Create && ref.createType?.toUpperCase() === `schema`
           ? ref.object.schema || ``
-          : ref.object.schema + ref.object.name;
+          : ref.object.schema || `` + ref.object.name || ``;
 
       if (databaseObj) {
         DbCache.resetObject(databaseObj);
@@ -347,7 +358,7 @@ async function runHandler(options?: StatementInfo) {
 
           } else {
             if (inWindow) {
-              useWindow(`CL results`, options.viewColumn);
+              useWindow(`CL results`, options!.viewColumn);
             }
             chosenView.setScrolling({
               basicSelect: statementDetail.content,
@@ -361,7 +372,7 @@ async function runHandler(options?: StatementInfo) {
             const position = editor.selection.active;
             const runStatement = getPriorBindableStatement(editor, editor.document.offsetAt(position));
 
-            if (runStatement) {
+            if (runStatement && statementDetail.group) {
               parameters = getLiteralsFromStatement(statementDetail.group);
 
               if (runStatement.parameters !== parameters.length) {
@@ -384,12 +395,12 @@ async function runHandler(options?: StatementInfo) {
 
           } else {
             if (inWindow) {
-              useWindow(possibleTitle, options.viewColumn);
+              useWindow(possibleTitle, options!.viewColumn);
             }
 
             let updatableTable: ObjectRef | undefined;
-            if (statementDetail.qualifier === `update` && statement.type === StatementType.Select && refs.length === 1) {
-              updatableTable = refs[0];
+            if (statementDetail.qualifier === `update` && statement?.type === StatementType.Select && ref) {
+              updatableTable = ref
             }
 
             const uiId = registerRunStatement(statementDetail);
@@ -437,7 +448,7 @@ async function runHandler(options?: StatementInfo) {
           }
 
         } else if (['rpg', 'udtf'].includes(statementDetail.qualifier)) {
-          if (![StatementType.Select, StatementType.With].includes(statementDetail.statement.type)) {
+          if (statementDetail.statement?.type && ![StatementType.Select, StatementType.With].includes(statementDetail.statement.type)) {
             vscode.window.showErrorMessage(`${statementDetail.qualifier.toLocaleUpperCase()} qualifier only supported for select statements`);
           } else {
             chosenView.setLoadingText(`Executing SQL statement...`, false);
@@ -465,7 +476,7 @@ async function runHandler(options?: StatementInfo) {
               content = `-- statement:\n`
                 + `-- ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n-- ')}\n\n`
                 + `-- User-defined table function\n`
-                + queryResultToUdtf(result, statementDetail.content, statementDetail.statement.tokens);
+                + queryResultToUdtf(result, statementDetail.content, statementDetail.statement?.tokens || []);
             }
 
             const textDoc = await vscode.workspace.openTextDocument({ language, content });
@@ -478,8 +489,8 @@ async function runHandler(options?: StatementInfo) {
 
           setCancelButtonVisibility(true);
           updateStatusBar({ executing: true });
-          const result = await JobManager.runSQLVerbose(statementDetail.content);
-          const data = result.data as any;
+          const result = await JobManager.runSQLVerbose<any>(statementDetail.content);
+          const data = result.data;
           setCancelButtonVisibility(false);
 
           if (data.length > 0) {
@@ -492,7 +503,7 @@ async function runHandler(options?: StatementInfo) {
                 let content = ``;
                 switch (statementDetail.qualifier) {
                   case `csv`:
-                    const delimiter = DelimValue[Configuration.get<keyof typeof DelimValue>(`codegen.csvColumnDelimiter`) || `Comma`];
+                    const delimiter = DelimValue.get(Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`);
 
                     // Use metadata to handle duplicate column names properly
                     if (result.metadata && result.metadata.columns) {
@@ -615,7 +626,7 @@ async function runHandler(options?: StatementInfo) {
           vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
         }
 
-      } catch (e) {
+      } catch (e: any) {
         setCancelButtonVisibility(false);
 
         let errorText;
@@ -648,20 +659,15 @@ async function runHandler(options?: StatementInfo) {
 export function parseStatement(editor?: vscode.TextEditor, existingInfo?: StatementInfo): ParsedStatementInfo {
   let statementInfo: ParsedStatementInfo = {
     content: ``,
-    qualifier: `statement`,
-    group: undefined,
-    statement: undefined,
-    embeddedInfo: undefined
+    qualifier: `statement`
   };
 
-  let sqlDocument: Document;
+  let sqlDocument: Document | undefined;
 
   if (existingInfo) {
     statementInfo = {
       ...existingInfo,
-      group: existingInfo.group,
-      statement: undefined,
-      embeddedInfo: undefined
+      group: existingInfo.group
     };
 
     if (!existingInfo.group) {
@@ -677,12 +683,12 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     const cursor = editor.document.offsetAt(editor.selection.active);
 
     sqlDocument = getSqlDocument(document);
-    statementInfo.group = sqlDocument.getGroupByOffset(cursor);
+    statementInfo.group = sqlDocument?.getGroupByOffset(cursor);
   }
 
-  statementInfo.statement = statementInfo.group.statements[0];
+  statementInfo.statement = statementInfo?.group?.statements[0];
 
-  if (statementInfo.group && !statementInfo.content) {
+  if (sqlDocument && statementInfo.group && !statementInfo.content) {
     statementInfo.content = sqlDocument.content.substring(
       statementInfo.group.range.start, statementInfo.group.range.end
     );
@@ -704,10 +710,8 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     statementInfo.content = statementInfo.content.split(eol).map(line => line.trim()).join(` `);
   }
 
-  if (sqlDocument) {
-    if (![`cl`, `bind`].includes(statementInfo.qualifier)) {
-      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, { replacement: `snippet` });
-    }
+  if (sqlDocument && statementInfo.statement && ![`cl`, `bind`].includes(statementInfo.qualifier)) {
+    statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, { replacement: `snippet` });
   }
 
   return statementInfo;
