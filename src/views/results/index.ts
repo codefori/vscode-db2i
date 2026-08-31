@@ -489,7 +489,8 @@ async function runHandler(options?: StatementInfo) {
 
           setCancelButtonVisibility(true);
           updateStatusBar({ executing: true });
-          const data = await JobManager.runSQL<any>(statementDetail.content);
+          const result = await JobManager.runSQLVerbose<any>(statementDetail.content);
+          const data = result.data;
           setCancelButtonVisibility(false);
 
           if (data.length > 0) {
@@ -502,11 +503,38 @@ async function runHandler(options?: StatementInfo) {
                 let content = ``;
                 switch (statementDetail.qualifier) {
                   case `csv`:
-                    content = csv.stringify(data, {
-                      header: true,
-                      quoted_string: true,
-                      delimiter: DelimValue.get(Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`)
-                    });
+                    const delimiter = DelimValue.get(Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`);
+
+                    // Use metadata to handle duplicate column names properly
+                    if (result.metadata && result.metadata.columns) {
+                      const columnNames = result.metadata.columns.map(col => col.name);
+
+                      // Build CSV manually to preserve duplicate column names
+                      const rows: string[][] = [];
+
+                      // Add header row
+                      rows.push(columnNames.map(name => `"${String(name).replace(/"/g, '""')}"`));
+                      // Add data rows - use column index to get values in correct order
+                      for (const row of data) {
+                        const values = columnNames.map(name => {
+                          const value = row[name];
+                          if (value === null || value === undefined) {
+                            return '';
+                          }
+                          return `"${String(value).replace(/"/g, '""')}"`;
+                        });
+                        rows.push(values);
+                      }
+
+                      content = rows.map(row => row.join(delimiter)).join('\n');
+                    } else {
+                      // Fallback to original method if no metadata
+                      content = csv.stringify(data, {
+                        header: true,
+                        quoted_string: true,
+                        delimiter: delimiter
+                      });
+                    }
                     break;
                   case `json`: content = JSON.stringify(data, null, 2); break;
 
@@ -516,7 +544,7 @@ async function runHandler(options?: StatementInfo) {
                     // Calculate column widths
                     const columnWidths = mdKeys.map(key => {
                       const headerWidth = key.length;
-                      const dataWidth = Math.max(...data.map(row => {
+                      const dataWidth = Math.max(...data.map((row: any) => {
                         if (row[key] === null) return 4; // 'NULL'.length
                         return String(row[key]).replace(/\|/g, `\\|`).replace(/\n/g, ` `).length;
                       }));
@@ -528,7 +556,7 @@ async function runHandler(options?: StatementInfo) {
                     const separator = `| ${columnWidths.map(width => `-`.repeat(width)).join(` | `)} |`;
 
                     // Generate aligned rows
-                    const rows = data.map(row =>
+                    const rows = data.map((row: any) =>
                       `| ${mdKeys.map((key, i) => {
                         const value = row[key] === null ?
                           `NULL` :
@@ -557,12 +585,11 @@ async function runHandler(options?: StatementInfo) {
                         `insert into TABLE (`,
                         `  ${keys.join(`, `)}`,
                         `) values `,
-                        data.map(
-                          row => `  (${keys.map(key => {
-                            if (row[key] === null) return `null`;
-                            if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
-                            return row[key];
-                          }).join(`, `)})`
+                        data.map((row: any) => `  (${keys.map(key => {
+                          if (row[key] === null) return `null`;
+                          if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
+                          return row[key];
+                        }).join(`, `)})`
                         ).join(`,\n`),
                       ];
                       content += insertStatement.join(`\n`) + `;\n`;
@@ -606,7 +633,7 @@ async function runHandler(options?: StatementInfo) {
         if (typeof e === `string`) {
           errorText = e.length > 0 ? e : `An error occurred when executing the statement.`;
         } else {
-          errorText = e.message || `Error running SQL statement.`;
+          errorText = (e as any)?.message || `Error running SQL statement.`;
         }
 
         if ([`statement`, `explain`, `onlyexplain`, `cl`].includes(statementDetail.qualifier) && statementDetail.history !== false) {
