@@ -139,6 +139,16 @@ export function initialise(context: vscode.ExtensionContext) {
       explainTree.showAdvisedIndexesAndStatistics(doveNodeView);
     }),
 
+    vscode.commands.registerCommand(`vscode-db2i.dove.searchVisualExplain`, () => {
+      vscode.commands.executeCommand('vscode-db2i.dove.nodes.focus');
+      vscode.commands.executeCommand('list.find');
+    }),
+
+    vscode.commands.registerCommand(`vscode-db2i.dove.node.searchVisualExplainDetails`, () => {
+      vscode.commands.executeCommand('vscode-db2i.dove.node.focus');
+      vscode.commands.executeCommand('list.find');
+    }),
+
     vscode.commands.registerCommand(`vscode-db2i.dove.editSettings`, () => {
       vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.visualExplain');
     }),
