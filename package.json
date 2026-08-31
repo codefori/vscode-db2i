@@ -32,7 +32,7 @@
   ],
   "main": "./dist/extension.js",
   "scripts": {
-    "test": "vitest",
+    "test": "vitest run",
     "package": "vsce package",
     "vscode:prepublish": "npm run webpack",
     "webpack": "vscd --clean && webpack --mode production",
@@ -233,6 +233,11 @@
             },
             "additionalProperties": false,
             "description": "Select which database object types should be shown in the Schema Browser"
+          },
+          "vscode-db2i.schemaBrowser.crudUseKeyColumns": {
+            "type": "boolean",
+            "default": true,
+            "description": "When generating an UPDATE or DELETE statement, use the table's primary or unique key to identify the row, if one is found. When disabled, every column is always used to identify the row, even if a key exists."
           }
         }
       },
@@ -598,6 +603,21 @@
       {
         "command": "vscode-db2i.generateSQLWithoutConstraints",
         "title": "With Separate ALTER Statements",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateInsertStatement",
+        "title": "Insert",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateUpdateStatement",
+        "title": "Update",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateDeleteStatement",
+        "title": "Delete",
         "category": "Db2 for i"
       },
       {
@@ -1113,6 +1133,18 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.generateInsertStatement",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateUpdateStatement",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateDeleteStatement",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.generateRoutineCall",
           "when": "never"
         },
@@ -1304,6 +1336,21 @@
         {
           "command": "vscode-db2i.generateSQLWithoutConstraints",
           "group": "1_generate"
+        },
+        {
+          "command": "vscode-db2i.generateInsertStatement",
+          "when": "viewItem == table || viewItem == view",
+          "group": "2_dml@1"
+        },
+        {
+          "command": "vscode-db2i.generateUpdateStatement",
+          "when": "viewItem == table || viewItem == view",
+          "group": "2_dml@2"
+        },
+        {
+          "command": "vscode-db2i.generateDeleteStatement",
+          "when": "viewItem == table || viewItem == view",
+          "group": "2_dml@3"
         }
       ],
       "view/title": [

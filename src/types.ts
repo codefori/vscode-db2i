@@ -10,7 +10,7 @@ export interface TableColumn {
   NUMERIC_SCALE?: number,
   NUMERIC_PRECISION?: number,
   IS_NULLABLE: "Y" | "N",
-  HAS_DEFAULT: "Y" | "N",
+  HAS_DEFAULT: string,
   COLUMN_DEFAULT?: string,
   COLUMN_TEXT: string,
   IS_IDENTITY: "YES" | "NO",

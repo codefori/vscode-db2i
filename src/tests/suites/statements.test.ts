@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import Document, { getPositionData } from '../document';
-import { ClauseType, StatementType } from '../types';
+import Document, { getPositionData } from '../../language/sql/document';
+import { ClauseType, StatementType } from '../../language/sql/types';
 
 const parserScenarios = describe.each([
   {newDoc: (content: string) => new Document(content)},

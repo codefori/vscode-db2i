@@ -1,5 +1,5 @@
 import { assert, expect, test } from 'vitest'
-import { columnToRpgDefinition, columnToRpgFieldName, queryResultToRpgDs } from './codegen';
+import { columnToRpgDefinition, columnToRpgFieldName, queryResultToRpgDs } from '../../views/results/codegen';
 import { QueryResult } from '@ibm/mapepire-js';
 
 test('Column to RPG symbol', () => {

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import SQLTokeniser from '../tokens';
+import SQLTokeniser from '../../language/sql/tokens';
 
 // Edit an assertion and save to see HMR in action
 
