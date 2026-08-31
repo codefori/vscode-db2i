@@ -1,4 +1,43 @@
 import Statement from "../../database/statement";
+import { prepareParamType } from "../../language/providers/logic/completion";
+import { SQLParm } from "../../types";
+
+export type RoutineInvocation = "PROCEDURE" | "SCALAR" | "TABLE";
+
+export function getRoutineCallStatement(schema: string, name: string, parms: SQLParm[], invocation: RoutineInvocation) {
+  const qualifiedName = `${Statement.delimName(schema)}.${Statement.delimName(name)}`;
+  // The arguments of a table function sit one level deeper, inside the TABLE() clause
+  const call = `${qualifiedName}(${getArgumentList(parms, invocation === `TABLE` ? `  ` : ``)})`;
+
+  switch (invocation) {
+    case `PROCEDURE`: return `CALL ${call};`;
+    case `TABLE`: return `SELECT * FROM TABLE(${call}) AS A;`;
+    default: return `VALUES ${call};`;
+  }
+}
+
+function getArgumentList(parms: SQLParm[], indent: string) {
+  if (parms.length === 0) {
+    return ``;
+  }
+
+  // External routines can be created without naming their parameters, so only use named arguments when they all have one
+  const useNames = parms.every(parm => parm.PARAMETER_NAME);
+
+  const args = parms.map(parm => {
+    const value = parm.PARAMETER_MODE === `OUT` ? `?` : (parm.DEFAULT || `?`);
+    return useNames ? `${Statement.delimName(parm.PARAMETER_NAME)} => ${value}` : value;
+  });
+
+  const width = Math.max(...args.map(arg => arg.length)) + 1;
+
+  const lines = args.map((arg, i) => {
+    const argument = arg + (i < args.length - 1 ? `,` : ``);
+    return `${indent}  ${argument.padEnd(width)} -- ${parms[i].PARAMETER_MODE} ${prepareParamType(parms[i])}`;
+  });
+
+  return [``, ...lines, indent].join(`\n`);
+}
 
 export function getRelatedObjects(schema: string, name: string) {
   return `SELECT SQL_NAME, SYSTEM_NAME, SCHEMA_NAME, LIBRARY_NAME, SQL_OBJECT_TYPE, 
@@ -243,7 +282,7 @@ export function getMTIStatement(schema: string, table: string = `*ALL`) {
   ].join(` `);
 }
 
-export function getAuthoritiesStatement(schema: string, table: string, objectType: string, tableType: string): string {
+export function getAuthoritiesStatement(schema: string, name: string, objectType: string, tableType: string): string {
   let sql: string = `
     select 
       authorization_name "User profile name", 
@@ -265,8 +304,8 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
       data_execute "Data execute authority", 
       text_description "Description"
     from qsys2.object_privileges
-    where system_object_schema = '${Statement.escapeString(schema)}' 
-      and system_object_name = '${Statement.escapeString(table)}'
+    where object_schema = '${Statement.escapeString(schema)}' 
+      and object_name = '${Statement.escapeString(name)}'
   `;
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;
@@ -282,7 +321,7 @@ export function getAuthoritiesStatement(schema: string, table: string, objectTyp
   return sql;
 }
 
-export function getObjectLocksStatement(schema: string, table: string, objectType: string, tableType: string): string {
+export function getObjectLocksStatement(schema: string, name: string, objectType: string, tableType: string): string {
   let sql: string = `
       select
         system_table_member "Member",
@@ -304,8 +343,8 @@ export function getObjectLocksStatement(schema: string, table: string, objectTyp
         statement_id "Statement ID", 
         machine_instruction "Instruction"
       from qsys2.object_lock_info
-      where system_object_schema = '${Statement.escapeString(schema)}'
-        and system_object_name = '${Statement.escapeString(table)}'
+      where object_schema = '${Statement.escapeString(schema)}'
+        and object_name = '${Statement.escapeString(name)}'
     `;
   if (objectType === 'TABLE' && tableType != 'T') {
     sql += ` and object_type = '*FILE'`;

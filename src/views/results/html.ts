@@ -359,6 +359,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
           let totalRows = 0;
           let noMoreRows = false;
           let isFetching = false;
+          let allRows = false;
 
           function isNumeric(str) {
             if (typeof str != "string") return false // we only process strings!  
@@ -427,6 +428,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
 
                 case 'fetch':
                   // Set loading here....
+                  allRows = data.allRows === true;
                   fetchNextPage();
                   break;
 
@@ -455,7 +457,8 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
               query: basicSelect,
               parameters: ${JSON.stringify(parameters)},
               isCL: ${isCL},
-              queryId: myQueryId
+              queryId: myQueryId,
+              allRows: allRows
             });
           }
 
@@ -481,7 +484,11 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
                   cell.innerText = column.name;
                   break;
                 case 'Both':
-                  cell.innerHTML = escapeHTML(column.name)+'<br>'+escapeHTML(column.label);
+                  if (column.name === column.label) {
+                    cell.innerText = column.name;
+                  } else {
+                    cell.innerHTML = escapeHTML(column.name)+'<br>'+escapeHTML(column.label);
+                  }
                   break;
                 default:
                   cell.innerText = column.label;
@@ -599,7 +606,11 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
                     headerCells[x].innerText = columnMetaData[x].name;
                     break;
                   case 'Both':
-                    headerCells[x].innerHTML = escapeHTML(columnMetaData[x].name)+'<br>'+escapeHTML(columnMetaData[x].label);
+                    if (columnMetaData[x].name === columnMetaData[x].label) {
+                      headerCells[x].innerText = columnMetaData[x].name;
+                    } else {
+                      headerCells[x].innerHTML = escapeHTML(columnMetaData[x].name)+'<br>'+escapeHTML(columnMetaData[x].label);
+                    }
                     break;
                   default:
                     headerCells[x].innerText = columnMetaData[x].label;

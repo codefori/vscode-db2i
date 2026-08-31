@@ -1,17 +1,12 @@
-import assert from "assert";
 import { TestSuite } from ".";
-import { ServerComponent } from "../connection/serverComponent";
-import { testSelfCodes } from "../views/jobManager/selfCodes/selfCodesTest";
 import { getInstance } from "../base";
+import { testSelfCodes } from "../views/jobManager/selfCodes/selfCodesTest";
 
 export const SelfCodesTestSuite: TestSuite = {
   name: `Self Codes Tests`,
   tests: [
-    {name: `Backend check`, test: async () => {
-      const backendInstalled = await ServerComponent.initialise();
-  
+    {name: `Backend check`, test: async () => {  
       // To run these tests, we need the backend server. If this test fails. Don't bother
-      assert.strictEqual(backendInstalled, true);
       try {
         const selfTestSchema = [
           `CREATE SCHEMA SELFTEST;`,

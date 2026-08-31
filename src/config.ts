@@ -4,7 +4,6 @@ import { ConnectionStorage } from "./Storage";
 import { getInstance } from "./base";
 import Configuration from "./configuration";
 import { SQLJobManager } from "./connection/manager";
-import { ServerComponent } from "./connection/serverComponent";
 import { Examples, ServiceInfoLabel } from "./views/examples";
 import { ConfigManager } from "./views/jobManager/ConfigManager";
 import { JobManagerView } from "./views/jobManager/jobManagerView";
@@ -12,28 +11,18 @@ import { updateStatusBar } from "./views/jobManager/statusBar";
 
 export let Config: ConnectionStorage;
 export let osDetail: IBMiDetail;
-export let JobManager: SQLJobManager = new SQLJobManager();
+export const JobManager: SQLJobManager = new SQLJobManager();
 
 export async function onConnectOrServerInstall(): Promise<boolean> {
   const instance = getInstance();
-
   Config.setConnectionName(instance.getConnection().currentConnectionName);
-
   osDetail = new IBMiDetail();
-
   await osDetail.fetchSystemInfo();
 
-  await ServerComponent.initialise().then(installed => {
-    if (installed) {
-      JobManagerView.setVisible(true);
-    }
-  });
-
-  await ServerComponent.checkForUpdate();
-
+  JobManagerView.setVisible(true);
+  
   updateStatusBar();
 
-  if (ServerComponent.isInstalled()) {
     JobManagerView.setVisible(true);
 
     let newJob = Configuration.get<string>(`alwaysStartSQLJob`) || `ask`;
@@ -58,7 +47,6 @@ export async function onConnectOrServerInstall(): Promise<boolean> {
         return true;
       }
       break;
-    }
   }
   return false;
 }

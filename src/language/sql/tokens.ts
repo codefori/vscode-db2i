@@ -41,7 +41,7 @@ export default class SQLTokeniser {
     {
       name: `STATEMENTTYPE`,
       match: [{ type: `word`, match: (value: string) => {
-        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`, `IF`, `FOR`, `WHILE`].includes(value.toUpperCase());
+        return [`CREATE`, `ALTER`, `SELECT`, `WITH`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CALL`, `DECLARE`, `IF`, `FOR`, `WHILE`, `LABEL`, `COMMIT`, `ROLLBACK`, `SAVEPOINT`, `RELEASE`, `PREPARE`, `EXECUTE`, `DESCRIBE`, `CONNECT`, `DISCONNECT`, `RENAME`, `TRUNCATE`, `COMMENT`, `TRANSFER`, `OPEN`, `CLOSE`, `GRANT`, `REVOKE`, `ALLOCATE`, `REFRESH`,`CONTINUE`, `ASSOCIATE`, `LOCK`].includes(value.toUpperCase());
       } }],
       becomes: `statementType`,
     },
@@ -310,7 +310,7 @@ export default class SQLTokeniser {
           }
         }
 
-        if (i > 0 && i < tokens.length - 2 && tokens[i].value.toLowerCase() === 'for' && tokens[i - 1].type === 'closebracket' && tokens[i + 2].value.toLowerCase() === 'data') {
+        if (i > 0 && i < tokens.length - 2 && tokens[i].value?.toLowerCase() === 'for' && tokens[i - 1].type === 'closebracket' && tokens[i + 2].value?.toLowerCase() === 'data') {
           goodMatch = false; // data-type with FOR BIT/SBCS/MIXED DATA
         }
 

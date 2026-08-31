@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import { CancellationToken, Event, EventEmitter, ProviderResult, TreeView, TreeDataProvider, TreeItem, TreeItemCollapsibleState, commands, ThemeIcon } from "vscode";
-import { ExplainNode } from "./nodes";
+import { CancellationToken, commands, Event, EventEmitter, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, TreeView } from "vscode";
 import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
+import { ExplainNode } from "./nodes";
 
 /**
  * Icon labels as defined by the API, along with the name of the icon to display.
@@ -10,46 +10,46 @@ import { toDoveTreeDecorationProviderUri } from "./doveTreeDecorationProvider";
  * @see https://www.ibm.com/docs/en/i/7.5?topic=ssw_ibm_i_75/apis/qqqvexpl.html#icon_labels
  * @see https://code.visualstudio.com/api/references/icons-in-labels
  */
-const icons = {
-  "Bitmap Merge":                           `merge`,
-  "Cache":                                  ``,
-  "Cache Probe":                            ``,
-  "Delete":                                 `trash`,
-  "Distinct":                               `list-flat`,
-  "Dynamic Bitmap":                         `symbol-misc`,
-  "Encoded Vector Index":                   `symbol-reference`,
-  "Encoded Vector Index, Parallel":         `symbol-reference`,
-  "Final Select":                           `selection`,
-  "Hash Grouping":                          `group-by-ref-type`,
-  "Hash Join":                              `add`,
-  "Hash Scan":                              `search`,
-  "Index Grouping":                         `group-by-ref-type`,
-  "Index Scan - Key Positioning":           `key`,
+const icons = new Map(Object.entries({
+  "Bitmap Merge": `merge`,
+  "Cache": ``,
+  "Cache Probe": ``,
+  "Delete": `trash`,
+  "Distinct": `list-flat`,
+  "Dynamic Bitmap": `symbol-misc`,
+  "Encoded Vector Index": `symbol-reference`,
+  "Encoded Vector Index, Parallel": `symbol-reference`,
+  "Final Select": `selection`,
+  "Hash Grouping": `group-by-ref-type`,
+  "Hash Join": `add`,
+  "Hash Scan": `search`,
+  "Index Grouping": `group-by-ref-type`,
+  "Index Scan - Key Positioning": `key`,
   "Index Scan - Key Positioning, Parallel": `key`,
-  "Index Scan - Key Selection":             `key`,
-  "Index Scan - Key Selection, Parallel":   `key`,
-  "Insert":                                 `insert`,
-  "Nested Loop Join":                       `add`,
-  "Select":                                 `selection`,
-  "Skip Sequential Table Scan":             `list-unordered`,
-  "Skip Sequential Table Scan, Parallel":   `list-unordered`,
-  "Sort":                                   `sort-precedence`,
-  "Sorted List Scan":                       `list-ordered`,
-  "Subquery Merge":                         `merge`,
-  "Table Probe":                            `list-selection`,
-  "Table Scan":                             `search`,
-  "Table Scan, Parallel":                   `search`,
-  "Temporary Distinct Hash Table":          `new-file`,
-  "Temporary Hash Table":                   `new-file`,
-  "Temporary Index":                        `new-file`,
-  "Temporary Sorted List":                  `list-ordered`,
-  "Temporary Table":                        `new-file`,
-  "Union Merge":                            `merge`,
-  "User Defined Table Function":            `symbol-function`,
-  "Unknown":                                `question`,
-  "Update":                                 `replace`,
-  "VALUES LIST":                            `list-flat`,
-}
+  "Index Scan - Key Selection": `key`,
+  "Index Scan - Key Selection, Parallel": `key`,
+  "Insert": `insert`,
+  "Nested Loop Join": `add`,
+  "Select": `selection`,
+  "Skip Sequential Table Scan": `list-unordered`,
+  "Skip Sequential Table Scan, Parallel": `list-unordered`,
+  "Sort": `sort-precedence`,
+  "Sorted List Scan": `list-ordered`,
+  "Subquery Merge": `merge`,
+  "Table Probe": `list-selection`,
+  "Table Scan": `search`,
+  "Table Scan, Parallel": `search`,
+  "Temporary Distinct Hash Table": `new-file`,
+  "Temporary Hash Table": `new-file`,
+  "Temporary Index": `new-file`,
+  "Temporary Sorted List": `list-ordered`,
+  "Temporary Table": `new-file`,
+  "Union Merge": `merge`,
+  "User Defined Table Function": `symbol-function`,
+  "Unknown": `question`,
+  "Update": `replace`,
+  "VALUES LIST": `list-flat`,
+}));
 
 type ChangeTreeDataEventType = ExplainTreeItem | undefined | null | void;
 
@@ -57,10 +57,10 @@ export class DoveResultsView implements TreeDataProvider<any> {
   private _onDidChangeTreeData: EventEmitter<ChangeTreeDataEventType> = new EventEmitter<ChangeTreeDataEventType>();
   readonly onDidChangeTreeData: Event<ChangeTreeDataEventType> = this._onDidChangeTreeData.event;
 
-  private topNode: ExplainTreeItem;
+  private topNode: ExplainTreeItem | undefined;
 
   private treeView: TreeView<ExplainTreeItem>;
-  
+
   constructor() {
     this.treeView = vscode.window.createTreeView(`vscode-db2i.dove.nodes`, { treeDataProvider: this, showCollapseAll: true });
   }
@@ -76,15 +76,15 @@ export class DoveResultsView implements TreeDataProvider<any> {
     // Show tree in the view
     commands.executeCommand(`setContext`, `vscode-db2i:explaining`, true);
     // Ensure that the tree is positioned such that the first element is visible
-    this.treeView.reveal(this.topNode,  { select: false });
+    this.treeView.reveal(this.topNode, { select: false });
     return this.topNode;
   }
-  getRootNode(): ExplainTreeItem {
+  getRootNode() {
     return this.topNode;
   }
 
-  getRootExplainNode(): ExplainNode {
-    return this.topNode.explainNode;
+  getRootExplainNode() {
+    return this.topNode?.explainNode;
   }
 
   close(): void {
@@ -116,10 +116,10 @@ export class DoveResultsView implements TreeDataProvider<any> {
 
 export class ExplainTreeItem extends TreeItem {
   explainNode: ExplainNode;
-  private children: ExplainTreeItem[];
+  private children: ExplainTreeItem[] | undefined;
 
   constructor(node: ExplainNode) {
-    super(node.title, node.childrenNodes > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None);
+    super(node.title, node.children.length > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None);
     this.explainNode = node;
     this.contextValue = `explainTreeItem`;
 
@@ -131,7 +131,7 @@ export class ExplainTreeItem extends TreeItem {
     // TODO: ideally the tooltip would be built using a MarkdownString, but regardless of everything tried, 'Loading...' is always displayed
     this.tooltip = [node.title, node.tooltipProps.map<string>(prop => prop.title + `: ` + prop.value).join(`\n`), ``].join(`\n`);
     this.resourceUri = toDoveTreeDecorationProviderUri(node.highlights);
-    this.iconPath = new ThemeIcon(icons[node.title] || `server-process`, node.highlights.getPriorityColor()); // `circle-outline`
+    this.iconPath = new ThemeIcon(icons.get(node.title) || `server-process`, node.highlights.getPriorityColor()); // `circle-outline`
   }
 
   getChildren(): ExplainTreeItem[] {

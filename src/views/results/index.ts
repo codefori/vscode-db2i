@@ -11,6 +11,7 @@ import { getSqlDocument } from "../../language/providers/logic/parse";
 import Document from "../../language/sql/document";
 import Statement from "../../language/sql/statement";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
+import { VisualExplainData } from "../../types";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { getLiteralsFromStatement, getPriorBindableStatement } from "./binding";
 import { queryResultToRpgDs, queryResultToUdtf } from "./codegen";
@@ -22,7 +23,7 @@ import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider
 import { ExplainTree } from "./explain/nodes";
 import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 
-export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "cl" | "sql" | "rpg" | "udtf";
+export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "md" | "cl" | "sql" | "rpg" | "udtf";
 
 export interface StatementInfo {
   content: string,
@@ -36,16 +37,16 @@ export interface StatementInfo {
 }
 
 export interface ParsedStatementInfo extends StatementInfo {
-  statement: Statement;
-  group: StatementGroup;
-  embeddedInfo: ParsedEmbeddedStatement;
+  statement?: Statement;
+  group?: StatementGroup;
+  embeddedInfo?: ParsedEmbeddedStatement;
 }
 
-const DelimValue = {
+const DelimValue = new Map(Object.entries({
   Comma: `,`,
   Semicolon: `;`,
   Tab: `\t`
-}
+}));
 
 export function setCancelButtonVisibility(visible: boolean) {
   vscode.commands.executeCommand(`setContext`, `vscode-db2i:statementCanCancel`, visible);
@@ -58,6 +59,12 @@ let doveResultsTreeView: TreeView<ExplainTreeItem> = doveResultsView.getTreeView
 let doveNodeView = new DoveNodeView();
 let doveNodeTreeView: TreeView<PropertyNode> = doveNodeView.getTreeView();
 let doveTreeDecorationProvider = new DoveTreeDecorationProvider(); // Self-registers as a tree decoration provider
+const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] =
+  [`json`, `csv`, `md`, `cl`, `sql`, `rpg`, `udtf`, `statement`, `bind`];
+const ALLOWED_PREFIXES_FOR_HISTORY: StatementQualifier[] =
+  [`json`, `csv`, `cl`, `md`, `sql`, `rpg`, `udtf`];
+const ALLOWED_PREFIXES_EXCLUDE_QUALIFIER_FOR_HISTORY: StatementQualifier[] =
+  [`statement`, `explain`];
 
 export function initialise(context: vscode.ExtensionContext) {
   setCancelButtonVisibility(false);
@@ -94,6 +101,14 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.resultset.settings`, async () => {
       vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.resultsets');
     }),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveMoreRows`, () => resultSetProvider.retrieveMoreRows()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveAllRows`, () => resultSetProvider.retrieveMoreRows(true)),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.refresh`, async () => await resultSetProvider.refresh()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, () => resultSetProvider.clear()),
 
     vscode.workspace.onDidChangeConfiguration(e => {
       // If the result set column headings setting has changed, update the header of the current result set
@@ -166,17 +181,15 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.multiple.selected`, () => { runMultipleHandler(`selected`) }),
     vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.multiple.from`, () => { runMultipleHandler(`from`) }),
 
-    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withRun`, (options?: StatementInfo) => { runHandler({ qualifier: `explain`, ...options }) }),
-    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withoutRun`, (options?: StatementInfo) => { runHandler({ qualifier: `onlyexplain`, ...options }) }),
-    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.inView`, (options?: StatementInfo) => { runHandler({ viewColumn: ViewColumn.Beside, ...options }) }),
-    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, (options?: StatementInfo) => { runHandler(options) })
+    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withRun`, (options: StatementInfo) => runHandler(Object.assign({ qualifier: `explain` }, options))),
+    vscode.commands.registerCommand(`vscode-db2i.editorExplain.withoutRun`, (options: StatementInfo) => runHandler(Object.assign({ qualifier: `onlyexplain` }, options))),
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement.inView`, (options: StatementInfo) => runHandler({ viewColumn: ViewColumn.Beside, ...options })),
+    vscode.commands.registerCommand(`vscode-db2i.runEditorStatement`, (options?: StatementInfo) => runHandler(options))
   )
 }
 
-const ALLOWED_PREFIXES_FOR_MULTIPLE: StatementQualifier[] = [`cl`, `json`, `csv`, `sql`, `statement`, `bind`];
-
 function isStop(statement: Statement) {
-  return (statement.type === StatementType.Unknown && statement.tokens.length === 1 && statement.tokens[0].value.toUpperCase() === `STOP`);
+  return (statement.type === StatementType.Unknown && statement.tokens.length === 1 && statement.tokens[0].value?.toUpperCase() === `STOP`);
 }
 
 async function runMultipleHandler(mode: `all` | `selected` | `from`) {
@@ -226,7 +239,7 @@ async function runMultipleHandler(mode: `all` | `selected` | `from`) {
           vscode.window.showErrorMessage(`Cannot run multiple statements with prefix ${prefix}.`);
           editor.selection = new vscode.Selection(
             editor.document.positionAt(group.range.start),
-            editor.document.positionAt(group.range.start + label.length)
+            editor.document.positionAt(group.range.start + (label?.length || 0))
           );
           return;
         }
@@ -266,6 +279,8 @@ async function runHandler(options?: StatementInfo) {
     await resultSetProvider.ensureActivation();
   }
 
+  resultSetProvider.resetContext();
+
   // Options here can be a vscode.Uri when called from editor context.
   // But that isn't valid here.
   const optionsIsValid = (options?.content !== undefined);
@@ -294,30 +309,31 @@ async function runHandler(options?: StatementInfo) {
     }
 
     if (editor) {
-      let group = statementDetail.group;
-      editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
-      editor.revealRange(editor.selection);
+      const group = statementDetail.group;
+      if (group) {
+        editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
+        editor.revealRange(editor.selection);
 
-      if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed) {
-        editor.insertSnippet(new SnippetString(statementDetail.embeddedInfo.content));
-        return;
+        if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed) {
+          editor.insertSnippet(new SnippetString(statementDetail.embeddedInfo.content));
+          return;
+        }
       }
     }
 
     const statement = statementDetail.statement;
-    const refs = statement.getObjectReferences();
-    const ref = refs[0];
+    const ref = statement?.getObjectReferences()?.[0];
 
     let possibleTitle = `SQL Results`;
     if (ref && ref.object.name) {
       possibleTitle = (ref.object.schema ? ref.object.schema + `.` : ``) + ref.object.name;
     }
 
-    if (statement.type === StatementType.Create || statement.type === StatementType.Alter) {
+    if (ref && (statement?.type === StatementType.Create || statement?.type === StatementType.Alter)) {
       const databaseObj =
-        statement.type === StatementType.Create && ref.createType.toUpperCase() === `schema`
+        statement.type === StatementType.Create && ref.createType?.toUpperCase() === `schema`
           ? ref.object.schema || ``
-          : ref.object.schema + ref.object.name;
+          : ref.object.schema || `` + ref.object.name || ``;
 
       if (databaseObj) {
         DbCache.resetObject(databaseObj);
@@ -342,7 +358,7 @@ async function runHandler(options?: StatementInfo) {
 
           } else {
             if (inWindow) {
-              useWindow(`CL results`, options.viewColumn);
+              useWindow(`CL results`, options!.viewColumn);
             }
             chosenView.setScrolling({
               basicSelect: statementDetail.content,
@@ -356,7 +372,7 @@ async function runHandler(options?: StatementInfo) {
             const position = editor.selection.active;
             const runStatement = getPriorBindableStatement(editor, editor.document.offsetAt(position));
 
-            if (runStatement) {
+            if (runStatement && statementDetail.group) {
               parameters = getLiteralsFromStatement(statementDetail.group);
 
               if (runStatement.parameters !== parameters.length) {
@@ -379,12 +395,12 @@ async function runHandler(options?: StatementInfo) {
 
           } else {
             if (inWindow) {
-              useWindow(possibleTitle, options.viewColumn);
+              useWindow(possibleTitle, options!.viewColumn);
             }
 
             let updatableTable: ObjectRef | undefined;
-            if (statementDetail.qualifier === `update` && statement.type === StatementType.Select && refs.length === 1) {
-              updatableTable = refs[0];
+            if (statementDetail.qualifier === `update` && statement?.type === StatementType.Select && ref) {
+              updatableTable = ref
             }
 
             const uiId = registerRunStatement(statementDetail);
@@ -410,7 +426,7 @@ async function runHandler(options?: StatementInfo) {
             const explainType: ExplainType = onlyExplain ? ExplainType.DO_NOT_RUN : ExplainType.RUN;
 
             setCancelButtonVisibility(true);
-            const explained = await selectedJob.job.explain(statementDetail.content, explainType); // Can throw
+            const explained = await selectedJob.job.explain<VisualExplainData[]>(statementDetail.content, explainType); // Can throw
             setCancelButtonVisibility(false);
 
             if (onlyExplain) {
@@ -431,9 +447,9 @@ async function runHandler(options?: StatementInfo) {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
 
-        } else if (statementDetail.qualifier === `rpg`) {
-          if (statementDetail.statement.type !== StatementType.Select) {
-            vscode.window.showErrorMessage('RPG qualifier only supported for select statements');
+        } else if (['rpg', 'udtf'].includes(statementDetail.qualifier)) {
+          if (statementDetail.statement?.type && ![StatementType.Select, StatementType.With].includes(statementDetail.statement.type)) {
+            vscode.window.showErrorMessage(`${statementDetail.qualifier.toLocaleUpperCase()} qualifier only supported for select statements`);
           } else {
             chosenView.setLoadingText(`Executing SQL statement...`, false);
             setCancelButtonVisibility(true);
@@ -441,43 +457,39 @@ async function runHandler(options?: StatementInfo) {
             const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
             setCancelButtonVisibility(false);
             updateStatusBar({ executing: false });
-            let content = `**free\n\n`
-              + `// statement:\n`
-              + `// ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n// ')}\n\n`
-              + `// Row data structure\n`
-              + queryResultToRpgDs(result, Configuration.get(`codegen.rpgSymbolicNameSource`));
-            const textDoc = await vscode.workspace.openTextDocument({ language: 'rpgle', content });
+
+            let language: string;
+            let content: string;
+            let label: string;
+            if (statementDetail.qualifier === 'rpg') {
+              label = 'RPG data structure';
+              language = 'rpgle';
+              content = `**free\n\n`
+                + `// statement:\n`
+                + `// ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n// ')}\n\n`
+                + `// Row data structure\n`
+                + queryResultToRpgDs(result, Configuration.get(`codegen.rpgSymbolicNameSource`));
+            }
+            else {
+              label = 'User-defined table function';
+              language = 'sql';
+              content = `-- statement:\n`
+                + `-- ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n-- ')}\n\n`
+                + `-- User-defined table function\n`
+                + queryResultToUdtf(result, statementDetail.content, statementDetail.statement?.tokens || []);
+            }
+
+            const textDoc = await vscode.workspace.openTextDocument({ language, content });
             await vscode.window.showTextDocument(textDoc);
-            chosenView.setLoadingText(`RPG data structure generated.`, false);
+            chosenView.setLoadingText(`${label} generated.`, false);
           }
-
-        } else if (statementDetail.qualifier === `udtf`) {
-          if (statementDetail.statement.type !== StatementType.Select) {
-            vscode.window.showErrorMessage('UDTF qualifier only supported for select statements');
-          } else {
-            chosenView.setLoadingText(`Executing SQL statement...`, false);
-            setCancelButtonVisibility(true);
-            updateStatusBar({ executing: true });
-            const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
-            setCancelButtonVisibility(false);
-            updateStatusBar({ executing: false });
-            let content = `-- statement:\n`
-              + `-- ${statementDetail.content.replace(/(\r\n|\r|\n)/g, '\n-- ')}\n\n`
-              + `-- User-defined table function\n`
-              + queryResultToUdtf(result, statementDetail.content, statementDetail.statement.tokens);
-
-            const textDoc = await vscode.workspace.openTextDocument({ language: 'sql', content });
-            await vscode.window.showTextDocument(textDoc);
-            chosenView.setLoadingText(`User-defined table function generated.`, false);
-          }
-
         } else {
           // Otherwise... it's a bit complicated.
           chosenView.setLoadingText(`Executing SQL statement...`, false);
 
           setCancelButtonVisibility(true);
           updateStatusBar({ executing: true });
-          const data = await JobManager.runSQL(statementDetail.content);
+          const data = await JobManager.runSQL<any>(statementDetail.content);
           setCancelButtonVisibility(false);
 
           if (data.length > 0) {
@@ -485,6 +497,7 @@ async function runHandler(options?: StatementInfo) {
 
               case `csv`:
               case `json`:
+              case `md`:
               case `sql`:
                 let content = ``;
                 switch (statementDetail.qualifier) {
@@ -492,10 +505,40 @@ async function runHandler(options?: StatementInfo) {
                     content = csv.stringify(data, {
                       header: true,
                       quoted_string: true,
-                      delimiter: DelimValue[Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`]
+                      delimiter: DelimValue.get(Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`)
                     });
                     break;
                   case `json`: content = JSON.stringify(data, null, 2); break;
+
+                  case `md`:
+                    const mdKeys = Object.keys(data[0]);
+
+                    // Calculate column widths
+                    const columnWidths = mdKeys.map(key => {
+                      const headerWidth = key.length;
+                      const dataWidth = Math.max(...data.map(row => {
+                        if (row[key] === null) return 4; // 'NULL'.length
+                        return String(row[key]).replace(/\|/g, `\\|`).replace(/\n/g, ` `).length;
+                      }));
+                      return Math.max(headerWidth, dataWidth);
+                    });
+
+                    // Generate aligned header
+                    const header = `| ${mdKeys.map((key, i) => key.padEnd(columnWidths[i])).join(` | `)} |`;
+                    const separator = `| ${columnWidths.map(width => `-`.repeat(width)).join(` | `)} |`;
+
+                    // Generate aligned rows
+                    const rows = data.map(row =>
+                      `| ${mdKeys.map((key, i) => {
+                        const value = row[key] === null ?
+                          `NULL` :
+                          String(row[key]).replace(/\|/g, `\\|`).replace(/\n/g, ` `);
+                        return value.padEnd(columnWidths[i]);
+                      }).join(` | `)} |`
+                    ).join(`\n`);
+
+                    content = `${header}\n${separator}\n${rows}`;
+                    break;
 
                   case `sql`:
                     const keys = Object.keys(data[0]);
@@ -527,7 +570,13 @@ async function runHandler(options?: StatementInfo) {
                     break;
                 }
 
-                const textDoc = await vscode.workspace.openTextDocument({ language: statementDetail.qualifier, content });
+                const languageMap: { [key: string]: string } = {
+                  'md': 'markdown',
+                  'csv': 'csv',
+                  'json': 'json',
+                  'sql': 'sql'
+                };
+                const textDoc = await vscode.workspace.openTextDocument({ language: languageMap[statementDetail.qualifier] || statementDetail.qualifier, content });
                 await vscode.window.showTextDocument(textDoc);
                 chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
                 break;
@@ -544,11 +593,13 @@ async function runHandler(options?: StatementInfo) {
           statementDetail.history = false;
         }
 
-        if ((statementDetail.qualifier === `statement` || statementDetail.qualifier === `explain`) && statementDetail.history !== false) {
+        if (ALLOWED_PREFIXES_FOR_HISTORY.includes(statementDetail.qualifier) && statementDetail.history !== false) {
+          vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, `${statementDetail.qualifier}: ${statementDetail.content}`);
+        } else if (ALLOWED_PREFIXES_EXCLUDE_QUALIFIER_FOR_HISTORY.includes(statementDetail.qualifier) && statementDetail.history !== false) {
           vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statementDetail.content);
         }
 
-      } catch (e) {
+      } catch (e: any) {
         setCancelButtonVisibility(false);
 
         let errorText;
@@ -581,20 +632,15 @@ async function runHandler(options?: StatementInfo) {
 export function parseStatement(editor?: vscode.TextEditor, existingInfo?: StatementInfo): ParsedStatementInfo {
   let statementInfo: ParsedStatementInfo = {
     content: ``,
-    qualifier: `statement`,
-    group: undefined,
-    statement: undefined,
-    embeddedInfo: undefined
+    qualifier: `statement`
   };
 
-  let sqlDocument: Document;
+  let sqlDocument: Document | undefined;
 
   if (existingInfo) {
     statementInfo = {
       ...existingInfo,
-      group: existingInfo.group,
-      statement: undefined,
-      embeddedInfo: undefined
+      group: existingInfo.group
     };
 
     if (!existingInfo.group) {
@@ -610,19 +656,19 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     const cursor = editor.document.offsetAt(editor.selection.active);
 
     sqlDocument = getSqlDocument(document);
-    statementInfo.group = sqlDocument.getGroupByOffset(cursor);
+    statementInfo.group = sqlDocument?.getGroupByOffset(cursor);
   }
 
-  statementInfo.statement = statementInfo.group.statements[0];
+  statementInfo.statement = statementInfo?.group?.statements[0];
 
-  if (statementInfo.group && !statementInfo.content) {
+  if (sqlDocument && statementInfo.group && !statementInfo.content) {
     statementInfo.content = sqlDocument.content.substring(
       statementInfo.group.range.start, statementInfo.group.range.end
     );
   }
 
   if (statementInfo.content) {
-    [`cl`, `json`, `csv`, `sql`, `explain`, `update`, `rpg`, `udtf`, `bind`].forEach(mode => {
+    [`cl`, `json`, `csv`, `md`, `sql`, `explain`, `update`, `rpg`, `udtf`, `bind`].forEach(mode => {
       if (statementInfo.content.trim().toLowerCase().startsWith(mode + `:`)) {
         statementInfo.content = statementInfo.content.substring(mode.length + 1).trim();
 
@@ -637,10 +683,8 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     statementInfo.content = statementInfo.content.split(eol).map(line => line.trim()).join(` `);
   }
 
-  if (sqlDocument) {
-    if (![`cl`, `bind`].includes(statementInfo.qualifier)) {
-      statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, { replacement: `snippet` });
-    }
+  if (sqlDocument && statementInfo.statement && ![`cl`, `bind`].includes(statementInfo.qualifier)) {
+    statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, { replacement: `snippet` });
   }
 
   return statementInfo;

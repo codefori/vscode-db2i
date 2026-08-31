@@ -1,92 +1,99 @@
-import Statement from "../../../database/statement";
 import { ThemeColor } from "vscode";
 import Configuration from "../../../configuration";
+import Statement from "../../../database/statement";
+import { VisualExplainData } from "../../../types";
 import { DoveNodeView } from "./doveNodeView";
 
 export interface ExplainNode {
-  id: number;
-  title: string;
-  objectSchema: string;
-  objectName: string;
-  childrenNodes: number;
-  children: ExplainNode[];
-  props: ExplainProperty[];
-  tooltipProps: ExplainProperty[];
-  highlights: NodeHighlights;
+  id: number
+  title: string
+  objectSchema: string
+  objectName: string
+  childrenIds: number[]
+  children: ExplainNode[]
+  props: ExplainProperty[]
+  tooltipProps: ExplainProperty[]
+  highlights: NodeHighlights
   /** Context objects include advised indexes and statistics */
-  contextObjects: ContextObject[];
+  contextObjects: ContextObject[]
   /** Context to set when displaying this node, used to identify additional actions */
-  nodeContext: string;
+  nodeContext: string
 }
 
 export interface ExplainProperty {
   type: number;
   title: string;
-  value: string|number;
+  value: string | number;
 }
 
 export class ExplainTree {
-  private flatNodes: {[nodeId: number]: any[]} = {};
-  private order: number[] = [];
-  private nextNodeIndex = 0;
+  private readonly topNode: ExplainNode | undefined;
 
-  private topNode: ExplainNode|undefined;
+  constructor(visualExplainData: VisualExplainData[]) {
+    let topNodeId = Number.MAX_SAFE_INTEGER;
+    const nodesDataById = new Map<number, VisualExplainData[]>();
+    for (const nodeData of visualExplainData) {
+      const nodeId = nodeData.IFA_ICON;
 
-  constructor(veData) {
-    for (let node of veData) {
-      const nodeId = node.IFA_ICON;
-
-      if (!this.order.includes(nodeId)) {
-        this.order.push(nodeId)
+      if (topNodeId > nodeId) {
+        topNodeId = nodeId;
       }
 
-      if (!this.flatNodes[nodeId]) {
-        this.flatNodes[nodeId] = [];
+      let data = nodesDataById.get(nodeId);
+      if (!data) {
+        data = [];
+        nodesDataById.set(nodeId, data);
       }
 
-      this.flatNodes[nodeId].push(node);
+      data.push(nodeData);
     }
 
-    this.topNode = this.processNode(this.nextNodeIndex);
+    //Aggregate data for each node
+    const nodesById = [...nodesDataById].reduce((map, [nodeId, data]) => map.set(nodeId, this.createNode(nodeId, data)), new Map<number, ExplainNode>());
+
+    //Get top node
+    this.topNode = nodesById.get(topNodeId);
+
+    //Link nodes based on their children ids
+    [...nodesById.values()].forEach(node => node.children.push(...node.childrenIds.map(id => nodesById.get(id)!)));
   }
 
   /** Returns the top node */
-  public get(): ExplainNode {
+  public get() {
     return this.topNode;
   }
-  
-  private processNode(index: number): ExplainNode {
-    let node = this.newNode(this.order[index]);
-    let state = new NodeProcessingState();
 
-    for (const data of this.flatNodes[node.id]) {
+  private createNode(nodeId: number, data: VisualExplainData[]): ExplainNode {
+    const node = this.newNode(nodeId);
+    let state = new NodeProcessingState();
+    for (const dataChunk of data) {
       // When a DELTA_ATTRIBUTES_INDICATOR row is encountered, the rows following it provide new values for previously processed attributes,
       // so we need to look back at currentNode.props to find the right entry to update with a new value.
-      if (DELTA_ATTRIBUTES_INDICATOR === data.IFA_COLHDG) {
+      if (DELTA_ATTRIBUTES_INDICATOR === dataChunk.IFA_COLHDG) {
         state.processingDeltaAttributes = true;
         continue;
       }
       let displayable = true;
       // The value of the attribute may be spread across multiple data elements
       let value: any;
-      switch (data.IFA_TYPOUT) {
+      switch (dataChunk.IFA_TYPOUT) {
         case ValueType.LONG_STRING:
           // Type indicates a long string so the value is continued in additional rows
           state.processingLongString = true;
-          state.longString += data.IFA_CHROUT;
+          state.longString += dataChunk.IFA_CHROUT;
           continue;
         case ValueType.DOUBLE_BYTE_STRING:
           // Type indicates a long double-byte string so the value is continued in additional rows
           state.processingLongDoubleByteString = true;
-          state.longDoubleByteString += data.IFA_DBLBYT;
+          state.longDoubleByteString += dataChunk.IFA_DBLBYT;
           continue;
         case ValueType.DOUBLE_BYTE_STRING_END:
           state.processingLongDoubleByteString = false;
-          value = state.longDoubleByteString + data.IFA_DBLBYT;
+          value = state.longDoubleByteString + dataChunk.IFA_DBLBYT;
           state.longDoubleByteString = ``;
           break;
         case ValueType.NUMERIC:
-          value = data.IFA_NUMOUT;
+          value = dataChunk.IFA_NUMOUT;
           break;
         case ValueType.INVISIBLE:
           // Invisible attributes are not meant for display, but are associated with context actions defined for the node
@@ -96,44 +103,36 @@ export class ExplainTree {
         default:
           // If we were processing a long string, we've reached the end of the data, so wrap it up, clear the long string mode
           if (state.processingLongString) {
-            value = state.longString + data.IFA_CHROUT;
+            value = state.longString + dataChunk.IFA_CHROUT;
             state.longString = ``;
             state.processingLongString = false;
             break;
           } else if (state.processingLongDoubleByteString) {
-            value = state.longDoubleByteString + data.IFA_DBLBYT;
+            value = state.longDoubleByteString + dataChunk.IFA_DBLBYT;
             state.longString = ``;
             break;
           }
-          value = data.IFA_CHROUT;
+          value = dataChunk.IFA_CHROUT;
           break;
       }
+
       if (displayable) {
         // Update the node details
-        this.updateNode(node, value, state, data);
+        this.updateNode(node, value, state, dataChunk);
         // Update the highlight settings for this node, bitwise excluding 16 ( binary 10000 ) which corresponds to Highlighting.ATTRIBUTE_SECTION_HEADING ( bit index 4, zero-based ), since it doesn't apply to the main VE tree
-        node.highlights.update(data.IFA_FMTVAL & ~16);
+        node.highlights.update(dataChunk.IFA_FMTVAL & ~16);
       }
-      this.processContextData(node, data);
-    }
-
-    for (let subIndex = 0; subIndex < node.childrenNodes; subIndex++) {
-      this.nextNodeIndex += 1;
-      node.children.push(this.processNode(this.nextNodeIndex));
-    }
-
-    if (node.childrenNodes !== node.children.length) {
-      throw new Error(`This makes no sense.`);
+      this.processContextData(node, dataChunk);
     }
 
     return node;
   }
-  
+
   /**
    * Update the node properties
    */
-  private updateNode(node: ExplainNode, value: any, state: NodeProcessingState, data: any): void {
-    const title = data.IFA_COLHDG;
+  private updateNode(node: ExplainNode, value: any, state: NodeProcessingState, data: VisualExplainData): void {
+    const title = data.IFA_COLHDG?.trim();
     // Ignore rows with no title
     if (!title) {
       return;
@@ -143,11 +142,8 @@ export class ExplainTree {
       case RecordType.NEW_ICON:
         node.title = value;
         break;
-      case RecordType.CHILD_COUNT:
-        node.childrenNodes = value;
-        break;
       case RecordType.CHILD_ICON:
-        // TODO: what do we do with this?
+        node.childrenIds.push(value);
         break;
       case RecordType.HEADING:
         node.props.push({
@@ -160,7 +156,14 @@ export class ExplainTree {
         if (value || value === 0) {
           // If processing delta attributes, update the existing property entry, otherwise push a new one
           if (state.processingDeltaAttributes) {
-            node.props.find(prop => prop.title === title).value = value;
+            const attribute = node.props.find(prop => prop.title === title);
+            if (attribute) {
+              attribute.value = value;
+            }
+            else {
+              //Should not happen
+              console.log(`Node ${node.id} attribute ${title} not found!`);
+            }
           } else {
             const newProperty: ExplainProperty = {
               type: type,
@@ -192,7 +195,7 @@ export class ExplainTree {
       title: ``,
       objectSchema: ``,
       objectName: ``,
-      childrenNodes: 0,
+      childrenIds: [],
       children: [],
       props: [],
       tooltipProps: [],
@@ -210,12 +213,12 @@ export class ExplainTree {
     // If the context data attribute relates to an advised index or statistic, squirrel it away
     if (contextType == ContextType.ADVISED_INDEX || contextType == ContextType.ADVISED_STATISTIC) {
       let attributeId: number = data.IFA_CTXORD;
-      let contextObj: ContextObject;
+      let contextObj;
       // The attributes are sequentially ordered, so for a given context type, we look to continue filling attributes of the last instance.
       // If the attribute we are adding is one that has already been set in the last context object, we start a new one.
-      let co: ContextObject = node.contextObjects.filter((co) => co.contextType == contextType).pop();
+      let co = node.contextObjects.filter((co) => co.contextType == contextType).pop();
       // If the attribute is not set, this is the context object that we will update
-      if (co != undefined && !co.hasProperty(attributeId)) {
+      if (co && !co.hasProperty(attributeId)) {
         contextObj = co;
       }
       // If we are not updating an existing context object, create one and push it onto the list
@@ -240,12 +243,14 @@ export class ExplainTree {
   /** Collects the context objects from the all the tree nodes, sorted by type */
   public getContextObjects(includeType?: number[]): ContextObject[] {
     let contextObjects: ContextObject[] = [];
-    this.topNode.contextObjects.forEach(co => contextObjects.push(co));
-    this.getAllChildNodes(this.topNode).forEach(en => en.contextObjects.forEach(co => contextObjects.push(co)));
-    if (includeType) {
-      contextObjects = contextObjects.filter(co => includeType.includes(co.contextType));
+    if (this.topNode) {
+      this.topNode.contextObjects.forEach(co => contextObjects.push(co));
+      this.getAllChildNodes(this.topNode).forEach(en => en.contextObjects.forEach(co => contextObjects.push(co)));
+      if (includeType) {
+        contextObjects = contextObjects.filter(co => includeType.includes(co.contextType));
+      }
+      contextObjects.sort((a: ContextObject, b: ContextObject) => a.contextType - b.contextType);
     }
-    contextObjects.sort((a: ContextObject, b: ContextObject) => a.contextType - b.contextType);
     return contextObjects;
   }
 
@@ -293,22 +298,22 @@ const DELTA_ATTRIBUTES_INDICATOR = `BEGIN DELTA ATTRIBUTES`;
  * @see https://www.ibm.com/docs/en/i/7.5?topic=ssw_ibm_i_75/apis/qqqvexpl.html#record_types
  */
 export const RecordType = {
-  NEW_ICON    :  10,
-  CHILD_COUNT :  11,
-  CHILD_ICON  :  12,
-  HEADING     : 111
+  NEW_ICON: 10,
+  CHILD_COUNT: 11,
+  CHILD_ICON: 12,
+  HEADING: 111
 } as const
 
 /**
  * Value type indicators from the data type column ( IFA_TYPOUT )
  */
 const ValueType = {
-  CHARACTER              : `C`,
-  NUMERIC                : `N`,
-  LONG_STRING            : `X`,
-  DOUBLE_BYTE_STRING     : `Y`,
-  DOUBLE_BYTE_STRING_END : `D`,
-  INVISIBLE              : `I`
+  CHARACTER: `C`,
+  NUMERIC: `N`,
+  LONG_STRING: `X`,
+  DOUBLE_BYTE_STRING: `Y`,
+  DOUBLE_BYTE_STRING_END: `D`,
+  INVISIBLE: `I`
 } as const
 
 /**
@@ -316,12 +321,12 @@ const ValueType = {
  * These are associated with invisible data, indicating actions the user might perform on the node
  */
 export const ContextType = {
-  TABLE_ACTIONS     : 21,
-  INDEX_ACTIONS     : 22,
-  ADVISED_INDEX     : 23,
-  ENVIRONMENT       : 24,
-  ADVISED_STATISTIC : 25,
-  UDTF_ACTIONS      : 26
+  TABLE_ACTIONS: 21,
+  INDEX_ACTIONS: 22,
+  ADVISED_INDEX: 23,
+  ENVIRONMENT: 24,
+  ADVISED_STATISTIC: 25,
+  UDTF_ACTIONS: 26
 } as const
 
 /**
@@ -345,8 +350,8 @@ function newContextObjectProperty(propertyId: number, data: any): ContextObjectP
  */
 class ContextObjectProperty implements ExplainProperty {
   type: number;
-  title: string;
-  value: string|number;
+  title: string = "";
+  value: string | number;
   constructor(type: number, data: any) {
     this.type = type;
     this.setDescription(type);
@@ -450,7 +455,7 @@ export class ContextObject {
   hasProperty(propertyId: number): boolean {
     return this.properties[propertyId] != undefined;
   }
-  
+
   /**
    * Log to console for debug
    */
@@ -486,24 +491,24 @@ class NodeProcessingState {
  * Bit indexes for the format value column ( IFA_FMTVAL )
  */
 export enum Highlighting {
-  ESTIMATED_ROW_EXPENSIVE        = 1,
-  ESTIMATED_TIME_EXPENSIVE       = 2,
-  INDEX_ADVISED                  = 3,
-  ATTRIBUTE_SECTION_HEADING      = 4,
+  ESTIMATED_ROW_EXPENSIVE = 1,
+  ESTIMATED_TIME_EXPENSIVE = 2,
+  INDEX_ADVISED = 3,
+  ATTRIBUTE_SECTION_HEADING = 4,
   LOOKAHEAD_PREDICATE_GENERATION = 5,
-  MATERIALIZED_QUERY_TABLE       = 6,
-  ACTUAL_ROWS_EXPENSIVE          = 7,
-  ACTUAL_TIME_EXPENSIVE          = 8,
+  MATERIALIZED_QUERY_TABLE = 6,
+  ACTUAL_ROWS_EXPENSIVE = 7,
+  ACTUAL_TIME_EXPENSIVE = 8,
 }
 
 export namespace Highlighting {
   export function getFromSettings(): NodeHighlights {
     let highlights = new NodeHighlights();
     // Defined in the configuration section of package.json, managed under Db2 for IBM i->Visual Explain in VS Code Settings
-    let settings = Configuration.get(`visualExplain.highlighting`);
+    let settings = Configuration.get<Record<string, boolean>>(`visualExplain.highlighting`);
     if (settings) {
       let keys = Object.keys(settings);
-      for (let key of keys) {
+      for (const key of keys) {
         if (settings[key]) {
           switch (key) {
             case "Index Advised": highlights.set(Highlighting.INDEX_ADVISED); break;
@@ -609,6 +614,7 @@ export class NodeHighlights {
    * Returns the count of highlight bits that are set
    */
   getCount(): number {
+    //@ts-ignore
     return Object.keys(Highlighting).filter(h => isNaN(Number(h))).filter(h => this.isSet(Highlighting[h])).map(h => Highlighting[h]).length;
   }
 
@@ -628,15 +634,15 @@ export class NodeHighlights {
   /**
   * Returns the highest priority highlight color that matches the user's highlight preferences
   */
-  getPriorityColor(): ThemeColor {
+  getPriorityColor() {
     // From the user's highlight preferences, find the highest priority highlight set for this node
-    for (let name of Highlighting.getFromSettings().getNames()) {
+    for (const name of Highlighting.getFromSettings().getNames()) {
+      //@ts-ignore
       const highlight: Highlighting = Highlighting[name];
       if (this.isSet(highlight)) {
         return Highlighting.Colors[highlight];
       }
     }
-    return null;
   }
 
   /**
@@ -646,6 +652,7 @@ export class NodeHighlights {
     if (this.formatValue > 0) {
       console.log([
         "  " + this.constructor['name'] + ": " + this.formatValue,
+        //@ts-ignore
         ...Object.keys(Highlighting).filter(h => isNaN(Number(h)) && this.isSet(Highlighting[h])).map(h => "    - " + h)
       ].join("\n")
       );

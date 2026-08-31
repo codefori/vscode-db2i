@@ -41,6 +41,21 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.generateSQLWithConstraints",
+        "title": "With Inline Constraints",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateSQLWithoutConstraints",
+        "title": "With Separate ALTER Statements",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.generateRoutineCall",
+        "title": "Generate Call Statement",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.getRelatedObjects",
         "title": "Get Related Objects",
         "category": "Db2 for i"
@@ -113,7 +128,23 @@
         "icon": "$(search)"
       }
     ],
+    "submenus": [
+      {
+        "id": "generateSQLSubmenu",
+        "label": "Generate SQL"
+      }
+    ],
     "menus": {
+      "generateSQLSubmenu": [
+        {
+          "command": "vscode-db2i.generateSQLWithConstraints",
+          "group": "1_generate"
+        },
+        {
+          "command": "vscode-db2i.generateSQLWithoutConstraints",
+          "group": "1_generate"
+        }
+      ],
       "commandPalette": [
         {
           "command": "vscode-db2i.filterDatabaseObjectTypes",
@@ -125,6 +156,18 @@
         },
         {
           "command": "vscode-db2i.generateSQL",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateSQLWithConstraints",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateSQLWithoutConstraints",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.generateRoutineCall",
           "when": "never"
         },
         {
@@ -205,7 +248,12 @@
           "group": "inline"
         },
         {
-          "command": "vscode-db2i.generateSQL",
+          "command": "vscode-db2i.generateRoutineCall",
+          "when": "viewItem == procedure || viewItem == function",
+          "group": "db2@1"
+        },
+        {
+          "submenu": "generateSQLSubmenu",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == trigger || viewItem == type",
           "group": "db2@2"
         },
@@ -231,12 +279,12 @@
         },
         {
           "command": "vscode-db2i.getAuthorities",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
           "group": "db2workWith@4"
         },
         {
           "command": "vscode-db2i.getObjectLocks",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
           "group": "db2workWith@5"
         },
         {
@@ -256,12 +304,12 @@
         },
         {
           "command": "vscode-db2i.deleteObject",
-          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type",
+          "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == mask || viewItem == constraint || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == permission || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
           "group": "db2data@3"
         },
         {
           "command": "vscode-db2i.renameObject",
-          "when": "viewItem == table || viewItem == view || viewItem == index",
+          "when": "viewItem == table || viewItem == view || viewItem == index || viewItem == logical",
           "group": "db2data@4"
         },
         {

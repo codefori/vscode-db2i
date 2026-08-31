@@ -1,13 +1,12 @@
 import { Hover, languages, MarkdownString, workspace } from "vscode";
-import { getSqlDocument } from "./logic/parse";
-import { DbCache, LookupResult, RoutineDetail } from "./logic/cache";
-import { JobManager } from "../../config";
+import { CallableSignature } from "../../database/callable";
 import Statement from "../../database/statement";
-import { getParmAttributes, prepareParamType } from "./logic/completion";
+import { getPositionData } from "../sql/document";
 import { StatementType } from "../sql/types";
 import { remoteAssistIsEnabled } from "./logic/available";
-import { CallableSignature } from "../../database/callable";
-import { getPositionData } from "../sql/document";
+import { DbCache, LookupResult, RoutineDetail } from "./logic/cache";
+import { prepareParamType } from "./logic/completion";
+import { getSqlDocument } from "./logic/parse";
 
 // =================================
 // We need to open provider to exist so symbols can be cached for hover support when opening files
@@ -80,12 +79,12 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
 
     if (statementAt) {
       const refs = statementAt.getObjectReferences();
-      const possibleNames = refs.map(ref => ref.object.name).filter(name => name);
+      const possibleNames : string[] = refs.map(ref => ref.object.name).filter((name): name is string => Boolean(name));
 
       for (const ref of refs) {
         const atRef = offset >= ref.tokens[0].range.start && offset <= ref.tokens[ref.tokens.length - 1].range.end;
 
-        if (atRef) {
+        if (atRef && ref.object.name) {
           const schema = ref.object.schema || defaultSchema;
           const result = await lookupSymbol(ref.object.name, schema, possibleNames);
 
@@ -102,14 +101,14 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
                 const callableRef = statementAt.getCallableDetail(routineOffset, false);
                 if (callableRef) {
                   const { currentCount } = getPositionData(callableRef, routineOffset);
-                  signatures = await DbCache.getCachedSignatures(callableRef.parentRef.object.schema, callableRef.parentRef.object.name);
+                  signatures = DbCache.getCachedSignatures(callableRef.parentRef.object.schema, callableRef.parentRef.object.name);
                   const possibleSignatures = signatures.filter((s) => s.parms.length >= currentCount).sort((a, b) => a.parms.length - b.parms.length);
                   signature = possibleSignatures.find((signature) => currentCount <= signature.parms.length);
                 } 
               }
               
               if (!signature) {
-                signatures = await DbCache.getCachedSignatures(result.routine.schema, result.routine.name);
+                signatures = DbCache.getCachedSignatures(result.routine.schema, result.routine.name);
                 signature = signatures[0];
               }
 

@@ -1,6 +1,6 @@
 import Statement from "./statement";
 import SQLTokeniser from "./tokens";
-import { CallableReference, Definition, IRange, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
+import { CallableReference, Definition, ParsedEmbeddedStatement, StatementGroup, StatementType, StatementTypeWord, Token } from "./types";
 
 export default class Document {
   content: string;
@@ -59,10 +59,11 @@ export default class Document {
           this.addStatement(statementTokens);
 
           statementStart = i + 1;
+          bracketDepth = 0;
           break;
 
         case `statementType`:
-          currentStatementType = StatementTypeWord[upperValue];
+          currentStatementType = (upperValue ? StatementTypeWord.get(upperValue) : StatementType.Unknown) || StatementType.Unknown;
           break;
 
         case `keyword`:

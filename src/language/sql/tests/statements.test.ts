@@ -1,7 +1,6 @@
-import { assert, describe, expect, test } from 'vitest'
-import SQLTokeniser from '../tokens'
+import { describe, expect, test } from 'vitest';
 import Document, { getPositionData } from '../document';
-import { CallableReference, ClauseType, StatementType } from '../types';
+import { ClauseType, StatementType } from '../types';
 
 const parserScenarios = describe.each([
   {newDoc: (content: string) => new Document(content)},
@@ -1213,7 +1212,7 @@ parserScenarios(`Object references`, ({newDoc}) => {
       'Create',  'Declare',
       'Declare', 'Call',
       'Loop', 'Set',
-      'Unknown', 'Unknown',
+      'Prepare', 'Execute',
       'If', 'Call',
       'Leave', 'End',
       'Call',    'End',
@@ -1249,8 +1248,8 @@ parserScenarios(`Offset reference tests`, ({newDoc}) => {
 
     const ref = statement.getReferenceByOffset(21);
     expect(ref).toBeDefined();
-    expect(ref.object.schema).toBe(`sample`);
-    expect(ref.object.name).toBeUndefined();
+    expect(ref!.object.schema).toBe(`sample`);
+    expect(ref!.object.name).toBeUndefined();
   });
 
   test(`Writing select, invalid middle`, () => {
@@ -1268,8 +1267,8 @@ parserScenarios(`Offset reference tests`, ({newDoc}) => {
 
     const ref = statement.getReferenceByOffset(9);
     expect(ref).toBeDefined();
-    expect(ref.object.schema).toBe(`b`);
-    expect(ref.object.name).toBeUndefined();
+    expect(ref!.object.schema).toBe(`b`);
+    expect(ref!.object.name).toBeUndefined();
   });
 });
 
@@ -1400,8 +1399,37 @@ parserScenarios(`PL body tests`, ({newDoc}) => {
 
     const blockParent = callStatement.getCallableDetail(callStatement.tokens[3].range.start);
     expect(blockParent).toBeDefined();
-    expect(blockParent.tokens.length).toBe(3);
-    expect(blockParent.parentRef.object.name).toBe(`MEDIAN_RESULT_SET`);
+    expect(blockParent!.tokens.length).toBe(3);
+    expect(blockParent!.parentRef.object.name).toBe(`MEDIAN_RESULT_SET`);
+  });
+
+  test(`CREATE PROCEDURE after syntax error`, () => {
+    const lines = [
+      `-- SELECT with syntax error (extra closing brackets)`,
+      `select * from table(qsys2.ifs_object_statistics('/home/scottf/'))));`,
+      ``,
+      `--CREATE parsing should not be impacted`,
+      `create or replace procedure coolstuff.proc1()`,
+      `begin`,
+      `    declare v1 integer;`,
+      `    declare v2 integer;`,
+      `    select 1+1, 2+2, 3+3 into v1, v2 from sysibm.sysdummy1;`,
+      `end;`
+    ].join(`\r\n`);
+
+    const document = newDoc(lines);
+    const statements = document.statements;
+
+    expect(statements.length).toBe(6);
+    expect(statements[0].tokens.length).toBe(14);
+    expect(statements[1].tokens.length).toBe(10);
+    expect(statements[2].tokens.length).toBe(3);
+    expect(statements[3].tokens.length).toBe(3);
+    expect(statements[4].tokens.length).toBe(20);
+    expect(statements[5].tokens.length).toBe(1);
+
+    const groups = document.getStatementGroups();
+    expect(groups.length).toBe(2);
   });
 
   test(`WITH: no explicit columns`, () => {
@@ -1747,6 +1775,17 @@ describe(`Parameter statement tests`, () => {
     expect(markerRanges.length).toBe(2);
   });
 
+  test('WRAPPED statement body colons should not be treated as host variables', () => {
+    const document = new Document(`CREATE FUNCTION SALARY ( WAGE DECFLOAT )  WRAPPED QSQ07040 aacxW8plW8VzG8pHG8VvG8Fv68pb68FHl8:d39pl2qpdW8pdW8pdW9pjaqebaqebaCyIiKAHDATfmviU2_csLwxF1GUVlfERKBQfPcs79kF1EUT7VTiNQ_TmNQ_Sa`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const markerRanges = statement.getEmbeddedStatementAreas();
+    expect(markerRanges.length).toBe(0);
+  });
+
   test('JSON_OBJECT parameters should not mark as embedded', () => {
     const document = new Document(`values json_object('model_id': 'meta-llama/llama-2-13b-chat', 'input': 'TEXT', 'parameters': json_object('max_new_tokens': 100, 'time_limit': 1000), 'space_id': 'SPACEID')`);
     const statements = document.statements;
@@ -2008,26 +2047,26 @@ describe(`Parameter statement tests`, () => {
   
     const callableA = a.getCallableDetail(23);
     expect(callableA).toBeDefined();
-    expect(callableA.parentRef.object.schema).toBe(`qsys2`);
-    expect(callableA.parentRef.object.name).toBe(`create_abcd`);
+    expect(callableA!.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableA!.parentRef.object.name).toBe(`create_abcd`);
   
     const blockB = a.getBlockRangeAt(24);
     expect(blockB).toMatchObject({ start: 5, end: 5 });
   
     const callableB = a.getCallableDetail(24);
     expect(callableB).toBeDefined();
-    expect(callableB.parentRef.object.schema).toBe(`qsys2`);
-    expect(callableB.parentRef.object.name).toBe(`create_abcd`);
+    expect(callableB!.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableB!.parentRef.object.name).toBe(`create_abcd`);
   
     const blockC = b.getBlockRangeAt(49);
     expect(blockC).toMatchObject({ start: 5, end: 13 });
   
     const callableC = b.getCallableDetail(49, true);
     expect(callableC).toBeDefined();
-    expect(callableC.tokens.length).toBe(4);
-    expect(callableC.tokens.some(t => t.type === `block` && t.block.length === 3)).toBeTruthy();
-    expect(callableC.parentRef.object.schema).toBe(`qsys2`);
-    expect(callableC.parentRef.object.name).toBe(`create_abcd`);
+    expect(callableC!.tokens.length).toBe(4);
+    expect(callableC!.tokens.some(t => t.type === `block` && t.block?.length === 3)).toBeTruthy();
+    expect(callableC!.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableC!.parentRef.object.name).toBe(`create_abcd`);
   });
 
   test('Partial parameters 1: Position data for procedure call', () => {
@@ -2038,12 +2077,12 @@ describe(`Parameter statement tests`, () => {
   
     expect(statements.length).toBe(1);
 
-    const callableReference: CallableReference = statements[0].getCallableDetail(29);
+    const callableReference = statements[0].getCallableDetail(29);
     expect(callableReference).toBeDefined();
-    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
-    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableReference!.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference!.parentRef.object.schema).toBe(`qsys2`);
 
-    const positionData = getPositionData(callableReference, 29);
+    const positionData = getPositionData(callableReference!, 29);
     expect(positionData).toBeDefined();
 
     expect(positionData.currentParm).toBe(1);
@@ -2058,12 +2097,12 @@ describe(`Parameter statement tests`, () => {
   
     expect(statements.length).toBe(1);
 
-    const callableReference: CallableReference = statements[0].getCallableDetail(31);
+    const callableReference = statements[0].getCallableDetail(31);
     expect(callableReference).toBeDefined();
-    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
-    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableReference!.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference!.parentRef.object.schema).toBe(`qsys2`);
 
-    const positionData = getPositionData(callableReference, 31);
+    const positionData = getPositionData(callableReference!, 31);
     expect(positionData).toBeDefined();
 
     expect(positionData.currentParm).toBe(1);
@@ -2078,12 +2117,12 @@ describe(`Parameter statement tests`, () => {
   
     expect(statements.length).toBe(1);
 
-    const callableReference: CallableReference = statements[0].getCallableDetail(25);
+    const callableReference = statements[0].getCallableDetail(25);
     expect(callableReference).toBeDefined();
-    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
-    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableReference!.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference!.parentRef.object.schema).toBe(`qsys2`);
 
-    const positionData = getPositionData(callableReference, 25);
+    const positionData = getPositionData(callableReference!, 25);
     expect(positionData).toBeDefined();
 
     expect(positionData.currentParm).toBe(0);
@@ -2098,18 +2137,18 @@ describe(`Parameter statement tests`, () => {
   
     expect(statements.length).toBe(1);
 
-    const callableReference: CallableReference = statements[0].getCallableDetail(25);
+    const callableReference = statements[0].getCallableDetail(25);
     expect(callableReference).toBeDefined();
-    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
-    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableReference!.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference!.parentRef.object.schema).toBe(`qsys2`);
 
-    const positionDataA = getPositionData(callableReference, 25);
+    const positionDataA = getPositionData(callableReference!, 25);
     expect(positionDataA).toBeDefined();
 
     expect(positionDataA.currentParm).toBe(0);
     expect(positionDataA.currentCount).toBe(3);
 
-    const positionDataB = getPositionData(callableReference, 29);
+    const positionDataB = getPositionData(callableReference!, 29);
     expect(positionDataB).toBeDefined();
 
     expect(positionDataB.currentParm).toBe(1);
@@ -2124,18 +2163,416 @@ describe(`Parameter statement tests`, () => {
   
     expect(statements.length).toBe(1);
 
-    const callableReference: CallableReference = statements[0].getCallableDetail(50);
+    const callableReference = statements[0].getCallableDetail(50);
     expect(callableReference).toBeDefined();
-    expect(callableReference.parentRef.object.name).toBe(`ifs_write`);
-    expect(callableReference.parentRef.object.schema).toBe(`qsys2`);
+    expect(callableReference!.parentRef.object.name).toBe(`ifs_write`);
+    expect(callableReference!.parentRef.object.schema).toBe(`qsys2`);
 
-    const positionDataA = getPositionData(callableReference, 50);
+    const positionDataA = getPositionData(callableReference!, 50);
     expect(positionDataA).toBeDefined();
 
     expect(positionDataA.currentParm).toBe(2);
     expect(positionDataA.currentCount).toBe(3);
   });
 });
+parserScenarios(`Transaction Control Statements`, ({newDoc}) => {
+  test('COMMIT: Basic commit', () => {
+    const document = newDoc(`COMMIT;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Commit);
+  });
+
+  test('ROLLBACK: Basic rollback', () => {
+    const document = newDoc(`ROLLBACK;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Rollback);
+  });
+
+  test('ROLLBACK: Rollback to savepoint', () => {
+    const document = newDoc(`ROLLBACK TO SAVEPOINT sp1;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Rollback);
+  });
+
+  test('SAVEPOINT: Create savepoint', () => {
+    const document = newDoc(`SAVEPOINT sp1 ON ROLLBACK RETAIN CURSORS;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Savepoint);
+  });
+
+  test('RELEASE: Release savepoint', () => {
+    const document = newDoc(`RELEASE SAVEPOINT sp1;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Release);
+  });
+});
+
+parserScenarios(`Dynamic SQL Statements`, ({newDoc}) => {
+  test('PREPARE: Basic prepare', () => {
+    const document = newDoc(`PREPARE stmt1 FROM 'SELECT * FROM employees';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Prepare);
+  });
+
+  test('PREPARE: Prepare with variable', () => {
+    const document = newDoc(`PREPARE stmt1 FROM :sql_string;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Prepare);
+  });
+
+  test('EXECUTE: Execute prepared statement', () => {
+    const document = newDoc(`EXECUTE stmt1;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Execute);
+  });
+
+  test('EXECUTE: Execute immediate', () => {
+    const document = newDoc(`EXECUTE IMMEDIATE 'DROP TABLE temp_table';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Execute);
+  });
+
+  test('DESCRIBE: Describe statement', () => {
+    const document = newDoc(`DESCRIBE stmt1 INTO :sqlda;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Describe);
+  });
+});
+
+parserScenarios(`Connection Statements`, ({newDoc}) => {
+  test('CONNECT: Basic connect', () => {
+    const document = newDoc(`CONNECT TO mydb;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Connect);
+  });
+
+  test('CONNECT: Connect with user', () => {
+    const document = newDoc(`CONNECT TO mydb USER :userid USING :password;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Connect);
+  });
+
+  test('DISCONNECT: Basic disconnect', () => {
+    const document = newDoc(`DISCONNECT CURRENT;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Disconnect);
+  });
+
+  test('DISCONNECT: Disconnect specific connection', () => {
+    const document = newDoc(`DISCONNECT mydb;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Disconnect);
+  });
+});
+
+parserScenarios(`DDL Statements`, ({newDoc}) => {
+  test('RENAME: Rename table', () => {
+    const document = newDoc(`RENAME TABLE old_table TO new_table;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Rename);
+  });
+
+  test('RENAME: Rename with schema', () => {
+    const document = newDoc(`RENAME TABLE myschema.old_table TO myschema.new_table;`);
+
+    expect(document.statements.length).toBe(1);
+    const statement = document.statements[0];
+    expect(statement.type).toBe(StatementType.Rename);
+  });
+
+  test('TRUNCATE: Basic truncate', () => {
+    const document = newDoc(`TRUNCATE TABLE employees;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Truncate);
+  });
+
+  test('TRUNCATE: Truncate with options', () => {
+    const document = newDoc(`TRUNCATE TABLE employees IMMEDIATE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Truncate);
+  });
+
+  test('COMMENT: Comment on table', () => {
+    const document = newDoc(`COMMENT ON TABLE employees IS 'Employee information';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Comment);
+  });
+
+  test('COMMENT: Comment on column', () => {
+    const document = newDoc(`COMMENT ON COLUMN employees.name IS 'Employee name';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Comment);
+  });
+});
+
+parserScenarios(`Data Transfer and Security Statements`, ({newDoc}) => {
+  test('TRANSFER: Transfer ownership', () => {
+    const document = newDoc(`TRANSFER OWNERSHIP OF TABLE employees TO USER newowner;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Transfer);
+  });
+
+  test('GRANT: Grant privileges', () => {
+    const document = newDoc(`GRANT SELECT, INSERT ON TABLE employees TO PUBLIC;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Grant);
+  });
+
+  test('GRANT: Grant with schema', () => {
+    const document = newDoc(`GRANT ALL PRIVILEGES ON myschema.employees TO USER john;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Grant);
+  });
+
+  test('REVOKE: Revoke privileges', () => {
+    const document = newDoc(`REVOKE SELECT ON TABLE employees FROM PUBLIC;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Revoke);
+  });
+
+  test('REVOKE: Revoke with schema', () => {
+    const document = newDoc(`REVOKE ALL PRIVILEGES ON myschema.employees FROM USER john;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Revoke);
+  });
+});
+
+parserScenarios(`Cursor and Locator Statements`, ({newDoc}) => {
+  test('ALLOCATE: Allocate cursor', () => {
+    const document = newDoc(`ALLOCATE cursor1 CURSOR FOR RESULT SET :rs1;`);
+    // console.log(document.statements[0]);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Allocate);
+  });
+
+  test('ALLOCATE: Allocate cursor', () => {
+    const document = newDoc(`ALLOCATE loc1 LOCATORS;`);
+
+    expect(document.statements.length).toBe(1);
+    // console.log(document.statements[0]);
+
+    expect(document.statements[0].type).toBe(StatementType.Allocate);
+  });
+
+  test('ASSOCIATE: Associate locators', () => {
+    const document = newDoc(`ASSOCIATE LOCATORS (:loc1, :loc2) WITH PROCEDURE myproc;`);
+    // console.log("helloo");
+    // console.log(document.statements[0]);
+
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Associate);
+  });
+
+  test('LOCK: Lock table', () => {
+    const document = newDoc(`LOCK TABLE employees IN EXCLUSIVE MODE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Lock);
+  });
+
+  test('LOCK: Lock with schema', () => {
+    const document = newDoc(`LOCK TABLE myschema.employees IN SHARE MODE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Lock);
+  });
+});
+
+parserScenarios(`Materialized View Statements`, ({newDoc}) => {
+  test('REFRESH: Refresh materialized view', () => {
+    const document = newDoc(`REFRESH TABLE mv_employees;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Refresh);
+  });
+
+  test('REFRESH: Refresh with schema', () => {
+    const document = newDoc(`REFRESH TABLE myschema.mv_employees;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Refresh);
+  });
+});
+
+parserScenarios(`SET Statements`, ({newDoc}) => {
+  test('SET: Set connection', () => {
+    const document = newDoc(`SET CONNECTION mydb;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set encryption password', () => {
+    const document = newDoc(`SET ENCRYPTION PASSWORD = 'mypassword';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set path', () => {
+    const document = newDoc(`SET PATH = CURRENT PATH, myschema;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set schema', () => {
+    const document = newDoc(`SET SCHEMA myschema;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set session authorization', () => {
+    const document = newDoc(`SET SESSION AUTHORIZATION USER john;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set transaction', () => {
+    const document = newDoc(`SET TRANSACTION ISOLATION LEVEL READ COMMITTED;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+
+  test('SET: Set option', () => {
+    const document = newDoc(`SET OPTION COMMIT = *NONE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Set);
+  });
+});
+
+parserScenarios(`GET Diagnostics Statement`, ({newDoc}) => {
+  test('GET: Get diagnostics', () => {
+    const document = newDoc(`GET DIAGNOSTICS :count = ROW_COUNT;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Get);
+  });
+
+  test('GET: Get diagnostics with condition', () => {
+    const document = newDoc(`GET DIAGNOSTICS CONDITION 1 :sqlstate = RETURNED_SQLSTATE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Get);
+  });
+});
+
+parserScenarios(`Control Flow Statements`, ({newDoc}) => {
+  test('LABEL: Label statement', () => {
+    const document = newDoc(`LABEL ON TABLE MYLIB.MYTABLE IS 'Employee master table';`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Label);
+  });
+
+  test('IF: If statement', () => {
+    const document = newDoc(`IF v_count > 0 THEN SET v_result = 1; END IF;`);
+
+    // IF statement contains nested statements (IF, SET, END)
+    expect(document.statements.length).toBe(3);
+    expect(document.statements[0].type).toBe(StatementType.If);
+    expect(document.statements[1].type).toBe(StatementType.Set);
+    expect(document.statements[2].type).toBe(StatementType.End);
+  });
+
+  test('FOR: For statement', () => {
+    const document = newDoc(`FOR v_row AS SELECT * FROM employees DO SET v_count = v_count + 1; END FOR;`);
+
+    // FOR statement contains nested statements (FOR, SET, END)
+    expect(document.statements.length).toBe(3);
+    expect(document.statements[0].type).toBe(StatementType.For);
+    expect(document.statements[1].type).toBe(StatementType.Set);
+    expect(document.statements[2].type).toBe(StatementType.End);
+  });
+
+  test('WHILE: While statement', () => {
+    const document = newDoc(`WHILE v_counter < 10 DO SET v_counter = v_counter + 1; END WHILE;`);
+
+    // WHILE statement contains nested statements (WHILE, SET, END)
+    expect(document.statements.length).toBe(3);
+    expect(document.statements[0].type).toBe(StatementType.While);
+    expect(document.statements[1].type).toBe(StatementType.Set);
+    expect(document.statements[2].type).toBe(StatementType.End);
+  });
+
+  test('CONTINUE: Continue statement', () => {
+    const document = newDoc(`CONTINUE;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Continue);
+  });
+
+});
+
+parserScenarios(`Cursor Operation Statements`, ({newDoc}) => {
+  test('OPEN: Open cursor', () => {
+    const document = newDoc(`OPEN cursor1;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Open);
+  });
+
+  test('CLOSE: Close cursor', () => {
+    const document = newDoc(`CLOSE cursor1;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Close);
+  });
+});
+
+parserScenarios(`VALUES Statement`, ({newDoc}) => {
+  test('VALUES: Standalone values statement', () => {
+    const document = newDoc(`VALUES (1, 2, 3);`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Values);
+  });
+
+  test('VALUES: Values with multiple rows', () => {
+    const document = newDoc(`VALUES (1, 'A'), (2, 'B'), (3, 'C');`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Values);
+  });
+
+  test('VALUES: Values with expressions', () => {
+    const document = newDoc(`VALUES CURRENT TIMESTAMP, CURRENT USER;`);
+
+    expect(document.statements.length).toBe(1);
+    expect(document.statements[0].type).toBe(StatementType.Values);
+  });
+});
+
 
 describe(`Prefix tests`, () => {
   test('CL prefix', () => {

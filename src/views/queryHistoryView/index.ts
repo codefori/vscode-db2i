@@ -49,11 +49,17 @@ export class QueryHistory implements TreeDataProvider<any> {
       commands.registerCommand(`vscode-db2i.queryHistory.prepend`, async (newQuery?: string, substatement?: string) => {
         if (newQuery && Config.ready) {
           let currentList = Config.getPastQueries();
+          const unixNow = Math.floor(Date.now() / 1000);
           const existingQueryi = currentList.findIndex(queryItem => queryItem.query.trim() === newQuery.trim());
-          const existingQuery = currentList[existingQueryi] || {
-            query: newQuery,
-            unix: Math.floor(Date.now() / 1000),
-          };
+          let existingQuery: QueryHistoryItem;
+          if (existingQueryi >= 0) {
+            // Update existing query item with unix timestamp
+            existingQuery = currentList[existingQueryi];
+            existingQuery.unix = unixNow;
+          } else {
+            // Create new query item
+            existingQuery = { query: newQuery, unix: unixNow };
+          }
 
           if (substatement) {
             if (!existingQuery.substatements) {
@@ -65,17 +71,17 @@ export class QueryHistory implements TreeDataProvider<any> {
               existingQuery.substatements.push(substatement);
             }
           }
-      
+
           // If it exists, remove it
           if (existingQueryi > 0) {
             currentList.splice(existingQueryi, 1);
           }
-      
+
           // If it's at the top, don't add it, it's already at the top
           if (existingQueryi !== 0) {
             currentList.splice(0, 0, existingQuery);
           }
-      
+
           await Config.setPastQueries(currentList);
 
           this.refresh();
@@ -85,10 +91,10 @@ export class QueryHistory implements TreeDataProvider<any> {
       commands.registerCommand(`vscode-db2i.queryHistory.toggleStar`, async (node: PastQueryNode) => {
         if (node && Config.ready) {
           let currentList = Config.getPastQueries();
-          const existingQuery = currentList.findIndex(queryItem => 
+          const existingQuery = currentList.findIndex(queryItem =>
             queryItem.unix === node.item.unix
           );
-      
+
           // If it exists, remove it
           if (existingQuery >= 0) {
             // Toggle the starred status
@@ -102,10 +108,10 @@ export class QueryHistory implements TreeDataProvider<any> {
       commands.registerCommand(`vscode-db2i.queryHistory.remove`, async (node: PastQueryNode) => {
         if (node && Config.ready) {
           let currentList = Config.getPastQueries();
-          const existingQuery = currentList.findIndex(queryItem => 
+          const existingQuery = currentList.findIndex(queryItem =>
             queryItem.unix === node.item.unix
           );
-      
+
           // If it exists, remove it
           if (existingQuery >= 0) {
             currentList.splice(existingQuery, 1);
@@ -116,7 +122,7 @@ export class QueryHistory implements TreeDataProvider<any> {
       }),
 
       commands.registerCommand(`vscode-db2i.queryHistory.clear`, async () => {
-        window.showInformationMessage(`Statement history`, {detail: `Are you sure you want to clear your statement history? This will not remove starred items.`, modal: true}, `Clear`).then(async (result) => {
+        window.showInformationMessage(`Statement history`, { detail: `Are you sure you want to clear your statement history? This will not remove starred items.`, modal: true }, `Clear`).then(async (result) => {
           if (result) {
             if (Config.ready) {
               const starredItems = Config.getPastQueries().filter(queryItem => queryItem.starred === true);
@@ -144,11 +150,11 @@ export class QueryHistory implements TreeDataProvider<any> {
 
       } else {
         const currentList = Config.getPastQueries();
-        
+
         const day = 60 * 60 * 24;
         const week = day * 7;
         const month = day * 30;
-        
+
         const now = Math.floor(Date.now() / 1000);
         const dayAgo = now - day;
         const weekAgo = now - week;
@@ -164,23 +170,23 @@ export class QueryHistory implements TreeDataProvider<any> {
         currentList.forEach(queryItem => {
           // The smaller the unix value, the older it is
           if (queryItem.unix < monthAgo) {
-             olderQueries.push(new PastQueryNode(queryItem));
+            olderQueries.push(new PastQueryNode(queryItem));
           } else if (queryItem.unix < weekAgo) {
             pastMonthQueries.push(new PastQueryNode(queryItem));
-         } else if (queryItem.unix < dayAgo) {
+          } else if (queryItem.unix < dayAgo) {
             pastWeekQueries.push(new PastQueryNode(queryItem));
-         } else {
+          } else {
             pastDayQueries.push(new PastQueryNode(queryItem));
-         }
+          }
         });
 
         let nodes: TimePeriodNode[] = [];
 
         if (hasStarredQueries) {
-          nodes.push(new TimePeriodNode(`Starred`, starredQueries.map(q => new PastQueryNode(q)), {expanded: true, stars: true}));
+          nodes.push(new TimePeriodNode(`Starred`, starredQueries.map(q => new PastQueryNode(q)), { expanded: true, stars: true }));
         }
         if (pastDayQueries.length > 0) {
-          nodes.push(new TimePeriodNode(`Past day`, pastDayQueries, {expanded: !hasStarredQueries}));
+          nodes.push(new TimePeriodNode(`Past day`, pastDayQueries, { expanded: !hasStarredQueries }));
         }
         if (pastWeekQueries.length > 0) {
           nodes.push(new TimePeriodNode(`Past week`, pastWeekQueries));

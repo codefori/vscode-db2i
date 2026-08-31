@@ -1,5 +1,5 @@
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
-import { getBase, getInstance, loadBase } from "../../../base";
+import { getBase, getInstance } from "../../../base";
 import { formatDescription } from ".";
 
 const dbNameText = `
@@ -39,13 +39,13 @@ export default function getSystemTab(options: JDBCOptions) {
         {
           value: `true`,
           description: `True`,
-          text: `Commit (true)`,
+          text: `true`,
           selected: options["auto commit"] === true,
         },
         {
           value: `false`,
           description: `False`,
-          text: `No commit (false)`,
+          text: `false`,
           selected: options["auto commit"] === false,
         },
       ],
@@ -120,10 +120,7 @@ export default function getSystemTab(options: JDBCOptions) {
     //   ],
     //   formatDescription(autoCommitText)
     // )
-    .addSelect(`database name`, `Database name`, [
-      {text: `System Base`, description: `*SYSBAS`, value: ``, selected: options["database name"] === ``},
-      ...Object.values(connection.getAllIAsps()).map(asp => ({text: asp.name, description: asp.name, value: asp.rdbName, selected: options["database name"] === asp.rdbName}))
-    ], formatDescription(dbNameText))
+    .addInput(`database name`, `Database name`, formatDescription(dbNameText), { default: options["database name"] })
     .addSelect(
       `decfloat rounding mode`,
       `Decfloat rounding mode`,
@@ -290,32 +287,32 @@ export default function getSystemTab(options: JDBCOptions) {
       [
         {
           value: `none`,
-          description: `None`,
-          text: `No commit (none)`,
+          description: `None (*NC or *NONE)`,
+          text: `none (*NC or *NONE)`,
           selected: options["transaction isolation"] === `none`,
         },
         {
           value: `read committed`,
-          description: `Read committed`,
-          text: `read committed`,
+          description: `Read committed (*CS)`,
+          text: `read committed (*CS)`,
           selected: options["transaction isolation"] === `read committed`,
         },
         {
           value: `read uncommitted`,
-          description: `Read uncommitted`,
-          text: `read uncommitted`,
+          description: `Read uncommitted (*UR or *CHG)`,
+          text: `read uncommitted (*UR or *CHG)`,
           selected: options["transaction isolation"] === `read uncommitted`,
         },
         {
           value: `repeatable read`,
-          description: `Repeatable read`,
-          text: `repeatable read`,
+          description: `Repeatable read (*RS or *ALL)`,
+          text: `repeatable read (*RS or *ALL)`,
           selected: options["transaction isolation"] === `repeatable read`,
         },
         {
           value: `serializable`,
-          description: `Serializable`,
-          text: `serializable`,
+          description: `Serializable (*RR)`,
+          text: `serializable (*RR)`,
           selected: options["transaction isolation"] === `serializable`,
         },
       ],

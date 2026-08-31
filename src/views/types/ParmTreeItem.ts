@@ -15,7 +15,7 @@ export default class ParmTreeItem extends vscode.TreeItem {
   name: string;
 
   constructor(schema: string, routine: string, data: SQLParm) {
-    super(Statement.prettyName(data.PARAMETER_NAME), vscode.TreeItemCollapsibleState.None);
+    super(Statement.prettyName(data.PARAMETER_NAME || ``), vscode.TreeItemCollapsibleState.None);
 
     this.contextValue = `parameter`;
     this.schema = schema;

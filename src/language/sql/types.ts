@@ -34,10 +34,32 @@ export enum StatementType {
 	Return = "Return",
 	Signal = "Signal",
 	Set = "Set",
-	While = "While"
+	While = "While",
+	Label = "Label",
+	Commit = "Commit",
+	Rollback = "Rollback",
+	Savepoint = "Savepoint",
+	Release = "Release",
+	Prepare = "Prepare",
+	Execute = "Execute",
+	Describe = "Describe",
+	Connect = "Connect",
+	Disconnect = "Disconnect",
+	Rename = "Rename",
+	Truncate = "Truncate",
+	Comment = "Comment",
+	Transfer = "Transfer",
+	Grant = "Grant",
+	Revoke = "Revoke",
+	Allocate = "Allocate",
+	Refresh = "Refresh",
+	Values = "Values",
+	Continue = "Continue",
+	Associate = "Associate",
+	Lock = "Lock",
 }
 
-export const StatementTypeWord = {
+export const StatementTypeWord = new Map(Object.entries({
 	'CREATE': StatementType.Create,
 	'SELECT': StatementType.Select,
 	'WITH': StatementType.With,
@@ -69,7 +91,31 @@ export const StatementTypeWord = {
 	'SIGNAL': StatementType.Signal,
 	'SET': StatementType.Set,
 	'WHILE': StatementType.While,
-};
+	'LABEL': StatementType.Label,
+	'COMMIT': StatementType.Commit,
+	'ROLLBACK': StatementType.Rollback,
+	'SAVEPOINT': StatementType.Savepoint,
+	'RELEASE': StatementType.Release,
+	'PREPARE': StatementType.Prepare,
+	'EXECUTE': StatementType.Execute,
+	'DESCRIBE': StatementType.Describe,
+	'CONNECT': StatementType.Connect,
+	'DISCONNECT': StatementType.Disconnect,
+	'RENAME': StatementType.Rename,
+	'TRUNCATE': StatementType.Truncate,
+	'COMMENT': StatementType.Comment,
+	'TRANSFER': StatementType.Transfer,
+	'GRANT': StatementType.Grant,
+	'REVOKE': StatementType.Revoke,
+	'ALLOCATE': StatementType.Allocate,
+	'REFRESH': StatementType.Refresh,
+	'VALUES': StatementType.Values,
+	'CONTINUE': StatementType.Continue,
+	'ASSOCIATE': StatementType.Associate,
+	'LOCK': StatementType.Lock,
+	'OPEN': StatementType.Open,
+	'CLOSE': StatementType.Close,
+}));
 
 export enum ClauseType {
 	Unknown = "Unknown",
@@ -83,7 +129,7 @@ export enum ClauseType {
 	Order = "Order"
 }
 
-export const ClauseTypeWord = {
+export const ClauseTypeWord = new Map(Object.entries({
 	'FROM': ClauseType.From,
 	'INTO': ClauseType.Into,
 	'WHERE': ClauseType.Where,
@@ -92,7 +138,7 @@ export const ClauseTypeWord = {
 	'LIMIT': ClauseType.Limit,
 	'OFFSET': ClauseType.Offset,
 	'ORDER': ClauseType.Order
-}
+}));
 
 export interface CTEReference {
 	name: string;

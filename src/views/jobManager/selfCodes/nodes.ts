@@ -39,12 +39,12 @@ export type SelfValue = "*ALL" | "*ERROR" | "*WARNING" | "*NONE";
 
 export interface SelfCodeObject {
   code: SelfValue;
-  message: string;
+  message?: string;
 }
 
 export const selfCodesMap: SelfCodeObject[] = [
-  {code: `*ALL`, message: undefined},
-  {code: `*ERROR`, message: undefined},
-  {code: `*WARNING`, message: undefined},
-  {code: `*NONE`, message: undefined}
+  {code: `*ALL` },
+  {code: `*ERROR` },
+  {code: `*WARNING` },
+  {code: `*NONE` }
 ];

@@ -1,0 +1,5 @@
+on: pull_request
+
+jobs:
+  build-pull-request:
+    uses: codefori/.github/.github/workflows/pr_build.yaml@main

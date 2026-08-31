@@ -1,17 +1,17 @@
-import { window, CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands } from "vscode";
+import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, window } from "vscode";
 
+import { QueryResult } from "@ibm/mapepire-js";
+import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
-import { updateStatusBar } from "../jobManager/statusBar";
 import Configuration from "../../configuration";
-import * as html from "./html";
-import { Query } from "@ibm/mapepire-js/dist/src/query";
-import { ObjectRef } from "../../language/sql/types";
-import Table from "../../database/table";
 import Statement from "../../database/statement";
+import Table from "../../database/table";
+import { ObjectRef } from "../../language/sql/types";
 import { TableColumn } from "../../types";
+import { updateStatusBar } from "../jobManager/statusBar";
 import { statementDone } from "./editorUi";
-import { QueryResult } from "@ibm/mapepire-js";
+import * as html from "./html";
 
 export type SqlParameter = string | number;
 
@@ -26,13 +26,10 @@ export interface ScrollerOptions {
 }
 
 export class ResultSetPanelProvider implements WebviewViewProvider {
-  _view: WebviewView | WebviewPanel;
-  loadingState: boolean;
-  currentQuery: Query<any>;
-  constructor() {
-    this._view = undefined;
-    this.loadingState = false;
-  }
+  _view: WebviewView | WebviewPanel | undefined;
+  loadingState: boolean = false;
+  currentQuery: Query<any> | undefined;
+  lastScrollerOptions: ScrollerOptions | undefined;
 
   endQuery() {
     if (this.currentQuery) {
@@ -42,6 +39,29 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         commands.executeCommand(`vscode-db2i.statement.cancel`, hostJob.id);
       }
       this.currentQuery.close();
+    }
+  }
+
+  retrieveMoreRows(allRows?: boolean) {
+    if (this._view) {
+      const queryId = this.currentQuery?.getId();
+      this._view.webview.postMessage({
+        command: `fetch`,
+        queryId: queryId,
+        allRows: allRows === true
+      });
+    }
+  }
+
+  async refresh() {
+    if (this.lastScrollerOptions) {
+      // Close the current query if it exists
+      if (this.currentQuery) {
+        await this.currentQuery.close();
+        this.currentQuery = undefined;
+      }
+      // Re-run the query with the same options
+      await this.setScrolling(this.lastScrollerOptions);
     }
   }
 
@@ -61,7 +81,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     webviewView.webview.html = html.getLoadingHTML();
 
     const postCellResponse = (id: number, success: boolean) => {
-      this._view.webview.postMessage({
+      this._view?.webview.postMessage({
         command: `cellResponse`,
         id,
         success
@@ -78,15 +98,15 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           if (message.id && message.update && message.bindings) {
             console.log(message);
             try {
-              const result = await JobManager.runSQL(message.update, { parameters: message.bindings });
+              await JobManager.runSQL(message.update, { parameters: message.bindings });
               const substatement = message.bindings
-                ? `bind: ${message.bindings
+                ? `bind: ${(message.bindings as string[])
                   .map(binding => typeof binding === 'string' ? `'${binding}'` : String(binding))
                   .join(', ')}`
                 : undefined;
               commands.executeCommand(`vscode-db2i.queryHistory.prepend`, message.update, substatement);
               postCellResponse(message.id, true);
-            } catch (e) {
+            } catch (e: any) {
               // this.setError(e.message);
               // if (this.currentQuery) {
               //   this.currentQuery.close();
@@ -99,6 +119,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
         default:
           if (message.query) {
+            let canClear = false;
+            let canRetrieveMoreRows = false;
+            let canRefresh = false;
             if (this.currentQuery) {
               // If we get a request for a new query, then we need to close the old one
               if (this.currentQuery.getId() === undefined || this.currentQuery.getId() !== message.queryId) {
@@ -115,17 +138,21 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
               if (this.currentQuery.getState() !== "RUN_DONE") {
                 setCancelButtonVisibility(true);
-                let queryResults: QueryResult<any> = undefined;
+                let queryResults: QueryResult<any> | undefined = undefined;
                 let startTime = 0;
                 let endTime = 0;
                 let executionTime: number | undefined;
 
+                let rowsToFetch = Configuration.get<number>('resultsets.rowsToFetch') || 100;
                 if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
-                  queryResults = await this.currentQuery.fetchMore();
+                  // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
+                  // int. This is the largest number available without overflow (Integer.MAX_VALUE)
+                  rowsToFetch = message.allRows === true ? 2147483647 : rowsToFetch;
+                  queryResults = await this.currentQuery.fetchMore(rowsToFetch);
                 }
                 else {
                   startTime = performance.now();
-                  queryResults = await this.currentQuery.execute();
+                  queryResults = await this.currentQuery.execute(rowsToFetch);
                   endTime = performance.now();
                   executionTime = (endTime - startTime);
 
@@ -135,7 +162,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 }
                 const jobId = this.currentQuery.getHostJob().id;
 
-                this._view.webview.postMessage({
+                this._view?.webview.postMessage({
                   command: `rows`,
                   jobId,
                   rows: queryResults.data,
@@ -146,11 +173,15 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                   isDone: queryResults.is_done,
                   executionTime
                 });
+
+                canClear = true;
+                canRetrieveMoreRows = !queryResults.is_done;
+                canRefresh = true;
               }
 
-            } catch (e) {
+            } catch (e: any) {
               this.setError(e.message);
-              this._view.webview.postMessage({
+              this._view?.webview.postMessage({
                 command: `rows`,
                 rows: [],
                 queryId: ``,
@@ -160,6 +191,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
             setCancelButtonVisibility(false);
             updateStatusBar();
+            commands.executeCommand(`setContext`, `vscode-db2i:canClear`, canClear);
+            commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, canRetrieveMoreRows);
+            commands.executeCommand(`setContext`, `vscode-db2i:canRefresh`, canRefresh);
           }
           break;
       }
@@ -195,12 +229,14 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       await this.focus();
     }
 
-    if (!this.loadingState) {
-      this._view.webview.html = html.getLoadingHTML();
-      this.loadingState = true;
-    }
+    if (this._view) {
+      if (!this.loadingState) {
+        this._view.webview.html = html.getLoadingHTML();
+        this.loadingState = true;
+      }
 
-    html.setLoadingText(this._view.webview, content);
+      html.setLoadingText(this._view.webview, content);
+    }
   }
 
   /** Update the result table column headings based on the configuration setting */
@@ -214,6 +250,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   async setScrolling(options: ScrollerOptions) {
+    this.lastScrollerOptions = { ...options };
+
     this.loadingState = false;
     await this.focus();
 
@@ -223,7 +261,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       const schema = options.ref.object.schema || options.ref.object.system;
       if (schema) {
         const goodSchema = Statement.delimName(schema, true);
-        const goodName = Statement.delimName(options.ref.object.name, true);
+        const goodName = Statement.delimName(options.ref.object.name || '', true);
 
         try {
           const isPartitioned = await Table.isPartitioned(goodSchema, goodName);
@@ -292,24 +330,41 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
               };
             }
           }
-        } catch (e) {
+        } catch (e: any) {
           window.showErrorMessage(`Table may not be updatable. This sometimes happens if you're Db2 for i PTF levels are not up to date: ${e.message}`);
         }
       }
     }
 
-    this._view.webview.html = html.generateScroller(options.uiId, options.basicSelect, options.parameters, options.isCL, options.withCancel, updatable);
+    if (this._view) {
+      this._view.webview.html = html.generateScroller(options.uiId || '', options.basicSelect, options.parameters, options.isCL, options.withCancel, updatable);
 
-    this._view.webview.postMessage({
-      command: `fetch`,
-      queryId: options.queryId
-    });
+      this._view.webview.postMessage({
+        command: `fetch`,
+        queryId: options.queryId
+      });
+    }
   }
 
-  setError(error) {
+  setError(error: string) {
     this.loadingState = false;
     // TODO: pretty error
-    this._view.webview.html = `<p>${error}</p>`;
+    if (this._view) {
+      this._view.webview.html = `<p>${error}</p>`;
+    }
+  }
+
+  clear() {
+    if (this._view) {
+      this._view.webview.html = ``;
+    }
+    this.resetContext();
+  }
+
+  resetContext() {
+    commands.executeCommand(`setContext`, `vscode-db2i:canClear`, false);
+    commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, false);
+    commands.executeCommand(`setContext`, `vscode-db2i:canRefresh`, false);
   }
 }
 

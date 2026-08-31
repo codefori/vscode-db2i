@@ -1,12 +1,15 @@
 import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
-import { Token } from "../../language/sql/types";
 import { tokenIs } from "../../language/sql/statement";
+import { Token } from "../../language/sql/types";
 
 export function queryResultToRpgDs(result: QueryResult<any>, source: string = 'Name'): string {
   let content = `dcl-ds row_t qualified template;\n`;
-  for (let i = 0; i < result.metadata.column_count; i++) {
-    const name = columnToRpgFieldName(result.metadata.columns[i], source);
-    content += `  ${name} ${columnToRpgDefinition(result.metadata.columns[i])};\n`;
+
+  if (result.metadata.column_count && result.metadata.columns) {
+    for (let i = 0; i < result.metadata.column_count; i++) {
+      const name = columnToRpgFieldName(result.metadata.columns[i], source);
+      content += `  ${name} ${columnToRpgDefinition(result.metadata.columns[i])};\n`;
+    }
   }
   content += `end-ds;\n`;
   return content;
@@ -64,13 +67,15 @@ export function columnToRpgDefinition(column: ColumnMetaData): string {
 
 export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string, tokens: Token[]): string {
   let columnDefinitions = '';
-  for (let i = 0; i < result.metadata.column_count; i++) {
-    const column = result.metadata.columns[i];
-    columnDefinitions += `    ${column.name} ${columnToSqlDefinition(column)}`;
-    if (i < result.metadata.column_count - 1) {
-      columnDefinitions += ',\n';
-    } else {
-      columnDefinitions += '\n';
+  if (result.metadata.column_count && result.metadata.columns) {
+    for (let i = 0; i < result.metadata.column_count; i++) {
+      const column = result.metadata.columns[i];
+      columnDefinitions += `    ${column.name} ${columnToSqlDefinition(column)}`;
+      if (i < result.metadata.column_count - 1) {
+        columnDefinitions += ',\n';
+      } else {
+        columnDefinitions += '\n';
+      }
     }
   }
 
@@ -79,10 +84,11 @@ export function queryResultToUdtf(result: QueryResult<any>, sqlStatement: string
     tokenIs(tokens[1], `colon`, `:`) &&
     tokenIs(tokens[2], `statementType`, `SELECT`) &&
     tokenIs(tokens[3], `asterisk`, `*`)) {
-    const prefixEnd = (tokens[3].range.start - tokens[0].range.start) - (tokens[1].range.start - tokens[0].range.start) - 2;
-    const suffixStart = (tokens[3].range.start - tokens[0].range.start) - (tokens[1].range.start - tokens[0].range.start);
-    const columns = result.metadata.columns.map(column => column.name).join(`,\n                  `)
-    sqlStatement = `${sqlStatement.substring(0, prefixEnd)}${columns}\n            ${sqlStatement.substring(suffixStart)}`;
+    const adjustment = tokens[2].range.start;
+    const prefixEnd = tokens[3].range.start - adjustment;
+    const suffixStart = tokens[3].range.end - adjustment;
+    const columns = result.metadata.columns!.map(column => column.name).join(`,\n                  `)
+    sqlStatement = `${sqlStatement.substring(0, prefixEnd).trimEnd()} ${columns}\n            ${sqlStatement.substring(suffixStart).trimStart()}`;
   }
 
   return `CREATE OR REPLACE FUNCTION MyFunction()\n`
@@ -161,6 +167,10 @@ export function columnToSqlDefinition(column: ColumnMetaData): string {
     case 'BOOLEAN':
       return `BOOLEAN`;
     default:
-      return `-- type:${column.type} precision:${column.precision} scale:${column.scale} */`;
+      if (column.type.includes(`/`)) {
+        return column.type;
+      } else {
+        return `-- type:${column.type} precision:${column.precision} scale:${column.scale} */`;
+      }
   }
 }

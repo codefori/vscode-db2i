@@ -1,7 +1,6 @@
-import { MarkdownString, StatusBarAlignment, ThemeColor, languages, window } from "vscode";
-import { ServerComponent } from "../../connection/serverComponent";
+import { MarkdownString, StatusBarAlignment, ThemeColor, window } from "vscode";
+import { getInstance, getVSCodeTools } from "../../base";
 import { JobManager } from "../../config";
-import { getInstance } from "../../base";
 import Statement from "../../database/statement";
 
 const item = window.createStatusBarItem(`sqlJob`, StatusBarAlignment.Left);
@@ -10,7 +9,7 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
   const instance = getInstance();
   const connection = instance.getConnection();
 
-  if (connection && ServerComponent.isInstalled()) {
+  if (connection) {
     const selected = JobManager.getSelection();
 
     let text;
@@ -34,6 +33,11 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
 
       const job = selected.job;
 
+      if (job.id) {
+        toolTipItems.push(`[SQL Job: \`${job.id}\`](command:vscode-db2i.jobManager.copyJobId)`);
+        toolTipItems.push(`[$(info) View Job Log](command:vscode-db2i.jobManager.viewJobLog)`);
+      }
+
       if (job.getNaming() === `sql`) {
         toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${Statement.delimName(await job.getCurrentSchema())}\``);
       } else {
@@ -42,7 +46,7 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
           ``,
           `Configured user library list for job:`,
           ``,
-          ...job.options.libraries.map((lib, i) => `${i+1}. \`${lib}\``)
+          ...(job.options?.libraries?.map((lib, i) => `${i+1}. \`${lib}\``) || ['N/A'])
         ].join(`\n`));
       }
 
@@ -59,7 +63,6 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
         }
       }
 
-      toolTipItems.push(`[$(info) View Job Log](command:vscode-db2i.jobManager.viewJobLog)`);
       toolTipItems.push(`[$(edit) Edit Connection Settings](command:vscode-db2i.jobManager.editJobProps)`);
       toolTipItems.push(`[$(bracket-error) Edit SELF codes](command:vscode-db2i.jobManager.editSelfCodes)`);
     } else {
@@ -75,6 +78,8 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
     
     item.text = text;
     item.backgroundColor = backgroundColour;
+    const config = connection.getConfig();
+    item.color = getVSCodeTools()?.parseStatusBarColor(config.statusBarColor);
 
     item.show();
   } else {

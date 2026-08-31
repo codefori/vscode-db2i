@@ -1,21 +1,22 @@
 
-import { ThemeIcon, TreeItem, workspace, window } from "vscode"
-import * as vscode from "vscode"
-import Schemas, { AllSQLTypes, InternalTypes, SQL_ESCAPE_CHAR, SQLType } from "../../database/schemas";
+import * as vscode from "vscode";
+import { ThemeIcon, TreeItem, window, workspace } from "vscode";
+import { getInstance } from "../../base";
+import Schemas, { AllSQLTypes, InternalTypes, SQLType } from "../../database/schemas";
 import Table from "../../database/table";
-import { getInstance, loadBase } from "../../base";
 
 import Configuration from "../../configuration";
 
-import Types from "../types";
-import Statement from "../../database/statement";
-import { getCopyUi } from "./copyUI";
-import { getAdvisedIndexesStatement, getIndexesStatement, getMTIStatement, getAuthoritiesStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects } from "./statements";
-import { BasicSQLObject } from "../../types";
-import { TextDecoder } from "util";
 import { parse } from "csv/sync";
+import { TextDecoder } from "util";
+import Callable from "../../database/callable";
+import Statement from "../../database/statement";
+import { BasicSQLObject } from "../../types";
+import Types from "../types";
+import { getCopyUi } from "./copyUI";
+import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects, getRoutineCallStatement, RoutineInvocation } from "./statements";
 
-const itemIcons = {
+const itemIcons = new Map(Object.entries({
   "table": `split-horizontal`,
   "procedure": `run`,
   "function": `run`,
@@ -33,23 +34,19 @@ const itemIcons = {
   "permission": `key`,
   "sequence": `file-binary`,
   "package": `package`
-}
+}));
 
 export default class SchemaBrowser {
-  emitter: vscode.EventEmitter<any | undefined | null | void>;
-  onDidChangeTreeData: vscode.Event<any | undefined | null | void>;
-  cache: { [key: string]: object[] };
+  private readonly emitter: vscode.EventEmitter<any | undefined | null | void>;
+  readonly onDidChangeTreeData: vscode.Event<any | undefined | null | void>;
 
-  filters: { [schema: string]: string } = {};
+  private readonly cache: Map<string, vscode.TreeItem[]> = new Map;
+  private readonly filters: Map<string, string> = new Map;
 
-  /**
-   * @param {vscode.ExtensionContext} context
-   */
-  constructor(context) {
+  constructor(context: vscode.ExtensionContext) {
     this.emitter = new vscode.EventEmitter();
     this.onDidChangeTreeData = this.emitter.event;
     this.enableManageCommand(true);
-    this.cache = {};
 
     context.subscriptions.push(
       vscode.commands.registerCommand(`vscode-db2i.refreshSchemaBrowser`, async () => this.clearCacheAndRefresh()),
@@ -59,17 +56,16 @@ export default class SchemaBrowser {
         // Disable the command while it is running
         this.enableManageCommand(false);
         try {
-          const config = getInstance().getConfig();
+          const config = getInstance().getConnection().getConfig();
           // Get the list of schemas currently selected for display
           const currentSchemas = config[`databaseBrowserList`] || [];
-          let allSchemas: BasicSQLObject[];
+          ;
           // Get all the schemas on the system.  This might take a while, so display a progress message to let the user know something is happening.
-          await vscode.window.withProgress({
+          const allSchemas: BasicSQLObject[] = await vscode.window.withProgress({
             location: vscode.ProgressLocation.Window,
             title: `Retrieving schemas for ${config.name}...`
-          }, async () => {
-            allSchemas = await Schemas.getObjects(undefined, [`schemas`]);
-          });
+          }, async () => await Schemas.getObjects('', [`schemas`]));
+
           // Create an array of SchemaQuickPickItem representing the currently selected schemas
           const selectedItems: SchemaQuickPickItem[] = allSchemas.filter(schema => currentSchemas.includes(Statement.delimName(schema.name))).map(object => new SchemaQuickPickItem(object));
           // Prepare the QuickPick window
@@ -98,7 +94,7 @@ export default class SchemaBrowser {
           })
           quickPick.onDidHide(() => quickPick.dispose());
           quickPick.show();
-        } catch (e) {
+        } catch (e: any) {
           vscode.window.showErrorMessage(e.message);
         } finally {
           // We're done, enable the command
@@ -107,7 +103,7 @@ export default class SchemaBrowser {
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.filterDatabaseObjectTypes`, async () => {
-        const currentTypes = Configuration.get(`schemaBrowser.databaseObjectTypes`);
+        const currentTypes = Configuration.get<Record<string, boolean>>(`schemaBrowser.databaseObjectTypes`);
         if (currentTypes) {
           const quickPickItems = Object.keys(currentTypes).map((key) => {
             return {
@@ -133,11 +129,9 @@ export default class SchemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.removeSchemaFromSchemaBrowser`, async (node: SchemaItem) => {
         if (node) {
           //Running from right click
-          const config = getInstance().getConfig();
-
-          let schemas = config[`databaseBrowserList`];
-
-          let index = schemas.findIndex(file => file === node.label)
+          const config = getInstance().getConnection().getConfig();
+          const schemas: string[] = config[`databaseBrowserList`];
+          const index = schemas.findIndex(file => file === node.label)
           if (index >= 0) {
             schemas.splice(index, 1);
           }
@@ -161,10 +155,62 @@ export default class SchemaBrowser {
               const content = await Schemas.generateSQL(object.schema, object.uniqueName(), object.type.toUpperCase());
               const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
               await vscode.window.showTextDocument(textDoc);
-            } catch (e) {
+            } catch (e: any) {
               vscode.window.showErrorMessage(e.message);
             }
           });
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.generateSQLWithConstraints`, async (object: SQLObject) => {
+        if (object) {
+          vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL with Inline Constraints` }, async () => {
+            try {
+              const content = await Schemas.generateSQL(object.schema, object.uniqueName(), object.type.toUpperCase(), false, true);
+              const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+              await vscode.window.showTextDocument(textDoc);
+            } catch (e: any) {
+              vscode.window.showErrorMessage(e.message);
+            }
+          });
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.generateSQLWithoutConstraints`, async (object: SQLObject) => {
+        if (object) {
+          vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL with Separate ALTER Statements` }, async () => {
+            try {
+              const content = await Schemas.generateSQL(object.schema, object.uniqueName(), object.type.toUpperCase(), false, false);
+              const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+              await vscode.window.showTextDocument(textDoc);
+            } catch (e: any) {
+              vscode.window.showErrorMessage(e.message);
+            }
+          });
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.generateRoutineCall`, async (object: SQLObject) => {
+        if (object && Schemas.isRoutineType(object.type)) {
+          try {
+            const content = await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating call statement` }, async () => {
+              // The specific name resolves overloaded routines to the signature that was picked
+              const specificName = object.uniqueName();
+              const [signature] = await Callable.getSignaturesFor(object.schema, [specificName]);
+
+              let invocation: RoutineInvocation = `PROCEDURE`;
+              if (object.type === `function`) {
+                invocation = (await Callable.getFunctionType(object.schema, specificName)) === `TABLE` ? `TABLE` : `SCALAR`;
+              }
+
+              return getRoutineCallStatement(object.schema, object.name, signature ? signature.parms : [], invocation);
+            });
+
+            const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
+            await vscode.window.showTextDocument(textDoc);
+          } catch (e: any) {
+            vscode.window.showErrorMessage(e.message);
+          }
         }
       }),
 
@@ -207,7 +253,7 @@ export default class SchemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getAuthorities`, async (object: SQLObject) => {
         if (object) {
-          const content = getAuthoritiesStatement(object.system.schema, object.system.name, object.type.toUpperCase(), object.tableType);
+          const content = getAuthoritiesStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             qualifier: `statement`,
@@ -218,7 +264,7 @@ export default class SchemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.getObjectLocks`, async (object: SQLObject) => {
         if (object) {
-          const content = getObjectLocksStatement(object.system.schema, object.system.name, object.type.toUpperCase(), object.tableType);
+          const content = getObjectLocksStatement(object.schema, object.name, object.type.toUpperCase(), object.tableType);
           vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
             content,
             qualifier: `statement`,
@@ -270,7 +316,7 @@ export default class SchemaBrowser {
           if (result === 'Yes') {
             try {
               await Schemas.clearAdvisedIndexes(object.schema, isObject ? object.name : undefined);
-            } catch (e) {
+            } catch (e: any) {
               vscode.window.showErrorMessage(e.message);
             }
           }
@@ -294,7 +340,7 @@ export default class SchemaBrowser {
 
               vscode.window.showInformationMessage(`${object.name} deleted`);
               this.clearCacheAndRefresh();
-            } catch (e) {
+            } catch (e: any) {
               vscode.window.showErrorMessage(e.message);
             }
           }
@@ -321,7 +367,7 @@ export default class SchemaBrowser {
 
                 vscode.window.showInformationMessage(`Renamed ${object.name} to ${name}`);
                 this.clearCacheAndRefresh();
-              } catch (e) {
+              } catch (e: any) {
                 vscode.window.showErrorMessage(e.message);
               }
             }
@@ -347,7 +393,7 @@ export default class SchemaBrowser {
               });
 
               vscode.window.showInformationMessage(`${object.name} cleared`);
-            } catch (e) {
+            } catch (e: any) {
               vscode.window.showErrorMessage(e.message);
             }
           }
@@ -373,7 +419,7 @@ export default class SchemaBrowser {
 
                 vscode.window.showInformationMessage(`Table copied`);
                 this.clearCacheAndRefresh();
-              } catch (e) {
+              } catch (e: any) {
                 vscode.window.showErrorMessage(e.message);
               }
             }
@@ -396,15 +442,15 @@ export default class SchemaBrowser {
         if (node) {
           const value = await vscode.window.showInputBox({
             title: `Set filter for ${node.schema}`,
-            value: this.filters[node.schema],
-            placeHolder: `COOL, COOL*`,
+            value: this.filters.get(node.schema),
+            placeHolder: `NAME, NAME*`,
             prompt: `Show objects that contain this value (case-insensitive). Blank to reset. Use '*' for wildcard at end.`,
           });
 
-          if (value !== undefined) {
-            this.filters[node.schema] = value.trim() === `` ? undefined : value;
+          if (value) {
+            this.filters.set(node.schema, value.trim());
 
-            updateSchemaNode(node, this.filters[node.schema]);
+            updateSchemaNode(node, this.filters.get(node.schema));
             this.refresh(node);
           }
         }
@@ -413,10 +459,12 @@ export default class SchemaBrowser {
       vscode.commands.registerCommand(`vscode-db2i.importDataContextMenu`, async () => {
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Generating SQL` }, async (arg?: any) => {
           try {
-            const data = vscode.window.activeTextEditor.document.getText();
-            const uri = vscode.window.activeTextEditor.document.uri;
-            await this.generateInsert(uri, data);
-          } catch (e) {
+            const data = vscode.window.activeTextEditor?.document.getText();
+            const uri = vscode.window.activeTextEditor?.document.uri;
+            if (data && uri) {
+              await this.generateInsert(uri, data);
+            }
+          } catch (e: any) {
             vscode.window.showErrorMessage(e.message);
           }
         });
@@ -430,7 +478,7 @@ export default class SchemaBrowser {
             const data = await this.readFile(uri);
 
             await this.generateInsert(uri, data);
-          } catch (e) {
+          } catch (e: any) {
             vscode.window.showErrorMessage(e.message);
           }
         });
@@ -442,8 +490,6 @@ export default class SchemaBrowser {
         }
       })
     )
-
-    getInstance().subscribe(context, `connected`, `db2i-clearCacheAndRefresh`, () => this.clearCacheAndRefresh());
   }
 
   async pickFile(): Promise<vscode.Uri | undefined> {
@@ -464,10 +510,12 @@ export default class SchemaBrowser {
   }
 
   async generateInsert(uri: vscode.Uri, data: string) {
-    let ext: string = (uri.fsPath.split('.').pop() || '').toLowerCase();
+    let ext: string | undefined = (uri.fsPath.split('.').pop() || '').toLowerCase();
     if (ext != `csv` && ext != `json`) {
       ext = await vscode.window.showQuickPick(['csv', 'json'], { placeHolder: 'What format is this file?' });
-      if (!ext) { return; }
+      if (!ext) {
+        return;
+      }
     }
 
     let rows: any[] = [];
@@ -541,7 +589,8 @@ export default class SchemaBrowser {
   }
 
   clearCacheAndRefresh() {
-    this.cache = {};
+    this.cache.clear();
+    this.filters.clear();
     this.refresh();
   }
 
@@ -553,25 +602,21 @@ export default class SchemaBrowser {
     vscode.commands.executeCommand(`setContext`, `vscode-db2i:manageSchemaBrowserEnabled`, enabled);
   }
 
-  /**
-   * @returns {Number};
-   */
   getPageSize() {
     return Number(Configuration.get(`pageSize`)) || 100;
   }
 
-
   async fetchData(schema: string, type: SQLType, addRows?: boolean) {
     const pageSize = this.getPageSize() + 1; //Get 1 extra item to see if we need to add a more button 
     const key = `${schema}-${type}`;
-    let offset;
+    let offset = 0;
 
-    if (addRows || this.cache[key] === undefined) {
-      if (this.cache[key]) {
-        this.cache[key].pop(); //Remove more button
-        offset = this.cache[key].length;
-      } else {
-        offset = 0;
+    if (addRows || !this.cache.has(key)) {
+
+      const items = this.cache.get(key);
+      if (items) {
+        items.pop(); //Remove more button
+        offset = items.length;
       }
 
       const data = await Schemas.getObjects(schema, [type], {
@@ -588,37 +633,34 @@ export default class SchemaBrowser {
         }
 
         const items = data.map(item => new SQLObject(item));
-        if (this.cache[key]) {
-          this.cache[key].push(...items);
+        const treeItems = this.cache.get(key);
+        if (treeItems) {
+          treeItems.push(...items);
         } else {
-          this.cache[key] = items;
+          this.cache.set(key, items);
         }
 
-        if (more) {
-          this.cache[key].push(moreButton(schema, type));
+        if (more && this.cache.has(key)) {
+          this.cache.get(key)!.push(moreButton(schema, type));
         }
       } else {
         vscode.window.showInformationMessage(`No items to load.`);
       }
     }
 
-    if (this.cache[key]) {
-      return this.cache[key].slice(0);
+    if (this.cache.has(key)) {
+      return this.cache.get(key)!.slice(0);
     } else {
       return [];
     }
   }
 
-  /**
-   * @param {vscode.TreeItem} element
-   * @returns {vscode.TreeItem};
-   */
-  getTreeItem(element) {
+  getTreeItem(element: vscode.TreeItem) {
     return element;
   }
 
   async getChildren(element?: Schema | SchemaItem | SQLObject) {
-    let items = [];
+    const items: any[] = [];
 
     if (element) {
 
@@ -626,44 +668,37 @@ export default class SchemaBrowser {
 
       if (element instanceof Schema) {
 
-        let filterValue = this.filters[element.schema];
+        const filterValue = this.filters.get(element.schema);
         if (filterValue) {
           const validSchemaName = Statement.noQuotes(element.schema);
           const filteredObjects = await Schemas.getObjects(validSchemaName, AllSQLTypes, { filter: filterValue, sort: true });
-          items = filteredObjects.map(obj => new SQLObject(obj));
+          items.push(...filteredObjects.map(obj => new SQLObject(obj)));
 
         } else {
           // If no filter is provided, group objects by types
-          items = getSchemaItems(element.schema);
+          items.push(...getSchemaItems(element.schema));
         }
 
 
       } else
         if (element instanceof SchemaItem) {
-          items = await this.fetchData(element.schema, contextValue as SQLType, false);
+          items.push(...await this.fetchData(element.schema, contextValue as SQLType, false));
         } else
           if (element instanceof SQLObject) {
             const type = element.type;
 
-            if (Types[type]) {
-              items = await Types[type].getChildren(element.schema, element.uniqueName());
+            if (type && type in Types) {
+              items.push(...await Types[type as keyof typeof Types].getChildren(element.schema, element.uniqueName()));
             }
           }
-
     } else {
-      const connection = getInstance().getConnection();
-      if (connection) {
-        const config = getInstance().getConfig();
-
+      const config = getInstance().getConnection().getConfig();
+      if (config) {
         const schemas = config[`databaseBrowserList`] || [];
-        schemas.sort((s1, s2) => {
-          if (s1 > s2) return 1;
-          if (s1 < s2) return -1;
-          return 0;
-        });
+        schemas.sort((s1: string, s2: string) => s1.localeCompare(s2));
 
-        for (let schema of schemas) {
-          items.push(new Schema(schema, this.filters[schema]));
+        for (const schema of schemas) {
+          items.push(new Schema(schema, this.filters.get(schema)));
         }
       } else {
         items.push(new Schema(`No connection. Refresh when ready.`));
@@ -703,25 +738,25 @@ class SchemaItem extends vscode.TreeItem {
 }
 
 class SQLObject extends vscode.TreeItem {
-  path: string;
-  schema: string;
-  name: string;
-  specificName: string;
-  type: string;
-  tableType: string;
-  constraintType: string;
-  system: {
+  readonly path: string;
+  readonly schema: string;
+  readonly name: string;
+  readonly specificName: string;
+  readonly type: string;
+  readonly tableType: string;
+  readonly constraintType: string;
+  readonly system: {
     schema: string;
     name: string;
   }
-  basedOn: {
+  readonly basedOn: {
     schema: string;
     name: string;
   }
 
   constructor(item: BasicSQLObject) {
     const type = InternalTypes[item.type];
-    super(Statement.prettyName(item.name), Types[type] ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+    super(Statement.prettyName(item.name), type && type in Types ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 
     this.contextValue = type;
     this.path = `${item.schema}.${item.name}`;
@@ -738,7 +773,7 @@ class SQLObject extends vscode.TreeItem {
     if (Schemas.isRoutineType(this.type)) {
       this.tooltip = new vscode.MarkdownString(`${Statement.prettyName(item.name)} ${item.specificName ? `(*${Statement.prettyName(item.specificName)}*)` : ``}`); // Name (Specific name)
     }
-    this.iconPath = itemIcons[type] ? new vscode.ThemeIcon(itemIcons[type]) : undefined;
+    this.iconPath = itemIcons.get(type);
   }
 
   /**
@@ -754,10 +789,10 @@ class SQLObject extends vscode.TreeItem {
  * QuickPick item that represents a schema
  */
 class SchemaQuickPickItem implements vscode.QuickPickItem {
-  label: string;
-  detail?: string;
-  description?: string;
-  iconPath: ThemeIcon;
+  readonly label: string;
+  readonly detail?: string;
+  readonly description?: string;
+  readonly iconPath: ThemeIcon;
 
   constructor(object: BasicSQLObject) {
     const name = Statement.delimName(object.name);
@@ -773,7 +808,7 @@ class SchemaQuickPickItem implements vscode.QuickPickItem {
 }
 
 
-const getSchemaItems = (schema) => {
+const getSchemaItems = (schema: string) => {
   const items = [
     //new SchemaItem(`All Database Objects`, `all`, schema),
     new SchemaItem(`Aliases`, `aliases`, schema, `symbol-reference`),
@@ -795,11 +830,11 @@ const getSchemaItems = (schema) => {
     new SchemaItem(`Views`, `views`, schema, `symbol-interface`)
   ];
 
-  const databaseObjectTypes = Configuration.get(`schemaBrowser.databaseObjectTypes`);
-  return databaseObjectTypes ? items.filter(item => databaseObjectTypes[item.label.toString()]) : items;
+  const databaseObjectTypes = Configuration.get<Record<string, boolean>>(`schemaBrowser.databaseObjectTypes`);
+  return databaseObjectTypes ? items.filter(item => item.label && databaseObjectTypes[item.label.toString()]) : items;
 }
 
-const moreButton = (schema, type) => {
+const moreButton = (schema: string, type: SQLType) => {
   const item = new vscode.TreeItem(`More...`, vscode.TreeItemCollapsibleState.None);
   item.iconPath = new vscode.ThemeIcon(`add`);
   item.command = {
