@@ -202,7 +202,6 @@ function toWire<T>(options: DataTableOptions<T>) {
     columns: wireColumns,
     rows: wireRows,
     actions: wireActions,
-    hasActions: wireActions.length > 0,
     pageSize: options.pageSize ?? 100,
     searchPlaceholder: options.searchPlaceholder ?? `Search…`,
     emptyMessage: options.emptyMessage ?? `Nothing to show.`,
@@ -343,27 +342,6 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
        the viewport, so the header band and row hover reach the right edge. */
     .dt-filler { padding: 0; max-width: none; border-right: none; }
 
-    /* --- leading column holding the per row actions button --- */
-    .dt-h.dt-act, .dt-c.dt-act { padding: 1px 4px; }
-    .dt-act-button {
-      display: block;
-      width: 100%;
-      padding: 1px 5px;
-      border: none;
-      border-radius: 3px;
-      background: transparent;
-      color: var(--vscode-foreground);
-      font-family: inherit;
-      font-size: 1.15em;
-      line-height: 1.1;
-      cursor: pointer;
-      opacity: 0.5;
-    }
-    .dt-row:hover .dt-act-button, .dt-act-button:focus { opacity: 1; }
-    .dt-act-button:hover {
-      background-color: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
-    }
-
     #empty { display: none; padding: 22px 16px; color: var(--dt-muted); text-align: center; }
 
     /* --- bottom bar: count + pagination --- */
@@ -435,19 +413,12 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
 
     function gridTemplate() {
       const tracks = MODEL.columns.map((c) => c.track);
-      // The actions column leads, so it stays reachable however wide the table scrolls
-      if (MODEL.hasActions) tracks.unshift("min-content");
       return tracks.join(" ") + " minmax(0, 1fr)";
     }
 
     // ----- header ----------------------------------------------------------
     function buildHeader() {
       grid.style.gridTemplateColumns = gridTemplate();
-      if (MODEL.hasActions) {
-        const actionsHeader = document.createElement("div");
-        actionsHeader.className = "dt-h dt-act";
-        grid.appendChild(actionsHeader);
-      }
       MODEL.columns.forEach((col, index) => {
         const h = document.createElement("div");
         h.className = "dt-h" + (col.sortable ? " sortable" : "");
@@ -525,8 +496,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       computeView();
       if (state.page > pageCount()) state.page = pageCount();
 
-      // Drop existing rows, keep the header cells (actions + columns + filler)
-      const headerCount = MODEL.columns.length + 1 + (MODEL.hasActions ? 1 : 0);
+      // Drop existing rows, keep the header cells (columns + filler)
+      const headerCount = MODEL.columns.length + 1;
       while (grid.children.length > headerCount) grid.removeChild(grid.lastChild);
 
       const frag = document.createDocumentFragment();
@@ -534,10 +505,6 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
         const rowEl = document.createElement("div");
         rowEl.className = "dt-row " + (rowIndex % 2 ? "even" : "odd");
         rowEl.dataset.i = String(r.i);
-        if (MODEL.hasActions) {
-          rowEl.appendChild(actionsCell(r));
-          if (r.a.length) rowEl.classList.add("actionable");
-        }
         r.c.forEach((cellHtml, c) => {
           const cell = document.createElement("div");
           cell.className = "dt-c" + (MODEL.columns[c].align !== "left" ? " " + MODEL.columns[c].align : "");
@@ -668,34 +635,6 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       }
       return rowFromNode(ev.target) || rowFromNode(document.elementFromPoint(ev.clientX, ev.clientY));
     }
-
-    /** The per row actions button — the way in that does not rely on the host passing right clicks through */
-    function actionsCell(wireRow) {
-      const cell = document.createElement("div");
-      cell.className = "dt-c dt-act";
-      if (!wireRow.a.length) return cell;
-
-      const button = document.createElement("button");
-      button.className = "dt-act-button";
-      button.type = "button";
-      button.title = "Actions";
-      button.textContent = "⋯";
-      button.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        const rect = button.getBoundingClientRect();
-        openMenu(rect.left, rect.bottom + 2, wireRow);
-      });
-      cell.appendChild(button);
-      return cell;
-    }
-
-    // A double click anywhere on the row runs its first action
-    grid.addEventListener("dblclick", (ev) => {
-      const wireRow = rowFromEvent(ev);
-      if (!wireRow) return;
-      const actions = actionsFor(wireRow);
-      if (actions.length) fire(actions[0].id, wireRow.i);
-    });
 
     let lastMenuTrigger = 0;
     function triggerRowMenu(ev) {
