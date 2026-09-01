@@ -461,11 +461,6 @@
           "id": "ibmi-panel",
           "title": "IBM i",
           "icon": "$(search)"
-        },
-        {
-          "id": "db2i-dba-panel",
-          "title": "Db2 for i - DBA",
-          "icon": "$(database)"
         }
       ]
     },
@@ -527,15 +522,6 @@
           "name": "SQL Error Logging Facility (SELF)",
           "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported && vscode-db2i:jobManager == true",
           "visibility": "collapsed"
-        }
-      ],
-      "db2i-dba-panel": [
-        {
-          "type": "webview",
-          "id": "vscode-db2i.dbaResultView",
-          "name": "DBA",
-          "contextualTitle": "Db2 for i - DBA",
-          "when": "code-for-ibmi:connected == true"
         }
       ]
     },

@@ -74,11 +74,31 @@ export interface DataTableOptions<T> {
   emptyMessage?: string;
   /** Initial sort. Omit to keep the natural order of `rows`. */
   sort?: { columnId: string; direction?: "asc" | "desc" };
+  /** Text the search box starts with — used when the table is re-opened elsewhere */
+  initialQuery?: string;
+  /**
+   * Show a button beside the search box that moves the table into an editor tab.
+   * Only makes sense when the table is hosted in a view; default false.
+   */
+  openInEditor?: boolean;
+}
+
+/** What the user is currently looking at — carried over when the table moves to the editor */
+export interface DataTableViewState {
+  /** Text in the search box */
+  query: string;
+  /** Column the table is sorted by, if any */
+  sort?: { columnId: string; direction: "asc" | "desc" };
 }
 
 export interface DataTableHandlers<T> {
   /** Fired when the user picks a row action */
   onAction?: (actionId: string, row: T) => void | Promise<void>;
+  /**
+   * Fired when the user clicks the "move to editor" button, with the state the table is
+   * in. Pass it to {@link moveDataTableToEditor} to reopen the same view as an editor tab.
+   */
+  onOpenInEditor?: (state: DataTableViewState) => void | Promise<void>;
 }
 
 const escapeHtml = (value: unknown): string =>
@@ -119,6 +139,7 @@ function formatCellValue(value: string | number | null | undefined): string {
 }
 
 interface WireColumn {
+  id: string;
   title: string;
   track: string;
   align: "left" | "right" | "center";
@@ -143,6 +164,7 @@ function toWire<T>(options: DataTableOptions<T>) {
   const actions = options.actions ?? [];
 
   const wireColumns: WireColumn[] = columns.map(col => ({
+    id: col.id,
     title: col.title,
     track: col.width ?? `max-content`,
     align: col.align ?? `left`,
@@ -186,6 +208,8 @@ function toWire<T>(options: DataTableOptions<T>) {
     emptyMessage: options.emptyMessage ?? `Nothing to show.`,
     initialSort,
     initialDir,
+    initialQuery: options.initialQuery ?? ``,
+    canOpenInEditor: options.openInEditor === true,
   };
 }
 
@@ -247,6 +271,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     }
     #title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #search { margin-left: auto; width: min(280px, 45vw); }
+    #openInEditor { flex: 0 0 auto; }
+    #openInEditor svg { display: block; }
 
     /* --- the scrollable grid --- */
     #gridScroll {
@@ -317,6 +343,27 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
        the viewport, so the header band and row hover reach the right edge. */
     .dt-filler { padding: 0; max-width: none; border-right: none; }
 
+    /* --- leading column holding the per row actions button --- */
+    .dt-h.dt-act, .dt-c.dt-act { padding: 1px 4px; }
+    .dt-act-button {
+      display: block;
+      width: 100%;
+      padding: 1px 5px;
+      border: none;
+      border-radius: 3px;
+      background: transparent;
+      color: var(--vscode-foreground);
+      font-family: inherit;
+      font-size: 1.15em;
+      line-height: 1.1;
+      cursor: pointer;
+      opacity: 0.5;
+    }
+    .dt-row:hover .dt-act-button, .dt-act-button:focus { opacity: 1; }
+    .dt-act-button:hover {
+      background-color: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+    }
+
     #empty { display: none; padding: 22px 16px; color: var(--dt-muted); text-align: center; }
 
     /* --- bottom bar: count + pagination --- */
@@ -341,7 +388,14 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
 <body style="padding: 0;">
   <div id="toolbar">
     <span id="title">${escapeHtml(model.title)}</span>
-    <vscode-textfield id="search" type="search" placeholder="${escapeHtml(model.searchPlaceholder)}"></vscode-textfield>
+    <vscode-textfield id="search" type="search" placeholder="${escapeHtml(model.searchPlaceholder)}" value="${escapeHtml(model.initialQuery)}"></vscode-textfield>
+    ${model.canOpenInEditor ? /*html*/ `<vscode-button id="openInEditor" secondary title="Move this table into the editor">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12.5 9.5V13a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H7"/>
+        <path d="M10 2.5h3.5V6"/>
+        <path d="M13.5 2.5 8 8"/>
+      </svg>
+    </vscode-button>` : ``}
   </div>
 
   <div id="gridScroll">
@@ -369,7 +423,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     const MODEL = ${JSON.stringify(model)};
 
     const state = {
-      query: "",
+      query: MODEL.initialQuery,
       page: 1,
       sortCol: MODEL.initialSort,
       sortDir: MODEL.initialDir,
@@ -380,12 +434,20 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     const grid = el("grid");
 
     function gridTemplate() {
-      return MODEL.columns.map((c) => c.track).join(" ") + " minmax(0, 1fr)";
+      const tracks = MODEL.columns.map((c) => c.track);
+      // The actions column leads, so it stays reachable however wide the table scrolls
+      if (MODEL.hasActions) tracks.unshift("min-content");
+      return tracks.join(" ") + " minmax(0, 1fr)";
     }
 
     // ----- header ----------------------------------------------------------
     function buildHeader() {
       grid.style.gridTemplateColumns = gridTemplate();
+      if (MODEL.hasActions) {
+        const actionsHeader = document.createElement("div");
+        actionsHeader.className = "dt-h dt-act";
+        grid.appendChild(actionsHeader);
+      }
       MODEL.columns.forEach((col, index) => {
         const h = document.createElement("div");
         h.className = "dt-h" + (col.sortable ? " sortable" : "");
@@ -463,8 +525,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       computeView();
       if (state.page > pageCount()) state.page = pageCount();
 
-      // Drop existing rows, keep the header cells (columns + filler)
-      const headerCount = MODEL.columns.length + 1;
+      // Drop existing rows, keep the header cells (actions + columns + filler)
+      const headerCount = MODEL.columns.length + 1 + (MODEL.hasActions ? 1 : 0);
       while (grid.children.length > headerCount) grid.removeChild(grid.lastChild);
 
       const frag = document.createDocumentFragment();
@@ -472,7 +534,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
         const rowEl = document.createElement("div");
         rowEl.className = "dt-row " + (rowIndex % 2 ? "even" : "odd");
         rowEl.dataset.i = String(r.i);
-        if (MODEL.hasActions && r.a.length) rowEl.classList.add("actionable");
+        if (MODEL.hasActions) {
+          rowEl.appendChild(actionsCell(r));
+          if (r.a.length) rowEl.classList.add("actionable");
+        }
         r.c.forEach((cellHtml, c) => {
           const cell = document.createElement("div");
           cell.className = "dt-c" + (MODEL.columns[c].align !== "left" ? " " + MODEL.columns[c].align : "");
@@ -541,6 +606,20 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       }, 150);
     });
 
+    // ----- move to the editor -------------------------------------
+    const openInEditor = el("openInEditor");
+    if (openInEditor) {
+      openInEditor.addEventListener("click", () => {
+        // The state travels with it, so the editor copy opens on what is on screen here
+        vscode.postMessage({
+          command: "openInEditor",
+          query: state.query,
+          sortCol: state.sortCol,
+          sortDir: state.sortDir,
+        });
+      });
+    }
+
     // ----- context menu ---------------------------------------------
     const ctxWrap = el("ctxWrap");
     const ctxMenu = el("ctxMenu");
@@ -589,6 +668,34 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       }
       return rowFromNode(ev.target) || rowFromNode(document.elementFromPoint(ev.clientX, ev.clientY));
     }
+
+    /** The per row actions button — the way in that does not rely on the host passing right clicks through */
+    function actionsCell(wireRow) {
+      const cell = document.createElement("div");
+      cell.className = "dt-c dt-act";
+      if (!wireRow.a.length) return cell;
+
+      const button = document.createElement("button");
+      button.className = "dt-act-button";
+      button.type = "button";
+      button.title = "Actions";
+      button.textContent = "⋯";
+      button.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const rect = button.getBoundingClientRect();
+        openMenu(rect.left, rect.bottom + 2, wireRow);
+      });
+      cell.appendChild(button);
+      return cell;
+    }
+
+    // A double click anywhere on the row runs its first action
+    grid.addEventListener("dblclick", (ev) => {
+      const wireRow = rowFromEvent(ev);
+      if (!wireRow) return;
+      const actions = actionsFor(wireRow);
+      if (actions.length) fire(actions[0].id, wireRow.i);
+    });
 
     let lastMenuTrigger = 0;
     function triggerRowMenu(ev) {
@@ -644,6 +751,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       }
     });
 
+    if (MODEL.initialQuery) el("search").value = MODEL.initialQuery;
+
     buildHeader();
     render();
   </script>
@@ -657,29 +766,40 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
  * view's message router.
  *
  * @param post   how to send a message back to that same webview
+ * @returns whether the message belonged to the table — useful when the webview is shared
  */
 export async function handleDataTableMessage<T>(
   message: any,
   options: DataTableOptions<T>,
   handlers: DataTableHandlers<T>,
   post: (message: any) => void,
-): Promise<void> {
+): Promise<boolean> {
   switch (message?.command) {
     case `rowAction`: {
       const row = options.rows[message.rowIndex];
       if (row !== undefined) {
         await handlers.onAction?.(message.actionId, row);
       }
-      break;
+      return true;
     }
     case `subtitle`: {
       const fn = typeof options.subtitle === `function` ? options.subtitle : undefined;
       if (fn) {
         post({ command: `setSubtitle`, text: fn(message.shown, message.total) });
       }
-      break;
+      return true;
+    }
+    case `openInEditor`: {
+      const sortColumn = options.columns[message.sortCol];
+      await handlers.onOpenInEditor?.({
+        query: message.query ?? ``,
+        sort: sortColumn ? { columnId: sortColumn.id, direction: message.sortDir } : undefined,
+      });
+      return true;
     }
   }
+
+  return false;
 }
 
 /**
@@ -705,6 +825,26 @@ export function openDataTable<T>(
   );
 
   return panel;
+}
+
+/**
+ * Reopen a table that is hosted in a view as an editor tab, on whatever the user was
+ * looking at. Wire it to {@link DataTableHandlers.onOpenInEditor}; the editor copy has
+ * no "move to editor" button of its own.
+ */
+export function moveDataTableToEditor<T>(
+  viewType: string,
+  options: DataTableOptions<T>,
+  handlers: DataTableHandlers<T>,
+  state: DataTableViewState,
+  column: vscode.ViewColumn = vscode.ViewColumn.Active,
+): vscode.WebviewPanel {
+  return openDataTable(
+    viewType,
+    { ...options, openInEditor: false, initialQuery: state.query, sort: state.sort ?? options.sort },
+    handlers,
+    column,
+  );
 }
 
 /**

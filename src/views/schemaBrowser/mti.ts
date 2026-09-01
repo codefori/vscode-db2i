@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import Statement from "../../database/statement";
 import { DataTableColumn, DataTableHandlers, DataTableOptions } from "../html/dataTable";
-import { dbaResultView } from "../dba/dbaResultView";
+import { showDataTable } from "../results";
 import { getMTIStatement } from "./statements";
 
 /** A row from `select * from table(qsys2.mti_info(...))`. Columns vary across IBM i releases (see `isSparse`), so only the fields actually used here are typed. */
@@ -20,6 +20,9 @@ interface MTIInfo {
 
 const CREATE_INDEX = `Create Index`;
 const SHOW_STATEMENT = `Show Statement`;
+
+/** Webview type of the editor tab the MTI list can be moved into */
+const MTI_VIEW_TYPE = `vscode-db2i.mtiTable`;
 
 const SPARSE_WARNING = `This MTI is sparse, but MTI_INFO did not report its condition. The statement below creates an index over every row of the table, not the sparse subset the MTI covers.`;
 
@@ -284,7 +287,6 @@ function openMTIWebview(target: string, mtis: MTIInfo[], onIndexCreated?: () => 
     },
   };
 
-  dbaResultView
-    .showTable(options, handlers)
+  showDataTable(MTI_VIEW_TYPE, options, handlers)
     .catch(e => vscode.window.showErrorMessage(`Could not show the MTI list: ${e?.message ?? e}`));
 }

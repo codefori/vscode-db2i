@@ -9,6 +9,7 @@ import Statement from "../../database/statement";
 import Table from "../../database/table";
 import { ObjectRef } from "../../language/sql/types";
 import { TableColumn } from "../../types";
+import { DataTableHandlers, DataTableOptions, handleDataTableMessage, moveDataTableToEditor, renderDataTable } from "../html/dataTable";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { statementDone } from "./editorUi";
 import * as html from "./html";
@@ -30,6 +31,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   loadingState: boolean = false;
   currentQuery: Query<any> | undefined;
   lastScrollerOptions: ScrollerOptions | undefined;
+  /** Routes the webview messages while a data table (see {@link showDataTable}) is shown instead of a result set */
+  private dataTableRouter: ((message: any) => Promise<boolean>) | undefined;
 
   endQuery() {
     if (this.currentQuery) {
@@ -89,6 +92,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
 
     this._view.webview.onDidReceiveMessage(async (message) => {
+      // A data table owns the view while it is shown, and posts messages of its own
+      if (this.dataTableRouter && await this.dataTableRouter(message)) {
+        return;
+      }
+
       switch (message.command) {
         case `cancel`:
           this.endQuery();
@@ -225,6 +233,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   async setLoadingText(content: string, focus = true) {
+    this.dataTableRouter = undefined;
+
     if (focus) {
       await this.focus();
     }
@@ -250,6 +260,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   async setScrolling(options: ScrollerOptions) {
+    this.dataTableRouter = undefined;
     this.lastScrollerOptions = { ...options };
 
     this.loadingState = false;
@@ -346,7 +357,39 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
   }
 
+  /**
+   * Show a data table listing (MTIs, locks, …) in this view instead of a result set. The
+   * table's "move to editor" button reopens it as an editor tab and empties this view.
+   *
+   * @param viewType webview type used for the editor tab the table can be moved into
+   */
+  async showDataTable<T>(viewType: string, options: DataTableOptions<T>, handlers: DataTableHandlers<T> = {}): Promise<void> {
+    const tableHandlers: DataTableHandlers<T> = {
+      ...handlers,
+      onOpenInEditor: state => {
+        moveDataTableToEditor(viewType, options, handlers, state);
+        this.clear();
+      }
+    };
+
+    this.dataTableRouter = message =>
+      handleDataTableMessage(message, options, tableHandlers, msg => this._view?.webview.postMessage(msg));
+
+    // Whatever result set was shown here is gone as soon as the table is rendered
+    this.endQuery();
+    this.currentQuery = undefined;
+    this.resetContext();
+    this.loadingState = false;
+
+    await this.ensureActivation();
+
+    if (this._view) {
+      this._view.webview.html = renderDataTable({ ...options, openInEditor: true });
+    }
+  }
+
   setError(error: string) {
+    this.dataTableRouter = undefined;
     this.loadingState = false;
     // TODO: pretty error
     if (this._view) {
@@ -355,6 +398,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   clear() {
+    this.dataTableRouter = undefined;
     if (this._view) {
       this._view.webview.html = ``;
     }

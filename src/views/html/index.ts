@@ -1,4 +1,4 @@
-/** Fixed colour for NULL values in the results grid and the DBA panel */
+/** Fixed colour for NULL values in the results grid */
 const NULL_CELL_COLOR = `var(--vscode-charts-orange)`;
 
 export function getHeader(options: { withCollapsed?: boolean } = {}): string {

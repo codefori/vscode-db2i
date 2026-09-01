@@ -6,7 +6,6 @@ import SchemaBrowser from "./views/schemaBrowser";
 import * as JSONServices from "./language/json";
 import * as ClipboardServices from "./language/clipboard";
 import * as resultsProvider from "./views/results";
-import * as dbaResultView from "./views/dba/dbaResultView";
 
 import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import { registerCopilotProvider } from "./aiProviders/copilot";
@@ -84,7 +83,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<Db2i> 
   JSONServices.initialise(context);
   ClipboardServices.initialise(context);
   resultsProvider.initialise(context);
-  dbaResultView.initialise(context);
 
   initConfig(context);
 
