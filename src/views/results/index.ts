@@ -21,6 +21,7 @@ import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ExplainTree } from "./explain/nodes";
+import { DataTableHandlers, DataTableOptions } from "../html/dataTable";
 import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 
 export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "md" | "cl" | "sql" | "rpg" | "udtf";
@@ -65,6 +66,16 @@ const ALLOWED_PREFIXES_FOR_HISTORY: StatementQualifier[] =
   [`json`, `csv`, `cl`, `md`, `sql`, `rpg`, `udtf`];
 const ALLOWED_PREFIXES_EXCLUDE_QUALIFIER_FOR_HISTORY: StatementQualifier[] =
   [`statement`, `explain`];
+
+/**
+ * Show a data table listing (MTIs, locks, …) in the Results view, in place of whatever
+ * result set is there. The user can move it into an editor tab from the table itself.
+ *
+ * @param viewType webview type used for the editor tab the table can be moved into
+ */
+export function showDataTable<T>(viewType: string, options: DataTableOptions<T>, handlers?: DataTableHandlers<T>): Promise<void> {
+  return resultSetProvider.showDataTable(viewType, options, handlers);
+}
 
 export function initialise(context: vscode.ExtensionContext) {
   setCancelButtonVisibility(false);

@@ -15,6 +15,7 @@ import Statement from "../../database/statement";
 import { BasicSQLObject } from "../../types";
 import Types from "../types";
 import { getCopyUi } from "./copyUI";
+import { pickMTIAction } from "./mti";
 import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects, getRoutineCallStatement, RoutineInvocation } from "./statements";
 
 const itemIcons = new Map(Object.entries({
@@ -233,18 +234,40 @@ export default class SchemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.getMTIs`, async (object: SQLObject | SchemaItem) => {
-        if (object) {
-          const content = getMTIStatement(object.schema, (`name` in object ? object.name : undefined));
+      vscode.commands.registerCommand(`vscode-db2i.mtiActions`, async (object?: SQLObject | SchemaItem) => {
+        let schema: string;
+        let table: string | undefined;
 
-          if (content) {
-            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-              content,
-              qualifier: `statement`,
-              open: false,
-            });
-          }
+        if (object) {
+          // From the tree: library (and, for a table row, table) come from what was right-clicked
+          schema = object.schema;
+          table = `name` in object ? object.name : undefined;
+        } else {
+          // From the Command Palette: ask for a library and a table, both defaulting to *ALL
+          const libraryInput = await vscode.window.showInputBox({
+            title: `Work with MTIs`,
+            prompt: `Library to work with, or *ALL for every library`,
+            placeHolder: `*ALL`,
+            value: `*ALL`
+          });
+
+          if (libraryInput === undefined) return;
+
+          const tableInput = await vscode.window.showInputBox({
+            title: `Work with MTIs`,
+            prompt: `Table to work with, or *ALL for every table`,
+            placeHolder: `*ALL`,
+            value: `*ALL`
+          });
+
+          if (tableInput === undefined) return;
+
+          schema = libraryInput.trim() || `*ALL`;
+          table = tableInput.trim() || `*ALL`;
         }
+
+        // Refresh via the callback once a job is actually submitted, not on this call's return
+        await pickMTIAction(schema, table, () => this.clearCacheAndRefresh());
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.getIndexes`, async (object: SQLObject) => {

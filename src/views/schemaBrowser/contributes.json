@@ -76,8 +76,8 @@
         "category": "Db2 for i"
       },
       {
-        "command": "vscode-db2i.getMTIs",
-        "title": "Get MTIs",
+        "command": "vscode-db2i.mtiActions",
+        "title": "Work with MTIs",
         "category": "Db2 for i"
       },
       {
@@ -217,10 +217,6 @@
           "when": "never"
         },
         {
-          "command": "vscode-db2i.getMTIs",
-          "when": "never"
-        },
-        {
           "command": "vscode-db2i.getIndexes",
           "when": "never"
         },
@@ -315,24 +311,24 @@
           "group": "db2workWith@2"
         },
         {
-          "command": "vscode-db2i.getMTIs",
+          "command": "vscode-db2i.mtiActions",
           "when": "viewItem == table || viewItem == schema",
           "group": "db2workWith@3"
         },
         {
           "command": "vscode-db2i.getAuthorities",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
-          "group": "db2workWith@4"
+          "group": "db2workWith@5"
         },
         {
           "command": "vscode-db2i.getObjectLocks",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
-          "group": "db2workWith@5"
+          "group": "db2workWith@6"
         },
         {
           "command": "vscode-db2i.getRecordLocks",
           "when": "viewItem == table",
-          "group": "db2workWith@6"
+          "group": "db2workWith@7"
         },
         {
           "command": "vscode-db2i.clearData",
