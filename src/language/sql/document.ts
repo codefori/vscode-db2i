@@ -63,6 +63,9 @@ export default class Document {
           break;
 
         case `statementType`:
+          if (upperValue === `FOR` && currentStatementType === StatementType.Create) {
+            break;
+          }
           currentStatementType = (upperValue ? StatementTypeWord.get(upperValue) : StatementType.Unknown) || StatementType.Unknown;
           break;
 

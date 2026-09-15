@@ -73,6 +73,27 @@ parserScenarios(`Basic statements`, ({newDoc}) => {
     expect(document.statements[0].tokens.length).toBe(4);
     expect(document.statements[1].tokens.length).toBe(6);
   });
+
+  test('CREATE MASK: CASE THEN remains in the outer statement group', () => {
+    const content = [
+      `CREATE MASK qtemp.mask_test_then`,
+      `  ON sysibm.sysdummy1`,
+      `  FOR COLUMN IBMREQD`,
+      `  RETURN`,
+      `    CASE`,
+      `      WHEN IBMREQD = 'Y'`,
+      `        THEN 'N'`,
+      `      ELSE 'Y'`,
+      `    END`,
+      `  ENABLE;`,
+    ].join(`\n`);
+    const document = newDoc(content);
+
+    const group = document.getGroupByOffset(content.indexOf(`THEN`));
+
+    expect(group?.statements).toHaveLength(1);
+    expect(content.substring(group!.range.start, group!.range.end)).toBe(content.slice(0, -1));
+  });
 });
 
 parserScenarios(`Object references`, ({newDoc}) => {
