@@ -123,6 +123,7 @@ export class IBMiController {
               }
               
             } else {
+              success = false;
               items.push(vscode.NotebookCellOutputItem.stderr(`No job selected in SQL Job Manager.`));
             }
           } catch (e) {
@@ -201,6 +202,7 @@ export class IBMiController {
       }
 
     } else {
+      success = false;
       items.push(
         vscode.NotebookCellOutputItem.stderr(`Failed to execute. Are you connected?`)
       )
