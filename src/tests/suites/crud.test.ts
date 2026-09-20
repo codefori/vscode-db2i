@@ -29,7 +29,7 @@ const allGenerated: TableColumn[] = [
   column(`C4`, `TIMESTAMP`, { HAS_DEFAULT: `X` }),
 ];
 
-test('Generated columns are left out of an INSERT, and every value is a host variable with a bind statement', () => {
+test('Generated columns are left out of an INSERT, and every value is a named host variable', () => {
   const columns = [
     ...allGenerated,
     column(`NAME`, `VARCHAR`, { CHARACTER_MAXIMUM_LENGTH: 20 }),
@@ -49,10 +49,29 @@ test('Generated columns are left out of an INSERT, and every value is a host var
     `  CREATED`,
     `)`,
     `VALUES (`,
-    `  ?,  -- NAME - VARCHAR(20) NOT NULL`,
-    `  ?  -- CREATED - DATE NOT NULL`,
-    `);`,
-    `bind: '', '2024-01-01';`
+    `  :NAME,  -- NAME - VARCHAR(20) NOT NULL`,
+    `  :CREATED  -- CREATED - DATE NOT NULL`,
+    `);`
+  ].join(`\n`));
+});
+
+test('A column whose catalog name needs delimiting still produces a valid named host variable', () => {
+  const columns = [
+    column(`PARK_NAME`, `VARCHAR`, { CHARACTER_MAXIMUM_LENGTH: 50 }),
+    column(`'thetime"`, `TIMESTAMP`),
+  ];
+
+  const statement = generateCrudStatement(`INSERT`, `annoying`, `annoyingly123`, columns);
+
+  expect(statement).toBe([
+    `INSERT INTO "annoying"."annoyingly123" (`,
+    `  PARK_NAME,`,
+    `  "'thetime"""`,
+    `)`,
+    `VALUES (`,
+    `  :PARK_NAME,  -- PARK_NAME - VARCHAR(50) NOT NULL`,
+    `  :thetime  -- "'thetime""" - TIMESTAMP NOT NULL`,
+    `);`
   ].join(`\n`));
 });
 
@@ -108,7 +127,7 @@ test('An identity column is left out when HAS_DEFAULT says nothing', () => {
   expect(generateCrudStatement(`INSERT`, `RMOELLER`, `MYTABLE`, columns)).toContain(`-- C1 omitted: identity`);
 });
 
-test('Generated columns are left out of the SET list of an UPDATE, which assigns host variables', () => {
+test('Generated columns are left out of the SET list of an UPDATE, which assigns named host variables', () => {
   const columns = [
     ...allGenerated,
     column(`NAME`, `VARCHAR`, { CHARACTER_MAXIMUM_LENGTH: 20 }),
@@ -123,11 +142,10 @@ test('Generated columns are left out of the SET list of an UPDATE, which assigns
     `-- C4 omitted: transaction start ID`,
     `UPDATE RMOELLER.MYTABLE`,
     `SET`,
-    `  NAME = ?  -- NAME - VARCHAR(20) NOT NULL`,
+    `  NAME = :NAME  -- NAME - VARCHAR(20) NOT NULL`,
     `WHERE`,
-    `  C1 = ?  -- C1 - INTEGER`,
-    `;`,
-    `bind: '', 0;`
+    `  C1 = :C1  -- C1 - INTEGER`,
+    `;`
   ].join(`\n`));
 });
 
@@ -137,9 +155,8 @@ test('A DELETE keeps generated columns in the WHERE clause', () => {
   expect(statement).toBe([
     `DELETE FROM RMOELLER.MYTABLE`,
     `WHERE`,
-    `  C1 = ?  -- C1 - INTEGER`,
-    `;`,
-    `bind: 0;`
+    `  C1 = :C1  -- C1 - INTEGER`,
+    `;`
   ].join(`\n`));
 });
 
@@ -155,9 +172,20 @@ test('Without a key, an UPDATE/DELETE uses every column in the WHERE clause, joi
     `-- No primary or unique key found so every column is listed to identify the row. Adjust as needed.`,
     `DELETE FROM RMOELLER.MYTABLE`,
     `WHERE`,
-    `  C1 = ?  -- C1 - INTEGER NOT NULL`,
-    `  AND C2 = ?  -- C2 - VARCHAR(10) NOT NULL`,
-    `;`,
-    `bind: 0, '';`
+    `  C1 = :C1  -- C1 - INTEGER NOT NULL`,
+    `  AND C2 = :C2  -- C2 - VARCHAR(10) NOT NULL`,
+    `;`
   ].join(`\n`));
+});
+
+test('Two columns whose names sanitize to the same host variable name get disambiguated', () => {
+  const columns = [
+    column(`A.B`, `INTEGER`),
+    column(`A-B`, `VARCHAR`, { CHARACTER_MAXIMUM_LENGTH: 5 }),
+  ];
+
+  const statement = generateCrudStatement(`INSERT`, `RMOELLER`, `MYTABLE`, columns);
+
+  expect(statement).toContain(`:AB,`);
+  expect(statement).toContain(`:AB2`);
 });

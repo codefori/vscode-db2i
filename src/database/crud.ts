@@ -5,10 +5,9 @@ import Statement from "./statement";
 export type CrudType = `INSERT` | `UPDATE` | `DELETE`;
 
 /**
- * Generates an INSERT, UPDATE or DELETE statement for a table. Every value is a `?` host variable,
- * described in a trailing comment, so the statement is valid SQL as-is. A `bind:` statement with a
- * placeholder value per host variable is appended below it, so running the statement is as easy as
- * editing those values first.
+ * Generates an INSERT, UPDATE or DELETE statement for a table. Every value is a `:name` named
+ * host variable, described in a trailing comment, so the statement is valid SQL once those
+ * variables are declared or bound.
  * @param schema Schema name, as it comes from the catalog
  * @param name Table name, as it comes from the catalog
  * @param columns All columns of the table, in ordinal position order
@@ -38,7 +37,7 @@ function generateInsert(schema: string, name: string, columns: TableColumn[]): s
     ].join(`\n`);
   }
 
-  const values = valuesList(insertColumns);
+  const values = valuesList(insertColumns, new Set());
 
   return [
     ...omissionWarnings(generatedColumns),
@@ -47,8 +46,7 @@ function generateInsert(schema: string, name: string, columns: TableColumn[]): s
     `)`,
     `VALUES (`,
     ...values.lines,
-    `);`,
-    bindStatement(values.bindValues)
+    `);`
   ].join(`\n`);
 }
 
@@ -60,8 +58,11 @@ function generateUpdate(schema: string, name: string, columns: TableColumn[], ke
     throw new Error(`No columns available to update in ${qualify(schema, name)}`);
   }
 
-  const set = setList(setColumns);
-  const where = whereClause(schema, name, columns, keyColumns);
+  // Shared across SET and WHERE so a column used in both places doesn't collide with itself,
+  // and so two columns that sanitize to the same host variable name don't collide either.
+  const usedNames = new Set<string>();
+  const set = setList(setColumns, usedNames);
+  const where = whereClause(schema, name, columns, keyColumns, usedNames);
 
   return [
     ...omissionWarnings(generatedColumns),
@@ -71,25 +72,23 @@ function generateUpdate(schema: string, name: string, columns: TableColumn[], ke
     ...set.lines,
     `WHERE`,
     ...where.lines,
-    `;`,
-    bindStatement([...set.bindValues, ...where.bindValues])
+    `;`
   ].join(`\n`);
 }
 
 function generateDelete(schema: string, name: string, columns: TableColumn[], keyColumns: string[]): string {
-  const where = whereClause(schema, name, columns, keyColumns);
+  const where = whereClause(schema, name, columns, keyColumns, new Set());
 
   return [
     ...where.warnings,
     `DELETE FROM ${qualify(schema, name)}`,
     `WHERE`,
     ...where.lines,
-    `;`,
-    bindStatement(where.bindValues)
+    `;`
   ].join(`\n`);
 }
 
-function whereClause(schema: string, name: string, columns: TableColumn[], keyColumns: string[]) {
+function whereClause(schema: string, name: string, columns: TableColumn[], keyColumns: string[], usedNames: Set<string>) {
   // Without a key, every column is listed so the statement never matches more rows than intended
   const predicateColumns = keyColumns.length ? columns.filter(column => isKeyColumn(column, keyColumns)) : columns;
 
@@ -97,12 +96,11 @@ function whereClause(schema: string, name: string, columns: TableColumn[], keyCo
     throw new Error(`No columns available to identify a row in ${qualify(schema, name)}`);
   }
 
-  const predicate = wherePredicates(predicateColumns);
+  const predicate = wherePredicates(predicateColumns, usedNames);
 
   return {
     warnings: keyColumns.length ? [] : [`-- No primary or unique key found so every column is listed to identify the row. Adjust as needed.`],
-    lines: predicate.lines,
-    bindValues: predicate.bindValues
+    lines: predicate.lines
   };
 }
 
@@ -154,48 +152,44 @@ function qualify(schema: string, name: string) {
   return `${Statement.delimName(schema)}.${Statement.delimName(name)}`;
 }
 
-/** A `?` host variable per column for a VALUES list, e.g. "?,  -- COL - VARCHAR(20)" */
-function valuesList(columns: TableColumn[]): { lines: string[], bindValues: string[] } {
-  return {
-    lines: columns.map((column, index) => `  ?${index < columns.length - 1 ? `,` : ``}  -- ${describe(column)}`),
-    bindValues: columns.map(placeholderValue)
-  };
-}
-
-/** A `?` host variable assignment per column for a SET list, e.g. "COL = ?,  -- COL - VARCHAR(20)" */
-function setList(columns: TableColumn[]): { lines: string[], bindValues: string[] } {
-  return {
-    lines: columns.map((column, index) => `  ${Statement.delimName(column.COLUMN_NAME)} = ?${index < columns.length - 1 ? `,` : ``}  -- ${describe(column)}`),
-    bindValues: columns.map(placeholderValue)
-  };
-}
-
-/** A `?` host variable predicate per column for a WHERE clause, joined with AND */
-function wherePredicates(columns: TableColumn[]): { lines: string[], bindValues: string[] } {
-  return {
-    lines: columns.map((column, index) => `  ${index > 0 ? `AND ` : ``}${Statement.delimName(column.COLUMN_NAME)} = ?  -- ${describe(column)}`),
-    bindValues: columns.map(placeholderValue)
-  };
-}
-
 /**
- * A value for the `bind:` statement. Must be a string or number literal, so date/time/timestamp
- * columns get a valid literal string rather than an expression like CURRENT DATE.
+ * A valid, unquoted identifier to use as a `:name` host variable for a column. Column names from
+ * the catalog can contain characters (quotes, spaces, punctuation) that aren't valid in an
+ * identifier, so those are stripped out. `usedNames` avoids collisions when that stripping makes
+ * two columns resolve to the same name within one statement.
  */
-function placeholderValue(column: TableColumn): string {
-  const type = column.DATA_TYPE.toUpperCase();
+function hostVariableName(column: TableColumn, usedNames: Set<string>): string {
+  const stripped = column.COLUMN_NAME.replace(/[^A-Za-z0-9_]/g, ``);
+  const base = !stripped || /^[0-9]/.test(stripped) ? `C${stripped}` : stripped;
 
-  if (type === `DATE`) return `'2024-01-01'`;
-  if (type === `TIME`) return `'00:00:00'`;
-  if (type.startsWith(`TIMESTAMP`)) return `'2024-01-01-00.00.00.000000'`;
-  if ([`DECIMAL`, `NUMERIC`, `DECFLOAT`, `FLOAT`, `REAL`, `DOUBLE`, `INTEGER`, `BIGINT`, `SMALLINT`].includes(type)) return `0`;
+  let candidate = base;
+  for (let suffix = 2; usedNames.has(candidate); suffix++) {
+    candidate = `${base}${suffix}`;
+  }
 
-  // Character types, and anything else not covered above, default to an empty string literal
-  return `''`;
+  usedNames.add(candidate);
+  return candidate;
 }
 
-function bindStatement(bindValues: string[]): string {
-  return `bind: ${bindValues.join(`, `)};`;
+/** A `:name` host variable per column for a VALUES list, e.g. ":NAME,  -- COL - VARCHAR(20)" */
+function valuesList(columns: TableColumn[], usedNames: Set<string>): { lines: string[] } {
+  return {
+    lines: columns.map((column, index) => `  :${hostVariableName(column, usedNames)}${index < columns.length - 1 ? `,` : ``}  -- ${describe(column)}`)
+  };
+}
+
+/** A `:name` host variable assignment per column for a SET list, e.g. "COL = :NAME,  -- COL - VARCHAR(20)" */
+function setList(columns: TableColumn[], usedNames: Set<string>): { lines: string[] } {
+  return {
+    lines: columns.map((column, index) => `  ${Statement.delimName(column.COLUMN_NAME)} = :${hostVariableName(column, usedNames)}${index < columns.length - 1 ? `,` : ``}  -- ${describe(column)}`)
+  };
+}
+
+/** A `:name` host variable predicate per column for a WHERE clause, joined with AND */
+function wherePredicates(columns: TableColumn[], usedNames: Set<string>): { lines: string[] } {
+  return {
+    lines: columns.map((column, index) => `  ${index > 0 ? `AND ` : ``}${Statement.delimName(column.COLUMN_NAME)} = :${hostVariableName(column, usedNames)}  -- ${describe(column)}`)
+  };
 }
 
 function describe(column: TableColumn): string {
