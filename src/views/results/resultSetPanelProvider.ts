@@ -9,7 +9,20 @@ import Statement from "../../database/statement";
 import Table from "../../database/table";
 import { ObjectRef } from "../../language/sql/types";
 import { TableColumn } from "../../types";
-import { DataTableHandlers, DataTableOptions, handleDataTableMessage, moveDataTableToEditor, renderDataTable } from "../html/dataTable";
+import {
+  BasicColumn,
+  DataTableColumn,
+  DataTableHandlers,
+  DataTableOptions,
+  UpdatableInfo,
+  appendDataTableRows,
+  handleDataTableMessage,
+  moveDataTableToEditor,
+  postDataTableCellResponse,
+  renderDataTable,
+  resetDataTableRows,
+  updateDataTableColumns,
+} from "../html/dataTable";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { statementDone } from "./editorUi";
 import * as html from "./html";
@@ -26,13 +39,75 @@ export interface ScrollerOptions {
   ref?: ObjectRef;
 }
 
+/** SQL column heading display mode, from the `resultsets.columnHeadings` setting */
+function resultColumnTitle(column: any, columnHeadings: string): string {
+  switch (columnHeadings) {
+    case `Name`: return column.name;
+    case `Both`: return column.name === column.label ? column.name : `${column.name}\n${column.label}`;
+    default: return column.label;
+  }
+}
+
+function resultColumnTooltip(column: any, columnHeadings: string): string {
+  let title: string;
+  switch (column.type) {
+    case `CHAR`: case `VARCHAR`: case `CLOB`: case `BINARY`: case `VARBINARY`: case `BLOB`:
+    case `GRAPHIC`: case `VARGRAPHIC`: case `DBCLOB`: case `NCHAR`: case `NVARCHAR`: case `NCLOB`:
+    case `FLOAT`: case `DECFLOAT`: case `DATALINK`:
+      title = `${column.type}(${column.precision})`;
+      break;
+    case `DECIMAL`: case `NUMERIC`:
+      title = `${column.type}(${column.precision}, ${column.scale})`;
+      break;
+    default:
+      title = column.type;
+  }
+  title += `\n`;
+  switch (columnHeadings) {
+    case `Name`: title += column.label; break;
+    case `Both`: break;
+    default: title += column.name;
+  }
+  return title;
+}
+
+/** Builds the data table's columns from a query's SQL column metadata (rows are plain `row[i]` arrays — `isTerseResults: true`) */
+function buildResultColumns(columnMetaData: any[], columnHeadings: string): DataTableColumn<any[]>[] {
+  return columnMetaData.map((column, i) => ({
+    id: column.name,
+    title: resultColumnTitle(column, columnHeadings),
+    value: (row: any[]) => row[i],
+    headerTooltip: resultColumnTooltip(column, columnHeadings),
+  }));
+}
+
+/** Types a "search all columns" `CAST(... AS VARCHAR(...))` can't meaningfully apply to */
+const SEARCH_EXCLUDED_TYPES = new Set([
+  `BLOB`, `CLOB`, `DBCLOB`, `NCLOB`, `VARBIN`, `BINARY`, `GRAPHIC`, `VARGRAPHIC`, `ROWID`, `DATALINK`,
+]);
+
+/** Double-quotes an identifier for interpolation into generated SQL, escaping embedded `"` (unlike `Statement.delimName`, which doesn't) */
+function quoteIdent(id: string): string {
+  return `"${id.replace(/"/g, `""`)}"`;
+}
+
+/** Escapes `\`, `%` and `_` in user-typed search text so it can't act as a LIKE wildcard once bound */
+function escapeLikeText(text: string): string {
+  return text.replace(/\\/g, `\\\\`).replace(/%/g, `\\%`).replace(/_/g, `\\_`);
+}
+
 export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel | undefined;
   loadingState: boolean = false;
   currentQuery: Query<any> | undefined;
   lastScrollerOptions: ScrollerOptions | undefined;
-  /** Routes the webview messages while a data table (see {@link showDataTable}) is shown instead of a result set */
-  private dataTableRouter: ((message: any) => Promise<boolean>) | undefined;
+  /** Routes the webview's messages while it shows a data table instead of the idle placeholder */
+  private messageRouter: ((message: any) => Promise<boolean> | void) | undefined;
+  /** Raw SQL column metadata of the query shown, so a heading-setting change can rebuild titles */
+  private lastColumnMetaData: any[] | undefined;
+  private lastDataTableOptions: DataTableOptions<any[]> | undefined;
+  /** Bumped on every restart so a superseded in-flight fetch can drop its stale result */
+  private queryEpoch = 0;
 
   endQuery() {
     if (this.currentQuery) {
@@ -47,11 +122,10 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
   retrieveMoreRows(allRows?: boolean) {
     if (this._view) {
-      const queryId = this.currentQuery?.getId();
       this._view.webview.postMessage({
-        command: `fetch`,
-        queryId: queryId,
-        allRows: allRows === true
+        command: `requestFetch`,
+        allRows: allRows === true,
+        queryId: this.currentQuery?.getId(),
       });
     }
   }
@@ -83,128 +157,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
     webviewView.webview.html = html.getLoadingHTML();
 
-    const postCellResponse = (id: number, success: boolean) => {
-      this._view?.webview.postMessage({
-        command: `cellResponse`,
-        id,
-        success
-      });
-    }
-
     this._view.webview.onDidReceiveMessage(async (message) => {
-      // A data table owns the view while it is shown, and posts messages of its own
-      if (this.dataTableRouter && await this.dataTableRouter(message)) {
-        return;
-      }
-
-      switch (message.command) {
-        case `cancel`:
-          this.endQuery();
-          break;
-
-        case `update`:
-          if (message.id && message.update && message.bindings) {
-            console.log(message);
-            try {
-              await JobManager.runSQL(message.update, { parameters: message.bindings });
-              const substatement = message.bindings
-                ? `bind: ${(message.bindings as string[])
-                  .map(binding => typeof binding === 'string' ? `'${binding}'` : String(binding))
-                  .join(', ')}`
-                : undefined;
-              commands.executeCommand(`vscode-db2i.queryHistory.prepend`, message.update, substatement);
-              postCellResponse(message.id, true);
-            } catch (e: any) {
-              // this.setError(e.message);
-              // if (this.currentQuery) {
-              //   this.currentQuery.close();
-              // }
-              postCellResponse(message.id, false);
-              window.showWarningMessage(e.message);
-            }
-          }
-          break;
-
-        default:
-          if (message.query) {
-            let canClear = false;
-            let canRetrieveMoreRows = false;
-            let canRefresh = false;
-            if (this.currentQuery) {
-              // If we get a request for a new query, then we need to close the old one
-              if (this.currentQuery.getId() === undefined || this.currentQuery.getId() !== message.queryId) {
-                // This is a new query, so we need to clean up the old one
-                await this.currentQuery.close();
-                this.currentQuery = undefined;
-              }
-            }
-
-            try {
-              if (this.currentQuery === undefined) {
-                this.currentQuery = await JobManager.getPagingStatement(message.query, { parameters: message.parameters, isClCommand: message.isCL, isTerseResults: true });
-              }
-
-              if (this.currentQuery.getState() !== "RUN_DONE") {
-                setCancelButtonVisibility(true);
-                let queryResults: QueryResult<any> | undefined = undefined;
-                let startTime = 0;
-                let endTime = 0;
-                let executionTime: number | undefined;
-
-                let rowsToFetch = Configuration.get<number>('resultsets.rowsToFetch') || 100;
-                if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
-                  // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
-                  // int. This is the largest number available without overflow (Integer.MAX_VALUE)
-                  rowsToFetch = message.allRows === true ? 2147483647 : rowsToFetch;
-                  queryResults = await this.currentQuery.fetchMore(rowsToFetch);
-                }
-                else {
-                  startTime = performance.now();
-                  queryResults = await this.currentQuery.execute(rowsToFetch);
-                  endTime = performance.now();
-                  executionTime = (endTime - startTime);
-
-                  if (message.uiId) {
-                    statementDone(message.uiId, { paramsOut: queryResults.output_parms });
-                  }
-                }
-                const jobId = this.currentQuery.getHostJob().id;
-
-                this._view?.webview.postMessage({
-                  command: `rows`,
-                  jobId,
-                  rows: queryResults.data,
-                  columnMetaData: queryResults.metadata ? queryResults.metadata.columns : undefined, // Query.fetchMore() doesn't return the metadata
-                  columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
-                  queryId: this.currentQuery.getId(),
-                  update_count: queryResults.update_count,
-                  isDone: queryResults.is_done,
-                  executionTime
-                });
-
-                canClear = true;
-                canRetrieveMoreRows = !queryResults.is_done;
-                canRefresh = true;
-              }
-
-            } catch (e: any) {
-              this.setError(e.message);
-              this._view?.webview.postMessage({
-                command: `rows`,
-                rows: [],
-                queryId: ``,
-                isDone: true
-              });
-            }
-
-            setCancelButtonVisibility(false);
-            updateStatusBar();
-            commands.executeCommand(`setContext`, `vscode-db2i:canClear`, canClear);
-            commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, canRetrieveMoreRows);
-            commands.executeCommand(`setContext`, `vscode-db2i:canRefresh`, canRefresh);
-          }
-          break;
-      }
+      await this.messageRouter?.(message);
     });
   }
 
@@ -233,7 +187,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   async setLoadingText(content: string, focus = true) {
-    this.dataTableRouter = undefined;
+    this.messageRouter = undefined;
+    this.lastColumnMetaData = undefined;
+    this.lastDataTableOptions = undefined;
 
     if (focus) {
       await this.focus();
@@ -251,22 +207,23 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
   /** Update the result table column headings based on the configuration setting */
   async updateHeader() {
-    if (this._view) {
-      this._view.webview.postMessage({
-        command: `header`,
-        columnHeadings: Configuration.get(`resultsets.columnHeadings`) || 'Name',
-      });
+    if (this._view && this.lastColumnMetaData && this.lastDataTableOptions) {
+      const columns = buildResultColumns(this.lastColumnMetaData, Configuration.get<string>(`resultsets.columnHeadings`) || 'Name');
+      updateDataTableColumns(msg => this._view?.webview.postMessage(msg), this.lastDataTableOptions, columns);
     }
   }
 
   async setScrolling(options: ScrollerOptions) {
-    this.dataTableRouter = undefined;
+    this.messageRouter = undefined;
+    this.queryEpoch++;
     this.lastScrollerOptions = { ...options };
+    this.lastColumnMetaData = undefined;
+    this.lastDataTableOptions = undefined;
 
     this.loadingState = false;
     await this.focus();
 
-    let updatable: html.UpdatableInfo | undefined;
+    let updatable: UpdatableInfo | undefined;
 
     if (options.ref) {
       const schema = options.ref.object.schema || options.ref.object.system;
@@ -291,7 +248,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             const uneditableTypes = [`VARBIN`, `BINARY`, `ROWID`, `DATALINK`, `DBCLOB`, `BLOB`, `GRAPHIC`]
 
             if (tableInfo.length > 0) {
-              let currentColumns: html.BasicColumn[] | undefined;
+              let currentColumns: BasicColumn[] | undefined;
 
               currentColumns = tableInfo
                 .filter((column) => !uneditableTypes.includes(column.DATA_TYPE))
@@ -347,13 +304,190 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       }
     }
 
-    if (this._view) {
-      this._view.webview.html = html.generateScroller(options.uiId || '', options.basicSelect, options.parameters, options.isCL, options.withCancel, updatable);
+    // Always wrap this pristine text, never an already-wrapped one, so restarts don't nest.
+    const baseSelect = options.basicSelect;
+    // Excludes CL (not a SELECT) and explain-with-run (its `queryId` ties it to an existing engine run).
+    const serverQuery = !options.isCL && options.queryId === undefined;
+    let sortState: { columnId: string; direction: "asc" | "desc" } | undefined;
+    let searchQuery = ``;
 
-      this._view.webview.postMessage({
-        command: `fetch`,
-        queryId: options.queryId
-      });
+    const dtOptions: DataTableOptions<any[]> = {
+      title: baseSelect.replace(/\s+/g, ` `).trim(),
+      columns: [],
+      rows: [],
+      search: serverQuery,
+      streaming: true,
+      serverQuery,
+      cancellable: options.withCancel === true,
+      updatable,
+      resizable: true,
+      collapsedInitialWidth: Configuration.get<boolean>(`collapsedResultSet`) ? `200px` : undefined,
+      loadingText: options.isCL ? `Running CL command...` : `Running statement...`,
+    };
+
+    const post = (msg: any) => this._view?.webview.postMessage(msg);
+    let columnsSent = false;
+
+    /** Builds the SQL actually sent for the current sort/search state, wrapping `baseSelect` only when needed */
+    const buildQueryText = (): { sql: string; params: SqlParameter[] } => {
+      if (!sortState && !searchQuery) {
+        return { sql: baseSelect, params: options.parameters ?? [] };
+      }
+
+      const params: SqlParameter[] = [...(options.parameters ?? [])];
+      let sql = `SELECT * FROM (${baseSelect}) AS "DTQ"`;
+
+      if (searchQuery && this.lastColumnMetaData) {
+        const searchable = this.lastColumnMetaData.filter((c: any) => !SEARCH_EXCLUDED_TYPES.has(String(c.type).toUpperCase()));
+        if (searchable.length > 0) {
+          const likeText = `%${escapeLikeText(searchQuery)}%`;
+          // Cast to CCSID 37
+          const clauses = searchable.map((c: any) => {
+            params.push(likeText);
+            return `UPPER(CAST(${quoteIdent(c.name)} AS VARCHAR(1024) CCSID 37)) LIKE UPPER(CAST(? AS VARCHAR(1024) CCSID 37)) ESCAPE '\\'`;
+          });
+          sql += ` WHERE ${clauses.join(` OR `)}`;
+        }
+      }
+
+      if (sortState) {
+        const index = dtOptions.columns.findIndex(c => c.id === sortState!.columnId);
+        if (index >= 0) {
+          sql += ` ORDER BY ${index + 1} ${sortState.direction === `desc` ? `DESC` : `ASC`}`;
+        }
+      }
+
+      return { sql, params };
+    };
+
+    /** Restart the stream from page 1 with the current sort/search state applied */
+    const restartQuery = () => {
+      this.queryEpoch++;
+      this.currentQuery?.close();
+      this.currentQuery = undefined;
+      resetDataTableRows(post, dtOptions);
+      post({ command: `requestFetch`, allRows: false });
+    };
+
+    const handlers: DataTableHandlers<any[]> = {
+      onFetchMore: async ({ allRows, queryId }) => {
+        const myEpoch = this.queryEpoch;
+
+        if (this.currentQuery) {
+          // If we get a request for a new query, then we need to close the old one
+          if (this.currentQuery.getId() === undefined || this.currentQuery.getId() !== queryId) {
+            // This is a new query, so we need to clean up the old one
+            await this.currentQuery.close();
+            this.currentQuery = undefined;
+          }
+        }
+
+        let canClear = false;
+        let canRetrieveMoreRows = false;
+        let canRefresh = false;
+
+        try {
+          if (this.currentQuery === undefined) {
+            const { sql, params } = buildQueryText();
+            this.currentQuery = await JobManager.getPagingStatement(sql, { parameters: params, isClCommand: options.isCL, isTerseResults: true });
+          }
+
+          if (this.currentQuery.getState() !== "RUN_DONE") {
+            setCancelButtonVisibility(true);
+            let queryResults: QueryResult<any> | undefined = undefined;
+            let executionTime: number | undefined;
+
+            let rowsToFetch = Configuration.get<number>('resultsets.rowsToFetch') || 100;
+            if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
+              // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
+              // int. This is the largest number available without overflow (Integer.MAX_VALUE)
+              rowsToFetch = allRows === true ? 2147483647 : rowsToFetch;
+              queryResults = await this.currentQuery.fetchMore(rowsToFetch);
+            }
+            else {
+              const startTime = performance.now();
+              queryResults = await this.currentQuery.execute(rowsToFetch);
+              executionTime = performance.now() - startTime;
+
+              if (options.uiId) {
+                statementDone(options.uiId, { paramsOut: queryResults.output_parms });
+              }
+            }
+
+            // A restart may have superseded this fetch while it was in flight — drop it.
+            if (myEpoch !== this.queryEpoch) return;
+
+            const jobId = this.currentQuery.getHostJob().id;
+
+            let columns: DataTableColumn<any[]>[] | undefined;
+            if (!columnsSent && queryResults.metadata) {
+              columns = buildResultColumns(queryResults.metadata.columns, Configuration.get<string>(`resultsets.columnHeadings`) || 'Name');
+              columnsSent = true;
+              this.lastColumnMetaData = queryResults.metadata.columns;
+              this.lastDataTableOptions = dtOptions;
+            }
+
+            appendDataTableRows(post, dtOptions, queryResults.data ?? [], {
+              isDone: queryResults.is_done,
+              queryId: this.currentQuery.getId(),
+              columns,
+              executionTimeMs: executionTime,
+              jobId,
+              updateCount: queryResults.update_count,
+            });
+
+            canClear = true;
+            canRetrieveMoreRows = !queryResults.is_done;
+            canRefresh = true;
+          }
+
+        } catch (e: any) {
+          if (myEpoch === this.queryEpoch) this.setError(e.message);
+        }
+
+        setCancelButtonVisibility(false);
+        updateStatusBar();
+        if (myEpoch === this.queryEpoch) {
+          commands.executeCommand(`setContext`, `vscode-db2i:canClear`, canClear);
+          commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, canRetrieveMoreRows);
+          commands.executeCommand(`setContext`, `vscode-db2i:canRefresh`, canRefresh);
+        }
+      },
+
+      onCellUpdate: async ({ id, statement, bindings }) => {
+        try {
+          await JobManager.runSQL(statement, { parameters: bindings });
+          const substatement = bindings.length
+            ? `bind: ${bindings.map(binding => typeof binding === 'string' ? `'${binding}'` : String(binding)).join(', ')}`
+            : undefined;
+          commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement, substatement);
+          postDataTableCellResponse(post, id, true);
+        } catch (e: any) {
+          postDataTableCellResponse(post, id, false);
+          window.showWarningMessage(e.message);
+        }
+      },
+
+      onCancel: () => { this.endQuery(); },
+
+      onSortChange: async ({ columnId, direction }) => {
+        if (!serverQuery || !this.lastColumnMetaData) return;
+        sortState = { columnId, direction };
+        restartQuery();
+      },
+
+      onSearchChange: async ({ query }) => {
+        if (!serverQuery || !this.lastColumnMetaData) return;
+        searchQuery = query.trim();
+        restartQuery();
+      },
+    };
+
+    this.messageRouter = message => handleDataTableMessage(message, dtOptions, handlers, post);
+
+    if (this._view) {
+      this._view.webview.html = renderDataTable(dtOptions);
+      this._view.webview.postMessage({ command: `requestFetch`, allRows: false, queryId: options.queryId });
     }
   }
 
@@ -372,14 +506,17 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       }
     };
 
-    this.dataTableRouter = message =>
+    this.messageRouter = message =>
       handleDataTableMessage(message, options, tableHandlers, msg => this._view?.webview.postMessage(msg));
 
     // Whatever result set was shown here is gone as soon as the table is rendered
     this.endQuery();
     this.currentQuery = undefined;
+    this.queryEpoch++;
     this.resetContext();
     this.loadingState = false;
+    this.lastColumnMetaData = undefined;
+    this.lastDataTableOptions = undefined;
 
     await this.ensureActivation();
 
@@ -389,8 +526,10 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   setError(error: string) {
-    this.dataTableRouter = undefined;
+    this.messageRouter = undefined;
     this.loadingState = false;
+    this.lastColumnMetaData = undefined;
+    this.lastDataTableOptions = undefined;
     // TODO: pretty error
     if (this._view) {
       this._view.webview.html = `<p>${error}</p>`;
@@ -398,7 +537,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   clear() {
-    this.dataTableRouter = undefined;
+    this.messageRouter = undefined;
+    this.lastColumnMetaData = undefined;
+    this.lastDataTableOptions = undefined;
     if (this._view) {
       this._view.webview.html = ``;
     }
