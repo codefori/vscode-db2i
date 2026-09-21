@@ -315,6 +315,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
             <path d="M10.02 10.727a5.5 5.5 0 1 1 .707-.707l3.127 3.126a.5.5 0 0 1-.708.708l-3.127-3.127ZM11 6.5a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0Z"/>
           </svg>
         </span>`;
+  // Server-side search needs the columns of the first page
+  const searchDisabled = model.serverQuery && model.columns.length === 0;
 
   return /*html*/ `<!DOCTYPE html>
 <html lang="en">
@@ -367,6 +369,9 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     #search { width: min(280px, 45vw); }
     #toolbarEnd { margin-left: auto; display: flex; align-items: center; gap: 6px; }
     .dt-search-icon { display: flex; align-items: center; color: var(--dt-muted); }
+    .dt-search-clear { display: flex; align-items: center; cursor: pointer; border-radius: 3px; color: var(--vscode-icon-foreground, var(--vscode-foreground)); }
+    .dt-search-clear:hover { background-color: var(--vscode-toolbar-hoverBackground); }
+    .dt-search-clear[hidden] { display: none; }
     #dtModified.active { color: var(--vscode-editorInfo-foreground, var(--dt-accent)); cursor: help; }
     #openInEditor { flex: 0 0 auto; }
     #openInEditor svg { display: block; }
@@ -575,8 +580,14 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
   <div id="toolbar" ${showToolbar ? `` : `style="display:none"`}>
     <span id="title" title="${escapeHtml(model.title)}">${escapeHtml(model.title)}</span>
     <span id="toolbarEnd">
-      ${model.search ? /*html*/ `<vscode-textfield id="search" type="search" placeholder="${escapeHtml(model.searchPlaceholder)}" value="${escapeHtml(model.initialQuery)}">
+      ${model.search ? /*html*/ `<vscode-textfield id="search" type="text" placeholder="${escapeHtml(model.searchPlaceholder)}" value="${escapeHtml(model.initialQuery)}"${searchDisabled ? ` disabled` : ``}>
         ${searchIcon}
+        <span slot="content-after" id="searchClear" class="dt-search-clear" title="Clear"${model.initialQuery ? `` : ` hidden`}>
+          <!-- codicon "close" -->
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="m8.707 8 3.646-3.646a.5.5 0 0 0-.707-.707L8 7.293 4.354 3.647a.5.5 0 0 0-.707.707L7.293 8l-3.646 3.646a.5.5 0 0 0 .708.707l3.646-3.646 3.646 3.646a.498.498 0 0 0 .708 0 .5.5 0 0 0 0-.707L8.709 8h-.002Z"/>
+          </svg>
+        </span>
       </vscode-textfield>` : ``}
       ${model.canOpenInEditor ? /*html*/ `<vscode-button id="openInEditor" secondary title="Move this table into the editor">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -942,6 +953,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       state.noMoreRows = false;
       state.isFetching = false;
       el("dtMessage").style.display = "none";
+      el("dtSentinel").style.display = "";
       grid.style.display = "grid";
       if (MODEL.loadingText) el("dtLoading").style.display = "flex";
     }
@@ -984,7 +996,15 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
 
     function requestFetch(allRows) {
       state.isFetching = true;
+      if (MODEL.rows.length) el("dtStatus").textContent = "Loaded " + MODEL.rows.length + " rows. Fetching more…";
       vscode.postMessage({ command: "fetchRows", allRows: !!allRows, queryId: state.myQueryId });
+    }
+
+    // The observer won't fire again if a short page leaves the sentinel in view
+    function fetchIfSentinelVisible() {
+      if (state.isFetching || state.noMoreRows || !MODEL.rows.length) return;
+      const sentinel = el("dtSentinel").getBoundingClientRect();
+      if (sentinel.top <= el("gridScroll").getBoundingClientRect().bottom) requestFetch(state.allRows);
     }
 
     if (MODEL.streaming) {
@@ -1011,10 +1031,17 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       vscode.postMessage({ command: "searchChange", query: state.query });
     }
 
+    function applyLocalSearch() {
+      clearTimeout(searchTimer);
+      state.page = 1;
+      render();
+    }
+
     if (el("search")) {
       el("search").addEventListener("input", (ev) => {
         clearTimeout(searchTimer);
         state.query = ev.target.value || "";
+        el("searchClear").hidden = !state.query;
 
         if (MODEL.streaming) {
           if (!MODEL.serverQuery) return;
@@ -1023,14 +1050,19 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
           return;
         }
 
-        searchTimer = setTimeout(() => {
-          state.page = 1;
-          render();
-        }, 150);
+        searchTimer = setTimeout(applyLocalSearch, 150);
       });
 
       el("search").addEventListener("keydown", (ev) => {
         if (ev.key === "Enter" && MODEL.serverQuery) applyServerSearch();
+      });
+
+      el("searchClear").addEventListener("click", () => {
+        el("search").value = "";
+        state.query = "";
+        el("searchClear").hidden = true;
+        if (MODEL.serverQuery) applyServerSearch();
+        else if (!MODEL.streaming) applyLocalSearch();
       });
     }
 
@@ -1259,11 +1291,15 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
           state.isDone = data.isDone === true;
           state.noMoreRows = state.isDone;
           if (data.rows && data.rows.length) appendRowsToDom(data.rows);
+          if (el("search")) el("search").disabled = false;
           if (MODEL.rows.length === 0) {
-            showStreamingMessage("Statement executed with no result set returned. Rows affected: " + (data.updateCount !== undefined ? data.updateCount : 0));
+            showStreamingMessage(state.appliedQuery.trim()
+              ? MODEL.emptyMessage
+              : "Statement executed with no result set returned. Rows affected: " + (data.updateCount !== undefined ? data.updateCount : 0));
           } else {
             hideStreamingMessage();
             updateStreamingStatus(data);
+            fetchIfSentinelVisible();
           }
           break;
         case "cellResponse":

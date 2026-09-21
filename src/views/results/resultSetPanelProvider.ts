@@ -219,7 +219,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   private tableRegistration: { dispose(): void } | undefined;
   private session: ResultSetSession | undefined;
   private tableSession: DataTableSession | undefined;
-  private fetching = false;
+  private fetchingEpoch: number | undefined;
   /** Bumped on every restart so a superseded in-flight fetch can drop its stale result */
   private queryEpoch = 0;
 
@@ -468,6 +468,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         rows: [],
         search: from.serverQuery,
         initialQuery: from.search,
+        emptyMessage: `No rows match the search.`,
         sort: from.sort,
         streaming: true,
         serverQuery: from.serverQuery,
@@ -517,31 +518,38 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         let canRetrieveMoreRows = false;
         let canRefresh = hasRows;
 
-        this.fetching = true;
+        this.fetchingEpoch = myEpoch;
         try {
-          if (this.currentQuery === undefined) {
+          let query = this.currentQuery;
+          if (query === undefined) {
             const { sql, params } = buildQueryText(session);
-            this.currentQuery = await JobManager.getPagingStatement(sql, { parameters: params, isClCommand: options.isCL, isTerseResults: true });
+            const prepared = await JobManager.getPagingStatement(sql, { parameters: params, isClCommand: options.isCL, isTerseResults: true });
+            // Superseded by a restart while preparing
+            if (myEpoch !== this.queryEpoch) {
+              prepared.close();
+              return;
+            }
+            query = this.currentQuery = prepared;
             if (session.serverQuery) {
               setDataTableQueryModification(post, describeModification(session, sql));
             }
           }
 
-          if (this.currentQuery.getState() !== "RUN_DONE") {
+          if (query.getState() !== "RUN_DONE") {
             setCancelButtonVisibility(true);
             let queryResults: QueryResult<any> | undefined = undefined;
             let executionTime: number | undefined;
 
             let rowsToFetch = Configuration.get<number>('resultsets.rowsToFetch') || 100;
-            if (this.currentQuery.getState() == "RUN_MORE_DATA_AVAILABLE") {
+            if (query.getState() == "RUN_MORE_DATA_AVAILABLE") {
               // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
               // int. This is the largest number available without overflow (Integer.MAX_VALUE)
               rowsToFetch = allRows === true ? 2147483647 : rowsToFetch;
-              queryResults = await this.currentQuery.fetchMore(rowsToFetch);
+              queryResults = await query.fetchMore(rowsToFetch);
             }
             else {
               const startTime = performance.now();
-              queryResults = await this.currentQuery.execute(rowsToFetch);
+              queryResults = await query.execute(rowsToFetch);
               executionTime = performance.now() - startTime;
               session.executionTimeMs = executionTime;
 
@@ -553,7 +561,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             // A restart may have superseded this fetch while it was in flight — drop it.
             if (myEpoch !== this.queryEpoch) return;
 
-            const jobId = this.currentQuery.getHostJob().id;
+            const jobId = query.getHostJob().id;
 
             let columns: DataTableColumn<any[]>[] | undefined;
             if (!columnsSent && queryResults.metadata) {
@@ -564,7 +572,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
             appendDataTableRows(post, dtOptions, queryResults.data ?? [], {
               isDone: queryResults.is_done,
-              queryId: this.currentQuery.getId(),
+              queryId: query.getId(),
               columns,
               executionTimeMs: executionTime,
               jobId,
@@ -581,7 +589,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         } catch (e: any) {
           if (myEpoch === this.queryEpoch) this.setError(e.message);
         } finally {
-          this.fetching = false;
+          if (this.fetchingEpoch === myEpoch) this.fetchingEpoch = undefined;
         }
 
         setCancelButtonVisibility(false);
@@ -660,7 +668,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   private moveResultSetToEditor(session: ResultSetSession) {
     if (this.session !== session || this.host !== `view`) return;
 
-    if (this.fetching) {
+    if (this.fetchingEpoch === this.queryEpoch) {
       window.showInformationMessage(`Rows are still being fetched. Try again once they are shown.`);
       return;
     }
