@@ -22,7 +22,7 @@ import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ExplainTree } from "./explain/nodes";
 import { DataTableHandlers, DataTableOptions } from "../html/dataTable";
-import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
+import { DataTableExtras, ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 
 export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "md" | "cl" | "sql" | "rpg" | "udtf";
 
@@ -67,14 +67,38 @@ const ALLOWED_PREFIXES_FOR_HISTORY: StatementQualifier[] =
 const ALLOWED_PREFIXES_EXCLUDE_QUALIFIER_FOR_HISTORY: StatementQualifier[] =
   [`statement`, `explain`];
 
+/** The active result set editor tab, target of its editor/title actions */
+let activePanelProvider: ResultSetPanelProvider | undefined;
+
 /**
  * Show a data table listing (MTIs, locks, …) in the Results view, in place of whatever
- * result set is there. The user can move it into an editor tab from the table itself.
- *
- * @param viewType webview type used for the editor tab the table can be moved into
+ * result set is there. The user can move it into an editor tab from the view's toolbar.
  */
-export function showDataTable<T>(viewType: string, options: DataTableOptions<T>, handlers?: DataTableHandlers<T>): Promise<void> {
-  return resultSetProvider.showDataTable(viewType, options, handlers);
+export function showDataTable<T>(options: DataTableOptions<T>, handlers?: DataTableHandlers<T>, extras?: DataTableExtras<T>): Promise<void> {
+  return resultSetProvider.showDataTable(options, handlers, extras);
+}
+
+export function openResultSetPanel(title: string, column: ViewColumn = ViewColumn.Active): ResultSetPanelProvider {
+  const panel = window.createWebviewPanel(`sqlResultSet`, title, column, { retainContextWhenHidden: true, enableScripts: true, enableFindWidget: true });
+  const provider = new ResultSetPanelProvider(`panel`);
+  provider.resolveWebviewView(panel);
+
+  const trackActive = () => {
+    provider.active = panel.active;
+    if (panel.active) {
+      activePanelProvider = provider;
+      provider.applyContext();
+    } else if (activePanelProvider === provider) {
+      activePanelProvider = undefined;
+    }
+  };
+  trackActive();
+  panel.onDidChangeViewState(trackActive);
+  panel.onDidDispose(() => {
+    if (activePanelProvider === provider) activePanelProvider = undefined;
+  });
+
+  return provider;
 }
 
 export function initialise(context: vscode.ExtensionContext) {
@@ -120,6 +144,20 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.resultset.refresh`, async () => await resultSetProvider.refresh()),
 
     vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, () => resultSetProvider.clear()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.copySql`, () => resultSetProvider.copySql()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.moveToEditor`, () => resultSetProvider.moveToEditor()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.panel.retrieveMoreRows`, () => activePanelProvider?.retrieveMoreRows()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.panel.retrieveAllRows`, () => activePanelProvider?.retrieveMoreRows(true)),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.panel.refresh`, async () => await activePanelProvider?.refresh()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.panel.clear`, () => activePanelProvider?.clear()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.panel.copySql`, () => activePanelProvider?.copySql()),
 
     vscode.workspace.onDidChangeConfiguration(e => {
       // If the result set column headings setting has changed, update the header of the current result set
@@ -293,9 +331,7 @@ async function runHandler(options?: StatementInfo) {
     let chosenView = resultSetProvider;
 
     const useWindow = (title: string, column?: ViewColumn) => {
-      const webview = window.createWebviewPanel(`sqlResultSet`, title, column || ViewColumn.Two, { retainContextWhenHidden: true, enableScripts: true, enableFindWidget: true });
-      chosenView = new ResultSetPanelProvider();
-      chosenView.resolveWebviewView(webview);
+      chosenView = openResultSetPanel(title, column || ViewColumn.Two);
     }
 
     const statementDetail = parseStatement(editor, optionsIsValid ? options : undefined);
@@ -364,6 +400,7 @@ async function runHandler(options?: StatementInfo) {
             chosenView.setScrolling({
               basicSelect: statementDetail.content,
               isCL: true,
+              title: `CL results`,
             }); // Never errors
           }
 
@@ -413,7 +450,8 @@ async function runHandler(options?: StatementInfo) {
               withCancel: inWindow,
               ref: updatableTable,
               parameters,
-              uiId
+              uiId,
+              title: possibleTitle,
             })
           }
 
@@ -436,6 +474,7 @@ async function runHandler(options?: StatementInfo) {
               chosenView.setScrolling({ // Never errors
                 basicSelect: statementDetail.content,
                 queryId: explained.id,
+                title: possibleTitle,
               })
             }
 

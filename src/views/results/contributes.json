@@ -161,6 +161,53 @@
         "category": "Db2 for i",
         "icon": "$(clear-all)",
         "enablement": "vscode-db2i:canClear"
+      },
+      {
+        "command": "vscode-db2i.resultset.copySql",
+        "title": "Copy SQL",
+        "category": "Db2 for i",
+        "icon": "$(copy)",
+        "enablement": "vscode-db2i:canCopySql"
+      },
+      {
+        "command": "vscode-db2i.resultset.moveToEditor",
+        "title": "Move into Editor Area",
+        "category": "Db2 for i",
+        "icon": "$(link-external)",
+        "enablement": "vscode-db2i:canMoveToEditor"
+      },
+      {
+        "command": "vscode-db2i.resultset.panel.retrieveMoreRows",
+        "title": "Retrieve More Rows",
+        "category": "Db2 for i",
+        "enablement": "vscode-db2i:panelCanRetrieveMoreRows"
+      },
+      {
+        "command": "vscode-db2i.resultset.panel.retrieveAllRows",
+        "title": "Retrieve All Rows",
+        "category": "Db2 for i",
+        "enablement": "vscode-db2i:panelCanRetrieveMoreRows"
+      },
+      {
+        "command": "vscode-db2i.resultset.panel.refresh",
+        "title": "Refresh",
+        "category": "Db2 for i",
+        "icon": "$(refresh)",
+        "enablement": "vscode-db2i:panelCanRefresh"
+      },
+      {
+        "command": "vscode-db2i.resultset.panel.clear",
+        "title": "Clear Results",
+        "category": "Db2 for i",
+        "icon": "$(clear-all)",
+        "enablement": "vscode-db2i:panelCanClear"
+      },
+      {
+        "command": "vscode-db2i.resultset.panel.copySql",
+        "title": "Copy SQL",
+        "category": "Db2 for i",
+        "icon": "$(copy)",
+        "enablement": "vscode-db2i:panelCanCopySql"
       }
     ],
     "submenus": [
@@ -173,12 +220,41 @@
         "id": "vscode-db2i.resultset.retrieve",
         "label": "Retrieve...",
         "icon": "$(git-stash)"
+      },
+      {
+        "id": "vscode-db2i.resultset.panel.retrieve",
+        "label": "Retrieve...",
+        "icon": "$(git-stash)"
       }
     ],
     "menus": {
       "commandPalette": [
         {
           "command": "vscode-db2i.resultset.settings",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.moveToEditor",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.panel.retrieveMoreRows",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.panel.retrieveAllRows",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.panel.refresh",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.panel.clear",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.panel.copySql",
           "when": "never"
         }
       ],
@@ -192,6 +268,26 @@
           "command": "vscode-db2i.statement.cancel",
           "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
           "group": "navigation@1"
+        },
+        {
+          "submenu": "vscode-db2i.resultset.panel.retrieve",
+          "group": "navigation@01",
+          "when": "activeWebviewPanelId == sqlResultSet"
+        },
+        {
+          "command": "vscode-db2i.resultset.panel.refresh",
+          "group": "navigation@02",
+          "when": "activeWebviewPanelId == sqlResultSet"
+        },
+        {
+          "command": "vscode-db2i.resultset.panel.clear",
+          "group": "navigation@03",
+          "when": "activeWebviewPanelId == sqlResultSet"
+        },
+        {
+          "command": "vscode-db2i.resultset.panel.copySql",
+          "group": "navigation@04",
+          "when": "activeWebviewPanelId == sqlResultSet"
         }
       ],
       "sql/editor/context": [
@@ -263,9 +359,29 @@
           "when": "view == vscode-db2i.resultset"
         },
         {
+          "command": "vscode-db2i.resultset.copySql",
+          "group": "navigation@04",
+          "when": "view == vscode-db2i.resultset"
+        },
+        {
+          "command": "vscode-db2i.resultset.moveToEditor",
+          "group": "navigation@05",
+          "when": "view == vscode-db2i.resultset"
+        },
+        {
           "command": "vscode-db2i.resultset.settings",
           "group": "navigation@10",
           "when": "view == vscode-db2i.resultset"
+        }
+      ],
+      "vscode-db2i.resultset.panel.retrieve": [
+        {
+          "command": "vscode-db2i.resultset.panel.retrieveMoreRows",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.resultset.panel.retrieveAllRows",
+          "group": "navigation@1"
         }
       ]
     },

@@ -1,8 +1,8 @@
-import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, window } from "vscode";
+import { CancellationToken, ProgressLocation, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, env, window } from "vscode";
 
 import { QueryResult } from "@ibm/mapepire-js";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
-import { setCancelButtonVisibility } from ".";
+import { openResultSetPanel, setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
 import Configuration from "../../configuration";
 import Statement from "../../database/statement";
@@ -17,11 +17,14 @@ import {
   UpdatableInfo,
   appendDataTableRows,
   handleDataTableMessage,
-  moveDataTableToEditor,
   postDataTableCellResponse,
+  registerDataTable,
   renderDataTable,
+  requestDataTableOpenInEditor,
   resetDataTableRows,
+  setDataTableQueryModification,
   updateDataTableColumns,
+  updateDataTableRows,
 } from "../html/dataTable";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { statementDone } from "./editorUi";
@@ -37,6 +40,66 @@ export interface ScrollerOptions {
   queryId?: string;
   withCancel?: boolean;
   ref?: ObjectRef;
+  title?: string;
+}
+
+/** Toolbar actions of a data table listing */
+export interface DataTableExtras<T> {
+  sql?: string;
+  reload?: () => Promise<T[]>;
+}
+
+export type ResultSetHost = `view` | `panel`;
+
+interface ContextFlags {
+  canClear: boolean;
+  canRetrieveMoreRows: boolean;
+  canRefresh: boolean;
+  canCopySql: boolean;
+  canMoveToEditor: boolean;
+}
+
+const NO_FLAGS: ContextFlags = { canClear: false, canRetrieveMoreRows: false, canRefresh: false, canCopySql: false, canMoveToEditor: false };
+
+/** Editor tabs have their own keys, driven by the active tab */
+const CONTEXT_KEYS: Record<ResultSetHost, Record<keyof ContextFlags, string>> = {
+  view: {
+    canClear: `vscode-db2i:canClear`,
+    canRetrieveMoreRows: `vscode-db2i:canRetrieveMoreRows`,
+    canRefresh: `vscode-db2i:canRefresh`,
+    canCopySql: `vscode-db2i:canCopySql`,
+    canMoveToEditor: `vscode-db2i:canMoveToEditor`,
+  },
+  panel: {
+    canClear: `vscode-db2i:panelCanClear`,
+    canRetrieveMoreRows: `vscode-db2i:panelCanRetrieveMoreRows`,
+    canRefresh: `vscode-db2i:panelCanRefresh`,
+    canCopySql: `vscode-db2i:panelCanCopySql`,
+    canMoveToEditor: `vscode-db2i:panelCanMoveToEditor`,
+  },
+};
+
+/** State of the shown result set, carried as is when it moves into an editor tab */
+interface ResultSetSession {
+  options: ScrollerOptions;
+  /** Statement run before sort/search wrapping (with RRN when updatable) */
+  baseSelect: string;
+  updatable?: UpdatableInfo;
+  serverQuery: boolean;
+  sort?: { columnId: string; direction: "asc" | "desc" };
+  search: string;
+  dtOptions: DataTableOptions<any[]>;
+  columnMetaData?: any[];
+  isDone: boolean;
+  executionTimeMs?: number;
+  jobId?: string;
+}
+
+interface DataTableSession {
+  title: string;
+  options: DataTableOptions<any>;
+  handlers: DataTableHandlers<any>;
+  extras: DataTableExtras<any>;
 }
 
 /** SQL column heading display mode, from the `resultsets.columnHeadings` setting */
@@ -96,18 +159,71 @@ function escapeLikeText(text: string): string {
   return text.replace(/\\/g, `\\\\`).replace(/%/g, `\\%`).replace(/_/g, `\\_`);
 }
 
+/** SQL sent for the session's sort/search state */
+function buildQueryText(session: ResultSetSession): { sql: string; params: SqlParameter[] } {
+  const baseParams = session.options.parameters ?? [];
+  if (!session.sort && !session.search) {
+    return { sql: session.baseSelect, params: baseParams };
+  }
+
+  const params: SqlParameter[] = [...baseParams];
+  let sql = `SELECT * FROM (${session.baseSelect}) AS "DTQ"`;
+
+  if (session.search && session.columnMetaData) {
+    const searchable = session.columnMetaData.filter((c: any) => !SEARCH_EXCLUDED_TYPES.has(String(c.type).toUpperCase()));
+    if (searchable.length > 0) {
+      const likeText = `%${escapeLikeText(session.search)}%`;
+      // Cast to CCSID 37
+      const clauses = searchable.map((c: any) => {
+        params.push(likeText);
+        return `UPPER(CAST(${quoteIdent(c.name)} AS VARCHAR(1024) CCSID 37)) LIKE UPPER(CAST(? AS VARCHAR(1024) CCSID 37)) ESCAPE '\\'`;
+      });
+      sql += ` WHERE ${clauses.join(` OR `)}`;
+    }
+  }
+
+  if (session.sort) {
+    const index = session.dtOptions.columns.findIndex(c => c.id === session.sort!.columnId);
+    if (index >= 0) {
+      sql += ` ORDER BY ${index + 1} ${session.sort.direction === `desc` ? `DESC` : `ASC`}`;
+    }
+  }
+
+  return { sql, params };
+}
+
+function describeModification(session: ResultSetSession, sql: string): string | undefined {
+  if (!session.sort && !session.search) return undefined;
+
+  const lines: string[] = [];
+  if (session.search) {
+    lines.push(`Filtered: rows with "${session.search}" in any column`);
+  }
+  if (session.sort) {
+    lines.push(`Sorted: by ${session.sort.columnId} ${session.sort.direction === `desc` ? `descending` : `ascending`}`);
+  }
+  lines.push(``, `Statement run:`, sql);
+  return lines.join(`\n`);
+}
+
 export class ResultSetPanelProvider implements WebviewViewProvider {
   _view: WebviewView | WebviewPanel | undefined;
   loadingState: boolean = false;
   currentQuery: Query<any> | undefined;
   lastScrollerOptions: ScrollerOptions | undefined;
+  /** Only the active provider drives the context keys */
+  active = true;
+  private flags: ContextFlags = { ...NO_FLAGS };
   /** Routes the webview's messages while it shows a data table instead of the idle placeholder */
   private messageRouter: ((message: any) => Promise<boolean> | void) | undefined;
-  /** Raw SQL column metadata of the query shown, so a heading-setting change can rebuild titles */
-  private lastColumnMetaData: any[] | undefined;
-  private lastDataTableOptions: DataTableOptions<any[]> | undefined;
+  private tableRegistration: { dispose(): void } | undefined;
+  private session: ResultSetSession | undefined;
+  private tableSession: DataTableSession | undefined;
+  private fetching = false;
   /** Bumped on every restart so a superseded in-flight fetch can drop its stale result */
   private queryEpoch = 0;
+
+  constructor(readonly host: ResultSetHost = `view`) { }
 
   endQuery() {
     if (this.currentQuery) {
@@ -131,19 +247,30 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   async refresh() {
-    if (this.lastScrollerOptions) {
+    if (this.tableSession) {
+      await this.reloadDataTable(this.tableSession);
+    } else if (this.lastScrollerOptions) {
       // Close the current query if it exists
       if (this.currentQuery) {
         await this.currentQuery.close();
         this.currentQuery = undefined;
       }
-      if (this._view) {
-        // Forces a real reload: setScrolling's html can be identical to what's already
-        // shown, and VS Code no-ops an unchanged webview.html assignment.
-        this._view.webview.html = html.getLoadingHTML();
-      }
       // Re-run the query with the same options
       await this.setScrolling(this.lastScrollerOptions);
+    }
+  }
+
+  async copySql() {
+    const sql = this.tableSession?.extras.sql ?? this.session?.options.basicSelect;
+    if (sql) {
+      await env.clipboard.writeText(sql);
+      window.setStatusBarMessage(`SQL statement copied to clipboard`, 3000);
+    }
+  }
+
+  moveToEditor() {
+    if (this._view && this.host === `view`) {
+      requestDataTableOpenInEditor(msg => this._view?.webview.postMessage(msg));
     }
   }
 
@@ -152,6 +279,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
     this._view.onDidDispose(() => {
       this._view = undefined;
+      this.setRouter(undefined);
       this.endQuery();
     });
 
@@ -192,9 +320,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   async setLoadingText(content: string, focus = true) {
-    this.messageRouter = undefined;
-    this.lastColumnMetaData = undefined;
-    this.lastDataTableOptions = undefined;
+    this.setRouter(undefined);
+    this.setFlags({ canCopySql: false, canMoveToEditor: false });
 
     if (focus) {
       await this.focus();
@@ -212,22 +339,22 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
   /** Update the result table column headings based on the configuration setting */
   async updateHeader() {
-    if (this._view && this.lastColumnMetaData && this.lastDataTableOptions) {
-      const columns = buildResultColumns(this.lastColumnMetaData, Configuration.get<string>(`resultsets.columnHeadings`) || 'Name');
-      updateDataTableColumns(msg => this._view?.webview.postMessage(msg), this.lastDataTableOptions, columns);
+    const session = this.session;
+    if (this._view && session?.columnMetaData) {
+      const columns = buildResultColumns(session.columnMetaData, Configuration.get<string>(`resultsets.columnHeadings`) || 'Name');
+      updateDataTableColumns(msg => this._view?.webview.postMessage(msg), session.dtOptions, columns);
     }
   }
 
   async setScrolling(options: ScrollerOptions) {
-    this.messageRouter = undefined;
+    this.setRouter(undefined);
     this.queryEpoch++;
     this.lastScrollerOptions = { ...options };
-    this.lastColumnMetaData = undefined;
-    this.lastDataTableOptions = undefined;
 
     this.loadingState = false;
     await this.focus();
 
+    let basicSelect = options.basicSelect;
     let updatable: UpdatableInfo | undefined;
 
     if (options.ref) {
@@ -269,13 +396,13 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 const cName = options.ref.alias || `t`;
 
                 // Support for using a custom column list
-                const selectClauseStart = options.basicSelect.toLowerCase().indexOf(`select `);
-                const fromClauseStart = options.basicSelect.toLowerCase().indexOf(`from`);
+                const selectClauseStart = basicSelect.toLowerCase().indexOf(`select `);
+                const fromClauseStart = basicSelect.toLowerCase().indexOf(`from`);
                 let possibleColumnList: string | undefined;
 
                 possibleColumnList = `${cName}.*`;
                 if (fromClauseStart > 0) {
-                  possibleColumnList = options.basicSelect.substring(0, fromClauseStart);
+                  possibleColumnList = basicSelect.substring(0, fromClauseStart);
                   if (selectClauseStart >= 0) {
                     possibleColumnList = possibleColumnList.substring(selectClauseStart + 7);
 
@@ -286,14 +413,14 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 }
 
                 // We need to override the input statement if they want to do updatable
-                const whereClauseStart = options.basicSelect.toLowerCase().indexOf(`where`);
+                const whereClauseStart = basicSelect.toLowerCase().indexOf(`where`);
                 let fromWhereClause: string | undefined;
 
                 if (whereClauseStart > 0) {
-                  fromWhereClause = options.basicSelect.substring(whereClauseStart);
+                  fromWhereClause = basicSelect.substring(whereClauseStart);
                 }
 
-                options.basicSelect = `select rrn(${cName}) as RRN, ${possibleColumnList} from ${schema}.${options.ref.object.name} as ${cName} ${fromWhereClause || ``}`;
+                basicSelect = `select rrn(${cName}) as RRN, ${possibleColumnList} from ${schema}.${options.ref.object.name} as ${cName} ${fromWhereClause || ``}`;
                 currentColumns = [{ name: `RRN`, jsType: `number`, isNullable: false, useInWhere: true }, ...currentColumns];
               }
 
@@ -309,67 +436,63 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       }
     }
 
-    // Always wrap this pristine text, never an already-wrapped one, so restarts don't nest.
-    const baseSelect = options.basicSelect;
-    // Excludes CL (not a SELECT) and explain-with-run (its `queryId` ties it to an existing engine run).
-    const serverQuery = !options.isCL && options.queryId === undefined;
-    let sortState: { columnId: string; direction: "asc" | "desc" } | undefined;
-    let searchQuery = ``;
-
-    const dtOptions: DataTableOptions<any[]> = {
-      title: baseSelect.replace(/\s+/g, ` `).trim(),
-      columns: [],
-      rows: [],
-      search: serverQuery,
-      streaming: true,
-      serverQuery,
-      cancellable: options.withCancel === true,
+    this.startSession({
+      options: this.lastScrollerOptions,
+      baseSelect: basicSelect,
       updatable,
-      resizable: true,
-      collapsedInitialWidth: Configuration.get<boolean>(`collapsedResultSet`) ? `200px` : undefined,
-      loadingText: options.isCL ? `Running CL command...` : `Running statement...`,
+      // Excludes CL (not a SELECT) and explain-with-run (its `queryId` ties it to an existing engine run).
+      serverQuery: !options.isCL && options.queryId === undefined,
+      search: ``,
+      dtOptions: { columns: [], rows: [] },
+      isDone: false,
+    });
+  }
+
+  /** Shows a result set moved from another provider, continuing its open query without re-running it */
+  adoptResultSet(session: ResultSetSession, query: Query<any> | undefined) {
+    this.lastScrollerOptions = { ...session.options };
+    this.loadingState = false;
+    this.startSession(session, query);
+  }
+
+  private startSession(from: ResultSetSession, carriedQuery?: Query<any>) {
+    const carried = carriedQuery !== undefined;
+    const carriedRows = carried ? from.dtOptions.rows : [];
+    const inEditor = this.host === `panel`;
+
+    const session: ResultSetSession = {
+      ...from,
+      dtOptions: {
+        title: from.options.basicSelect.replace(/\s+/g, ` `).trim(),
+        columns: carried ? from.dtOptions.columns : [],
+        rows: [],
+        search: from.serverQuery,
+        initialQuery: from.search,
+        sort: from.sort,
+        streaming: true,
+        serverQuery: from.serverQuery,
+        cancellable: from.options.withCancel === true || inEditor,
+        updatable: from.updatable,
+        resizable: true,
+        collapsedInitialWidth: Configuration.get<boolean>(`collapsedResultSet`) ? `200px` : undefined,
+        loadingText: from.options.isCL ? `Running CL command...` : `Running statement...`,
+      },
     };
+    const dtOptions = session.dtOptions;
+    const options = session.options;
+
+    this.currentQuery = carriedQuery;
+    if (carried) this.queryEpoch++;
 
     const post = (msg: any) => this._view?.webview.postMessage(msg);
-    let columnsSent = false;
-
-    /** Builds the SQL actually sent for the current sort/search state, wrapping `baseSelect` only when needed */
-    const buildQueryText = (): { sql: string; params: SqlParameter[] } => {
-      if (!sortState && !searchQuery) {
-        return { sql: baseSelect, params: options.parameters ?? [] };
-      }
-
-      const params: SqlParameter[] = [...(options.parameters ?? [])];
-      let sql = `SELECT * FROM (${baseSelect}) AS "DTQ"`;
-
-      if (searchQuery && this.lastColumnMetaData) {
-        const searchable = this.lastColumnMetaData.filter((c: any) => !SEARCH_EXCLUDED_TYPES.has(String(c.type).toUpperCase()));
-        if (searchable.length > 0) {
-          const likeText = `%${escapeLikeText(searchQuery)}%`;
-          // Cast to CCSID 37
-          const clauses = searchable.map((c: any) => {
-            params.push(likeText);
-            return `UPPER(CAST(${quoteIdent(c.name)} AS VARCHAR(1024) CCSID 37)) LIKE UPPER(CAST(? AS VARCHAR(1024) CCSID 37)) ESCAPE '\\'`;
-          });
-          sql += ` WHERE ${clauses.join(` OR `)}`;
-        }
-      }
-
-      if (sortState) {
-        const index = dtOptions.columns.findIndex(c => c.id === sortState!.columnId);
-        if (index >= 0) {
-          sql += ` ORDER BY ${index + 1} ${sortState.direction === `desc` ? `DESC` : `ASC`}`;
-        }
-      }
-
-      return { sql, params };
-    };
+    let columnsSent = dtOptions.columns.length > 0;
 
     /** Restart the stream from page 1 with the current sort/search state applied */
     const restartQuery = () => {
       this.queryEpoch++;
       this.currentQuery?.close();
       this.currentQuery = undefined;
+      session.isDone = false;
       resetDataTableRows(post, dtOptions);
       post({ command: `requestFetch`, allRows: false });
     };
@@ -394,10 +517,14 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         let canRetrieveMoreRows = false;
         let canRefresh = hasRows;
 
+        this.fetching = true;
         try {
           if (this.currentQuery === undefined) {
-            const { sql, params } = buildQueryText();
+            const { sql, params } = buildQueryText(session);
             this.currentQuery = await JobManager.getPagingStatement(sql, { parameters: params, isClCommand: options.isCL, isTerseResults: true });
+            if (session.serverQuery) {
+              setDataTableQueryModification(post, describeModification(session, sql));
+            }
           }
 
           if (this.currentQuery.getState() !== "RUN_DONE") {
@@ -416,6 +543,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
               const startTime = performance.now();
               queryResults = await this.currentQuery.execute(rowsToFetch);
               executionTime = performance.now() - startTime;
+              session.executionTimeMs = executionTime;
 
               if (options.uiId) {
                 statementDone(options.uiId, { paramsOut: queryResults.output_parms });
@@ -431,8 +559,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             if (!columnsSent && queryResults.metadata) {
               columns = buildResultColumns(queryResults.metadata.columns, Configuration.get<string>(`resultsets.columnHeadings`) || 'Name');
               columnsSent = true;
-              this.lastColumnMetaData = queryResults.metadata.columns;
-              this.lastDataTableOptions = dtOptions;
+              session.columnMetaData = queryResults.metadata.columns;
             }
 
             appendDataTableRows(post, dtOptions, queryResults.data ?? [], {
@@ -443,6 +570,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
               jobId,
               updateCount: queryResults.update_count,
             });
+            session.isDone = queryResults.is_done;
+            session.jobId = jobId;
 
             canClear = true;
             canRetrieveMoreRows = !queryResults.is_done;
@@ -451,14 +580,20 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
         } catch (e: any) {
           if (myEpoch === this.queryEpoch) this.setError(e.message);
+        } finally {
+          this.fetching = false;
         }
 
         setCancelButtonVisibility(false);
         updateStatusBar();
-        if (myEpoch === this.queryEpoch) {
-          commands.executeCommand(`setContext`, `vscode-db2i:canClear`, canClear);
-          commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, canRetrieveMoreRows);
-          commands.executeCommand(`setContext`, `vscode-db2i:canRefresh`, canRefresh);
+        if (myEpoch === this.queryEpoch && this.session === session) {
+          this.setFlags({
+            canClear,
+            canRetrieveMoreRows,
+            canRefresh,
+            canCopySql: true,
+            canMoveToEditor: this.host === `view` && dtOptions.rows.length > 0,
+          });
         }
       },
 
@@ -479,65 +614,140 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       onCancel: () => { this.endQuery(); },
 
       onSortChange: async ({ columnId, direction }) => {
-        if (!serverQuery || !this.lastColumnMetaData) return;
-        sortState = { columnId, direction };
+        if (!session.serverQuery || !session.columnMetaData) return;
+        session.sort = { columnId, direction };
         restartQuery();
       },
 
       onSearchChange: async ({ query }) => {
-        if (!serverQuery || !this.lastColumnMetaData) return;
-        searchQuery = query.trim();
+        if (!session.serverQuery || !session.columnMetaData) return;
+        session.search = query.trim();
         restartQuery();
       },
+
+      onOpenInEditor: () => this.moveResultSetToEditor(session),
     };
 
-    this.messageRouter = message => handleDataTableMessage(message, dtOptions, handlers, post);
+    this.setRouter(message => handleDataTableMessage(message, dtOptions, handlers, post));
+    this.session = session;
 
     if (this._view) {
       this._view.webview.html = renderDataTable(dtOptions);
-      this._view.webview.postMessage({ command: `requestFetch`, allRows: false, queryId: options.queryId });
+
+      if (carried) {
+        appendDataTableRows(post, dtOptions, carriedRows, {
+          isDone: session.isDone,
+          queryId: carriedQuery?.getId(),
+          executionTimeMs: session.executionTimeMs,
+          jobId: session.jobId,
+        });
+        if (session.serverQuery) {
+          setDataTableQueryModification(post, describeModification(session, buildQueryText(session).sql));
+        }
+        this.setFlags({
+          canClear: true,
+          canRetrieveMoreRows: !session.isDone,
+          canRefresh: true,
+          canCopySql: true,
+          canMoveToEditor: false,
+        });
+      } else {
+        this._view.webview.postMessage({ command: `requestFetch`, allRows: false, queryId: options.queryId });
+      }
     }
   }
 
+  private moveResultSetToEditor(session: ResultSetSession) {
+    if (this.session !== session || this.host !== `view`) return;
+
+    if (this.fetching) {
+      window.showInformationMessage(`Rows are still being fetched. Try again once they are shown.`);
+      return;
+    }
+
+    // The editor tab owns the query from now on
+    const query = this.currentQuery;
+    this.currentQuery = undefined;
+    this.session = undefined;
+    this.queryEpoch++;
+
+    const target = openResultSetPanel(session.options.title || `SQL Results`);
+    target.adoptResultSet(session, query);
+
+    this.clear();
+  }
+
   /**
-   * Show a data table listing (MTIs, locks, …) in this view instead of a result set. The
-   * table's "move to editor" button reopens it as an editor tab and empties this view.
-   *
-   * @param viewType webview type used for the editor tab the table can be moved into
+   * Show a data table listing (MTIs, locks, …) instead of a result set. In the view, the
+   * "Move into Editor" action reopens it as an editor tab and empties the view.
    */
-  async showDataTable<T>(viewType: string, options: DataTableOptions<T>, handlers: DataTableHandlers<T> = {}): Promise<void> {
+  async showDataTable<T>(options: DataTableOptions<T>, handlers: DataTableHandlers<T> = {}, extras: DataTableExtras<T> = {}): Promise<void> {
+    const title = options.title ?? `Results`;
+    const tableSession: DataTableSession = { title, options, handlers, extras };
+
     const tableHandlers: DataTableHandlers<T> = {
       ...handlers,
       onOpenInEditor: state => {
-        moveDataTableToEditor(viewType, options, handlers, state);
+        if (this.host !== `view` || this.tableSession !== tableSession) return;
+
+        const target = openResultSetPanel(title);
+        target.showDataTable({ ...options, initialQuery: state.query, sort: state.sort ?? options.sort }, handlers, extras);
         this.clear();
       }
     };
-
-    this.messageRouter = message =>
-      handleDataTableMessage(message, options, tableHandlers, msg => this._view?.webview.postMessage(msg));
 
     // Whatever result set was shown here is gone as soon as the table is rendered
     this.endQuery();
     this.currentQuery = undefined;
     this.queryEpoch++;
-    this.resetContext();
     this.loadingState = false;
-    this.lastColumnMetaData = undefined;
-    this.lastDataTableOptions = undefined;
+    this.lastScrollerOptions = undefined;
 
-    await this.ensureActivation();
+    const registration = registerDataTable(options, handlers);
+    this.setRouter(
+      message => handleDataTableMessage(message, options, tableHandlers, msg => this._view?.webview.postMessage(msg)),
+      registration,
+    );
+    this.tableSession = tableSession;
+
+    this.setFlags({
+      canClear: true,
+      canRetrieveMoreRows: false,
+      canRefresh: extras.reload !== undefined,
+      canCopySql: extras.sql !== undefined,
+      canMoveToEditor: this.host === `view`,
+    });
+
+    if (this.host === `view`) {
+      await this.ensureActivation();
+    }
 
     if (this._view) {
-      this._view.webview.html = renderDataTable({ ...options, openInEditor: true });
+      this._view.webview.html = renderDataTable(options, registration.id);
+    }
+  }
+
+  private async reloadDataTable(tableSession: DataTableSession) {
+    const reload = tableSession.extras.reload;
+    if (!reload) return;
+
+    try {
+      const rows = await window.withProgress(
+        { location: ProgressLocation.Window, title: `Refreshing ${tableSession.title}` },
+        () => reload()
+      );
+      if (this.tableSession === tableSession) {
+        updateDataTableRows(msg => this._view?.webview.postMessage(msg), tableSession.options, rows);
+      }
+    } catch (e: any) {
+      window.showErrorMessage(e.message);
     }
   }
 
   setError(error: string) {
-    this.messageRouter = undefined;
+    this.setRouter(undefined);
     this.loadingState = false;
-    this.lastColumnMetaData = undefined;
-    this.lastDataTableOptions = undefined;
+    this.setFlags({ canCopySql: false, canMoveToEditor: false });
     // TODO: pretty error
     if (this._view) {
       this._view.webview.html = `<p>${error}</p>`;
@@ -545,9 +755,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   clear() {
-    this.messageRouter = undefined;
-    this.lastColumnMetaData = undefined;
-    this.lastDataTableOptions = undefined;
+    this.setRouter(undefined);
     if (this._view) {
       this._view.webview.html = ``;
     }
@@ -555,9 +763,28 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   resetContext() {
-    commands.executeCommand(`setContext`, `vscode-db2i:canClear`, false);
-    commands.executeCommand(`setContext`, `vscode-db2i:canRetrieveMoreRows`, false);
-    commands.executeCommand(`setContext`, `vscode-db2i:canRefresh`, false);
+    this.setFlags(NO_FLAGS);
+  }
+
+  applyContext() {
+    if (!this.active) return;
+    const keys = CONTEXT_KEYS[this.host];
+    for (const flag of Object.keys(keys) as (keyof ContextFlags)[]) {
+      commands.executeCommand(`setContext`, keys[flag], this.flags[flag]);
+    }
+  }
+
+  private setFlags(flags: Partial<ContextFlags>) {
+    Object.assign(this.flags, flags);
+    this.applyContext();
+  }
+
+  private setRouter(router: ((message: any) => Promise<boolean> | void) | undefined, registration?: { dispose(): void }) {
+    this.messageRouter = router;
+    this.tableRegistration?.dispose();
+    this.tableRegistration = registration;
+    this.session = undefined;
+    this.tableSession = undefined;
   }
 }
 

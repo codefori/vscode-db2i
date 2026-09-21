@@ -14,7 +14,8 @@ import Statement from "../../database/statement";
 import { BasicSQLObject } from "../../types";
 import Types from "../types";
 import { getCopyUi } from "./copyUI";
-import { pickMTIAction } from "./mti";
+import { MTI_ACTIONS, pickMTIAction } from "./mti";
+import { runDataTableRowAction } from "../html/dataTable";
 import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects, getRoutineCallStatement, RoutineInvocation } from "./statements";
 
 const itemIcons = new Map(Object.entries({
@@ -262,6 +263,9 @@ export default class SchemaBrowser {
         // Refresh via the callback once a job is actually submitted, not on this call's return
         await pickMTIAction(schema, table, () => this.clearCacheAndRefresh());
       }),
+
+      vscode.commands.registerCommand(`vscode-db2i.mti.createIndex`, (context) => runDataTableRowAction(MTI_ACTIONS.createIndex, context)),
+      vscode.commands.registerCommand(`vscode-db2i.mti.showStatement`, (context) => runDataTableRowAction(MTI_ACTIONS.showStatement, context)),
 
       vscode.commands.registerCommand(`vscode-db2i.getIndexes`, async (object: SQLObject) => {
         if (object) {

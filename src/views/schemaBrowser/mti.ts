@@ -18,11 +18,10 @@ interface MTIInfo {
   SPARSE_DEFINITION?: string;
 }
 
-const CREATE_INDEX = `Create Index`;
-const SHOW_STATEMENT = `Show Statement`;
-
-/** Webview type of the editor tab the MTI list can be moved into */
-const MTI_VIEW_TYPE = `vscode-db2i.mtiTable`;
+export const MTI_ACTIONS = {
+  createIndex: `mtiCreateIndex`,
+  showStatement: `mtiShowStatement`,
+};
 
 const SPARSE_WARNING = `This MTI is sparse, but MTI_INFO did not report its condition. The statement below creates an index over every row of the table, not the sparse subset the MTI covers.`;
 
@@ -219,31 +218,51 @@ export async function pickMTIAction(schema: string, table?: string, onIndexCreat
     : specificTable
       ? `${Statement.delimName(schema)}.${Statement.delimName(specificTable)}`
       : Statement.delimName(schema);
-  let mtis: MTIInfo[];
+  const sql = getMTIStatement(schema, table);
+  const stats: LoadStats = { executionTimeMs: 0 };
+  const load = async () => {
+    const startTime = performance.now();
+    const mtis = await JobManager.runSQL<MTIInfo>(sql);
+    stats.executionTimeMs = performance.now() - startTime;
+    stats.jobId = JobManager.getSelection()?.job.id;
+    return mtis.filter(mti => mti.TABLE_SCHEMA && mti.TABLE_NAME && mti.KEY_DEFINITION);
+  };
+  let usable: MTIInfo[];
 
   try {
-    mtis = await vscode.window.withProgress(
+    usable = await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Window, title: `Fetching MTIs for ${target}` },
-      () => JobManager.runSQL<MTIInfo>(getMTIStatement(schema, table))
+      load
     );
   } catch (e: any) {
     vscode.window.showErrorMessage(e.message);
     return false;
   }
 
-  const usable = mtis.filter(mti => mti.TABLE_SCHEMA && mti.TABLE_NAME && mti.KEY_DEFINITION);
-
   if (usable.length === 0) {
     vscode.window.showInformationMessage(`No MTIs found for ${target}.`);
     return false;
   }
 
-  openMTIWebview(target, usable, onIndexCreated);
+  openMTIWebview(target, usable, sql, load, stats, onIndexCreated);
   return true;
 }
 
-/** Show the MTI list in the shared "Db2 for i" result panel, with per-row context menu actions */
-function openMTIWebview(target: string, mtis: MTIInfo[], onIndexCreated?: () => void) {
+interface LoadStats {
+  executionTimeMs: number;
+  jobId?: string;
+}
+
+/** Same wording as a query result set's footer */
+function mtiFooter(shown: number, total: number, stats: LoadStats): string {
+  const noun = `MTI${total === 1 ? `` : `s`}`;
+  const matching = shown === total ? `` : ` ${shown} match the search.`;
+  const job = stats.jobId ? ` ${stats.jobId}` : ``;
+  return `Loaded ${total} ${noun} in ${Math.round(stats.executionTimeMs)}ms.${matching} End of data.${job}`;
+}
+
+/** Show the MTI list in the "Db2 for i" result panel */
+function openMTIWebview(target: string, mtis: MTIInfo[], sql: string, reload: () => Promise<MTIInfo[]>, stats: LoadStats, onIndexCreated?: () => void) {
   // Every row shares the same columns, so the first one is enough to know them all
   const columns: DataTableColumn<MTIInfo>[] = Object.keys(mtis[0])
     .filter(column => !HIDDEN_COLUMNS.has(column))
@@ -264,29 +283,29 @@ function openMTIWebview(target: string, mtis: MTIInfo[], onIndexCreated?: () => 
 
   const options: DataTableOptions<MTIInfo> = {
     title: `MTIs for ${target}`,
-    subtitle: (shown, total) => `${shown} of ${total} MTI${total === 1 ? `` : `s`}`,
+    subtitle: (shown, total) => mtiFooter(shown, total, stats),
     columns,
     rows: mtis,
     searchPlaceholder: `Search MTIs…`,
     emptyMessage: `No MTIs match the search.`,
     actions: [
-      { id: `createIndex`, label: `${CREATE_INDEX}…` },
-      { id: `showStatement`, label: SHOW_STATEMENT },
+      { id: MTI_ACTIONS.createIndex },
+      { id: MTI_ACTIONS.showStatement },
     ],
   };
 
   const handlers: DataTableHandlers<MTIInfo> = {
     onAction: async (actionId, mti) => {
-      if (actionId === `createIndex`) {
+      if (actionId === MTI_ACTIONS.createIndex) {
         if (await createIndex(mti)) {
           onIndexCreated?.();
         }
-      } else if (actionId === `showStatement`) {
+      } else if (actionId === MTI_ACTIONS.showStatement) {
         await showStatement(mti);
       }
     },
   };
 
-  showDataTable(MTI_VIEW_TYPE, options, handlers)
+  showDataTable(options, handlers, { sql, reload })
     .catch(e => vscode.window.showErrorMessage(`Could not show the MTI list: ${e?.message ?? e}`));
 }

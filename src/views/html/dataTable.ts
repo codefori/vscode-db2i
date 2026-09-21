@@ -35,12 +35,9 @@ export interface DataTableColumn<T> {
   headerTooltip?: string;
 }
 
+/** Right-click row action: contribute a `webview/context` command with `when: webviewSection == dtRow && dtAction_<id>` that calls {@link runDataTableRowAction} */
 export interface DataTableRowAction<T> {
-  /** Sent back to the extension as `message.actionId` */
   id: string;
-  label: string;
-  /** Shown greyed on the right of the menu item, e.g. `"⌘K"` — cosmetic only */
-  keybinding?: string;
   /** Return false to hide this action for a given row (default: always shown) */
   when?: (row: T) => boolean;
 }
@@ -67,7 +64,6 @@ export interface DataTableOptions<T> {
   subtitle?: string | ((shown: number, total: number) => string);
   columns: DataTableColumn<T>[];
   rows: T[];
-  /** Right click / double click actions available on every row it applies to */
   actions?: DataTableRowAction<T>[];
   /** Rows per page. 0 disables pagination. Default 100. Forced to 0 when `streaming`. */
   pageSize?: number;
@@ -76,7 +72,7 @@ export interface DataTableOptions<T> {
   searchPlaceholder?: string;
   /** Shown when there are no rows at all, or the search matches nothing */
   emptyMessage?: string;
-  /** Initial sort. Omit to keep the natural order of `rows`. Ignored when `streaming`. */
+  /** Initial sort. Omit to keep the natural order of `rows`. With `serverQuery` it only marks the sorted column. */
   sort?: { columnId: string; direction?: "asc" | "desc" };
   /** Text the search box starts with — used when the table is re-opened elsewhere */
   initialQuery?: string;
@@ -117,8 +113,8 @@ export interface DataTableHandlers<T> {
   /** Fired when the user picks a row action */
   onAction?: (actionId: string, row: T) => void | Promise<void>;
   /**
-   * Fired when the user clicks the "move to editor" button, with the state the table is
-   * in. Pass it to {@link moveDataTableToEditor} to reopen the same view as an editor tab.
+   * Fired when the user clicks the "move to editor" button, or the host asks for it with
+   * {@link requestDataTableOpenInEditor}, with the state the table is in.
    */
   onOpenInEditor?: (state: DataTableViewState) => void | Promise<void>;
   /** Fired when a `streaming` table wants its next page (scrolled to bottom, or a caller-driven "load more"/"load all") */
@@ -234,7 +230,10 @@ function rowToWire<T>(
   return { i, c: cells, s: searchText, k: sortKeys, a: enabled };
 }
 
-function toWire<T>(options: DataTableOptions<T>) {
+/** Keeps every render unique: VS Code ignores assigning a webview the html it already has */
+let renderCount = 0;
+
+function toWire<T>(options: DataTableOptions<T>, tableId: string) {
   const columns = options.columns;
   const actions = options.actions ?? [];
   const streaming = options.streaming === true;
@@ -244,22 +243,22 @@ function toWire<T>(options: DataTableOptions<T>) {
 
   const wireColumns = toWireColumns(columns, streaming, serverQuery);
   const wireRows = options.rows.map((row, i) => rowToWire(row, i, columns, actions, wrapEditable, nullableIds));
-  const wireActions = actions.map(a => ({ id: a.id, label: a.label, keybinding: a.keybinding ?? `` }));
 
   let initialSort = -1;
   let initialDir: "asc" | "desc" = `asc`;
-  if (options.sort && !streaming) {
+  if (options.sort && (!streaming || serverQuery)) {
     initialSort = columns.findIndex(col => col.id === options.sort!.columnId);
     initialDir = options.sort.direction ?? `asc`;
   }
 
   return {
+    tableId,
+    renderId: ++renderCount,
     title: options.title ?? ``,
     subtitleTemplate: typeof options.subtitle === `string` ? options.subtitle : null,
     hasSubtitleFn: typeof options.subtitle === `function`,
     columns: wireColumns,
     rows: wireRows,
-    actions: wireActions,
     pageSize: streaming ? 0 : (options.pageSize ?? 100),
     search: options.search !== false,
     searchPlaceholder: options.searchPlaceholder ?? `Search…`,
@@ -278,18 +277,44 @@ function toWire<T>(options: DataTableOptions<T>) {
   };
 }
 
+const liveTables = new Map<string, { options: DataTableOptions<any>; handlers: DataTableHandlers<any> }>();
+let nextTableId = 0;
+
+/** Makes a table's rows reachable from its right-click commands; render it with the returned id */
+export function registerDataTable<T>(options: DataTableOptions<T>, handlers: DataTableHandlers<T>): vscode.Disposable & { id: string } {
+  const id = `dt${++nextTableId}`;
+  liveTables.set(id, { options, handlers });
+  return { id, dispose: () => liveTables.delete(id) };
+}
+
+export async function runDataTableRowAction(actionId: string, context: any): Promise<void> {
+  const table = liveTables.get(context?.dtTable);
+  const row = table?.options.rows[context?.dtRow];
+  if (table && row !== undefined) {
+    await table.handlers.onAction?.(actionId, row);
+  }
+}
+
 /**
  * Render a complete HTML page for the data table. Assign it to a webview's
- * `.html`, then route its messages through {@link handleDataTableMessage}. Use
+ * `.html`, then route its messages through {@link handleDataTableMessage}. Pass the id of
+ * a {@link registerDataTable} registration when the table has row actions. Use
  * {@link openDataTable} for the standalone-panel case.
  */
-export function renderDataTable<T>(options: DataTableOptions<T>): string {
-  const model = toWire(options);
+export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): string {
+  const model = toWire(options, tableId);
   const subtitleFn = typeof options.subtitle === `function` ? options.subtitle : undefined;
   const initialSubtitle = subtitleFn
     ? subtitleFn(model.rows.length, model.rows.length)
     : (model.subtitleTemplate ?? ``);
   const showToolbar = Boolean(model.title || model.search);
+  // With serverQuery it also signals a modified query
+  const searchIcon = /*html*/ `<span slot="content-before" class="dt-search-icon"${model.serverQuery ? ` id="dtModified"` : ``}>
+          <!-- codicon "search" -->
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M10.02 10.727a5.5 5.5 0 1 1 .707-.707l3.127 3.126a.5.5 0 0 1-.708.708l-3.127-3.127ZM11 6.5a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0Z"/>
+          </svg>
+        </span>`;
 
   return /*html*/ `<!DOCTYPE html>
 <html lang="en">
@@ -339,7 +364,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       border-bottom: 1px solid var(--dt-border);
     }
     #title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #search { margin-left: auto; width: min(280px, 45vw); }
+    #search { width: min(280px, 45vw); }
+    #toolbarEnd { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+    .dt-search-icon { display: flex; align-items: center; color: var(--dt-muted); }
+    #dtModified.active { color: var(--vscode-editorInfo-foreground, var(--dt-accent)); cursor: help; }
     #openInEditor { flex: 0 0 auto; }
     #openInEditor svg { display: block; }
 
@@ -441,19 +469,12 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     /* Soaks up leftover width so the header band and row hover reach the right edge */
     .dt-filler { padding: 0; max-width: none; border-right: none; }
 
-    .dt-menu-col { padding: 0; display: flex; align-items: center; justify-content: center; }
-    .dt-menu-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 20px;
-      height: 20px;
-      border-radius: 3px;
-      cursor: pointer;
-      color: var(--dt-muted);
-      user-select: none;
+    /* Search matches, colored like the editor's find matches */
+    mark.dt-match {
+      background-color: var(--vscode-editor-findMatchHighlightBackground);
+      outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, transparent);
+      color: inherit;
     }
-    .dt-menu-btn:hover { background-color: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); color: var(--vscode-foreground); }
 
     #empty, #dtMessage { display: none; padding: 22px 16px; color: var(--dt-muted); text-align: center; }
 
@@ -474,8 +495,6 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     #rangeInfo { color: var(--dt-muted); }
     #dtUpdateMessage { font-family: monospace; }
     #dtUpdateMessage:empty { display: none; }
-
-    #ctxWrap { position: fixed; z-index: 1000; display: none; }
 
     /* --- initial loading overlay (streaming, or a static table opened while still loading) --- */
     #dtLoading {
@@ -555,14 +574,18 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
 <body style="padding: 0;">
   <div id="toolbar" ${showToolbar ? `` : `style="display:none"`}>
     <span id="title" title="${escapeHtml(model.title)}">${escapeHtml(model.title)}</span>
-    ${model.search ? /*html*/ `<vscode-textfield id="search" type="search" placeholder="${escapeHtml(model.searchPlaceholder)}" value="${escapeHtml(model.initialQuery)}"></vscode-textfield>` : ``}
-    ${model.canOpenInEditor ? /*html*/ `<vscode-button id="openInEditor" secondary title="Move this table into the editor">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12.5 9.5V13a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H7"/>
-        <path d="M10 2.5h3.5V6"/>
-        <path d="M13.5 2.5 8 8"/>
-      </svg>
-    </vscode-button>` : ``}
+    <span id="toolbarEnd">
+      ${model.search ? /*html*/ `<vscode-textfield id="search" type="search" placeholder="${escapeHtml(model.searchPlaceholder)}" value="${escapeHtml(model.initialQuery)}">
+        ${searchIcon}
+      </vscode-textfield>` : ``}
+      ${model.canOpenInEditor ? /*html*/ `<vscode-button id="openInEditor" secondary title="Move this table into the editor">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12.5 9.5V13a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H7"/>
+          <path d="M10 2.5h3.5V6"/>
+          <path d="M13.5 2.5 8 8"/>
+        </svg>
+      </vscode-button>` : ``}
+    </span>
   </div>
 
   <div id="gridScroll">
@@ -579,10 +602,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
 
   <div id="footer">
     ${model.streaming ? /*html*/ `
-      <span id="dtUpdateMessage"></span>
-      <span class="spacer"></span>
       <span id="dtStatus"></span>
       <span id="dtJobId"></span>
+      <span class="spacer"></span>
+      <span id="dtUpdateMessage"></span>
     ` : /*html*/ `
       <span id="subtitle">${escapeHtml(initialSubtitle)}</span>
       <span class="spacer"></span>
@@ -597,14 +620,14 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     `}
   </div>
 
-  <div id="ctxWrap"><vscode-context-menu id="ctxMenu"></vscode-context-menu></div>
-
   <script defer>
     const vscode = acquireVsCodeApi();
     const MODEL = ${JSON.stringify(model)};
 
     const state = {
       query: MODEL.initialQuery,
+      // serverQuery: the search the shown rows were fetched with
+      appliedQuery: MODEL.initialQuery,
       page: 1,
       sortCol: MODEL.initialSort,
       sortDir: MODEL.initialDir,
@@ -627,13 +650,11 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     function gridTemplate() {
       const capped = MODEL.resizable && MODEL.collapsedInitialWidth;
       const tracks = MODEL.columns.map((c) => (capped ? MODEL.collapsedInitialWidth : c.track));
-      const menuTrack = MODEL.actions.length ? "28px " : "";
-      return menuTrack + tracks.join(" ") + " minmax(0, 1fr)";
+      return tracks.join(" ") + " minmax(0, 1fr)";
     }
 
-    // Non-data children of #grid to keep: leading "⋯" column (if actions) + filler.
     function headerCellCount() {
-      return (MODEL.actions.length ? 1 : 0) + MODEL.columns.length + 1;
+      return MODEL.columns.length + 1;
     }
 
     // ----- header ----------------------------------------------------------
@@ -669,11 +690,6 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     function buildHeader() {
       Array.from(grid.querySelectorAll(":scope > .dt-h")).forEach((n) => n.remove());
       grid.style.gridTemplateColumns = gridTemplate();
-      if (MODEL.actions.length) {
-        const menuHeader = document.createElement("div");
-        menuHeader.className = "dt-h dt-menu-col";
-        grid.appendChild(menuHeader);
-      }
       MODEL.columns.forEach((col, index) => {
         const h = document.createElement("div");
         h.className = "dt-h" + (col.sortable ? " sortable" : "");
@@ -697,7 +713,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     }
 
     function updateHeaderTitles() {
-      const headers = Array.from(grid.querySelectorAll(":scope > .dt-h:not(.dt-filler):not(.dt-menu-col)"));
+      const headers = Array.from(grid.querySelectorAll(":scope > .dt-h:not(.dt-filler)"));
       MODEL.columns.forEach((col, i) => {
         const h = headers[i];
         if (!h) return;
@@ -777,22 +793,65 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       return state.view.slice(start, start + MODEL.pageSize);
     }
 
+    // ----- search match highlighting ---------------------------------------
+    function highlightTerms() {
+      const text = (MODEL.serverQuery ? state.appliedQuery : state.query).trim().toLowerCase();
+      if (!text) return [];
+      return MODEL.serverQuery ? [text] : text.split(/\\s+/).filter(Boolean);
+    }
+
+    function highlightIn(root, terms) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+      textNodes.forEach((node) => {
+        const text = node.nodeValue;
+        const lower = text.toLowerCase();
+        const ranges = [];
+        terms.forEach((term) => {
+          let at = lower.indexOf(term);
+          while (at !== -1) {
+            ranges.push([at, at + term.length]);
+            at = lower.indexOf(term, at + term.length);
+          }
+        });
+        if (!ranges.length) return;
+
+        // Merge overlapping terms into single marks
+        ranges.sort((a, b) => a[0] - b[0]);
+        const merged = [];
+        ranges.forEach((r) => {
+          const last = merged[merged.length - 1];
+          if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+          else merged.push(r.slice());
+        });
+
+        const frag = document.createDocumentFragment();
+        let pos = 0;
+        merged.forEach(([start, end]) => {
+          if (start > pos) frag.appendChild(document.createTextNode(text.slice(pos, start)));
+          const mark = document.createElement("mark");
+          mark.className = "dt-match";
+          mark.textContent = text.slice(start, end);
+          frag.appendChild(mark);
+          pos = end;
+        });
+        if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+        node.parentNode.replaceChild(frag, node);
+      });
+    }
+
     // ----- row DOM construction (shared: static render + streaming append) -
-    function buildRowElement(wireRow, zebraIndex) {
+    function buildRowElement(wireRow, zebraIndex, terms) {
       const rowEl = document.createElement("div");
       rowEl.className = "dt-row " + (zebraIndex % 2 ? "even" : "odd");
       rowEl.dataset.i = String(wireRow.i);
-      if (MODEL.actions.length) {
-        const menuCell = document.createElement("div");
-        menuCell.className = "dt-c dt-menu-col";
-        if (wireRow.a.length) {
-          const btn = document.createElement("div");
-          btn.className = "dt-menu-btn";
-          btn.title = "Actions";
-          btn.textContent = "⋯";
-          menuCell.appendChild(btn);
-        }
-        rowEl.appendChild(menuCell);
+      if (wireRow.a.length) {
+        // Read by VS Code's webview/context menu
+        const context = { webviewSection: "dtRow", dtTable: MODEL.tableId, dtRow: wireRow.i, preventDefaultContextMenuItems: true };
+        wireRow.a.forEach((id) => { context["dtAction_" + id] = true; });
+        rowEl.dataset.vscodeContext = JSON.stringify(context);
       }
       wireRow.c.forEach((cellHtml, c) => {
         const col = MODEL.columns[c];
@@ -800,6 +859,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
         cell.className = "dt-c" + (col && col.align !== "left" ? " " + col.align : "");
         if (MODEL.updatable && col) cell.dataset.col = col.id;
         cell.innerHTML = cellHtml;
+        if (terms.length) highlightIn(cell, terms);
         rowEl.appendChild(cell);
       });
       const filler = document.createElement("div");
@@ -817,8 +877,9 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       const headerCount = headerCellCount();
       while (grid.children.length > headerCount) grid.removeChild(grid.lastChild);
 
+      const terms = highlightTerms();
       const frag = document.createDocumentFragment();
-      currentPageRows().forEach((r, rowIndex) => frag.appendChild(buildRowElement(r, rowIndex)));
+      currentPageRows().forEach((r, rowIndex) => frag.appendChild(buildRowElement(r, rowIndex, terms)));
       grid.appendChild(frag);
 
       el("empty").style.display = state.view.length ? "none" : "";
@@ -911,9 +972,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
     }
 
     function appendRowsToDom(wireRows) {
+      const terms = highlightTerms();
       const frag = document.createDocumentFragment();
       wireRows.forEach((r) => {
-        frag.appendChild(buildRowElement(r, state.zebraCount));
+        frag.appendChild(buildRowElement(r, state.zebraCount, terms));
         state.zebraCount++;
       });
       grid.appendChild(frag);
@@ -940,18 +1002,24 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
 
     // ----- search (static tables: local filter; serverQuery: re-run the query) -------
     let searchTimer;
+
+    // Re-runs the query only when the trimmed text actually changed
+    function applyServerSearch() {
+      clearTimeout(searchTimer);
+      if (state.query.trim() === state.appliedQuery.trim()) return;
+      state.appliedQuery = state.query;
+      vscode.postMessage({ command: "searchChange", query: state.query });
+    }
+
     if (el("search")) {
       el("search").addEventListener("input", (ev) => {
         clearTimeout(searchTimer);
-        const value = ev.target.value || "";
-        state.query = value;
+        state.query = ev.target.value || "";
 
         if (MODEL.streaming) {
           if (!MODEL.serverQuery) return;
-          // Server round trip costs more than a local filter, so debounce a bit longer.
-          searchTimer = setTimeout(() => {
-            vscode.postMessage({ command: "searchChange", query: value });
-          }, 300);
+          // Server round trip costs more than a local filter, so wait for a longer pause in typing
+          searchTimer = setTimeout(applyServerSearch, 500);
           return;
         }
 
@@ -960,83 +1028,23 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
           render();
         }, 150);
       });
-    }
 
-    // ----- move to the editor -------------------------------------
-    const openInEditor = el("openInEditor");
-    if (openInEditor) {
-      openInEditor.addEventListener("click", () => {
-        // The state travels with it, so the editor copy opens on what is on screen here
-        vscode.postMessage({
-          command: "openInEditor",
-          query: state.query,
-          sortCol: state.sortCol,
-          sortDir: state.sortDir,
-        });
+      el("search").addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" && MODEL.serverQuery) applyServerSearch();
       });
     }
 
-    // ----- context menu ---------------------------------------------
-    const ctxWrap = el("ctxWrap");
-    const ctxMenu = el("ctxMenu");
-    let ctxRow = null;
-    ctxWrap.style.display = "none";
-
-    function actionsFor(wireRow) {
-      const allowed = new Set(wireRow.a);
-      return MODEL.actions.filter((a) => allowed.has(a.id));
+    // ----- move to the editor -------------------------------------
+    function postOpenInEditor() {
+      vscode.postMessage({
+        command: "openInEditor",
+        query: state.query,
+        sortCol: state.sortCol,
+        sortDir: state.sortDir,
+      });
     }
-
-    function openMenu(x, y, wireRow) {
-      const actions = actionsFor(wireRow);
-      if (!actions.length) return;
-      ctxRow = wireRow;
-      ctxMenu.data = actions.map((a) => ({ label: a.label, value: a.id, keybinding: a.keybinding }));
-      ctxWrap.style.left = Math.max(4, Math.min(x, window.innerWidth - 240)) + "px";
-      ctxWrap.style.top = Math.max(4, Math.min(y, window.innerHeight - 16 - actions.length * 28)) + "px";
-      ctxWrap.style.display = "block";
-      ctxMenu.show = true;
-    }
-
-    function closeMenu() {
-      ctxWrap.style.display = "none";
-      ctxMenu.show = false;
-      ctxRow = null;
-    }
-
-    function rowSource() {
-      return MODEL.streaming ? MODEL.rows : state.view;
-    }
-
-    // Opened from the "⋯" button at the start of a row (see buildRowElement), not right-click.
-    grid.addEventListener("click", (ev) => {
-      const btn = ev.target.closest && ev.target.closest(".dt-menu-btn");
-      if (!btn) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const rowEl = btn.closest(".dt-row");
-      const wireRow = rowEl && rowSource().find((r) => String(r.i) === rowEl.dataset.i);
-      if (!wireRow) return;
-      const rect = btn.getBoundingClientRect();
-      openMenu(rect.left, rect.bottom + 2, wireRow);
-    });
-
-    ctxMenu.addEventListener("vsc-context-menu-select", (ev) => {
-      const actionId = ev.detail && ev.detail.value;
-      const row = ctxRow;
-      closeMenu();
-      if (actionId && row) fire(actionId, row.i);
-    });
-
-    document.addEventListener("click", (ev) => {
-      if (ctxWrap.style.display !== "none" && !ev.composedPath().includes(ctxWrap)) closeMenu();
-    });
-    window.addEventListener("blur", closeMenu);
-    el("gridScroll").addEventListener("scroll", closeMenu);
-
-    function fire(actionId, rowIndex) {
-      vscode.postMessage({ command: "rowAction", actionId, rowIndex });
-    }
+    const openInEditor = el("openInEditor");
+    if (openInEditor) openInEditor.addEventListener("click", postOpenInEditor);
 
     // ----- editable cells (updatable tables) --------------------------------
     (function setupEditableCells() {
@@ -1266,6 +1274,17 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
           state.allRows = state.allRows || data.allRows === true;
           if (!state.isFetching) requestFetch(state.allRows);
           break;
+        case "requestOpenInEditor":
+          postOpenInEditor();
+          break;
+        case "setQueryModification": {
+          const icon = el("dtModified");
+          if (icon) {
+            icon.classList.toggle("active", Boolean(data.text));
+            icon.title = data.text || "";
+          }
+          break;
+        }
       }
     });
 
@@ -1304,13 +1323,6 @@ export async function handleDataTableMessage<T>(
   post: (message: any) => void,
 ): Promise<boolean> {
   switch (message?.command) {
-    case `rowAction`: {
-      const row = options.rows[message.rowIndex];
-      if (row !== undefined) {
-        await handlers.onAction?.(message.actionId, row);
-      }
-      return true;
-    }
     case `subtitle`: {
       const fn = typeof options.subtitle === `function` ? options.subtitle : undefined;
       if (fn) {
@@ -1368,32 +1380,15 @@ export function openDataTable<T>(
     retainContextWhenHidden: true,
   });
 
-  panel.webview.html = renderDataTable(options);
+  const registration = registerDataTable(options, handlers);
+  panel.onDidDispose(() => registration.dispose());
+
+  panel.webview.html = renderDataTable(options, registration.id);
   panel.webview.onDidReceiveMessage(message =>
     handleDataTableMessage(message, options, handlers, msg => panel.webview.postMessage(msg)),
   );
 
   return panel;
-}
-
-/**
- * Reopen a table that is hosted in a view as an editor tab, on whatever the user was
- * looking at. Wire it to {@link DataTableHandlers.onOpenInEditor}; the editor copy has
- * no "move to editor" button of its own.
- */
-export function moveDataTableToEditor<T>(
-  viewType: string,
-  options: DataTableOptions<T>,
-  handlers: DataTableHandlers<T>,
-  state: DataTableViewState,
-  column: vscode.ViewColumn = vscode.ViewColumn.Active,
-): vscode.WebviewPanel {
-  return openDataTable(
-    viewType,
-    { ...options, openInEditor: false, initialQuery: state.query, sort: state.sort ?? options.sort },
-    handlers,
-    column,
-  );
 }
 
 /**
@@ -1407,7 +1402,7 @@ export function updateDataTableRows<T>(
   newRows: T[],
 ): void {
   options.rows = newRows;
-  const model = toWire(options);
+  const model = toWire(options, ``);
   post({ command: `setRows`, rows: model.rows, subtitleTemplate: model.subtitleTemplate });
 }
 
@@ -1472,4 +1467,14 @@ export function postDataTableCellResponse(post: (message: any) => void, id: numb
 export function resetDataTableRows<T>(post: (message: any) => void, options: DataTableOptions<T>): void {
   options.rows = [];
   post({ command: `resetRows` });
+}
+
+/** Asks the table to fire {@link DataTableHandlers.onOpenInEditor} with its current state */
+export function requestDataTableOpenInEditor(post: (message: any) => void): void {
+  post({ command: `requestOpenInEditor` });
+}
+
+/** `serverQuery` only — marks the rows as coming from a modified query, with `text` as tooltip */
+export function setDataTableQueryModification(post: (message: any) => void, text: string | undefined): void {
+  post({ command: `setQueryModification`, text: text ?? `` });
 }
