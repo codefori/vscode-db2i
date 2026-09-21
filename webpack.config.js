@@ -66,7 +66,7 @@ const config = {
       },
       {
         // Inlined as raw source (not parsed as a module) so it can be dropped straight into a
-        // <script type="module"> tag in the FastTable webview pages; see views/webviewToolkit.ts.
+        // <script type="module"> tag in the data table webview pages; see views/html/dataTable.ts.
         test: /\.js$/,
         include: path.resolve(__dirname, `node_modules`, `@vscode-elements`, `elements`, `dist`, `bundled.js`),
         type: `asset/source`

@@ -298,8 +298,7 @@ export async function runDataTableRowAction(actionId: string, context: any): Pro
 /**
  * Render a complete HTML page for the data table. Assign it to a webview's
  * `.html`, then route its messages through {@link handleDataTableMessage}. Pass the id of
- * a {@link registerDataTable} registration when the table has row actions. Use
- * {@link openDataTable} for the standalone-panel case.
+ * a {@link registerDataTable} registration when the table has row actions.
  */
 export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): string {
   const model = toWire(options, tableId);
@@ -1127,11 +1126,12 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         const updateKeyColumns = updateTable.columns.filter((c) => c.useInWhere);
         if (updateKeyColumns.length === 0) return;
 
-        const idValues = [];
+        // Keyed by column name: the row's cell order need not match updateKeyColumns' order. null = SQL NULL.
+        const idValues = {};
         Array.from(rowEl.children).forEach((cell) => {
           if (updateKeyColumns.some((c) => c.name === cell.dataset.col)) {
             const h = cell.querySelector(".dt-hoverable");
-            idValues.push(h ? h.innerText : "");
+            idValues[cell.dataset.col] = h && h.classList.contains("dt-null") ? null : (h ? h.innerText : "");
           }
         });
 
@@ -1162,20 +1162,24 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
             }
           }
 
-          updateStatement += " WHERE ";
-          for (let i = 0; i < updateKeyColumns.length; i++) {
-            if (idValues[i] === "null") continue;
-            if (useRrn && updateKeyColumns[i].name === "RRN") {
-              updateStatement += "RRN(t) = ?";
-            } else {
-              updateStatement += updateKeyColumns[i].name + " = ?";
+          const conditions = [];
+          updateKeyColumns.forEach((keyColumn) => {
+            if (!(keyColumn.name in idValues)) return;
+            const value = idValues[keyColumn.name];
+            const target = useRrn && keyColumn.name === "RRN" ? "RRN(t)" : keyColumn.name;
+            if (value === null) {
+              conditions.push(target + " IS NULL");
+              return;
             }
-            switch (updateKeyColumns[i].jsType) {
-              case "number": bindings.push(Number(idValues[i])); break;
-              case "asString": bindings.push(idValues[i]); break;
+            conditions.push(target + " = ?");
+            switch (keyColumn.jsType) {
+              case "number": bindings.push(Number(value)); break;
+              case "asString": bindings.push(value); break;
             }
-            if (i < updateKeyColumns.length - 1) updateStatement += " AND ";
-          }
+          });
+          // Never send an UPDATE that would hit every row
+          if (conditions.length === 0) return undefined;
+          updateStatement += " WHERE " + conditions.join(" AND ");
 
           let statementParts = updateStatement.split("?");
           let saneStatement = "";
@@ -1397,34 +1401,6 @@ export async function handleDataTableMessage<T>(
   }
 
   return false;
-}
-
-/**
- * Open a standalone webview panel (an editor tab) showing the data table with
- * its row action messages wired up. Prefer rendering into an existing view with
- * {@link renderDataTable} + {@link handleDataTableMessage} when the feature
- * already owns a panel slot.
- */
-export function openDataTable<T>(
-  viewType: string,
-  options: DataTableOptions<T>,
-  handlers: DataTableHandlers<T> = {},
-  column: vscode.ViewColumn = vscode.ViewColumn.Active,
-): vscode.WebviewPanel {
-  const panel = vscode.window.createWebviewPanel(viewType, options.title ?? ``, column, {
-    enableScripts: true,
-    retainContextWhenHidden: true,
-  });
-
-  const registration = registerDataTable(options, handlers);
-  panel.onDidDispose(() => registration.dispose());
-
-  panel.webview.html = renderDataTable(options, registration.id);
-  panel.webview.onDidReceiveMessage(message =>
-    handleDataTableMessage(message, options, handlers, msg => panel.webview.postMessage(msg)),
-  );
-
-  return panel;
 }
 
 /**

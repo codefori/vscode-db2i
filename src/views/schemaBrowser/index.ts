@@ -256,8 +256,10 @@ export default class SchemaBrowser {
 
           if (tableInput === undefined) return;
 
-          schema = libraryInput.trim() || `*ALL`;
-          table = tableInput.trim() || `*ALL`;
+          // Fold to uppercase unless delimited, as the SQL name would be
+          const toName = (input: string) => Statement.noQuotes(Statement.delimName(input.trim() || `*ALL`, true));
+          schema = toName(libraryInput);
+          table = toName(tableInput);
         }
 
         // Refresh via the callback once a job is actually submitted, not on this call's return

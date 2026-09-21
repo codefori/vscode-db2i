@@ -590,10 +590,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           if (myEpoch === this.queryEpoch) this.setError(e.message);
         } finally {
           if (this.fetchingEpoch === myEpoch) this.fetchingEpoch = undefined;
+          // Also on a superseded fetch's early return, unless a newer fetch now owns the button
+          if (this.fetchingEpoch === undefined) setCancelButtonVisibility(false);
+          updateStatusBar();
         }
 
-        setCancelButtonVisibility(false);
-        updateStatusBar();
         if (myEpoch === this.queryEpoch && this.session === session) {
           this.setFlags({
             canClear,

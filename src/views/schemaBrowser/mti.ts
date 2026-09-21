@@ -85,7 +85,9 @@ async function suggestIndexName(mti: MTIInfo): Promise<string> {
     suffix += 1;
   }
 
-  return candidateName(prefix, suffix);
+  // Delimited when needed, so createIndex doesn't fold it to a different (possibly taken) name
+  const name = candidateName(prefix, suffix);
+  return Statement.delimName(name, true) === name ? name : `"${name}"`;
 }
 
 const SUBMITTED_JOB_NAME = `C4ICRTIDX`;
