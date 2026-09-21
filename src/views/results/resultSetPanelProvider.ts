@@ -137,6 +137,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         await this.currentQuery.close();
         this.currentQuery = undefined;
       }
+      if (this._view) {
+        // Forces a real reload: setScrolling's html can be identical to what's already
+        // shown, and VS Code no-ops an unchanged webview.html assignment.
+        this._view.webview.html = html.getLoadingHTML();
+      }
       // Re-run the query with the same options
       await this.setScrolling(this.lastScrollerOptions);
     }
@@ -382,9 +387,12 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           }
         }
 
-        let canClear = false;
+        // Default to current state, not false — a stale/no-op fetch (query already RUN_DONE)
+        // must not disable Refresh/Clear on an already-loaded result set.
+        const hasRows = dtOptions.rows.length > 0;
+        let canClear = hasRows;
         let canRetrieveMoreRows = false;
-        let canRefresh = false;
+        let canRefresh = hasRows;
 
         try {
           if (this.currentQuery === undefined) {

@@ -641,10 +641,14 @@ export function renderDataTable<T>(options: DataTableOptions<T>): string {
       const grip = document.createElement("div");
       grip.className = "dt-grip";
       grip.addEventListener("mousedown", (e) => {
+        e.stopPropagation();
         state.adjustingColumn = index;
         state.startOffset = headerCell.offsetWidth - e.pageX;
       });
-      grip.addEventListener("dblclick", () => {
+      // Otherwise the click generated on mouseup bubbles to the header and toggles sort.
+      grip.addEventListener("click", (e) => e.stopPropagation());
+      grip.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
         const tracks = grid.style.gridTemplateColumns.split(" ");
         tracks[index] = "max-content";
         grid.style.gridTemplateColumns = tracks.join(" ");
