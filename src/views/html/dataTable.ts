@@ -40,6 +40,14 @@ export interface DataTableRowAction<T> {
   id: string;
   /** Return false to hide this action for a given row (default: always shown) */
   when?: (row: T) => boolean;
+  /** Also run on a double click on the row. When several are shown on a row, the first one wins. */
+  primary?: boolean;
+  /**
+   * Ends, deletes or drops something. Never run by a double click, even when marked primary.
+   * Its `webview/context` entry belongs in the `9_destructive` group, which VS Code sets
+   * apart from the other actions with a separator.
+   */
+  destructive?: boolean;
 }
 
 /** A column an updatable table can edit in place */
@@ -110,7 +118,7 @@ export interface DataTableViewState {
 }
 
 export interface DataTableHandlers<T> {
-  /** Fired when the user picks a row action */
+  /** Fired when the user picks a row action from the context menu, or double-clicks a row with a primary one */
   onAction?: (actionId: string, row: T) => void | Promise<void>;
   /**
    * Fired when the user clicks the "move to editor" button, or the host asks for it with
@@ -191,6 +199,8 @@ interface WireRow {
   k: (string | number)[];
   /** Ids of the actions enabled for this row */
   a: string[];
+  /** Id of the action a double click runs, if any */
+  p?: string;
 }
 
 function toWireColumns<T>(columns: DataTableColumn<T>[], streaming: boolean, serverQuery: boolean): WireColumn[] {
@@ -225,9 +235,11 @@ function rowToWire<T>(
     .join(` `)
     .toLowerCase();
   const sortKeys = rawValues.map(v => (typeof v === `number` ? v : String(v ?? ``)));
-  const enabled = actions.filter(action => !action.when || action.when(row)).map(a => a.id);
+  const enabled = actions.filter(action => !action.when || action.when(row));
+  // A double click is too easy to do by accident for an action that cannot be undone
+  const primary = enabled.find(action => action.primary && !action.destructive);
 
-  return { i, c: cells, s: searchText, k: sortKeys, a: enabled };
+  return { i, c: cells, s: searchText, k: sortKeys, a: enabled.map(a => a.id), p: primary?.id };
 }
 
 /** Keeps every render unique: VS Code ignores assigning a webview the html it already has */
@@ -863,6 +875,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         wireRow.a.forEach((id) => { context["dtAction_" + id] = true; });
         rowEl.dataset.vscodeContext = JSON.stringify(context);
       }
+      if (wireRow.p) rowEl.dataset.primary = wireRow.p;
       wireRow.c.forEach((cellHtml, c) => {
         const col = MODEL.columns[c];
         const cell = document.createElement("div");
@@ -1269,6 +1282,30 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       });
     })();
 
+    // ----- primary row action (double click) ------------------------
+    (function () {
+      // Editable cells already react to clicks; controls inside a cell keep their own.
+      const IGNORED = ".dt-hoverable, button, a, input, textarea, select";
+
+      function primaryRowOf(e) {
+        if (!(e.target instanceof Element) || e.target.closest(IGNORED)) return null;
+        const rowEl = e.target.closest(".dt-row");
+        return rowEl && rowEl.dataset.primary ? rowEl : null;
+      }
+
+      grid.addEventListener("dblclick", (e) => {
+        const rowEl = primaryRowOf(e);
+        if (!rowEl) return;
+        window.getSelection()?.removeAllRanges();
+        vscode.postMessage({ command: "rowAction", actionId: rowEl.dataset.primary, row: Number(rowEl.dataset.i) });
+      });
+
+      // A double click would otherwise select the word under the pointer.
+      grid.addEventListener("mousedown", (e) => {
+        if (e.detail > 1 && primaryRowOf(e)) e.preventDefault();
+      });
+    })();
+
     // ----- messages from the extension ----------------------------
     window.addEventListener("message", (event) => {
       const data = event.data || {};
@@ -1396,6 +1433,16 @@ export async function handleDataTableMessage<T>(
     }
     case `searchChange`: {
       await handlers.onSearchChange?.({ query: message.query ?? `` });
+      return true;
+    }
+    case `rowAction`: {
+      // Double click on a row: the page only names the action, so check it really is the
+      // row's primary one rather than trusting it.
+      const row = options.rows[message.row];
+      const action = options.actions?.find(a => a.id === message.actionId);
+      if (row !== undefined && action?.primary && !action.destructive && (!action.when || action.when(row))) {
+        await handlers.onAction?.(action.id, row);
+      }
       return true;
     }
   }
