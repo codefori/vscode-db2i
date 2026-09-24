@@ -15,8 +15,9 @@ import { BasicSQLObject } from "../../types";
 import Types from "../types";
 import { getCopyUi } from "./copyUI";
 import { MTI_ACTIONS, pickMTIAction } from "./mti";
+import { ADVISED_INDEX_ACTIONS, pickAdvisedIndexAction } from "./advisedIndexes";
 import { runDataTableRowAction } from "../html/dataTable";
-import { getAdvisedIndexesStatement, getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects, getRoutineCallStatement, RoutineInvocation } from "./statements";
+import { getAuthoritiesStatement, getIndexesStatement, getMTIStatement, getObjectLocksStatement, getRecordLocksStatement, getRelatedObjects, getRoutineCallStatement, RoutineInvocation } from "./statements";
 
 const itemIcons = new Map(Object.entries({
   "table": `split-horizontal`,
@@ -37,6 +38,35 @@ const itemIcons = new Map(Object.entries({
   "sequence": `file-binary`,
   "package": `package`
 }));
+
+/** From the tree: what was right-clicked. From the Command Palette: asked for, defaulting to *ALL. */
+async function workWithTarget(title: string, object?: SQLObject | SchemaItem): Promise<{ schema: string, table?: string } | undefined> {
+  if (object) {
+    return { schema: object.schema, table: `name` in object ? object.name : undefined };
+  }
+
+  const libraryInput = await vscode.window.showInputBox({
+    title,
+    prompt: `Library to work with, or *ALL for every library`,
+    placeHolder: `*ALL`,
+    value: `*ALL`
+  });
+
+  if (libraryInput === undefined) return undefined;
+
+  const tableInput = await vscode.window.showInputBox({
+    title,
+    prompt: `Table to work with, or *ALL for every table`,
+    placeHolder: `*ALL`,
+    value: `*ALL`
+  });
+
+  if (tableInput === undefined) return undefined;
+
+  // Fold to uppercase unless delimited, as the SQL name would be
+  const toName = (input: string) => Statement.noQuotes(Statement.delimName(input.trim() || `*ALL`, true));
+  return { schema: toName(libraryInput), table: toName(tableInput) };
+}
 
 export default class SchemaBrowser {
   private readonly emitter: vscode.EventEmitter<any | undefined | null | void>;
@@ -229,41 +259,11 @@ export default class SchemaBrowser {
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.mtiActions`, async (object?: SQLObject | SchemaItem) => {
-        let schema: string;
-        let table: string | undefined;
-
-        if (object) {
-          // From the tree: library (and, for a table row, table) come from what was right-clicked
-          schema = object.schema;
-          table = `name` in object ? object.name : undefined;
-        } else {
-          // From the Command Palette: ask for a library and a table, both defaulting to *ALL
-          const libraryInput = await vscode.window.showInputBox({
-            title: `Work with MTIs`,
-            prompt: `Library to work with, or *ALL for every library`,
-            placeHolder: `*ALL`,
-            value: `*ALL`
-          });
-
-          if (libraryInput === undefined) return;
-
-          const tableInput = await vscode.window.showInputBox({
-            title: `Work with MTIs`,
-            prompt: `Table to work with, or *ALL for every table`,
-            placeHolder: `*ALL`,
-            value: `*ALL`
-          });
-
-          if (tableInput === undefined) return;
-
-          // Fold to uppercase unless delimited, as the SQL name would be
-          const toName = (input: string) => Statement.noQuotes(Statement.delimName(input.trim() || `*ALL`, true));
-          schema = toName(libraryInput);
-          table = toName(tableInput);
-        }
+        const selection = await workWithTarget(`Work with MTIs`, object);
+        if (!selection) return;
 
         // Refresh via the callback once a job is actually submitted, not on this call's return
-        await pickMTIAction(schema, table, () => this.clearCacheAndRefresh());
+        await pickMTIAction(selection.schema, selection.table, () => this.clearCacheAndRefresh());
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.mti.createIndex`, (context) => runDataTableRowAction(MTI_ACTIONS.createIndex, context)),
@@ -313,25 +313,15 @@ export default class SchemaBrowser {
         }
       }),
 
-      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object: SQLObject | SchemaItem) => { //table
-        if (object) {
-          let content: string | undefined;
-          if (`name` in object) {
-            content = getAdvisedIndexesStatement(object.schema, object.name);
-          }
-          else {
-            content = getAdvisedIndexesStatement(object.schema);
-          }
+      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes`, async (object?: SQLObject | SchemaItem) => {
+        const selection = await workWithTarget(`Work with Advised Indexes`, object);
+        if (!selection) return;
 
-          if (content) {
-            vscode.commands.executeCommand(`vscode-db2i.runEditorStatement`, {
-              content,
-              qualifier: `statement`,
-              open: false,
-            });
-          }
-        }
+        await pickAdvisedIndexAction(selection.schema, selection.table, () => this.clearCacheAndRefresh());
       }),
+
+      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes.createIndex`, (context) => runDataTableRowAction(ADVISED_INDEX_ACTIONS.createIndex, context)),
+      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes.showStatement`, (context) => runDataTableRowAction(ADVISED_INDEX_ACTIONS.showStatement, context)),
 
       vscode.commands.registerCommand(`vscode-db2i.clearAdvisedIndexes`, async (object: SQLObject | SchemaItem) => {
         if (object) {

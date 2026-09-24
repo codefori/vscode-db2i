@@ -107,7 +107,7 @@
       },
       {
         "command": "vscode-db2i.advisedIndexes",
-        "title": "Advised Indexes",
+        "title": "Work with Advised Indexes",
         "category": "Db2 for i"
       },
       {
@@ -134,6 +134,16 @@
       },
       {
         "command": "vscode-db2i.mti.showStatement",
+        "title": "Show Statement",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.advisedIndexes.createIndex",
+        "title": "Create Index...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.advisedIndexes.showStatement",
         "title": "Show Statement",
         "category": "Db2 for i"
       }
@@ -217,10 +227,6 @@
           "when": "never"
         },
         {
-          "command": "vscode-db2i.advisedIndexes",
-          "when": "never"
-        },
-        {
           "command": "vscode-db2i.clearAdvisedIndexes",
           "when": "never"
         },
@@ -230,6 +236,14 @@
         },
         {
           "command": "vscode-db2i.mti.showStatement",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.createIndex",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.showStatement",
           "when": "never"
         }
       ],
@@ -346,6 +360,16 @@
         {
           "command": "vscode-db2i.mti.showStatement",
           "when": "webviewSection == dtRow && dtAction_mtiShowStatement",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.createIndex",
+          "when": "webviewSection == dtRow && dtAction_advisedCreateIndex",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.showStatement",
+          "when": "webviewSection == dtRow && dtAction_advisedShowStatement",
           "group": "navigation@2"
         }
       ]
