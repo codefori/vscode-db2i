@@ -1883,6 +1883,32 @@ describe(`Parameter statement tests`, () => {
 
     const result = document.removeEmbeddedAreas(statement);
     expect(result.content).toBe(`select * from sample where x = ? or y=?`);
+    expect(result.parameterNames).toStrictEqual([`struct.value`, `struct.val`]);
+  });
+
+  test(`Parameter names in order of appearance`, () => {
+    const document = new Document(`select * from sample where x = :Value and y = ? and z = :other or w = :value`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select * from sample where x = ? and y = ? and z = ? or w = ?`);
+    expect(result.parameterCount).toBe(4);
+    expect(result.parameterNames).toStrictEqual([`Value`, undefined, `other`, `value`]);
+  });
+
+  test(`Parameter names exclude INTO and indicator variables`, () => {
+    const document = new Document(`select x into :myds.x :ind from sample where x = :struct.value :nullind`);
+    const statements = document.statements;
+    expect(statements.length).toBe(1);
+
+    const statement = statements[0];
+
+    const result = document.removeEmbeddedAreas(statement);
+    expect(result.content).toBe(`select x from sample where x = ?`);
+    expect(result.parameterNames).toStrictEqual([`struct.value`]);
   });
 
   test(`Single INTO clause content test`, () => {

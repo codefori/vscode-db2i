@@ -190,6 +190,7 @@ export interface ParsedEmbeddedStatement {
 	changed: boolean;
 	content: string;
 	parameterCount: number;
+	parameterNames: (string | undefined)[];
 }
 
 export interface CallableReference {

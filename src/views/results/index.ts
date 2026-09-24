@@ -13,7 +13,7 @@ import Statement from "../../language/sql/statement";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import { VisualExplainData } from "../../types";
 import { updateStatusBar } from "../jobManager/statusBar";
-import { getLiteralsFromStatement, getPriorBindableStatement } from "./binding";
+import { getLiteralsFromStatement, getPriorBindableStatement, hasHostVariables, promptForParameterValues } from "./binding";
 import { queryResultToRpgDs, queryResultToUdtf } from "./codegen";
 import { registerRunStatement } from "./editorUi";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
@@ -33,13 +33,15 @@ export interface StatementInfo {
   open?: boolean,
   viewColumn?: ViewColumn,
   viewFocus?: boolean,
-  history?: boolean
+  history?: boolean,
+  parameters?: SqlParameter[]
 }
 
 export interface ParsedStatementInfo extends StatementInfo {
   statement?: Statement;
   group?: StatementGroup;
   embeddedInfo?: ParsedEmbeddedStatement;
+  bindInfo?: ParsedEmbeddedStatement;
 }
 
 const DelimValue = new Map(Object.entries({
@@ -263,6 +265,20 @@ async function runMultipleHandler(mode: `all` | `selected` | `from`) {
     // Last statement should have UI
     statementInfos[statementInfos.length - 1].noUi = false;
 
+    const bindInfos = statementInfos.map(info => parseStatement(undefined, info).bindInfo);
+    if (bindInfos.some(bindInfo => hasHostVariables(bindInfo))) {
+      const values = await promptForParameterValues(bindInfos.map(bindInfo => hasHostVariables(bindInfo) ? bindInfo!.parameterNames : []));
+      if (!values) {
+        return;
+      }
+
+      statementInfos.forEach((info, i) => {
+        if (hasHostVariables(bindInfos[i])) {
+          info.parameters = values[i];
+        }
+      });
+    }
+
     for (let statementInfo of statementInfos) {
       try {
         await runHandler(statementInfo);
@@ -314,7 +330,7 @@ async function runHandler(options?: StatementInfo) {
         editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
         editor.revealRange(editor.selection);
 
-        if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed) {
+        if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed && !hasHostVariables(statementDetail.bindInfo)) {
           editor.insertSnippet(new SnippetString(statementDetail.embeddedInfo.content));
           return;
         }
@@ -341,6 +357,18 @@ async function runHandler(options?: StatementInfo) {
     }
 
     if (statementDetail.content.trim().length > 0) {
+      let parameters: SqlParameter[] = [];
+      let runContent = statementDetail.content;
+      if (statementDetail.bindInfo && hasHostVariables(statementDetail.bindInfo)) {
+        const values = statementDetail.parameters || (await promptForParameterValues([statementDetail.bindInfo.parameterNames]))?.[0];
+        if (!values) {
+          return;
+        }
+
+        parameters = values;
+        runContent = statementDetail.bindInfo.content;
+      }
+
       try {
         const inWindow = Boolean(options && options.viewColumn);
 
@@ -367,7 +395,6 @@ async function runHandler(options?: StatementInfo) {
           }
 
         } else if ([`statement`, `update`, `bind`].includes(statementDetail.qualifier)) {
-          let parameters: SqlParameter[] = [];
           if (editor && statementDetail.qualifier === `bind`) {
             const position = editor.selection.active;
             const runStatement = getPriorBindableStatement(editor, editor.document.offsetAt(position));
@@ -384,6 +411,7 @@ async function runHandler(options?: StatementInfo) {
 
               // Overwrite to run the prior statement
               statementDetail.content = runStatement.statement;
+              runContent = runStatement.statement;
             }
           }
 
@@ -391,7 +419,7 @@ async function runHandler(options?: StatementInfo) {
           if (statementDetail.noUi) {
             setCancelButtonVisibility(true);
             chosenView.setLoadingText(`Running SQL statement... (${possibleTitle})`, false);
-            await JobManager.runSQL(statementDetail.content, { parameters }, 1);
+            await JobManager.runSQL(runContent, { parameters }, 1);
 
           } else {
             if (inWindow) {
@@ -405,7 +433,7 @@ async function runHandler(options?: StatementInfo) {
 
             const uiId = registerRunStatement(statementDetail);
             const eol = editor?.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
-            const basicSelect = statementDetail.content.split(eol).filter(line => !line.trimStart().startsWith(`--`)).join(eol);
+            const basicSelect = runContent.split(eol).filter(line => !line.trimStart().startsWith(`--`)).join(eol);
 
             chosenView.setScrolling({ // Never errors
               basicSelect: basicSelect,
@@ -426,14 +454,16 @@ async function runHandler(options?: StatementInfo) {
             const explainType: ExplainType = onlyExplain ? ExplainType.DO_NOT_RUN : ExplainType.RUN;
 
             setCancelButtonVisibility(true);
-            const explained = await selectedJob.job.explain<VisualExplainData[]>(statementDetail.content, explainType); // Can throw
+            // Explain does not support parameters
+            const explainContent = parameters.length ? getContentWithValues(statementDetail.content, parameters) : statementDetail.content;
+            const explained = await selectedJob.job.explain<VisualExplainData[]>(explainContent, explainType); // Can throw
             setCancelButtonVisibility(false);
 
             if (onlyExplain) {
               chosenView.setLoadingText(`Explained.`, false);
             } else {
               chosenView.setScrolling({ // Never errors
-                basicSelect: statementDetail.content,
+                basicSelect: explainContent,
                 queryId: explained.id,
               })
             }
@@ -454,7 +484,7 @@ async function runHandler(options?: StatementInfo) {
             chosenView.setLoadingText(`Executing SQL statement...`, false);
             setCancelButtonVisibility(true);
             updateStatusBar({ executing: true });
-            const result = await JobManager.runSQLVerbose(statementDetail.content, undefined, 1);
+            const result = await JobManager.runSQLVerbose(runContent, parameters.length ? { parameters } : undefined, 1);
             setCancelButtonVisibility(false);
             updateStatusBar({ executing: false });
 
@@ -489,7 +519,7 @@ async function runHandler(options?: StatementInfo) {
 
           setCancelButtonVisibility(true);
           updateStatusBar({ executing: true });
-          const result = await JobManager.runSQLVerbose<any>(statementDetail.content);
+          const result = await JobManager.runSQLVerbose<any>(runContent, parameters.length ? { parameters } : undefined);
           const data = result.data;
           setCancelButtonVisibility(false);
 
@@ -656,6 +686,11 @@ async function runHandler(options?: StatementInfo) {
   }
 }
 
+function getContentWithValues(content: string, values: SqlParameter[]) {
+  const contentDocument = new Document(content);
+  return contentDocument.removeEmbeddedAreas(contentDocument.statements[0], { replacement: `values`, values }).content;
+}
+
 export function parseStatement(editor?: vscode.TextEditor, existingInfo?: StatementInfo): ParsedStatementInfo {
   let statementInfo: ParsedStatementInfo = {
     content: ``,
@@ -712,6 +747,13 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
 
   if (sqlDocument && statementInfo.statement && ![`cl`, `bind`].includes(statementInfo.qualifier)) {
     statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, { replacement: `snippet` });
+  }
+
+  if (statementInfo.content && ![`cl`, `bind`].includes(statementInfo.qualifier)) {
+    const contentDocument = new Document(statementInfo.content);
+    if (contentDocument.statements.length === 1) {
+      statementInfo.bindInfo = contentDocument.removeEmbeddedAreas(contentDocument.statements[0]);
+    }
   }
 
   return statementInfo;
