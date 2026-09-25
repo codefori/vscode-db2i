@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import Statement from "../../database/statement";
 import { DataTableColumn, DataTableHandlers, DataTableOptions } from "../html/dataTable";
-import { showDataTable } from "../results";
+import { showDataTable, showDataTableError, showDataTableLoading } from "../results";
 import { createIndex, formatBytes, formatTimestamp, IndexCreation, listFooter, LoadStats, prettyColumnTitle, qualifiedTable, showCreateIndexStatement } from "./indexCreation";
 import { getMTIStatement } from "./statements";
 
@@ -93,10 +93,10 @@ function formatColumnValue(mti: MTIInfo, column: string): string {
 const HIDDEN_COLUMNS = new Set([`JOB_NAME`, `JOB_USER`, `JOB_NUMBER`, `LIBRARY_NAME`, `FILE_NAME`]);
 
 /**
- * Fetch the MTIs for a schema (or a single table within it) and, if any are found, open a table
- * listing them with "Create Index..." and "Show Statement" actions on every row.
+ * Fetch the MTIs for a schema (or a single table within it) and open a table listing them with
+ * "Create Index..." and "Show Statement" actions on every row.
  *
- * @param onIndexCreated called once a "Create Index..." job is submitted, to refresh the caller's tree
+ * @param onIndexCreated called once an index is created or submitted, to refresh the caller's tree
  * @returns whether any MTI was found
  */
 export async function pickMTIAction(schema: string, table?: string, onIndexCreated?: () => void): Promise<boolean> {
@@ -118,28 +118,20 @@ export async function pickMTIAction(schema: string, table?: string, onIndexCreat
   let usable: MTIInfo[];
 
   try {
-    usable = await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Window, title: `Fetching MTIs for ${target}` },
-      load
-    );
+    await showDataTableLoading(`Fetching MTIs for ${target}...`);
+    usable = await load();
   } catch (e: any) {
-    vscode.window.showErrorMessage(e.message);
-    return false;
-  }
-
-  if (usable.length === 0) {
-    vscode.window.showInformationMessage(`No MTIs found for ${target}.`);
+    showDataTableError(e.message);
     return false;
   }
 
   openMTIWebview(target, usable, sql, load, stats, onIndexCreated);
-  return true;
+  return usable.length > 0;
 }
 
-/** Show the MTI list in the "Db2 for i" result panel */
-function openMTIWebview(target: string, mtis: MTIInfo[], sql: string, reload: () => Promise<MTIInfo[]>, stats: LoadStats, onIndexCreated?: () => void) {
-  // Every row shares the same columns, so the first one is enough to know them all
-  const columns: DataTableColumn<MTIInfo>[] = Object.keys(mtis[0])
+/** Taken from the first row, since every row shares them */
+function mtiColumns(mtis: MTIInfo[]): DataTableColumn<MTIInfo>[] {
+  return mtis.length === 0 ? [] : Object.keys(mtis[0])
     .filter(column => !HIDDEN_COLUMNS.has(column))
     .map(column => ({
       id: column,
@@ -147,14 +139,18 @@ function openMTIWebview(target: string, mtis: MTIInfo[], sql: string, reload: ()
       value: (mti: MTIInfo) => formatColumnValue(mti, column),
       align: [`MTI_SIZE`, `KEYS`].includes(column) ? `right` : `left`,
     }));
+}
 
+/** Show the MTI list in the "Db2 for i" result panel */
+function openMTIWebview(target: string, mtis: MTIInfo[], sql: string, reload: () => Promise<MTIInfo[]>, stats: LoadStats, onIndexCreated?: () => void) {
   const options: DataTableOptions<MTIInfo> = {
     title: `MTIs for ${target}`,
     subtitle: (shown, total) => listFooter({ one: `MTI`, many: `MTIs` }, shown, total, stats),
-    columns,
+    columns: mtiColumns(mtis),
     rows: mtis,
     searchPlaceholder: `Search MTIs…`,
     emptyMessage: `No MTIs match the search.`,
+    noRowsMessage: `No MTIs found for ${target}.`,
     actions: [
       { id: MTI_ACTIONS.createIndex },
       { id: MTI_ACTIONS.showStatement },
@@ -173,6 +169,6 @@ function openMTIWebview(target: string, mtis: MTIInfo[], sql: string, reload: ()
     },
   };
 
-  showDataTable(options, handlers, { sql, reload })
+  showDataTable(options, handlers, { sql, reload, columns: mtiColumns })
     .catch(e => vscode.window.showErrorMessage(`Could not show the MTI list: ${e?.message ?? e}`));
 }

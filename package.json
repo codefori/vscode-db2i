@@ -751,75 +751,64 @@
       {
         "command": "vscode-db2i.resultset.retrieveMoreRows",
         "title": "Retrieve More Rows",
-        "category": "Db2 for i",
-        "enablement": "vscode-db2i:canRetrieveMoreRows"
+        "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.resultset.retrieveAllRows",
         "title": "Retrieve All Rows",
-        "category": "Db2 for i",
-        "enablement": "vscode-db2i:canRetrieveMoreRows"
+        "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.resultset.refresh",
         "title": "Refresh",
         "category": "Db2 for i",
-        "icon": "$(refresh)",
-        "enablement": "vscode-db2i:canRefresh"
+        "icon": "$(refresh)"
       },
       {
         "command": "vscode-db2i.resultset.clear",
         "title": "Clear Results",
         "category": "Db2 for i",
-        "icon": "$(clear-all)",
-        "enablement": "vscode-db2i:canClear"
+        "icon": "$(clear-all)"
       },
       {
         "command": "vscode-db2i.resultset.copySql",
         "title": "Copy SQL",
         "category": "Db2 for i",
-        "icon": "$(copy)",
-        "enablement": "vscode-db2i:canCopySql"
+        "icon": "$(copy)"
       },
       {
         "command": "vscode-db2i.resultset.moveToEditor",
         "title": "Move into Editor Area",
         "category": "Db2 for i",
-        "icon": "$(link-external)",
-        "enablement": "vscode-db2i:canMoveToEditor"
+        "icon": "$(link-external)"
       },
       {
         "command": "vscode-db2i.resultset.panel.retrieveMoreRows",
         "title": "Retrieve More Rows",
-        "category": "Db2 for i",
-        "enablement": "vscode-db2i:panelCanRetrieveMoreRows"
+        "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.resultset.panel.retrieveAllRows",
         "title": "Retrieve All Rows",
-        "category": "Db2 for i",
-        "enablement": "vscode-db2i:panelCanRetrieveMoreRows"
+        "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.resultset.panel.refresh",
         "title": "Refresh",
         "category": "Db2 for i",
-        "icon": "$(refresh)",
-        "enablement": "vscode-db2i:panelCanRefresh"
+        "icon": "$(refresh)"
       },
       {
         "command": "vscode-db2i.resultset.panel.clear",
         "title": "Clear Results",
         "category": "Db2 for i",
-        "icon": "$(clear-all)",
-        "enablement": "vscode-db2i:panelCanClear"
+        "icon": "$(clear-all)"
       },
       {
         "command": "vscode-db2i.resultset.panel.copySql",
         "title": "Copy SQL",
         "category": "Db2 for i",
-        "icon": "$(copy)",
-        "enablement": "vscode-db2i:panelCanCopySql"
+        "icon": "$(copy)"
       },
       {
         "command": "vscode-db2i.dove.close",

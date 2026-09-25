@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import Statement from "../../database/statement";
 import { DataTableColumn, DataTableHandlers, DataTableOptions } from "../html/dataTable";
-import { showDataTable } from "../results";
+import { showDataTable, showDataTableError, showDataTableLoading } from "../results";
 import { createIndex, formatTimestamp, IndexCreation, IndexTarget, listFooter, LoadStats, prettyColumnTitle, qualifiedTable, showCreateIndexStatement } from "./indexCreation";
 import { getAdvisedIndexesStatement } from "./statements";
 
@@ -54,12 +54,29 @@ export function buildCreateIndexStatement(advice: AdvisedIndex, indexName: strin
   ].join(`\n`);
 }
 
+/** Removes the advice from the Index Advisor once its index exists, like ACS */
+function removeAdviceStatement(advice: AdvisedIndex): string {
+  const literal = (value: string) => `'${Statement.escapeString(value)}'`;
+  const conditions = [
+    `TABLE_SCHEMA = ${literal(advice.TABLE_SCHEMA)}`,
+    `TABLE_NAME = ${literal(advice.TABLE_NAME)}`,
+    `KEY_COLUMNS_ADVISED = ${literal(advice.KEY_COLUMNS_ADVISED)}`,
+    ...(advice.INDEX_TYPE ? [`INDEX_TYPE = ${literal(advice.INDEX_TYPE)}`] : []),
+  ];
+
+  return `DELETE FROM QSYS2.SYSIXADV WHERE ${conditions.join(` AND `)}`;
+}
+
 function indexCreation(advice: AdvisedIndex): IndexCreation {
   return {
     target: indexTarget(advice),
     nameTag: `IDX`,
     buildStatement: indexName => buildCreateIndexStatement(advice, indexName),
     warning: sortSequenceWarning(advice),
+    afterCreate: {
+      statement: removeAdviceStatement(advice),
+      description: `Once the index is created, this advice is removed from the Index Advisor.`,
+    },
   };
 }
 
@@ -97,46 +114,45 @@ export async function pickAdvisedIndexAction(schema: string, table?: string, onI
   let usable: AdvisedIndex[];
 
   try {
-    usable = await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Window, title: `Fetching advised indexes for ${target}` },
-      load
-    );
+    await showDataTableLoading(`Fetching advised indexes for ${target}...`);
+    usable = await load();
   } catch (e: any) {
-    vscode.window.showErrorMessage(e.message);
-    return false;
-  }
-
-  if (usable.length === 0) {
-    vscode.window.showInformationMessage(`No advised indexes found for ${target}.`);
+    showDataTableError(e.message);
     return false;
   }
 
   openAdvisedIndexesWebview(target, usable, sql, load, stats, onIndexCreated);
-  return true;
+  return usable.length > 0;
 }
 
-function openAdvisedIndexesWebview(target: string, advised: AdvisedIndex[], sql: string, reload: () => Promise<AdvisedIndex[]>, stats: LoadStats, onIndexCreated?: () => void) {
+/** Taken from the first row, since every row shares them */
+function advisedIndexColumns(advised: AdvisedIndex[]): DataTableColumn<AdvisedIndex>[] {
   const first = advised[0];
+  if (!first) return [];
+
   const available = Object.keys(first).filter(column => !HIDDEN_COLUMNS.has(column));
   const ordered = [
     ...LEADING_COLUMNS.filter(column => available.includes(column)),
     ...available.filter(column => !LEADING_COLUMNS.includes(column)),
   ];
 
-  const columns: DataTableColumn<AdvisedIndex>[] = ordered.map(column => ({
+  return ordered.map(column => ({
     id: column,
     title: prettyColumnTitle(column),
     value: (advice: AdvisedIndex) => formatColumnValue(advice, column),
     align: typeof first[column] === `number` ? `right` : `left`,
   }));
+}
 
+function openAdvisedIndexesWebview(target: string, advised: AdvisedIndex[], sql: string, reload: () => Promise<AdvisedIndex[]>, stats: LoadStats, onIndexCreated?: () => void) {
   const options: DataTableOptions<AdvisedIndex> = {
     title: `Advised indexes for ${target}`,
     subtitle: (shown, total) => listFooter({ one: `advised index`, many: `advised indexes` }, shown, total, stats),
-    columns,
+    columns: advisedIndexColumns(advised),
     rows: advised,
     searchPlaceholder: `Search advised indexes…`,
     emptyMessage: `No advised indexes match the search.`,
+    noRowsMessage: `No advised indexes found for ${target}.`,
     actions: [
       { id: ADVISED_INDEX_ACTIONS.createIndex },
       { id: ADVISED_INDEX_ACTIONS.showStatement },
@@ -144,9 +160,10 @@ function openAdvisedIndexesWebview(target: string, advised: AdvisedIndex[], sql:
   };
 
   const handlers: DataTableHandlers<AdvisedIndex> = {
-    onAction: async (actionId, advice) => {
+    onAction: async (actionId, advice, table) => {
       if (actionId === ADVISED_INDEX_ACTIONS.createIndex) {
         if (await createIndex(indexCreation(advice))) {
+          table.removeRow();
           onIndexCreated?.();
         }
       } else if (actionId === ADVISED_INDEX_ACTIONS.showStatement) {
@@ -155,6 +172,6 @@ function openAdvisedIndexesWebview(target: string, advised: AdvisedIndex[], sql:
     },
   };
 
-  showDataTable(options, handlers, { sql, reload })
+  showDataTable(options, handlers, { sql, reload, columns: advisedIndexColumns })
     .catch(e => vscode.window.showErrorMessage(`Could not show the advised indexes: ${e?.message ?? e}`));
 }

@@ -78,16 +78,23 @@ export function showDataTable<T>(options: DataTableOptions<T>, handlers?: DataTa
   return resultSetProvider.showDataTable(options, handlers, extras);
 }
 
+/** Loading placeholder in the Results view while a data table listing is fetched */
+export function showDataTableLoading(text: string): Promise<void> {
+  return resultSetProvider.showDataTableLoading(text);
+}
+
+export function showDataTableError(error: string): void {
+  resultSetProvider.setError(error);
+}
+
 export function openResultSetPanel(title: string, column: ViewColumn = ViewColumn.Active): ResultSetPanelProvider {
   const panel = window.createWebviewPanel(`sqlResultSet`, title, column, { retainContextWhenHidden: true, enableScripts: true, enableFindWidget: true });
   const provider = new ResultSetPanelProvider(`panel`);
   provider.resolveWebviewView(panel);
 
   const trackActive = () => {
-    provider.active = panel.active;
     if (panel.active) {
       activePanelProvider = provider;
-      provider.applyContext();
     } else if (activePanelProvider === provider) {
       activePanelProvider = undefined;
     }
@@ -317,8 +324,6 @@ async function runHandler(options?: StatementInfo) {
   if (options === undefined || options.viewColumn === undefined) {
     await resultSetProvider.ensureActivation();
   }
-
-  resultSetProvider.resetContext();
 
   // Options here can be a vscode.Uri when called from editor context.
   // But that isn't valid here.

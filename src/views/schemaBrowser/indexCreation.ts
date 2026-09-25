@@ -49,13 +49,62 @@ export async function suggestIndexName(target: IndexTarget, tag: string): Promis
 const SUBMITTED_JOB_NAME = `C4ICRTIDX`;
 
 /**
- * Creating an index over a large table can run for a long time, so it is submitted instead of
- * being run in the SQL job, where it would block the extension until it ends.
+ * Creating an index over a large table can run for a long time, so by default it is submitted
+ * instead of being run in the SQL job, where it would block the extension until it ends.
  */
-function buildSubmitCommand(statement: string): string {
-  const sql = statement.split(`\n`).map(line => line.trim()).join(` `).replace(/'/g, `''`);
+function buildSubmitCommand(statement: string, afterCreate?: AfterIndexCreation): string {
+  // In a compound statement, a failed CREATE INDEX stops it before afterCreate runs
+  const script = afterCreate ? `BEGIN ${statement}; ${afterCreate.statement}; END` : statement;
+  const sql = script.split(`\n`).map(line => line.trim()).join(` `).replace(/'/g, `''`);
 
   return `SBMJOB CMD(QSYS/RUNSQL SQL('${sql}') COMMIT(*NONE)) JOB(${SUBMITTED_JOB_NAME}) JOBQ(QSYS/QUSRNOMAX) LOG(4 0 *MSG)`;
+}
+
+/** e.g. `123456/QUSER/C4ICRTIDX`, as found in the text of message CPC1221 */
+const QUALIFIED_JOB_NAME = /(\d{6}\/[\w$#@.]{1,10}\/[\w$#@.]{1,10})/;
+
+/** Qualified name of the submitted job, from its CPC1221 message */
+async function submittedJobName(output: any[]): Promise<string | undefined> {
+  for (const row of output) {
+    const text = Object.values(row ?? {})
+      .find((value): value is string => typeof value === `string` && value.includes(SUBMITTED_JOB_NAME) && QUALIFIED_JOB_NAME.test(value));
+    if (text) return text.match(QUALIFIED_JOB_NAME)![1];
+  }
+
+  // Otherwise, from the job log of the SQL job
+  try {
+    const rows = await JobManager.runSQL<{ MESSAGE_TEXT: string }>(
+      `select MESSAGE_TEXT from table(QSYS2.JOBLOG_INFO('*')) where MESSAGE_ID = 'CPC1221' order by ORDINAL_POSITION desc fetch first 1 row only`
+    );
+    return rows[0]?.MESSAGE_TEXT?.match(QUALIFIED_JOB_NAME)?.[1];
+  } catch (e) {
+    return undefined;
+  }
+}
+
+/** The live job log while the job runs, the spooled one after it ends */
+async function showSubmittedJobLog(jobName: string): Promise<void> {
+  let hasLiveLog = false;
+  try {
+    const rows = await JobManager.runSQL<{ MESSAGES: number }>(
+      `select count(*) as MESSAGES from table(QSYS2.JOBLOG_INFO(?))`,
+      { parameters: [jobName] }
+    );
+    hasLiveLog = Number(rows[0]?.MESSAGES) > 0;
+  } catch (e) {
+  }
+
+  const content = hasLiveLog
+    ? `select * from table(QSYS2.JOBLOG_INFO('${jobName}')) order by ORDINAL_POSITION`
+    : `select SPOOLED_DATA from table(SYSTOOLS.SPOOLED_FILE_DATA(JOB_NAME => '${jobName}', SPOOLED_FILE_NAME => 'QPJOBLOG')) order by ORDINAL_POSITION`;
+
+  vscode.commands.executeCommand(`vscode-db2i.runEditorStatement.inView`, { content, qualifier: `statement`, open: false });
+}
+
+/** Runs once the index exists, never if its creation failed */
+export interface AfterIndexCreation {
+  statement: string;
+  description: string;
 }
 
 export interface IndexCreation {
@@ -63,9 +112,14 @@ export interface IndexCreation {
   nameTag: string;
   buildStatement: (indexName: string) => string;
   warning?: string;
+  afterCreate?: AfterIndexCreation;
 }
 
-/** @returns whether a job was submitted to create the index */
+const SUBMIT = `Submit Job`;
+const RUN_IN_CURRENT_JOB = `Run in Current Job`;
+const VIEW_JOB_LOG = `View Job Log`;
+
+/** @returns whether the index was created or submitted */
 export async function createIndex(creation: IndexCreation): Promise<boolean> {
   const table = qualifiedTable(creation.target);
   const indexName = await vscode.window.showInputBox({
@@ -84,18 +138,31 @@ export async function createIndex(creation: IndexCreation): Promise<boolean> {
 
   const name = indexName.trim();
   const statement = creation.buildStatement(name);
-  const confirmation = await vscode.window.showWarningMessage(
-    `Submit a job to create an index over ${table}?`,
-    { modal: true, detail: [creation.warning, statement].filter(part => part).join(`\n\n`) },
-    `Submit`
+  const howToRun = `${SUBMIT} runs it in batch job ${SUBMITTED_JOB_NAME}. ${RUN_IN_CURRENT_JOB} runs it in the SQL job, which is busy until the index is built.`;
+  const choice = await vscode.window.showWarningMessage(
+    `Create an index over ${table}?`,
+    { modal: true, detail: [creation.warning, statement, creation.afterCreate?.description, howToRun].filter(part => part).join(`\n\n`) },
+    SUBMIT,
+    RUN_IN_CURRENT_JOB
   );
 
-  if (confirmation !== `Submit`) return false;
+  switch (choice) {
+    case SUBMIT: return submitIndexCreation(statement, name, table, creation.afterCreate);
+    case RUN_IN_CURRENT_JOB: return runIndexCreation(statement, name, table, creation.afterCreate);
+    default: return false;
+  }
+}
+
+async function submitIndexCreation(statement: string, name: string, table: string, afterCreate?: AfterIndexCreation): Promise<boolean> {
+  let jobName: string | undefined;
 
   try {
-    await vscode.window.withProgress(
+    jobName = await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: `Submitting job to create index ${name}...` },
-      () => JobManager.runSQL(buildSubmitCommand(statement), { isClCommand: true })
+      async () => {
+        const result = await JobManager.runSQLVerbose<any>(buildSubmitCommand(statement, afterCreate), { isClCommand: true });
+        return submittedJobName(result.data ?? []);
+      }
     );
   } catch (e: any) {
     vscode.window.showErrorMessage(e.message);
@@ -103,13 +170,50 @@ export async function createIndex(creation: IndexCreation): Promise<boolean> {
   }
 
   vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement);
-  vscode.window.showInformationMessage(`Job ${SUBMITTED_JOB_NAME} submitted to create index ${name} over ${table}. The index only appears once that job has ended.`);
+
+  const message = `Job ${jobName ?? SUBMITTED_JOB_NAME} submitted to create index ${name} over ${table}. The index only appears once that job has ended.`;
+  if (jobName) {
+    // Not awaited, so the caller can refresh right away
+    vscode.window.showInformationMessage(message, VIEW_JOB_LOG).then(chosen => {
+      if (chosen === VIEW_JOB_LOG) showSubmittedJobLog(jobName!);
+    });
+  } else {
+    vscode.window.showInformationMessage(message);
+  }
+  return true;
+}
+
+async function runIndexCreation(statement: string, name: string, table: string, afterCreate?: AfterIndexCreation): Promise<boolean> {
+  try {
+    await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `Creating index ${name} over ${table}...` },
+      () => JobManager.runSQL(statement)
+    );
+  } catch (e: any) {
+    vscode.window.showErrorMessage(e.message);
+    return false;
+  }
+
+  vscode.commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement);
+  vscode.window.showInformationMessage(`Index ${name} created over ${table}.`);
+
+  if (afterCreate) {
+    try {
+      await JobManager.runSQL(afterCreate.statement);
+    } catch (e: any) {
+      vscode.window.showWarningMessage(`Index ${name} was created, but the statement run after it failed: ${e.message}`);
+    }
+  }
+
   return true;
 }
 
 export async function showCreateIndexStatement(creation: IndexCreation): Promise<void> {
   const statement = `${creation.buildStatement(await suggestIndexName(creation.target, creation.nameTag))};`;
-  const content = creation.warning ? `-- ${creation.warning}\n${statement}` : statement;
+  const afterCreate = creation.afterCreate
+    ? `\n\n-- ${creation.afterCreate.description}\n${creation.afterCreate.statement};`
+    : ``;
+  const content = (creation.warning ? `-- ${creation.warning}\n${statement}` : statement) + afterCreate;
   const textDoc = await vscode.workspace.openTextDocument({ language: `sql`, content });
   await vscode.window.showTextDocument(textDoc);
 }

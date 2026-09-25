@@ -80,6 +80,8 @@ export interface DataTableOptions<T> {
   searchPlaceholder?: string;
   /** Shown when there are no rows at all, or the search matches nothing */
   emptyMessage?: string;
+  /** Replaces `emptyMessage` when there are no rows at all */
+  noRowsMessage?: string;
   /** Initial sort. Omit to keep the natural order of `rows`. With `serverQuery` it only marks the sorted column. */
   sort?: { columnId: string; direction?: "asc" | "desc" };
   /** Text the search box starts with — used when the table is re-opened elsewhere */
@@ -117,9 +119,13 @@ export interface DataTableViewState {
   sort?: { columnId: string; direction: "asc" | "desc" };
 }
 
+export interface DataTableRowActionContext {
+  removeRow(): void;
+}
+
 export interface DataTableHandlers<T> {
   /** Fired when the user picks a row action from the context menu, or double-clicks a row with a primary one */
-  onAction?: (actionId: string, row: T) => void | Promise<void>;
+  onAction?: (actionId: string, row: T, table: DataTableRowActionContext) => void | Promise<void>;
   /**
    * Fired when the user clicks the "move to editor" button, or the host asks for it with
    * {@link requestDataTableOpenInEditor}, with the state the table is in.
@@ -127,8 +133,8 @@ export interface DataTableHandlers<T> {
   onOpenInEditor?: (state: DataTableViewState) => void | Promise<void>;
   /** Fired when a `streaming` table wants its next page (scrolled to bottom, or a caller-driven "load more"/"load all") */
   onFetchMore?: (params: { allRows: boolean; queryId?: string }) => void | Promise<void>;
-  /** `serverQuery` only — fired when the user clicks a sortable column header */
-  onSortChange?: (params: { columnId: string; direction: "asc" | "desc" }) => void | Promise<void>;
+  /** `serverQuery` only — fired when the user clicks a sortable column header; `undefined` removes the sort */
+  onSortChange?: (sort: { columnId: string; direction: "asc" | "desc" } | undefined) => void | Promise<void>;
   /** `serverQuery` only — fired (debounced) when the search box's text changes */
   onSearchChange?: (params: { query: string }) => void | Promise<void>;
   /** Fired when the user finishes editing an updatable cell */
@@ -275,6 +281,7 @@ function toWire<T>(options: DataTableOptions<T>, tableId: string) {
     search: options.search !== false,
     searchPlaceholder: options.searchPlaceholder ?? `Search…`,
     emptyMessage: options.emptyMessage ?? `Nothing to show.`,
+    noRowsMessage: options.noRowsMessage ?? null,
     initialSort,
     initialDir,
     initialQuery: options.initialQuery ?? ``,
@@ -289,21 +296,31 @@ function toWire<T>(options: DataTableOptions<T>, tableId: string) {
   };
 }
 
-const liveTables = new Map<string, { options: DataTableOptions<any>; handlers: DataTableHandlers<any> }>();
+const liveTables = new Map<string, { options: DataTableOptions<any>; handlers: DataTableHandlers<any>; post: (message: any) => void }>();
 let nextTableId = 0;
 
 /** Makes a table's rows reachable from its right-click commands; render it with the returned id */
-export function registerDataTable<T>(options: DataTableOptions<T>, handlers: DataTableHandlers<T>): vscode.Disposable & { id: string } {
+export function registerDataTable<T>(options: DataTableOptions<T>, handlers: DataTableHandlers<T>, post: (message: any) => void): vscode.Disposable & { id: string } {
   const id = `dt${++nextTableId}`;
-  liveTables.set(id, { options, handlers });
+  liveTables.set(id, { options, handlers, post });
   return { id, dispose: () => liveTables.delete(id) };
+}
+
+function rowActionContext<T>(post: (message: any) => void, options: DataTableOptions<T>, row: T): DataTableRowActionContext {
+  return {
+    removeRow: () => {
+      if (options.rows.includes(row)) {
+        updateDataTableRows(post, options, options.rows.filter(candidate => candidate !== row));
+      }
+    },
+  };
 }
 
 export async function runDataTableRowAction(actionId: string, context: any): Promise<void> {
   const table = liveTables.get(context?.dtTable);
   const row = table?.options.rows[context?.dtRow];
   if (table && row !== undefined) {
-    await table.handlers.onAction?.(actionId, row);
+    await table.handlers.onAction?.(actionId, row, rowActionContext(table.post, table.options, row));
   }
 }
 
@@ -319,8 +336,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     ? subtitleFn(model.rows.length, model.rows.length)
     : (model.subtitleTemplate ?? ``);
   const showToolbar = Boolean(model.title || model.search);
-  // With serverQuery it also signals a modified query
-  const searchIcon = /*html*/ `<span slot="content-before" class="dt-search-icon"${model.serverQuery ? ` id="dtModified"` : ``}>
+  const searchIcon = /*html*/ `<span slot="content-before" class="dt-search-icon">
           <!-- codicon "search" -->
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
             <path d="M10.02 10.727a5.5 5.5 0 1 1 .707-.707l3.127 3.126a.5.5 0 0 1-.708.708l-3.127-3.127ZM11 6.5a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0Z"/>
@@ -383,7 +399,32 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     .dt-search-clear { display: flex; align-items: center; cursor: pointer; border-radius: 3px; color: var(--vscode-icon-foreground, var(--vscode-foreground)); }
     .dt-search-clear:hover { background-color: var(--vscode-toolbar-hoverBackground); }
     .dt-search-clear[hidden] { display: none; }
-    #dtModified.active { color: var(--vscode-editorInfo-foreground, var(--dt-accent)); cursor: help; }
+    #dtModified {
+      display: flex;
+      align-items: center;
+      padding: 2px;
+      border-radius: 3px;
+      color: var(--vscode-editorInfo-foreground, var(--dt-accent));
+      cursor: pointer;
+    }
+    #dtModified:hover, #dtModified.pinned { background-color: var(--vscode-toolbar-hoverBackground); }
+    #dtModified:focus-visible { outline: 1px solid var(--vscode-focusBorder); }
+    #dtModified[hidden] { display: none; }
+    #dtModifiedPopup {
+      position: fixed;
+      z-index: 10;
+      max-width: min(640px, calc(100vw - 16px));
+      padding: 4px 8px;
+      border-radius: 3px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: var(--vscode-font-size, 13px);
+      color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+      background-color: var(--vscode-editorHoverWidget-background, var(--vscode-editor-background));
+      border: 1px solid var(--vscode-editorHoverWidget-border, var(--dt-border));
+      box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+    }
+    #dtModifiedPopup[hidden] { display: none; }
     #openInEditor { flex: 0 0 auto; }
     #openInEditor svg { display: block; }
 
@@ -591,6 +632,14 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
   <div id="toolbar" ${showToolbar ? `` : `style="display:none"`}>
     <span id="title" title="${escapeHtml(model.title)}">${escapeHtml(model.title)}</span>
     <span id="toolbarEnd">
+      <span id="dtModified" role="button" tabindex="0" aria-label="Sort or filter applied" aria-controls="dtModifiedPopup" aria-expanded="false" hidden>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.4"/>
+          <path d="M8 7.2v4.3" stroke-linecap="round"/>
+          <circle cx="8" cy="4.9" r="0.8" fill="currentColor" stroke="none"/>
+        </svg>
+      </span>
+      <div id="dtModifiedPopup" role="tooltip" hidden></div>
       ${model.search ? /*html*/ `<vscode-textfield id="search" type="text" placeholder="${escapeHtml(model.searchPlaceholder)}" value="${escapeHtml(model.initialQuery)}"${searchDisabled ? ` disabled` : ``}>
         ${searchIcon}
         <span slot="content-after" id="searchClear" class="dt-search-clear" title="Clear"${model.initialQuery ? `` : ` hidden`}>
@@ -764,16 +813,20 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
 
     function toggleSort(index) {
       if (MODEL.streaming && !MODEL.serverQuery) return;
-      if (state.sortCol === index) {
-        state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
-      } else {
+      if (state.sortCol !== index) {
         state.sortCol = index;
+        state.sortDir = "asc";
+      } else if (state.sortDir === "asc") {
+        state.sortDir = "desc";
+      } else {
+        state.sortCol = -1;
         state.sortDir = "asc";
       }
       state.page = 1;
       refreshArrows();
       if (MODEL.streaming) {
-        vscode.postMessage({ command: "sortChange", columnId: MODEL.columns[index].id, direction: state.sortDir });
+        const sorted = state.sortCol >= 0;
+        vscode.postMessage({ command: "sortChange", columnId: sorted ? MODEL.columns[index].id : undefined, direction: state.sortDir });
       } else {
         render();
       }
@@ -905,11 +958,89 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       currentPageRows().forEach((r, rowIndex) => frag.appendChild(buildRowElement(r, rowIndex, terms)));
       grid.appendChild(frag);
 
-      el("empty").style.display = state.view.length ? "none" : "";
+      const empty = el("empty");
+      empty.textContent = MODEL.rows.length === 0 && MODEL.noRowsMessage ? MODEL.noRowsMessage : MODEL.emptyMessage;
+      // "" would fall back to the stylesheet's display: none
+      empty.style.display = state.view.length ? "none" : "block";
       grid.style.display = state.view.length ? "grid" : "none";
 
       updateSubtitle();
       updatePager();
+      setModification(localModificationText());
+    }
+
+    // ----- sort/filter indicator ---------------------------------------------
+    const modifiedIcon = el("dtModified");
+    const modifiedPopup = el("dtModifiedPopup");
+    let modifiedPinned = false;
+
+    function setModification(text) {
+      modifiedIcon.hidden = !text;
+      modifiedPopup.textContent = text || "";
+      if (!text) hideModificationPopup();
+      else if (!modifiedPopup.hidden) placeModificationPopup();
+    }
+
+    function placeModificationPopup() {
+      const icon = modifiedIcon.getBoundingClientRect();
+      const margin = 8;
+      const left = Math.min(icon.left, window.innerWidth - modifiedPopup.offsetWidth - margin);
+      modifiedPopup.style.left = Math.max(margin, left) + "px";
+      modifiedPopup.style.top = (icon.bottom + 4) + "px";
+    }
+
+    function showModificationPopup() {
+      if (modifiedIcon.hidden || !modifiedPopup.textContent) return;
+      modifiedPopup.hidden = false;
+      modifiedIcon.setAttribute("aria-expanded", "true");
+      placeModificationPopup();
+    }
+
+    function hideModificationPopup() {
+      modifiedPinned = false;
+      modifiedIcon.classList.remove("pinned");
+      modifiedPopup.hidden = true;
+      modifiedIcon.setAttribute("aria-expanded", "false");
+    }
+
+    function toggleModificationPin() {
+      if (modifiedPinned) {
+        hideModificationPopup();
+      } else {
+        modifiedPinned = true;
+        modifiedIcon.classList.add("pinned");
+        showModificationPopup();
+      }
+    }
+
+    modifiedIcon.addEventListener("mouseenter", showModificationPopup);
+    modifiedIcon.addEventListener("mouseleave", () => { if (!modifiedPinned) hideModificationPopup(); });
+    modifiedIcon.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleModificationPin();
+    });
+    modifiedIcon.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleModificationPin();
+      }
+    });
+    document.addEventListener("click", (e) => {
+      if (modifiedPinned && !modifiedPopup.contains(e.target)) hideModificationPopup();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modifiedPopup.hidden) hideModificationPopup();
+    });
+    window.addEventListener("resize", () => { if (!modifiedPopup.hidden) placeModificationPopup(); });
+
+    function localModificationText() {
+      const lines = [];
+      const query = state.query.trim();
+      if (query) lines.push('Filtered: rows with "' + query + '" in any column');
+      if (state.sortCol >= 0 && MODEL.columns[state.sortCol]) {
+        lines.push("Sorted: by " + MODEL.columns[state.sortCol].title + (state.sortDir === "desc" ? " descending" : " ascending"));
+      }
+      return lines.join("\\n");
     }
 
     function updateSubtitle() {
@@ -970,12 +1101,12 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       if (MODEL.loadingText) el("dtLoading").style.display = "flex";
     }
 
-    function showStreamingMessage(text) {
-      grid.style.display = "none";
+    function showStreamingMessage(text, keepHeader) {
+      grid.style.display = keepHeader ? "grid" : "none";
       el("dtSentinel").style.display = "none";
       const msg = el("dtMessage");
       msg.textContent = text;
-      msg.style.display = "";
+      msg.style.display = "block";
     }
 
     function hideStreamingMessage() {
@@ -986,8 +1117,11 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     function updateStreamingStatus(data) {
       const updatableSuffix = MODEL.updatable ? " Updatable." : "";
       const doneSuffix = state.isDone ? " End of data." : " More available.";
+      const timed = typeof data.executionTimeMs === "number";
       const statusEl = el("dtStatus");
-      if (typeof data.executionTimeMs === "number") {
+      if (MODEL.columns.length === 0) {
+        statusEl.textContent = timed ? "Executed in " + Math.round(data.executionTimeMs) + "ms." : "Executed.";
+      } else if (timed) {
         statusEl.textContent = "Loaded " + MODEL.rows.length + " rows in " + Math.round(data.executionTimeMs) + "ms." + doneSuffix + updatableSuffix;
       } else {
         statusEl.textContent = "Loaded " + MODEL.rows.length + " rows." + doneSuffix + updatableSuffix;
@@ -1110,16 +1244,21 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         box.style.display = show ? "" : "none";
       }
 
-      function requestCellUpdate(cellNode, originalValue, statement, bindings) {
+      function restoreCell(cellNode, originalValue, wasNull) {
+        cellNode.innerText = originalValue;
+        cellNode.classList.toggle("dt-null", wasNull);
+      }
+
+      function requestCellUpdate(cellNode, originalValue, wasNull, statement, bindings) {
         const id = ++cellCounter;
-        updateRequests[id] = { cellNode, originalValue };
+        updateRequests[id] = { cellNode, originalValue, wasNull };
         vscode.postMessage({ command: "update", id, update: statement, bindings });
       }
 
       handleCellResponse = function (id, success) {
         const req = updateRequests[id];
         if (req) {
-          if (!success) req.cellNode.innerText = req.originalValue;
+          if (!success) restoreCell(req.cellNode, req.originalValue, req.wasNull);
           delete updateRequests[id];
         }
       };
@@ -1150,6 +1289,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
 
         const originalValue = hoverable.innerText;
         const editableNode = hoverable;
+        const wasNull = editableNode.classList.contains("dt-null");
 
         const getSqlStatement = (newValue, withSane, nullify) => {
           const useRrn = updateKeyColumns.length === 1 && updateKeyColumns.some((c) => c.name === "RRN");
@@ -1213,7 +1353,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
           if (sql) updateMessageContent(true, "<pre style=\\"margin:0;\\">" + sql.saneStatement + "</pre>");
         };
 
-        if (editableNode.classList.contains("dt-null") && editableNode.innerText === "null") {
+        if (wasNull) {
           editableNode.innerText = "";
         }
         editableNode.contentEditable = true;
@@ -1234,7 +1374,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
               editableNode.blur();
               break;
             case "Escape":
-              editableNode.innerText = originalValue;
+              restoreCell(editableNode, originalValue, wasNull);
               editableNode.blur();
               break;
           }
@@ -1254,7 +1394,12 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
           editableNode.contentEditable = false;
 
           let newValue = editableNode.innerText;
-          if (!nullify && newValue === originalValue) return;
+          // A null cell is emptied for editing: leaving it empty is no change
+          const unchanged = wasNull ? (nullify || newValue === "") : (!nullify && newValue === originalValue);
+          if (unchanged) {
+            restoreCell(editableNode, originalValue, wasNull);
+            return;
+          }
           if (chosenColumnDetail.maxInputLength && newValue.length > chosenColumnDetail.maxInputLength) {
             newValue = newValue.substring(0, chosenColumnDetail.maxInputLength);
             editableNode.innerText = newValue;
@@ -1262,7 +1407,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
 
           const sql = getSqlStatement(newValue, false, nullify);
           if (!sql) {
-            editableNode.innerText = originalValue;
+            restoreCell(editableNode, originalValue, wasNull);
             return;
           }
 
@@ -1273,7 +1418,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
             editableNode.classList.remove("dt-null");
           }
 
-          requestCellUpdate(editableNode, originalValue, sql.updateStatement, sql.bindings);
+          requestCellUpdate(editableNode, originalValue, wasNull, sql.updateStatement, sql.bindings);
         };
 
         editableNode.addEventListener("blur", (ev) => { ev.stopPropagation(); finishEditing(); }, { once: true });
@@ -1332,14 +1477,17 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
           state.isDone = data.isDone === true;
           state.noMoreRows = state.isDone;
           if (data.rows && data.rows.length) appendRowsToDom(data.rows);
-          if (el("search")) el("search").disabled = false;
+          if (el("search")) el("search").disabled = MODEL.columns.length === 0;
+          updateStreamingStatus(data);
           if (MODEL.rows.length === 0) {
-            showStreamingMessage(state.appliedQuery.trim()
-              ? MODEL.emptyMessage
-              : "Statement executed with no result set returned. Rows affected: " + (data.updateCount !== undefined ? data.updateCount : 0));
+            if (MODEL.columns.length === 0) {
+              const affected = typeof data.updateCount === "number" && data.updateCount >= 0 ? data.updateCount : 0;
+              showStreamingMessage("Statement executed with no result set returned. Rows affected: " + affected, false);
+            } else {
+              showStreamingMessage(state.appliedQuery.trim() ? MODEL.emptyMessage : "No rows returned.", true);
+            }
           } else {
             hideStreamingMessage();
-            updateStreamingStatus(data);
             fetchIfSentinelVisible();
           }
           break;
@@ -1354,14 +1502,17 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         case "requestOpenInEditor":
           postOpenInEditor();
           break;
-        case "setQueryModification": {
-          const icon = el("dtModified");
-          if (icon) {
-            icon.classList.toggle("active", Boolean(data.text));
-            icon.title = data.text || "";
+        case "setQueryModification":
+          setModification(data.text);
+          break;
+        case "setLoading":
+          if (data.text) {
+            el("dtLoadingText").textContent = data.text;
+            el("dtLoading").style.display = "flex";
+          } else {
+            hideLoading();
           }
           break;
-        }
       }
     });
 
@@ -1428,7 +1579,9 @@ export async function handleDataTableMessage<T>(
       return true;
     }
     case `sortChange`: {
-      await handlers.onSortChange?.({ columnId: message.columnId, direction: message.direction === `desc` ? `desc` : `asc` });
+      await handlers.onSortChange?.(message.columnId
+        ? { columnId: message.columnId, direction: message.direction === `desc` ? `desc` : `asc` }
+        : undefined);
       return true;
     }
     case `searchChange`: {
@@ -1441,7 +1594,7 @@ export async function handleDataTableMessage<T>(
       const row = options.rows[message.row];
       const action = options.actions?.find(a => a.id === message.actionId);
       if (row !== undefined && action?.primary && !action.destructive && (!action.when || action.when(row))) {
-        await handlers.onAction?.(action.id, row);
+        await handlers.onAction?.(action.id, row, rowActionContext(post, options, row));
       }
       return true;
     }
@@ -1536,4 +1689,9 @@ export function requestDataTableOpenInEditor(post: (message: any) => void): void
 /** `serverQuery` only — marks the rows as coming from a modified query, with `text` as tooltip */
 export function setDataTableQueryModification(post: (message: any) => void, text: string | undefined): void {
   post({ command: `setQueryModification`, text: text ?? `` });
+}
+
+/** Shows the loading overlay with `text`, or hides it when `text` is undefined */
+export function setDataTableLoading(post: (message: any) => void, text: string | undefined): void {
+  post({ command: `setLoading`, text: text ?? `` });
 }

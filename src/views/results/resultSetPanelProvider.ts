@@ -1,4 +1,4 @@
-import { CancellationToken, ProgressLocation, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, env, window } from "vscode";
+import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, env, window } from "vscode";
 
 import { QueryResult } from "@ibm/mapepire-js";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
@@ -22,6 +22,7 @@ import {
   renderDataTable,
   requestDataTableOpenInEditor,
   resetDataTableRows,
+  setDataTableLoading,
   setDataTableQueryModification,
   updateDataTableColumns,
   updateDataTableRows,
@@ -47,37 +48,11 @@ export interface ScrollerOptions {
 export interface DataTableExtras<T> {
   sql?: string;
   reload?: () => Promise<T[]>;
+  /** Columns for reloaded rows, when they depend on the rows */
+  columns?: (rows: T[]) => DataTableColumn<T>[];
 }
 
 export type ResultSetHost = `view` | `panel`;
-
-interface ContextFlags {
-  canClear: boolean;
-  canRetrieveMoreRows: boolean;
-  canRefresh: boolean;
-  canCopySql: boolean;
-  canMoveToEditor: boolean;
-}
-
-const NO_FLAGS: ContextFlags = { canClear: false, canRetrieveMoreRows: false, canRefresh: false, canCopySql: false, canMoveToEditor: false };
-
-/** Editor tabs have their own keys, driven by the active tab */
-const CONTEXT_KEYS: Record<ResultSetHost, Record<keyof ContextFlags, string>> = {
-  view: {
-    canClear: `vscode-db2i:canClear`,
-    canRetrieveMoreRows: `vscode-db2i:canRetrieveMoreRows`,
-    canRefresh: `vscode-db2i:canRefresh`,
-    canCopySql: `vscode-db2i:canCopySql`,
-    canMoveToEditor: `vscode-db2i:canMoveToEditor`,
-  },
-  panel: {
-    canClear: `vscode-db2i:panelCanClear`,
-    canRetrieveMoreRows: `vscode-db2i:panelCanRetrieveMoreRows`,
-    canRefresh: `vscode-db2i:panelCanRefresh`,
-    canCopySql: `vscode-db2i:panelCanCopySql`,
-    canMoveToEditor: `vscode-db2i:panelCanMoveToEditor`,
-  },
-};
 
 /** State of the shown result set, carried as is when it moves into an editor tab */
 interface ResultSetSession {
@@ -97,6 +72,7 @@ interface ResultSetSession {
 
 interface DataTableSession {
   title: string;
+  tableId: string;
   options: DataTableOptions<any>;
   handlers: DataTableHandlers<any>;
   extras: DataTableExtras<any>;
@@ -134,6 +110,11 @@ function resultColumnTooltip(column: any, columnHeadings: string): string {
   return title;
 }
 
+/** Types Db2 does not allow in an ORDER BY (SQL0134 / SQL20353) */
+const UNSORTABLE_TYPES = new Set([
+  `BLOB`, `CLOB`, `DBCLOB`, `NCLOB`, `XML`, `SQLXML`, `DATALINK`,
+]);
+
 /** Builds the data table's columns from a query's SQL column metadata (rows are plain `row[i]` arrays — `isTerseResults: true`) */
 function buildResultColumns(columnMetaData: any[], columnHeadings: string): DataTableColumn<any[]>[] {
   return columnMetaData.map((column, i) => ({
@@ -141,12 +122,13 @@ function buildResultColumns(columnMetaData: any[], columnHeadings: string): Data
     title: resultColumnTitle(column, columnHeadings),
     value: (row: any[]) => row[i],
     headerTooltip: resultColumnTooltip(column, columnHeadings),
+    sortable: !UNSORTABLE_TYPES.has(String(column.type).toUpperCase()),
   }));
 }
 
 /** Types a "search all columns" `CAST(... AS VARCHAR(...))` can't meaningfully apply to */
 const SEARCH_EXCLUDED_TYPES = new Set([
-  `BLOB`, `CLOB`, `DBCLOB`, `NCLOB`, `VARBIN`, `BINARY`, `GRAPHIC`, `VARGRAPHIC`, `ROWID`, `DATALINK`,
+  `BLOB`, `CLOB`, `DBCLOB`, `NCLOB`, `VARBIN`, `VARBINARY`, `BINARY`, `GRAPHIC`, `VARGRAPHIC`, `ROWID`, `DATALINK`, `XML`, `SQLXML`,
 ]);
 
 /** Double-quotes an identifier for interpolation into generated SQL, escaping embedded `"` (unlike `Statement.delimName`, which doesn't) */
@@ -211,9 +193,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   loadingState: boolean = false;
   currentQuery: Query<any> | undefined;
   lastScrollerOptions: ScrollerOptions | undefined;
-  /** Only the active provider drives the context keys */
-  active = true;
-  private flags: ContextFlags = { ...NO_FLAGS };
   /** Routes the webview's messages while it shows a data table instead of the idle placeholder */
   private messageRouter: ((message: any) => Promise<boolean> | void) | undefined;
   private tableRegistration: { dispose(): void } | undefined;
@@ -236,19 +215,33 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
   }
 
+  // Toolbar actions are always enabled, so each one checks whether it applies
+
   retrieveMoreRows(allRows?: boolean) {
-    if (this._view) {
-      this._view.webview.postMessage({
-        command: `requestFetch`,
-        allRows: allRows === true,
-        queryId: this.currentQuery?.getId(),
-      });
+    if (!this.session) {
+      window.showInformationMessage(this.tableSession ? `All rows are already shown.` : `There is no result set to retrieve rows for.`);
+      return;
     }
+
+    if (this.session.isDone) {
+      window.showInformationMessage(`All rows have already been retrieved.`);
+      return;
+    }
+
+    this._view?.webview.postMessage({
+      command: `requestFetch`,
+      allRows: allRows === true,
+      queryId: this.currentQuery?.getId(),
+    });
   }
 
   async refresh() {
     if (this.tableSession) {
-      await this.reloadDataTable(this.tableSession);
+      if (this.tableSession.extras.reload) {
+        await this.reloadDataTable(this.tableSession);
+      } else {
+        window.showInformationMessage(`This table cannot be refreshed.`);
+      }
     } else if (this.lastScrollerOptions) {
       // Close the current query if it exists
       if (this.currentQuery) {
@@ -257,20 +250,28 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       }
       // Re-run the query with the same options
       await this.setScrolling(this.lastScrollerOptions);
+    } else {
+      window.showInformationMessage(`There is no statement to refresh.`);
     }
   }
 
   async copySql() {
-    const sql = this.tableSession?.extras.sql ?? this.session?.options.basicSelect;
+    const sql = this.tableSession ? this.tableSession.extras.sql : this.lastScrollerOptions?.basicSelect;
     if (sql) {
       await env.clipboard.writeText(sql);
       window.setStatusBarMessage(`SQL statement copied to clipboard`, 3000);
+    } else {
+      window.showInformationMessage(`There is no SQL statement to copy.`);
     }
   }
 
   moveToEditor() {
-    if (this._view && this.host === `view`) {
+    if (this.host !== `view`) return;
+
+    if (this._view && (this.session || this.tableSession)) {
       requestDataTableOpenInEditor(msg => this._view?.webview.postMessage(msg));
+    } else {
+      window.showInformationMessage(`There is no result to move into the editor area.`);
     }
   }
 
@@ -321,7 +322,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
   async setLoadingText(content: string, focus = true) {
     this.setRouter(undefined);
-    this.setFlags({ canCopySql: false, canMoveToEditor: false });
+    this.lastScrollerOptions = undefined;
 
     if (focus) {
       await this.focus();
@@ -349,10 +350,15 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   async setScrolling(options: ScrollerOptions) {
     this.setRouter(undefined);
     this.queryEpoch++;
-    this.lastScrollerOptions = { ...options };
 
     this.loadingState = false;
     await this.focus();
+
+    if (options.ref) {
+      await this.setLoadingText(`Running statement...`, false);
+    }
+
+    this.lastScrollerOptions = { ...options };
 
     let basicSelect = options.basicSelect;
     let updatable: UpdatableInfo | undefined;
@@ -511,13 +517,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           }
         }
 
-        // Default to current state, not false — a stale/no-op fetch (query already RUN_DONE)
-        // must not disable Refresh/Clear on an already-loaded result set.
-        const hasRows = dtOptions.rows.length > 0;
-        let canClear = hasRows;
-        let canRetrieveMoreRows = false;
-        let canRefresh = hasRows;
-
         this.fetchingEpoch = myEpoch;
         try {
           let query = this.currentQuery;
@@ -564,10 +563,12 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             const jobId = query.getHostJob().id;
 
             let columns: DataTableColumn<any[]>[] | undefined;
-            if (!columnsSent && queryResults.metadata) {
-              columns = buildResultColumns(queryResults.metadata.columns, Configuration.get<string>(`resultsets.columnHeadings`) || 'Name');
+            // Statements without a result set have no columns
+            const columnMetaData = queryResults.metadata?.columns;
+            if (!columnsSent && columnMetaData) {
+              columns = buildResultColumns(columnMetaData, Configuration.get<string>(`resultsets.columnHeadings`) || 'Name');
               columnsSent = true;
-              session.columnMetaData = queryResults.metadata.columns;
+              session.columnMetaData = columnMetaData;
             }
 
             appendDataTableRows(post, dtOptions, queryResults.data ?? [], {
@@ -580,10 +581,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             });
             session.isDone = queryResults.is_done;
             session.jobId = jobId;
-
-            canClear = true;
-            canRetrieveMoreRows = !queryResults.is_done;
-            canRefresh = true;
           }
 
         } catch (e: any) {
@@ -593,16 +590,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           // Also on a superseded fetch's early return, unless a newer fetch now owns the button
           if (this.fetchingEpoch === undefined) setCancelButtonVisibility(false);
           updateStatusBar();
-        }
-
-        if (myEpoch === this.queryEpoch && this.session === session) {
-          this.setFlags({
-            canClear,
-            canRetrieveMoreRows,
-            canRefresh,
-            canCopySql: true,
-            canMoveToEditor: this.host === `view` && dtOptions.rows.length > 0,
-          });
         }
       },
 
@@ -622,9 +609,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
       onCancel: () => { this.endQuery(); },
 
-      onSortChange: async ({ columnId, direction }) => {
+      onSortChange: async (sort) => {
         if (!session.serverQuery || !session.columnMetaData) return;
-        session.sort = { columnId, direction };
+        session.sort = sort;
         restartQuery();
       },
 
@@ -642,6 +629,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
     if (this._view) {
       this._view.webview.html = renderDataTable(dtOptions);
+      this.loadingState = false;
 
       if (carried) {
         appendDataTableRows(post, dtOptions, carriedRows, {
@@ -653,13 +641,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         if (session.serverQuery) {
           setDataTableQueryModification(post, describeModification(session, buildQueryText(session).sql));
         }
-        this.setFlags({
-          canClear: true,
-          canRetrieveMoreRows: !session.isDone,
-          canRefresh: true,
-          canCopySql: true,
-          canMoveToEditor: false,
-        });
       } else {
         this._view.webview.postMessage({ command: `requestFetch`, allRows: false, queryId: options.queryId });
       }
@@ -692,7 +673,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
    */
   async showDataTable<T>(options: DataTableOptions<T>, handlers: DataTableHandlers<T> = {}, extras: DataTableExtras<T> = {}): Promise<void> {
     const title = options.title ?? `Results`;
-    const tableSession: DataTableSession = { title, options, handlers, extras };
 
     const tableHandlers: DataTableHandlers<T> = {
       ...handlers,
@@ -705,27 +685,16 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       }
     };
 
-    // Whatever result set was shown here is gone as soon as the table is rendered
-    this.endQuery();
-    this.currentQuery = undefined;
-    this.queryEpoch++;
-    this.loadingState = false;
-    this.lastScrollerOptions = undefined;
+    this.dropResultSet();
 
-    const registration = registerDataTable(options, handlers);
+    const post = (msg: any) => this._view?.webview.postMessage(msg);
+    const registration = registerDataTable(options, handlers, post);
+    const tableSession: DataTableSession = { title, tableId: registration.id, options, handlers, extras };
     this.setRouter(
-      message => handleDataTableMessage(message, options, tableHandlers, msg => this._view?.webview.postMessage(msg)),
+      message => handleDataTableMessage(message, options, tableHandlers, post),
       registration,
     );
     this.tableSession = tableSession;
-
-    this.setFlags({
-      canClear: true,
-      canRetrieveMoreRows: false,
-      canRefresh: extras.reload !== undefined,
-      canCopySql: extras.sql !== undefined,
-      canMoveToEditor: this.host === `view`,
-    });
 
     if (this.host === `view`) {
       await this.ensureActivation();
@@ -736,19 +705,47 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     }
   }
 
+  async showDataTableLoading(text: string): Promise<void> {
+    this.dropResultSet();
+    if (this.host === `view`) {
+      await this.ensureActivation();
+    }
+    await this.setLoadingText(text, false);
+  }
+
+  private dropResultSet() {
+    this.endQuery();
+    this.currentQuery = undefined;
+    this.queryEpoch++;
+    this.loadingState = false;
+    this.lastScrollerOptions = undefined;
+  }
+
   private async reloadDataTable(tableSession: DataTableSession) {
     const reload = tableSession.extras.reload;
     if (!reload) return;
 
+    const post = (msg: any) => this._view?.webview.postMessage(msg);
+    setDataTableLoading(post, `Refreshing ${tableSession.title}...`);
+
     try {
-      const rows = await window.withProgress(
-        { location: ProgressLocation.Window, title: `Refreshing ${tableSession.title}` },
-        () => reload()
-      );
-      if (this.tableSession === tableSession) {
-        updateDataTableRows(msg => this._view?.webview.postMessage(msg), tableSession.options, rows);
+      const rows = await reload();
+      if (this.tableSession !== tableSession) return;
+
+      const options = tableSession.options;
+      const columns = tableSession.extras.columns?.(rows);
+      const sameColumns = !columns || columns.map(c => c.id).join(`\0`) === options.columns.map(c => c.id).join(`\0`);
+
+      if (sameColumns) {
+        updateDataTableRows(post, options, rows);
+        setDataTableLoading(post, undefined);
+      } else if (this._view) {
+        options.columns = columns;
+        options.rows = rows;
+        this._view.webview.html = renderDataTable(options, tableSession.tableId);
       }
     } catch (e: any) {
+      if (this.tableSession === tableSession) setDataTableLoading(post, undefined);
       window.showErrorMessage(e.message);
     }
   }
@@ -756,7 +753,6 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   setError(error: string) {
     this.setRouter(undefined);
     this.loadingState = false;
-    this.setFlags({ canCopySql: false, canMoveToEditor: false });
     // TODO: pretty error
     if (this._view) {
       this._view.webview.html = `<p>${error}</p>`;
@@ -765,27 +761,17 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
   clear() {
     this.setRouter(undefined);
-    if (this._view) {
+    this.lastScrollerOptions = undefined;
+    this.queryEpoch++;
+    this.endQuery();
+    this.currentQuery = undefined;
+
+    if (this.host === `panel` && this._view) {
+      // Editor tabs are never reused
+      (this._view as WebviewPanel).dispose();
+    } else if (this._view) {
       this._view.webview.html = ``;
     }
-    this.resetContext();
-  }
-
-  resetContext() {
-    this.setFlags(NO_FLAGS);
-  }
-
-  applyContext() {
-    if (!this.active) return;
-    const keys = CONTEXT_KEYS[this.host];
-    for (const flag of Object.keys(keys) as (keyof ContextFlags)[]) {
-      commands.executeCommand(`setContext`, keys[flag], this.flags[flag]);
-    }
-  }
-
-  private setFlags(flags: Partial<ContextFlags>) {
-    Object.assign(this.flags, flags);
-    this.applyContext();
   }
 
   private setRouter(router: ((message: any) => Promise<boolean> | void) | undefined, registration?: { dispose(): void }) {
