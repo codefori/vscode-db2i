@@ -20,6 +20,7 @@ function candidateName(prefix: string, tag: string, suffix: number): string {
   return `${prefix}_${tag}${String(suffix).padStart(5, `0`)}`;
 }
 
+/** Can be slow, so callers show progress */
 export async function suggestIndexName(target: IndexTarget, tag: string): Promise<string> {
   // Truncated so that the suffix fits, since a longer name is not a valid SQL name
   const suffixLength = candidateName(``, tag, 0).length;
@@ -122,10 +123,14 @@ const VIEW_JOB_LOG = `View Job Log`;
 /** @returns whether the index was created or submitted */
 export async function createIndex(creation: IndexCreation): Promise<boolean> {
   const table = qualifiedTable(creation.target);
+  const suggestedName = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: `Suggesting a name for an index over ${table}...` },
+    () => suggestIndexName(creation.target, creation.nameTag)
+  );
   const indexName = await vscode.window.showInputBox({
     title: `Create index on ${table}`,
     prompt: `Name for the new index`,
-    value: await suggestIndexName(creation.target, creation.nameTag),
+    value: suggestedName,
     validateInput: (value) => {
       const name = value.trim();
       if (name.length === 0) return `Index name cannot be blank`;
@@ -209,7 +214,11 @@ async function runIndexCreation(statement: string, name: string, table: string, 
 }
 
 export async function showCreateIndexStatement(creation: IndexCreation): Promise<void> {
-  const statement = `${creation.buildStatement(await suggestIndexName(creation.target, creation.nameTag))};`;
+  const indexName = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: `Generating the statement to create an index over ${qualifiedTable(creation.target)}...` },
+    () => suggestIndexName(creation.target, creation.nameTag)
+  );
+  const statement = `${creation.buildStatement(indexName)};`;
   const afterCreate = creation.afterCreate
     ? `\n\n-- ${creation.afterCreate.description}\n${creation.afterCreate.statement};`
     : ``;
@@ -232,7 +241,7 @@ export function formatBytes(bytes: number): string {
 }
 
 /** Column names kept as-is (as opposed to title-cased) when turned into a header title */
-const ACRONYMS = new Set([`MTI`, `SQL`, `ID`, `NLSS`]);
+const ACRONYMS = new Set([`MTI`, `SQL`, `ID`, `NLSS`, `SQLCODE`, `SQLSTATE`, `RDB`]);
 
 /** e.g. `TABLE_PARTITION` -> `Table Partition`, `MTI_SIZE` -> `MTI Size` */
 export function prettyColumnTitle(column: string): string {

@@ -98,9 +98,21 @@
         "title": "Open SELF Documentation",
         "category": "Db2 for i",
         "icon": "$(question)"
+      },
+      {
+        "command": "vscode-db2i.self.showErrorLog",
+        "title": "Show SQL Error Log for All Jobs",
+        "category": "Db2 for i",
+        "icon": "$(globe)"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.self.showErrorLog",
+          "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported"
+        }
+      ],
       "view/title": [
         {
           "command": "vscode-db2i.self.refresh",
@@ -126,6 +138,11 @@
           "command": "vscode-db2i.self.disableSelectedJobOnly",
           "group": "navigation@2",
           "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.specificJob == true"
+        },
+        {
+          "command": "vscode-db2i.self.showErrorLog",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes"
         },
         {
           "command": "vscode-db2i.self.reset",

@@ -1060,6 +1060,12 @@
         "icon": "$(question)"
       },
       {
+        "command": "vscode-db2i.self.showErrorLog",
+        "title": "Show SQL Error Log for All Jobs",
+        "category": "Db2 for i",
+        "icon": "$(globe)"
+      },
+      {
         "command": "vscode-db2i.examples.setFilter",
         "title": "Set filter",
         "category": "Db2 for i (Examples)",
@@ -1325,6 +1331,10 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.self.showErrorLog",
+          "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported"
+        },
+        {
           "command": "vscode-db2i.examples.edit",
           "when": "never"
         },
@@ -1509,6 +1519,11 @@
           "command": "vscode-db2i.self.disableSelectedJobOnly",
           "group": "navigation@2",
           "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.specificJob == true"
+        },
+        {
+          "command": "vscode-db2i.self.showErrorLog",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes"
         },
         {
           "command": "vscode-db2i.self.reset",

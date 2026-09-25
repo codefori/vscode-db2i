@@ -15,6 +15,7 @@ import { JobLogEntry } from "../../../connection/types";
 import { SQLExample } from "../../examples";
 import { openExampleCommand } from "../../examples/exampleBrowser";
 import { SelfCodeNode, SelfIleStackFrame } from "./nodes";
+import { showSqlErrorLog } from "./sqlErrorLog";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -82,6 +83,7 @@ export class SelfCodesResultsView implements TreeDataProvider<any> {
       vscode.commands.registerCommand(`vscode-db2i.self.help`, async () => {
         await vscode.commands.executeCommand(`vscode.open`, `https://www.ibm.com/docs/en/i/7.5?topic=tools-sql-error-logging-facility-self`)
       }),
+      vscode.commands.registerCommand(`vscode-db2i.self.showErrorLog`, () => showSqlErrorLog()),
       vscode.commands.registerCommand(`vscode-db2i.self.enableSelectedJobOnly`, async () => {
         this.setJobOnly(true);
       }),
