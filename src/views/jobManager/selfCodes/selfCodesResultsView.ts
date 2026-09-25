@@ -15,7 +15,7 @@ import { JobLogEntry } from "../../../connection/types";
 import { SQLExample } from "../../examples";
 import { openExampleCommand } from "../../examples/exampleBrowser";
 import { SelfCodeNode, SelfIleStackFrame } from "./nodes";
-import { showSqlErrorLog } from "./sqlErrorLog";
+import { viewOtherSelfLogs } from "./sqlErrorLog";
 
 type ChangeTreeDataEventType = SelfCodeTreeItem | undefined | null | void;
 
@@ -29,19 +29,12 @@ export class SelfCodesResultsView implements TreeDataProvider<any> {
     context.subscriptions.push(
       vscode.commands.registerCommand(`vscode-db2i.self.refresh`, async () => this.refresh()),
       vscode.commands.registerCommand(`vscode-db2i.self.reset`, async () => {
-        const selected = JobManager.getRunningJobs();
+        const selected = JobManager.getSelection();
         if (selected) {
-          const resetCmd = this.selectedJobOnly
-            ? `DELETE FROM qsys2.SQL_ERRORT where job_name = '${selected[0].job.id}'`
-            : `DELETE FROM qsys2.SQL_ERRORT where user_name = current_user`;
-
           try {
-            await JobManager.runSQL(resetCmd, undefined);
+            await JobManager.runSQL(`DELETE FROM qsys2.SQL_ERRORT where job_name = '${selected.job.id}'`, undefined);
             this.refresh();
-            const message = this.selectedJobOnly
-              ? `Reset SELF code error log for job ${selected[0].name}.`
-              : `Reset SELF code error log for all jobs.`;
-            vscode.window.showInformationMessage(message);
+            vscode.window.showInformationMessage(`Reset SELF code error log for job ${selected.name}.`);
           } catch (e) {
             vscode.window.showErrorMessage(`An Error occurred resetting SELF code error log: ${e}`);
           }
@@ -83,7 +76,7 @@ export class SelfCodesResultsView implements TreeDataProvider<any> {
       vscode.commands.registerCommand(`vscode-db2i.self.help`, async () => {
         await vscode.commands.executeCommand(`vscode.open`, `https://www.ibm.com/docs/en/i/7.5?topic=tools-sql-error-logging-facility-self`)
       }),
-      vscode.commands.registerCommand(`vscode-db2i.self.showErrorLog`, () => showSqlErrorLog()),
+      vscode.commands.registerCommand(`vscode-db2i.self.viewOtherLogs`, () => viewOtherSelfLogs()),
       vscode.commands.registerCommand(`vscode-db2i.self.enableSelectedJobOnly`, async () => {
         this.setJobOnly(true);
       }),

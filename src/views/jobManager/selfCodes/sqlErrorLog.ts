@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
+import { getInstance } from "../../../base";
 import { JobManager } from "../../../config";
+import Statement from "../../../database/statement";
 import { DataTableColumn, DataTableHandlers, DataTableOptions } from "../../html/dataTable";
 import { showDataTable, showDataTableError, showDataTableLoading } from "../../results";
 import { formatTimestamp, listFooter, LoadStats, prettyColumnTitle } from "../../schemaBrowser/indexCreation";
@@ -15,7 +17,27 @@ export const SQL_ERROR_LOG_ACTIONS = {
   openStatement: `sqlErrorLogOpenStatement`,
 };
 
-const SQL_ERROR_LOG_STATEMENT = `select * from QSYS2.SQL_ERROR_LOG order by LOGGED_TIME desc`;
+type SelfLogScope =
+  | { kind: `job`, job: string }
+  | { kind: `user`, user: string }
+  | { kind: `all` };
+
+function scopeTarget(scope: SelfLogScope): string {
+  switch (scope.kind) {
+    case `job`: return scope.job;
+    case `user`: return `user ${scope.user}`;
+    case `all`: return `all jobs`;
+  }
+}
+
+function sqlErrorLogStatement(scope: SelfLogScope): string {
+  const literal = (value: string) => `'${Statement.escapeString(value)}'`;
+  const condition = scope.kind === `job` ? `where JOB_NAME = ${literal(scope.job)}`
+    : scope.kind === `user` ? `where USER_NAME = ${literal(scope.user)}`
+    : ``;
+
+  return [`select * from QSYS2.SQL_ERROR_LOG`, condition, `order by LOGGED_TIME desc`].filter(part => part).join(` `);
+}
 
 function statementText(entry: SqlErrorLogEntry): string | undefined {
   return (entry.STATEMENT_TEXT ?? entry.STMTTEXT)?.trim() || undefined;
@@ -62,9 +84,65 @@ async function openStatement(entry: SqlErrorLogEntry): Promise<void> {
   await vscode.window.showTextDocument(textDoc);
 }
 
-/** SELF entries of every job; a double click opens the statement */
-export async function showSqlErrorLog(): Promise<void> {
-  const sql = SQL_ERROR_LOG_STATEMENT;
+const TITLE = `View Other SELF Logs`;
+
+const QUALIFIED_JOB_NAME = /^\d{6}\/[^\/\s]{1,10}\/[^\/\s]{1,10}$/;
+
+type ScopeChoice = vscode.QuickPickItem & { scope?: SelfLogScope[`kind`], job?: string };
+
+async function pickScope(): Promise<SelfLogScope | undefined> {
+  const selected = JobManager.getSelection();
+  // As the SQL Job Manager lists them, with the current job first so that it starts highlighted
+  const sqlJobs = JobManager.getRunningJobs()
+    .filter(info => info.job.id)
+    .sort((a, b) => Number(b === selected) - Number(a === selected))
+    .map((info): ScopeChoice => ({
+      job: info.job.id,
+      label: `$(${info === selected ? `layers-active` : `layers`}) ${info.name}`,
+      description: info === selected ? `${info.job.id} · current` : info.job.id,
+    }));
+  const choices: ScopeChoice[] = [
+    ...(sqlJobs.length ? [{ label: `SQL Jobs`, kind: vscode.QuickPickItemKind.Separator }, ...sqlJobs] : []),
+    { label: `Other`, kind: vscode.QuickPickItemKind.Separator },
+    { scope: `job`, label: `$(briefcase) Job`, description: `SELF logs of any job, by its qualified name` },
+    { scope: `user`, label: `$(account) User`, description: `SELF logs of every job run by a user` },
+    { scope: `all`, label: `$(globe) All Jobs`, description: `SELF logs of every job` },
+  ];
+  const choice = await vscode.window.showQuickPick(choices, { title: TITLE, placeHolder: `Which SELF logs to view` });
+
+  if (choice?.job) return { kind: `job`, job: choice.job };
+
+  switch (choice?.scope) {
+    case `job`: {
+      const job = await vscode.window.showInputBox({
+        title: TITLE,
+        prompt: `Qualified job name`,
+        placeHolder: JobManager.getSelection()?.job.id ?? `123456/QUSER/QZDASOINIT`,
+        validateInput: value => QUALIFIED_JOB_NAME.test(value.trim()) ? undefined : `Enter the job as number/user/name`,
+      });
+      return job ? { kind: `job`, job: job.trim().toUpperCase() } : undefined;
+    }
+    case `user`: {
+      const user = await vscode.window.showInputBox({
+        title: TITLE,
+        prompt: `User profile`,
+        value: getInstance()?.getConnection()?.currentUser?.toUpperCase(),
+        validateInput: value => /^[^\s]{1,10}$/.test(value.trim()) ? undefined : `Enter a user profile of up to 10 characters`,
+      });
+      return user ? { kind: `user`, user: user.trim().toUpperCase() } : undefined;
+    }
+    case `all`: return { kind: `all` };
+    default: return undefined;
+  }
+}
+
+/** A double click on an entry opens its statement */
+export async function viewOtherSelfLogs(): Promise<void> {
+  const scope = await pickScope();
+  if (!scope) return;
+
+  const target = scopeTarget(scope);
+  const sql = sqlErrorLogStatement(scope);
   const stats: LoadStats = { executionTimeMs: 0 };
   const load = async () => {
     const startTime = performance.now();
@@ -76,7 +154,7 @@ export async function showSqlErrorLog(): Promise<void> {
   let entries: SqlErrorLogEntry[];
 
   try {
-    await showDataTableLoading(`Fetching the SQL error log...`);
+    await showDataTableLoading(`Fetching the SQL error log for ${target}...`);
     entries = await load();
   } catch (e: any) {
     showDataTableError(e.message);
@@ -84,13 +162,13 @@ export async function showSqlErrorLog(): Promise<void> {
   }
 
   const options: DataTableOptions<SqlErrorLogEntry> = {
-    title: `SQL error log`,
+    title: `SQL Error Log for ${target}`,
     subtitle: (shown, total) => listFooter({ one: `logged error`, many: `logged errors` }, shown, total, stats),
     columns: sqlErrorLogColumns(entries),
     rows: entries,
     searchPlaceholder: `Search logged errors…`,
     emptyMessage: `No logged errors match the search.`,
-    noRowsMessage: `No errors were logged by SELF.`,
+    noRowsMessage: `No errors were logged by SELF for ${target}.`,
     actions: [
       { id: SQL_ERROR_LOG_ACTIONS.openStatement, primary: true, when: entry => statementText(entry) !== undefined },
     ],
