@@ -233,6 +233,7 @@ export default class Document {
     const totalParameters = areas.filter(a => a.type === `marker`).length;
     let newContent = this.content.substring(statement.range.start, statement.range.end);
     let parameterCount = 0;
+    let parameterNames: (string | undefined)[] = [];
 
     const startRange = statement.range.start;
 
@@ -268,7 +269,8 @@ export default class Document {
               }
               break;
           }
-      
+
+          parameterNames.unshift(markerContent.startsWith(`:`) ? markerContent.substring(1).replace(/\s+/g, ``) : undefined);
           parameterCount++;
           break;
 
@@ -284,7 +286,8 @@ export default class Document {
     return {
       changed: areas.length > 0,
       content: newContent.trim(),
-      parameterCount
+      parameterCount,
+      parameterNames
     };
   }
 }

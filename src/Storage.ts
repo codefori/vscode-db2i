@@ -2,6 +2,7 @@ import vscode from 'vscode';
 
 const QUERIES_KEY = `queries`;
 const START_UP_CONFIGS_KEY = `startUpConfigs`;
+const BIND_VALUES_KEY = `bindValues`;
 
 export interface QueryHistoryItem {
   query: string;
@@ -18,6 +19,8 @@ export interface StartUpConfig {
 }
 
 export type StartUpConfigList = StartUpConfig[];
+
+export type BindValues = { [name: string]: string | null };
 
 abstract class Storage {
   protected readonly globalState;
@@ -74,5 +77,13 @@ export class ConnectionStorage extends Storage {
 
   async setStartUpConfigList(startUpConfigList: StartUpConfigList) {
     await this.set(START_UP_CONFIGS_KEY, startUpConfigList);
+  }
+
+  getBindValues() {
+    return this.get<BindValues>(BIND_VALUES_KEY) || {};
+  }
+
+  async setBindValues(bindValues: BindValues) {
+    await this.set(BIND_VALUES_KEY, bindValues);
   }
 }
