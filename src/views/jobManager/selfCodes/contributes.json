@@ -42,25 +42,25 @@
         "command": "vscode-db2i.self.enableAutoRefresh",
         "title": "Enable Auto Refresh",
         "category": "Db2 for i",
-        "icon": "$(sync)"
+        "icon": "$(play-circle)"
       },
       {
         "command": "vscode-db2i.self.disableAutoRefresh",
         "title": "Disable Auto Refresh",
         "category": "Db2 for i",
-        "icon": "$(sync-ignored)"
+        "icon": "$(stop-circle)"
       },
       {
         "command": "vscode-db2i.self.enableSelectedJobOnly",
-        "title": "Show Selected Job Only",
+        "title": "Show SELF Codes and Job Log",
         "category": "Db2 for i",
-        "icon": "$(filter)"
+        "icon": "$(list-tree)"
       },
       {
         "command": "vscode-db2i.self.disableSelectedJobOnly",
-        "title": "Show errors for user (all jobs)",
+        "title": "Show SELF Codes Only",
         "category": "Db2 for i",
-        "icon": "$(account)"
+        "icon": "$(list-flat)"
       },
       {
         "command": "vscode-db2i.self.reset",
@@ -98,9 +98,21 @@
         "title": "Open SELF Documentation",
         "category": "Db2 for i",
         "icon": "$(question)"
+      },
+      {
+        "command": "vscode-db2i.self.viewOtherLogs",
+        "title": "View Other SELF Logs",
+        "category": "Db2 for i",
+        "icon": "$(globe)"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "vscode-db2i.self.viewOtherLogs",
+          "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported"
+        }
+      ],
       "view/title": [
         {
           "command": "vscode-db2i.self.refresh",
@@ -126,6 +138,11 @@
           "command": "vscode-db2i.self.disableSelectedJobOnly",
           "group": "navigation@2",
           "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.specificJob == true"
+        },
+        {
+          "command": "vscode-db2i.self.viewOtherLogs",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes"
         },
         {
           "command": "vscode-db2i.self.reset",

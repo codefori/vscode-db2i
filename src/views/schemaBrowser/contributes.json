@@ -76,8 +76,8 @@
         "category": "Db2 for i"
       },
       {
-        "command": "vscode-db2i.getMTIs",
-        "title": "Get MTIs",
+        "command": "vscode-db2i.mtiActions",
+        "title": "Work with MTIs",
         "category": "Db2 for i"
       },
       {
@@ -122,7 +122,7 @@
       },
       {
         "command": "vscode-db2i.advisedIndexes",
-        "title": "Advised Indexes",
+        "title": "Work with Advised Indexes",
         "category": "Db2 for i"
       },
       {
@@ -141,6 +141,26 @@
         "title": "Set filter",
         "category": "Db2 for i",
         "icon": "$(search)"
+      },
+      {
+        "command": "vscode-db2i.mti.createIndex",
+        "title": "Create Index...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.mti.showStatement",
+        "title": "Show Statement",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.advisedIndexes.createIndex",
+        "title": "Create Index...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.advisedIndexes.showStatement",
+        "title": "Show Statement",
+        "category": "Db2 for i"
       }
     ],
     "submenus": [
@@ -217,10 +237,6 @@
           "when": "never"
         },
         {
-          "command": "vscode-db2i.getMTIs",
-          "when": "never"
-        },
-        {
           "command": "vscode-db2i.getIndexes",
           "when": "never"
         },
@@ -253,11 +269,23 @@
           "when": "never"
         },
         {
-          "command": "vscode-db2i.advisedIndexes",
+          "command": "vscode-db2i.clearAdvisedIndexes",
           "when": "never"
         },
         {
-          "command": "vscode-db2i.clearAdvisedIndexes",
+          "command": "vscode-db2i.mti.createIndex",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.mti.showStatement",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.createIndex",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.showStatement",
           "when": "never"
         }
       ],
@@ -315,24 +343,24 @@
           "group": "db2workWith@2"
         },
         {
-          "command": "vscode-db2i.getMTIs",
+          "command": "vscode-db2i.mtiActions",
           "when": "viewItem == table || viewItem == schema",
           "group": "db2workWith@3"
         },
         {
           "command": "vscode-db2i.getAuthorities",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
-          "group": "db2workWith@4"
+          "group": "db2workWith@5"
         },
         {
           "command": "vscode-db2i.getObjectLocks",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
-          "group": "db2workWith@5"
+          "group": "db2workWith@6"
         },
         {
           "command": "vscode-db2i.getRecordLocks",
           "when": "viewItem == table",
-          "group": "db2workWith@6"
+          "group": "db2workWith@7"
         },
         {
           "command": "vscode-db2i.clearData",
@@ -363,6 +391,28 @@
           "command": "vscode-db2i.clearAdvisedIndexes",
           "when": "viewItem == table || viewItem == schema",
           "group": "db2idxAdv@2"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "vscode-db2i.mti.createIndex",
+          "when": "webviewSection == dtRow && dtAction_mtiCreateIndex",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.mti.showStatement",
+          "when": "webviewSection == dtRow && dtAction_mtiShowStatement",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.createIndex",
+          "when": "webviewSection == dtRow && dtAction_advisedCreateIndex",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.showStatement",
+          "when": "webviewSection == dtRow && dtAction_advisedShowStatement",
+          "group": "navigation@2"
         }
       ]
     },
