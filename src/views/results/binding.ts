@@ -2,6 +2,7 @@ import { TextEditor } from "vscode";
 import { getBase } from "../../base";
 import { Config } from "../../config";
 import { getSqlDocument } from "../../language/providers/logic/parse";
+import Document from "../../language/sql/document";
 import { tokenIs } from "../../language/sql/statement";
 import { ParsedEmbeddedStatement, StatementGroup } from "../../language/sql/types";
 import { SqlParameter } from "./resultSetPanelProvider";
@@ -56,8 +57,13 @@ export function getLiteralsFromStatement(group: StatementGroup): SqlParameter[] 
   return literals;
 }
 
-export function hasHostVariables(embeddedInfo?: ParsedEmbeddedStatement) {
-  return Boolean(embeddedInfo?.parameterNames.some(name => name !== undefined));
+export function hasParameters(embeddedInfo?: ParsedEmbeddedStatement) {
+  return Boolean(embeddedInfo?.parameterCount);
+}
+
+export function isFollowedByBind(document: Document, group: StatementGroup) {
+  const nextGroup = document.getStatementGroups().find(g => g.range.start >= group.range.end);
+  return nextGroup?.statements[0]?.getLabel()?.toLowerCase() === `bind`;
 }
 
 function escapeHtml(value: string) {
@@ -66,9 +72,10 @@ function escapeHtml(value: string) {
 
 export async function promptForParameterValues(statementMarkers: (string | undefined)[][]): Promise<SqlParameter[][] | undefined> {
   const remembered = Config.ready ? { ...Config.getBindValues() } : {};
+  const hasNamedMarkers = statementMarkers.some(markers => markers.some(name => name !== undefined));
 
   const ui = getBase().customUI()
-    .addParagraph(`Enter a value for each parameter, or check NULL to bind a null value. Host variable values are remembered for the next run.`);
+    .addParagraph(`Enter a value for each parameter, or check NULL to bind a null value.` + (hasNamedMarkers ? ` Host variable values are remembered for the next run.` : ``));
 
   const namedFields = new Map<string, string>();
   let fieldCount = 0;

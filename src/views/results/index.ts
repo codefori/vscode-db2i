@@ -13,7 +13,7 @@ import Statement from "../../language/sql/statement";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import { VisualExplainData } from "../../types";
 import { updateStatusBar } from "../jobManager/statusBar";
-import { getLiteralsFromStatement, getPriorBindableStatement, hasHostVariables, promptForParameterValues } from "./binding";
+import { getLiteralsFromStatement, getPriorBindableStatement, hasParameters, isFollowedByBind, promptForParameterValues } from "./binding";
 import { queryResultToRpgDs, queryResultToUdtf } from "./codegen";
 import { registerRunStatement } from "./editorUi";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
@@ -265,15 +265,15 @@ async function runMultipleHandler(mode: `all` | `selected` | `from`) {
     // Last statement should have UI
     statementInfos[statementInfos.length - 1].noUi = false;
 
-    const bindInfos = statementInfos.map(info => parseStatement(undefined, info).bindInfo);
-    if (bindInfos.some(bindInfo => hasHostVariables(bindInfo))) {
-      const values = await promptForParameterValues(bindInfos.map(bindInfo => hasHostVariables(bindInfo) ? bindInfo!.parameterNames : []));
+    const bindInfos = statementInfos.map(info => parseStatement(editor, info).bindInfo);
+    if (bindInfos.some(bindInfo => hasParameters(bindInfo))) {
+      const values = await promptForParameterValues(bindInfos.map(bindInfo => hasParameters(bindInfo) ? bindInfo!.parameterNames : []));
       if (!values) {
         return;
       }
 
       statementInfos.forEach((info, i) => {
-        if (hasHostVariables(bindInfos[i])) {
+        if (hasParameters(bindInfos[i])) {
           info.parameters = values[i];
         }
       });
@@ -330,7 +330,7 @@ async function runHandler(options?: StatementInfo) {
         editor.selection = new vscode.Selection(editor.document.positionAt(group.range.start), editor.document.positionAt(group.range.end));
         editor.revealRange(editor.selection);
 
-        if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed && !hasHostVariables(statementDetail.bindInfo)) {
+        if (group.statements.length === 1 && statementDetail.embeddedInfo && statementDetail.embeddedInfo.changed && !hasParameters(statementDetail.bindInfo)) {
           editor.insertSnippet(new SnippetString(statementDetail.embeddedInfo.content));
           return;
         }
@@ -359,7 +359,7 @@ async function runHandler(options?: StatementInfo) {
     if (statementDetail.content.trim().length > 0) {
       let parameters: SqlParameter[] = [];
       let runContent = statementDetail.content;
-      if (statementDetail.bindInfo && hasHostVariables(statementDetail.bindInfo)) {
+      if (statementDetail.bindInfo && hasParameters(statementDetail.bindInfo)) {
         const values = statementDetail.parameters || (await promptForParameterValues([statementDetail.bindInfo.parameterNames]))?.[0];
         if (!values) {
           return;
@@ -749,9 +749,13 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
     statementInfo.embeddedInfo = sqlDocument.removeEmbeddedAreas(statementInfo.statement, { replacement: `snippet` });
   }
 
-  if (statementInfo.content && ![`cl`, `bind`].includes(statementInfo.qualifier)) {
+  if (statementInfo.content && ![`cl`, `bind`].includes(statementInfo.qualifier) && Configuration.get<string>(`parameterBinding`) !== `snippet`) {
+    // When a bind statement follows, the values come from it instead
+    const groupDocument = sqlDocument || (editor ? getSqlDocument(editor.document) : undefined);
+    const followedByBind = Boolean(groupDocument && statementInfo.group && isFollowedByBind(groupDocument, statementInfo.group));
+
     const contentDocument = new Document(statementInfo.content);
-    if (contentDocument.statements.length === 1) {
+    if (!followedByBind && contentDocument.statements.length === 1) {
       statementInfo.bindInfo = contentDocument.removeEmbeddedAreas(contentDocument.statements[0]);
     }
   }
