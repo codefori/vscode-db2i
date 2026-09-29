@@ -91,15 +91,15 @@
           },
           "vscode-db2i.parameterBinding": {
             "type": "string",
-            "description": "How values are provided for host variables (:var) and parameter markers (?) when running a statement. Statements followed by a 'bind:' statement always take their values from it.",
+            "description": "How values are provided for host variables (:var) and parameter markers (?) when running an SQL statement.",
             "default": "prompt",
             "enum": [
               "prompt",
-              "snippet"
+              "edit"
             ],
             "enumDescriptions": [
-              "Open a form to enter the values, then run the statement with bound parameters",
-              "Rewrite the statement as a snippet so each parameter can be edited in place (legacy behavior)"
+              "Prompt for a value for each parameter and then run the statement with the bound values",
+              "Place the cursor at each parameter so you can rewrite the statement with its values in place"
             ]
           }
         }
