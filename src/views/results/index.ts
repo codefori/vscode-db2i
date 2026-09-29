@@ -454,8 +454,13 @@ async function runHandler(options?: StatementInfo) {
             const explainType: ExplainType = onlyExplain ? ExplainType.DO_NOT_RUN : ExplainType.RUN;
 
             setCancelButtonVisibility(true);
-            // Explain does not support parameters
-            const explainContent = parameters.length ? getContentWithValues(statementDetail.content, parameters) : statementDetail.content;
+            // The mapepire explain (dove) request has no parameters field, so values are inlined as literals
+            let explainContent = statementDetail.content;
+            if (parameters.length) {
+              const contentDocument = new Document(explainContent);
+              explainContent = contentDocument.removeEmbeddedAreas(contentDocument.statements[0], { replacement: `values`, values: parameters }).content;
+            }
+
             const explained = await selectedJob.job.explain<VisualExplainData[]>(explainContent, explainType); // Can throw
             setCancelButtonVisibility(false);
 
@@ -684,11 +689,6 @@ async function runHandler(options?: StatementInfo) {
       updateStatusBar();
     }
   }
-}
-
-function getContentWithValues(content: string, values: SqlParameter[]) {
-  const contentDocument = new Document(content);
-  return contentDocument.removeEmbeddedAreas(contentDocument.statements[0], { replacement: `values`, values }).content;
 }
 
 export function parseStatement(editor?: vscode.TextEditor, existingInfo?: StatementInfo): ParsedStatementInfo {
