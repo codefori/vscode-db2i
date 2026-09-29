@@ -4,6 +4,7 @@ import { Config } from "../../config";
 import { getSqlDocument } from "../../language/providers/logic/parse";
 import { tokenIs } from "../../language/sql/statement";
 import { ParsedEmbeddedStatement, StatementGroup } from "../../language/sql/types";
+import { escapeHTML } from "../html";
 import { SqlParameter } from "./resultSetPanelProvider";
 
 const MAX_REMEMBERED_BIND_VALUES = 100;
@@ -60,10 +61,6 @@ export function hasParameters(embeddedInfo?: ParsedEmbeddedStatement) {
   return Boolean(embeddedInfo?.parameterCount);
 }
 
-function escapeHtml(value: string) {
-  return value.replace(/&/g, `&amp;`).replace(/"/g, `&quot;`).replace(/</g, `&lt;`).replace(/>/g, `&gt;`);
-}
-
 export async function promptForParameterValues(statementMarkers: (string | undefined)[][]): Promise<SqlParameter[][] | undefined> {
   const remembered = Config.ready ? { ...Config.getBindValues() } : {};
   const hasNamedMarkers = statementMarkers.some(markers => markers.some(name => name !== undefined));
@@ -84,7 +81,7 @@ export async function promptForParameterValues(statementMarkers: (string | undef
     const id = `parm${fieldCount++}`;
     if (key) {
       namedFields.set(key, id);
-      ui.addInput(id, escapeHtml(`:${name}`), undefined, { default: escapeHtml(remembered[key] || ``) });
+      ui.addInput(id, escapeHTML(`:${name}`), undefined, { default: escapeHTML(remembered[key] || ``) });
     } else {
       ui.addInput(id, `Parameter marker ${++positionalCount}`);
     }
