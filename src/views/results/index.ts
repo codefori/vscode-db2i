@@ -41,7 +41,7 @@ export interface ParsedStatementInfo extends StatementInfo {
   statement?: Statement;
   group?: StatementGroup;
   embeddedInfo?: ParsedEmbeddedStatement;
-  bindInfo?: ParsedEmbeddedStatement;
+  bindInfo?: ParsedEmbeddedStatement & { parameterNames: (string | undefined)[] };
 }
 
 const DelimValue = new Map(Object.entries({
@@ -752,7 +752,11 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   if (statementInfo.content && ![`cl`, `bind`].includes(statementInfo.qualifier) && Configuration.get<string>(`parameterBinding`) !== `edit`) {
     const contentDocument = new Document(statementInfo.content);
     if (contentDocument.statements.length === 1) {
-      statementInfo.bindInfo = contentDocument.removeEmbeddedAreas(contentDocument.statements[0]);
+      const bindStatement = contentDocument.statements[0];
+      statementInfo.bindInfo = {
+        ...contentDocument.removeEmbeddedAreas(bindStatement),
+        parameterNames: bindStatement.getEmbeddedStatementAreas().filter(area => area.type === `marker`).map(area => area.named)
+      };
     }
   }
 

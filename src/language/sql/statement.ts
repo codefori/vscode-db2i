@@ -773,7 +773,7 @@ export default class Statement {
 								start: currentToken.range.start,
 								end: (endToken.range.end)
 							},
-							named: endToken.value
+							named: this.tokens.slice(i + 1, followingTokenI).map(token => token.value).join(``)
 						});
 
 						lastTokenWasMarker = true;
