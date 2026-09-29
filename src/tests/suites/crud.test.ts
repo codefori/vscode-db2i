@@ -144,7 +144,7 @@ test('Generated columns are left out of the SET list of an UPDATE, which assigns
     `SET`,
     `  NAME = :NAME  -- NAME - VARCHAR(20) NOT NULL`,
     `WHERE`,
-    `  C1 = :C1  -- C1 - INTEGER`,
+    `  C1 IS NOT DISTINCT FROM :C1  -- C1 - INTEGER`,
     `;`
   ].join(`\n`));
 });
@@ -155,7 +155,7 @@ test('A DELETE keeps generated columns in the WHERE clause', () => {
   expect(statement).toBe([
     `DELETE FROM RMOELLER.MYTABLE`,
     `WHERE`,
-    `  C1 = :C1  -- C1 - INTEGER`,
+    `  C1 IS NOT DISTINCT FROM :C1  -- C1 - INTEGER`,
     `;`
   ].join(`\n`));
 });
@@ -174,6 +174,26 @@ test('Without a key, an UPDATE/DELETE uses every column in the WHERE clause, joi
     `WHERE`,
     `  C1 = :C1  -- C1 - INTEGER NOT NULL`,
     `  AND C2 = :C2  -- C2 - VARCHAR(10) NOT NULL`,
+    `;`
+  ].join(`\n`));
+});
+
+test('A nullable column is matched with IS NOT DISTINCT FROM in the WHERE clause, but not in the SET list', () => {
+  const columns = [
+    column(`ID`, `INTEGER`),
+    column(`CODE`, `CHAR`, { CHARACTER_MAXIMUM_LENGTH: 3, IS_NULLABLE: `Y` }),
+    column(`NOTE`, `VARCHAR`, { CHARACTER_MAXIMUM_LENGTH: 10, IS_NULLABLE: `Y` }),
+  ];
+
+  const statement = generateCrudStatement(`UPDATE`, `RMOELLER`, `MYTABLE`, columns, [`ID`, `CODE`]);
+
+  expect(statement).toBe([
+    `UPDATE RMOELLER.MYTABLE`,
+    `SET`,
+    `  NOTE = :NOTE  -- NOTE - VARCHAR(10)`,
+    `WHERE`,
+    `  ID = :ID  -- ID - INTEGER NOT NULL`,
+    `  AND CODE IS NOT DISTINCT FROM :CODE  -- CODE - CHAR(3)`,
     `;`
   ].join(`\n`));
 });

@@ -185,10 +185,16 @@ function setList(columns: TableColumn[], usedNames: Set<string>): { lines: strin
   };
 }
 
-/** A `:name` host variable predicate per column for a WHERE clause, joined with AND */
+/**
+ * A `:name` host variable predicate per column for a WHERE clause, joined with AND. A nullable
+ * column is compared with IS NOT DISTINCT FROM, like ACS does, since `=` never matches a null.
+ */
 function wherePredicates(columns: TableColumn[], usedNames: Set<string>): { lines: string[] } {
   return {
-    lines: columns.map((column, index) => `  ${index > 0 ? `AND ` : ``}${Statement.delimName(column.COLUMN_NAME)} = :${hostVariableName(column, usedNames)}  -- ${describe(column)}`)
+    lines: columns.map((column, index) => {
+      const operator = column.IS_NULLABLE === `N` ? `=` : `IS NOT DISTINCT FROM`;
+      return `  ${index > 0 ? `AND ` : ``}${Statement.delimName(column.COLUMN_NAME)} ${operator} :${hostVariableName(column, usedNames)}  -- ${describe(column)}`;
+    })
   };
 }
 
