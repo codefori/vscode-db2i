@@ -1,13 +1,13 @@
-import { TextEditor } from "vscode";
-import { getBase } from "../../base";
+import { QuickInputButton, QuickInputButtons, TextEditor, ThemeIcon, window } from "vscode";
 import { Config } from "../../config";
 import { getSqlDocument } from "../../language/providers/logic/parse";
 import { tokenIs } from "../../language/sql/statement";
 import { ParsedEmbeddedStatement, StatementGroup } from "../../language/sql/types";
-import { escapeHTML } from "../html";
 import { SqlParameter } from "./resultSetPanelProvider";
 
 const MAX_REMEMBERED_BIND_VALUES = 100;
+const BIND_TITLE = `Bind Parameters`;
+const NULL_BUTTON: QuickInputButton = { iconPath: new ThemeIcon(`circle-slash`), tooltip: `Set to NULL` };
 
 export function getPriorBindableStatement(editor: TextEditor, offset: number): { statement: string, parameters: number } | undefined {
   const sqlDocument = getSqlDocument(editor.document);
@@ -61,15 +61,42 @@ export function hasParameters(embeddedInfo?: ParsedEmbeddedStatement) {
   return Boolean(embeddedInfo?.parameterCount);
 }
 
+function inputParameterValue(label: string, current: string | null, step: number, totalSteps: number): Promise<{ value: string | null } | `back` | undefined> {
+  return new Promise(resolve => {
+    const input = window.createInputBox();
+    input.title = BIND_TITLE;
+    input.step = step;
+    input.totalSteps = totalSteps;
+    input.prompt = `Value for ${label}`;
+    input.value = current ?? ``;
+    // An empty field keeps a NULL value
+    input.placeholder = current === null ? `NULL` : undefined;
+    input.buttons = step > 1 ? [QuickInputButtons.Back, NULL_BUTTON] : [NULL_BUTTON];
+    input.ignoreFocusOut = true;
+
+    let result: { value: string | null } | `back` | undefined;
+    input.onDidAccept(() => {
+      result = { value: current === null && input.value === `` ? null : input.value };
+      input.hide();
+    });
+    input.onDidTriggerButton(button => {
+      result = button === QuickInputButtons.Back ? `back` : { value: null };
+      input.hide();
+    });
+    // Also fires when another run opens its own prompt, which cancels this one
+    input.onDidHide(() => {
+      input.dispose();
+      resolve(result);
+    });
+    input.show();
+  });
+}
+
 export async function promptForParameterValues(statementMarkers: (string | undefined)[][]): Promise<SqlParameter[][] | undefined> {
   const remembered = Config.ready ? { ...Config.getBindValues() } : {};
-  const hasNamedMarkers = statementMarkers.some(markers => markers.some(name => name !== undefined));
 
-  const ui = getBase().customUI()
-    .addParagraph(`Enter a value for each parameter, or check NULL to bind a null value.` + (hasNamedMarkers ? ` Host variable values are remembered for the next run.` : ``));
-
-  const namedFields = new Map<string, string>();
-  let fieldCount = 0;
+  const fields: { key?: string, label: string }[] = [];
+  const namedFields = new Map<string, number>();
   let positionalCount = 0;
 
   const statementFields = statementMarkers.map(markers => markers.map(name => {
@@ -78,42 +105,34 @@ export async function promptForParameterValues(statementMarkers: (string | undef
       return namedFields.get(key)!;
     }
 
-    const id = `parm${fieldCount++}`;
     if (key) {
-      namedFields.set(key, id);
-      ui.addInput(id, escapeHTML(`:${name}`), undefined, { default: escapeHTML(remembered[key] || ``) });
-    } else {
-      ui.addInput(id, `Parameter marker ${++positionalCount}`);
+      namedFields.set(key, fields.length);
     }
-    ui.addCheckbox(`${id}_null`, `NULL`, undefined, key ? remembered[key] === null : false);
-
-    return id;
+    fields.push({ key, label: key ? `:${name}` : `parameter marker ${++positionalCount}` });
+    return fields.length - 1;
   }));
 
-  ui.addButtons(
-    { id: `run`, label: `Run` },
-    { id: `cancel`, label: `Cancel` }
-  );
+  const values = fields.map(field => field.key && remembered[field.key] !== undefined ? remembered[field.key] : ``);
 
-  const page = await ui.loadPage<{ [id: string]: string | boolean }>(`Bind parameters`);
-  if (!page || !page.data) {
-    return;
-  }
+  let i = 0;
+  while (i < fields.length) {
+    const result = await inputParameterValue(fields[i].label, values[i], i + 1, fields.length);
+    if (!result) {
+      return;
+    }
 
-  const data = page.data;
-  page.panel.dispose();
-
-  // mapepire accepts null
-  const getValue = (id: string) => (data[`${id}_null`] === true ? null : String(data[id] || ``)) as SqlParameter;
-
-  if (data.buttons === `cancel`) {
-    return;
+    if (result === `back`) {
+      i--;
+    } else {
+      values[i] = result.value;
+      i++;
+    }
   }
 
   if (Config.ready && namedFields.size > 0) {
-    for (const [key, id] of namedFields) {
+    for (const [key, index] of namedFields) {
       delete remembered[key];
-      remembered[key] = getValue(id) as string | null;
+      remembered[key] = values[index];
     }
 
     const keys = Object.keys(remembered);
@@ -122,5 +141,6 @@ export async function promptForParameterValues(statementMarkers: (string | undef
     await Config.setBindValues(remembered);
   }
 
-  return statementFields.map(ids => ids.map(getValue));
+  // mapepire accepts null
+  return statementFields.map(indexes => indexes.map(index => values[index] as SqlParameter));
 }
