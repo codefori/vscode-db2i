@@ -27,8 +27,8 @@ export default class Statement {
       const validQsysName = new RegExp(`^[A-Z0-9${variant_chars_local}][A-Z0-9_${variant_chars_local}.]{0,9}$`);
       return validQsysName.test(name);
     } else {
-      // Fall back with standard variants
-      return name.match(`[^A-Z0-9_@#$]`);
+      // Fall back with standard variants. Valid when nothing outside that set is present.
+      return !name.match(`[^A-Z0-9_@#$]`);
     }
   }
 
@@ -42,16 +42,17 @@ export default class Statement {
     if (fromUser) { // The name was input by the user
       // If already delimited, return it as-is
       if (name.startsWith(`"`) && name.endsWith(`"`)) return name;
-      // If the value contains a space or decimal it needs to be delimited
-      if (name.includes(` `) || name.includes(`.`) || name.includes(`'`)) return `"${name}"`;
+      // If the value contains a space, decimal, apostrophe or double quote it needs to be delimited
+      if (name.includes(` `) || name.includes(`.`) || name.includes(`'`) || name.includes(`"`)) return `"${name.replace(/"/g, `""`)}"`;
       // Otherwise, fold to uppercase.  The user should have explicitly delimited if that was their intention.
       return name.toUpperCase();
     } else { // The name came from a catalog file query
       // If the name contains characters other than the valid variants, uppercase, digits, or underscores, it must be delimited
       if (Statement.validQsysName(name)) return name;
       else {
-        if (name.includes(` `) || name.includes(`.`) || name.includes(`'`) || name !== name.toUpperCase()) {
-          return `"${name}"`;
+        if (name.includes(` `) || name.includes(`.`) || name.includes(`'`) || name.includes(`"`) || name !== name.toUpperCase()) {
+          // Embedded double quotes must be escaped by doubling them, per the delimited identifier syntax
+          return `"${name.replace(/"/g, `""`)}"`;
         } else {
           return name;
         }
