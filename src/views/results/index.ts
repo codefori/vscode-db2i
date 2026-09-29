@@ -13,7 +13,7 @@ import Statement from "../../language/sql/statement";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import { VisualExplainData } from "../../types";
 import { updateStatusBar } from "../jobManager/statusBar";
-import { getLiteralsFromStatement, getPriorBindableStatement, hasParameters, isFollowedByBind, promptForParameterValues } from "./binding";
+import { getLiteralsFromStatement, getPriorBindableStatement, hasParameters, promptForParameterValues } from "./binding";
 import { queryResultToRpgDs, queryResultToUdtf } from "./codegen";
 import { registerRunStatement } from "./editorUi";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
@@ -750,12 +750,8 @@ export function parseStatement(editor?: vscode.TextEditor, existingInfo?: Statem
   }
 
   if (statementInfo.content && ![`cl`, `bind`].includes(statementInfo.qualifier) && Configuration.get<string>(`parameterBinding`) !== `snippet`) {
-    // When a bind statement follows, the values come from it instead
-    const groupDocument = sqlDocument || (editor ? getSqlDocument(editor.document) : undefined);
-    const followedByBind = Boolean(groupDocument && statementInfo.group && isFollowedByBind(groupDocument, statementInfo.group));
-
     const contentDocument = new Document(statementInfo.content);
-    if (!followedByBind && contentDocument.statements.length === 1) {
+    if (contentDocument.statements.length === 1) {
       statementInfo.bindInfo = contentDocument.removeEmbeddedAreas(contentDocument.statements[0]);
     }
   }

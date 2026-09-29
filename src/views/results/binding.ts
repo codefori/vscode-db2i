@@ -2,7 +2,6 @@ import { TextEditor } from "vscode";
 import { getBase } from "../../base";
 import { Config } from "../../config";
 import { getSqlDocument } from "../../language/providers/logic/parse";
-import Document from "../../language/sql/document";
 import { tokenIs } from "../../language/sql/statement";
 import { ParsedEmbeddedStatement, StatementGroup } from "../../language/sql/types";
 import { SqlParameter } from "./resultSetPanelProvider";
@@ -59,11 +58,6 @@ export function getLiteralsFromStatement(group: StatementGroup): SqlParameter[] 
 
 export function hasParameters(embeddedInfo?: ParsedEmbeddedStatement) {
   return Boolean(embeddedInfo?.parameterCount);
-}
-
-export function isFollowedByBind(document: Document, group: StatementGroup) {
-  const nextGroup = document.getStatementGroups().find(g => g.range.start >= group.range.end);
-  return nextGroup?.statements[0]?.getLabel()?.toLowerCase() === `bind`;
 }
 
 function escapeHtml(value: string) {
