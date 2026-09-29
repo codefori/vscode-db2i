@@ -48,6 +48,19 @@
             "type": "boolean",
             "description": "Wrap the SQL list in parentheses when using 'Copy as SQL List' (instant copy)",
             "default": false
+          },
+          "vscode-db2i.parameterBinding": {
+            "type": "string",
+            "description": "How values are provided for host variables (:var) and parameter markers (?) when running an SQL statement.",
+            "default": "prompt",
+            "enum": [
+              "prompt",
+              "edit"
+            ],
+            "enumDescriptions": [
+              "Prompt for a value for each parameter and then run the statement with the bound values",
+              "Place the cursor at each parameter so you can rewrite the statement with its values in place"
+            ]
           }
         }
       },
