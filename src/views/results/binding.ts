@@ -1,4 +1,4 @@
-import { QuickInputButton, QuickInputButtons, TextEditor, ThemeIcon, window } from "vscode";
+import { QuickInputButton, QuickInputButtons, QuickPickItem, QuickPickItemKind, TextEditor, ThemeIcon, window } from "vscode";
 import { Config } from "../../config";
 import { getSqlDocument } from "../../language/providers/logic/parse";
 import { tokenIs } from "../../language/sql/statement";
@@ -8,6 +8,8 @@ import { SqlParameter } from "./resultSetPanelProvider";
 const MAX_REMEMBERED_BIND_VALUES = 100;
 const BIND_TITLE = `Bind Parameters`;
 const NULL_BUTTON: QuickInputButton = { iconPath: new ThemeIcon(`circle-slash`), tooltip: `Set to NULL` };
+
+let promptId = 0;
 
 export function getPriorBindableStatement(editor: TextEditor, offset: number): { statement: string, parameters: number } | undefined {
   const sqlDocument = getSqlDocument(editor.document);
@@ -61,7 +63,7 @@ export function hasParameters(embeddedInfo?: ParsedEmbeddedStatement) {
   return Boolean(embeddedInfo?.parameterCount);
 }
 
-function inputParameterValue(label: string, current: string | null, step: number, totalSteps: number): Promise<{ value: string | null } | `back` | undefined> {
+function inputParameterValue(label: string, current: string | null, step?: number, totalSteps?: number): Promise<{ value: string | null } | `back` | undefined> {
   return new Promise(resolve => {
     const input = window.createInputBox();
     input.title = BIND_TITLE;
@@ -71,7 +73,7 @@ function inputParameterValue(label: string, current: string | null, step: number
     input.value = current ?? ``;
     // An empty field keeps a NULL value
     input.placeholder = current === null ? `NULL` : undefined;
-    input.buttons = step > 1 ? [QuickInputButtons.Back, NULL_BUTTON] : [NULL_BUTTON];
+    input.buttons = step && step > 1 ? [QuickInputButtons.Back, NULL_BUTTON] : [NULL_BUTTON];
     input.ignoreFocusOut = true;
 
     let result: { value: string | null } | `back` | undefined;
@@ -92,6 +94,35 @@ function inputParameterValue(label: string, current: string | null, step: number
   });
 }
 
+function pickParameter(labels: string[], values: (string | null)[]): Promise<number | `run` | undefined> {
+  return new Promise(resolve => {
+    const pick = window.createQuickPick<QuickPickItem & { index?: number }>();
+    pick.title = BIND_TITLE;
+    pick.placeholder = `Press Enter to run, or select a parameter to change its value`;
+    pick.matchOnDescription = true;
+    pick.ignoreFocusOut = true;
+    pick.items = [
+      { label: `$(play) Run` },
+      { label: `Parameters`, kind: QuickPickItemKind.Separator },
+      ...labels.map((label, index) => ({ label, description: values[index] === null ? `NULL` : values[index] || `(empty)`, index }))
+    ];
+
+    let choice: number | `run` | undefined;
+    pick.onDidAccept(() => {
+      const item = pick.selectedItems[0];
+      if (item) {
+        choice = item.index ?? `run`;
+        pick.hide();
+      }
+    });
+    pick.onDidHide(() => {
+      pick.dispose();
+      resolve(choice);
+    });
+    pick.show();
+  });
+}
+
 export async function promptForParameterValues(statementMarkers: (string | undefined)[][]): Promise<SqlParameter[][] | undefined> {
   const remembered = Config.ready ? { ...Config.getBindValues() } : {};
 
@@ -108,24 +139,48 @@ export async function promptForParameterValues(statementMarkers: (string | undef
     if (key) {
       namedFields.set(key, fields.length);
     }
-    fields.push({ key, label: key ? `:${name}` : `parameter marker ${++positionalCount}` });
+    fields.push({ key, label: name ?? `parameter marker ${++positionalCount}` });
     return fields.length - 1;
   }));
 
   const values = fields.map(field => field.key && remembered[field.key] !== undefined ? remembered[field.key] : ``);
+  const allStored = fields.length > 0 && fields.every(field => field.key && remembered[field.key] !== undefined);
+  const id = ++promptId;
 
-  let i = 0;
-  while (i < fields.length) {
-    const result = await inputParameterValue(fields[i].label, values[i], i + 1, fields.length);
-    if (!result) {
-      return;
+  if (allStored) {
+    const labels = fields.map(field => field.label);
+    let choice = await pickParameter(labels, values);
+    while (choice !== `run`) {
+      if (choice === undefined) {
+        return;
+      }
+
+      const result = await inputParameterValue(labels[choice], values[choice]);
+      // A newer run replaced this prompt
+      if (id !== promptId) {
+        return;
+      }
+
+      if (result && result !== `back`) {
+        values[choice] = result.value;
+      }
+      choice = await pickParameter(labels, values);
     }
 
-    if (result === `back`) {
-      i--;
-    } else {
-      values[i] = result.value;
-      i++;
+  } else {
+    let i = 0;
+    while (i < fields.length) {
+      const result = await inputParameterValue(fields[i].label, values[i], i + 1, fields.length);
+      if (!result) {
+        return;
+      }
+
+      if (result === `back`) {
+        i--;
+      } else {
+        values[i] = result.value;
+        i++;
+      }
     }
   }
 
