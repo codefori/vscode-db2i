@@ -644,8 +644,8 @@
         "category": "Db2 for i"
       },
       {
-        "command": "vscode-db2i.getMTIs",
-        "title": "Get MTIs",
+        "command": "vscode-db2i.mtiActions",
+        "title": "Work with MTIs",
         "category": "Db2 for i"
       },
       {
@@ -690,7 +690,7 @@
       },
       {
         "command": "vscode-db2i.advisedIndexes",
-        "title": "Advised Indexes",
+        "title": "Work with Advised Indexes",
         "category": "Db2 for i"
       },
       {
@@ -709,6 +709,31 @@
         "title": "Set filter",
         "category": "Db2 for i",
         "icon": "$(search)"
+      },
+      {
+        "command": "vscode-db2i.mti.createIndex",
+        "title": "Create Index...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.mti.showStatement",
+        "title": "Show Statement",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.advisedIndexes.createIndex",
+        "title": "Create Index...",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.advisedIndexes.showStatement",
+        "title": "Show Statement",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.advisedIndexes.remove",
+        "title": "Remove from Index Advisor...",
+        "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.runEditorStatement",
@@ -764,28 +789,36 @@
       {
         "command": "vscode-db2i.resultset.retrieveMoreRows",
         "title": "Retrieve More Rows",
-        "category": "Db2 for i",
-        "enablement": "vscode-db2i:canRetrieveMoreRows"
+        "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.resultset.retrieveAllRows",
         "title": "Retrieve All Rows",
-        "category": "Db2 for i",
-        "enablement": "vscode-db2i:canRetrieveMoreRows"
+        "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.resultset.refresh",
         "title": "Refresh",
         "category": "Db2 for i",
-        "icon": "$(refresh)",
-        "enablement": "vscode-db2i:canRefresh"
+        "icon": "$(refresh)"
       },
       {
         "command": "vscode-db2i.resultset.clear",
         "title": "Clear Results",
         "category": "Db2 for i",
-        "icon": "$(clear-all)",
-        "enablement": "vscode-db2i:canClear"
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "vscode-db2i.resultset.copySql",
+        "title": "Copy SQL",
+        "category": "Db2 for i",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "vscode-db2i.resultset.moveToEditor",
+        "title": "Move into Editor Area",
+        "category": "Db2 for i",
+        "icon": "$(link-external)"
       },
       {
         "command": "vscode-db2i.dove.close",
@@ -991,25 +1024,25 @@
         "command": "vscode-db2i.self.enableAutoRefresh",
         "title": "Enable Auto Refresh",
         "category": "Db2 for i",
-        "icon": "$(sync)"
+        "icon": "$(play-circle)"
       },
       {
         "command": "vscode-db2i.self.disableAutoRefresh",
         "title": "Disable Auto Refresh",
         "category": "Db2 for i",
-        "icon": "$(sync-ignored)"
+        "icon": "$(stop-circle)"
       },
       {
         "command": "vscode-db2i.self.enableSelectedJobOnly",
-        "title": "Show Selected Job Only",
+        "title": "Show SELF Codes and Job Log",
         "category": "Db2 for i",
-        "icon": "$(filter)"
+        "icon": "$(list-tree)"
       },
       {
         "command": "vscode-db2i.self.disableSelectedJobOnly",
-        "title": "Show errors for user (all jobs)",
+        "title": "Show SELF Codes Only",
         "category": "Db2 for i",
-        "icon": "$(account)"
+        "icon": "$(list-flat)"
       },
       {
         "command": "vscode-db2i.self.reset",
@@ -1047,6 +1080,12 @@
         "title": "Open SELF Documentation",
         "category": "Db2 for i",
         "icon": "$(question)"
+      },
+      {
+        "command": "vscode-db2i.self.viewOtherLogs",
+        "title": "View Other SELF Logs",
+        "category": "Db2 for i",
+        "icon": "$(globe)"
       },
       {
         "command": "vscode-db2i.examples.setFilter",
@@ -1166,10 +1205,6 @@
           "when": "never"
         },
         {
-          "command": "vscode-db2i.getMTIs",
-          "when": "never"
-        },
-        {
           "command": "vscode-db2i.getIndexes",
           "when": "never"
         },
@@ -1202,15 +1237,35 @@
           "when": "never"
         },
         {
-          "command": "vscode-db2i.advisedIndexes",
-          "when": "never"
-        },
-        {
           "command": "vscode-db2i.clearAdvisedIndexes",
           "when": "never"
         },
         {
+          "command": "vscode-db2i.mti.createIndex",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.mti.showStatement",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.createIndex",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.showStatement",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.remove",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.resultset.settings",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.moveToEditor",
           "when": "never"
         },
         {
@@ -1300,6 +1355,10 @@
         {
           "command": "vscode-db2i.jobManager.deleteConfig",
           "when": "never"
+        },
+        {
+          "command": "vscode-db2i.self.viewOtherLogs",
+          "when": "code-for-ibmi:connected && vscode-db2i:SELFSupported"
         },
         {
           "command": "vscode-db2i.examples.edit",
@@ -1395,6 +1454,16 @@
         {
           "command": "vscode-db2i.resultset.clear",
           "group": "navigation@03",
+          "when": "view == vscode-db2i.resultset"
+        },
+        {
+          "command": "vscode-db2i.resultset.copySql",
+          "group": "navigation@04",
+          "when": "view == vscode-db2i.resultset"
+        },
+        {
+          "command": "vscode-db2i.resultset.moveToEditor",
+          "group": "navigation@05",
           "when": "view == vscode-db2i.resultset"
         },
         {
@@ -1503,6 +1572,11 @@
           "when": "view == vscode-db2i.self.nodes && vscode-db2i.self.specificJob == true"
         },
         {
+          "command": "vscode-db2i.self.viewOtherLogs",
+          "group": "navigation@2",
+          "when": "view == vscode-db2i.self.nodes"
+        },
+        {
           "command": "vscode-db2i.self.reset",
           "group": "navigation@3",
           "when": "view == vscode-db2i.self.nodes && vscode-db2i:jobManager.hasJob"
@@ -1575,24 +1649,24 @@
           "group": "db2workWith@2"
         },
         {
-          "command": "vscode-db2i.getMTIs",
+          "command": "vscode-db2i.mtiActions",
           "when": "viewItem == table || viewItem == schema",
           "group": "db2workWith@3"
         },
         {
           "command": "vscode-db2i.getAuthorities",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == receiver || viewItem == journal || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
-          "group": "db2workWith@4"
+          "group": "db2workWith@5"
         },
         {
           "command": "vscode-db2i.getObjectLocks",
           "when": "viewItem == table || viewItem == view || viewItem == alias || viewItem == function || viewItem == variable || viewItem == index || viewItem == procedure || viewItem == sequence || viewItem == package || viewItem == trigger || viewItem == type || viewItem == logical",
-          "group": "db2workWith@5"
+          "group": "db2workWith@6"
         },
         {
           "command": "vscode-db2i.getRecordLocks",
           "when": "viewItem == table",
-          "group": "db2workWith@6"
+          "group": "db2workWith@7"
         },
         {
           "command": "vscode-db2i.clearData",
@@ -1729,6 +1803,33 @@
           "group": "0_open"
         }
       ],
+      "webview/context": [
+        {
+          "command": "vscode-db2i.mti.createIndex",
+          "when": "webviewSection == dtRow && dtAction_mtiCreateIndex",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.mti.showStatement",
+          "when": "webviewSection == dtRow && dtAction_mtiShowStatement",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.createIndex",
+          "when": "webviewSection == dtRow && dtAction_advisedCreateIndex",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.showStatement",
+          "when": "webviewSection == dtRow && dtAction_advisedShowStatement",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.remove",
+          "when": "webviewSection == dtRow && dtAction_advisedRemove",
+          "group": "9_destructive@1"
+        }
+      ],
       "editor/title": [
         {
           "when": "editorLangId == sql && code-for-ibmi:connected == true && vscode-db2i:statementCanCancel != true",
@@ -1739,6 +1840,26 @@
           "command": "vscode-db2i.statement.cancel",
           "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
           "group": "navigation@1"
+        },
+        {
+          "submenu": "vscode-db2i.resultset.retrieve",
+          "group": "navigation@01",
+          "when": "activeWebviewPanelId == sqlResultSet"
+        },
+        {
+          "command": "vscode-db2i.resultset.refresh",
+          "group": "navigation@02",
+          "when": "activeWebviewPanelId == sqlResultSet"
+        },
+        {
+          "command": "vscode-db2i.resultset.clear",
+          "group": "navigation@03",
+          "when": "activeWebviewPanelId == sqlResultSet"
+        },
+        {
+          "command": "vscode-db2i.resultset.copySql",
+          "group": "navigation@04",
+          "when": "activeWebviewPanelId == sqlResultSet"
         },
         {
           "command": "vscode-db2i.syntax.checkDocument",
@@ -2082,6 +2203,7 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
+    "@vscode-elements/elements": "^2.5.1",
     "chart.js": "^4.4.2",
     "csv": "^6.1.3",
     "json-to-markdown-table": "^1.0.0",

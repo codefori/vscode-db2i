@@ -21,7 +21,8 @@ import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ExplainTree } from "./explain/nodes";
-import { ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
+import { DataTableHandlers, DataTableOptions } from "../html/dataTable";
+import { DataTableExtras, ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 
 export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "md" | "cl" | "sql" | "rpg" | "udtf";
 
@@ -68,6 +69,56 @@ const ALLOWED_PREFIXES_FOR_HISTORY: StatementQualifier[] =
 const ALLOWED_PREFIXES_EXCLUDE_QUALIFIER_FOR_HISTORY: StatementQualifier[] =
   [`statement`, `explain`];
 
+/** The active result set editor tab, target of its editor/title actions */
+let activePanelProvider: ResultSetPanelProvider | undefined;
+
+/**
+ * The result set actions are shared by the Results view and the result set editor tabs.
+ * An editor tab's toolbar passes the resource of its editor, the view's toolbar passes nothing.
+ */
+function resultSetTarget(resource?: vscode.Uri): ResultSetPanelProvider | undefined {
+  const fromEditorTab = resource instanceof vscode.Uri && resource.scheme === `webview-panel`;
+  return fromEditorTab ? activePanelProvider : resultSetProvider;
+}
+
+/**
+ * Show a data table listing (MTIs, locks, …) in the Results view, in place of whatever
+ * result set is there. The user can move it into an editor tab from the view's toolbar.
+ */
+export function showDataTable<T>(options: DataTableOptions<T>, handlers?: DataTableHandlers<T>, extras?: DataTableExtras<T>): Promise<void> {
+  return resultSetProvider.showDataTable(options, handlers, extras);
+}
+
+/** Loading placeholder in the Results view while a data table listing is fetched */
+export function showDataTableLoading(text: string): Promise<void> {
+  return resultSetProvider.showDataTableLoading(text);
+}
+
+export function showDataTableError(error: string): void {
+  resultSetProvider.setError(error);
+}
+
+export function openResultSetPanel(title: string, column: ViewColumn = ViewColumn.Active): ResultSetPanelProvider {
+  const panel = window.createWebviewPanel(`sqlResultSet`, title, column, { retainContextWhenHidden: true, enableScripts: true, enableFindWidget: true });
+  const provider = new ResultSetPanelProvider(`panel`);
+  provider.resolveWebviewView(panel);
+
+  const trackActive = () => {
+    if (panel.active) {
+      activePanelProvider = provider;
+    } else if (activePanelProvider === provider) {
+      activePanelProvider = undefined;
+    }
+  };
+  trackActive();
+  panel.onDidChangeViewState(trackActive);
+  panel.onDidDispose(() => {
+    if (activePanelProvider === provider) activePanelProvider = undefined;
+  });
+
+  return provider;
+}
+
 export function initialise(context: vscode.ExtensionContext) {
   setCancelButtonVisibility(false);
 
@@ -104,13 +155,17 @@ export function initialise(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.resultsets');
     }),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveMoreRows`, () => resultSetProvider.retrieveMoreRows()),
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveMoreRows`, (resource?: vscode.Uri) => resultSetTarget(resource)?.retrieveMoreRows()),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveAllRows`, () => resultSetProvider.retrieveMoreRows(true)),
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveAllRows`, (resource?: vscode.Uri) => resultSetTarget(resource)?.retrieveMoreRows(true)),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.refresh`, async () => await resultSetProvider.refresh()),
+    vscode.commands.registerCommand(`vscode-db2i.resultset.refresh`, async (resource?: vscode.Uri) => await resultSetTarget(resource)?.refresh()),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, () => resultSetProvider.clear()),
+    vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, (resource?: vscode.Uri) => resultSetTarget(resource)?.clear()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.copySql`, (resource?: vscode.Uri) => resultSetTarget(resource)?.copySql()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.moveToEditor`, () => resultSetProvider.moveToEditor()),
 
     vscode.workspace.onDidChangeConfiguration(e => {
       // If the result set column headings setting has changed, update the header of the current result set
@@ -295,8 +350,6 @@ async function runHandler(options?: StatementInfo) {
     await resultSetProvider.ensureActivation();
   }
 
-  resultSetProvider.resetContext();
-
   // Options here can be a vscode.Uri when called from editor context.
   // But that isn't valid here.
   const optionsIsValid = (options?.content !== undefined);
@@ -308,9 +361,7 @@ async function runHandler(options?: StatementInfo) {
     let chosenView = resultSetProvider;
 
     const useWindow = (title: string, column?: ViewColumn) => {
-      const webview = window.createWebviewPanel(`sqlResultSet`, title, column || ViewColumn.Two, { retainContextWhenHidden: true, enableScripts: true, enableFindWidget: true });
-      chosenView = new ResultSetPanelProvider();
-      chosenView.resolveWebviewView(webview);
+      chosenView = openResultSetPanel(title, column || ViewColumn.Two);
     }
 
     const statementDetail = parseStatement(editor, optionsIsValid ? options : undefined);
@@ -391,6 +442,7 @@ async function runHandler(options?: StatementInfo) {
             chosenView.setScrolling({
               basicSelect: statementDetail.content,
               isCL: true,
+              title: `CL results`,
             }); // Never errors
           }
 
@@ -440,7 +492,8 @@ async function runHandler(options?: StatementInfo) {
               withCancel: inWindow,
               ref: updatableTable,
               parameters,
-              uiId
+              uiId,
+              title: possibleTitle,
             })
           }
 
@@ -470,6 +523,7 @@ async function runHandler(options?: StatementInfo) {
               chosenView.setScrolling({ // Never errors
                 basicSelect: explainContent,
                 queryId: explained.id,
+                title: possibleTitle,
               })
             }
 
