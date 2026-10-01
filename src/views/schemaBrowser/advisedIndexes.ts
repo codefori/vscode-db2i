@@ -3,6 +3,7 @@ import { JobManager } from "../../config";
 import Statement from "../../database/statement";
 import { DataTableColumn, DataTableHandlers, DataTableOptions } from "../html/dataTable";
 import { showDataTable, showDataTableError, showDataTableLoading } from "../results";
+import { coversAdvice, hasSameKeys, RawAdvice } from "./adviceCoverage";
 import { createIndex, formatTimestamp, IndexCreation, IndexTarget, listFooter, LoadStats, prettyColumnTitle, qualifiedTable, showCreateIndexStatement } from "./indexCreation";
 import { getAdvisedIndexesStatement } from "./statements";
 
@@ -17,20 +18,29 @@ interface AdvisedIndex {
   NLSS_TABLE_NAME?: string;
 }
 
+type AdviceKind = Pick<AdvisedIndex, `INDEX_TYPE` | `NLSS_TABLE_SCHEMA` | `NLSS_TABLE_NAME`>;
+
+/** A row from `QSYS2.SYSIXADV`, which the condensed advice of `qsys2.condidxa` is built from */
+type RawAdvisedIndex = RawAdvice & AdviceKind & { PARTITION_NAME?: string | null };
+
+/** Together with its table, the columns that tell one Index Advisor entry from the others */
+const ENTRY_COLUMNS = [`PARTITION_NAME`, `INDEX_TYPE`, `NLSS_TABLE_SCHEMA`, `NLSS_TABLE_NAME`, `KEY_COLUMNS_ADVISED`, `LEADING_COLUMN_KEYS`] as const;
+
 export const ADVISED_INDEX_ACTIONS = {
   createIndex: `advisedCreateIndex`,
   showStatement: `advisedShowStatement`,
+  remove: `advisedRemove`,
 };
 
 function indexTarget(advice: AdvisedIndex): IndexTarget {
   return { schema: advice.TABLE_SCHEMA, table: advice.TABLE_NAME };
 }
 
-function isEncodedVector(advice: AdvisedIndex): boolean {
+function isEncodedVector(advice: AdviceKind): boolean {
   return advice.INDEX_TYPE?.trim().toUpperCase().startsWith(`E`) === true;
 }
 
-function sortSequence(advice: AdvisedIndex): string | undefined {
+function sortSequence(advice: AdviceKind): string | undefined {
   const table = advice.NLSS_TABLE_NAME?.trim();
   if (!table || table === `*HEX` || table === `*N`) return undefined;
 
@@ -54,27 +64,86 @@ export function buildCreateIndexStatement(advice: AdvisedIndex, indexName: strin
   ].join(`\n`);
 }
 
-/** Removes the advice from the Index Advisor once its index exists, like ACS */
-function removeAdviceStatement(advice: AdvisedIndex): string {
+function sameKind(a: AdviceKind, b: AdviceKind): boolean {
+  return isEncodedVector(a) === isEncodedVector(b) && sortSequence(a) === sortSequence(b);
+}
+
+/**
+ * The raw advice a condensed one stands for. Advice for only the first of its keys is left
+ * out when one of the `others` stands for it too.
+ */
+async function rawAdviceFor(advice: AdvisedIndex, others: AdvisedIndex[] = []): Promise<RawAdvisedIndex[]> {
+  const raw = await JobManager.runSQL<RawAdvisedIndex>(
+    `select ${ENTRY_COLUMNS.join(`, `)} from QSYS2.SYSIXADV where TABLE_SCHEMA = ? and TABLE_NAME = ?`,
+    { parameters: [advice.TABLE_SCHEMA, advice.TABLE_NAME] }
+  );
+  const rivals = others.filter(other => other.TABLE_SCHEMA === advice.TABLE_SCHEMA && other.TABLE_NAME === advice.TABLE_NAME && sameKind(other, advice));
+
+  return raw.filter(row => sameKind(row, advice)
+    && coversAdvice(advice.KEY_COLUMNS_ADVISED, row)
+    && (hasSameKeys(advice.KEY_COLUMNS_ADVISED, row) || !rivals.some(rival => coversAdvice(rival.KEY_COLUMNS_ADVISED, row))));
+}
+
+/** Removes the advice from the Index Advisor, on request or once its index exists, like ACS */
+function removeAdviceStatement(advice: AdvisedIndex, raw: RawAdvisedIndex[]): string {
   const literal = (value: string) => `'${Statement.escapeString(value)}'`;
+  // A column the row was not read with is left out, as opposed to one that is null
+  const rows = raw.map(row => ENTRY_COLUMNS
+    .filter(column => row[column] !== undefined)
+    .map(column => row[column] === null ? `${column} IS NULL` : `${column} = ${literal(String(row[column]))}`)
+    .join(` AND `));
   const conditions = [
     `TABLE_SCHEMA = ${literal(advice.TABLE_SCHEMA)}`,
     `TABLE_NAME = ${literal(advice.TABLE_NAME)}`,
-    `KEY_COLUMNS_ADVISED = ${literal(advice.KEY_COLUMNS_ADVISED)}`,
-    ...(advice.INDEX_TYPE ? [`INDEX_TYPE = ${literal(advice.INDEX_TYPE)}`] : []),
+    `(${[...new Set(rows)].map(row => `(${row})`).join(` OR `)})`,
   ];
 
   return `DELETE FROM QSYS2.SYSIXADV WHERE ${conditions.join(` AND `)}`;
 }
 
-function indexCreation(advice: AdvisedIndex): IndexCreation {
+const REMOVE = `Remove`;
+
+/** @returns whether the advice was removed */
+async function removeAdvice(advice: AdvisedIndex, others: AdvisedIndex[]): Promise<boolean> {
+  const choice = await vscode.window.showWarningMessage(
+    `Remove this advised index over ${qualifiedTable(indexTarget(advice))} from the Index Advisor?`,
+    { modal: true, detail: `Key columns: ${advice.KEY_COLUMNS_ADVISED.trim()}\n\nNo index is created. The advice comes back if this index is advised again.` },
+    REMOVE
+  );
+
+  if (choice !== REMOVE) return false;
+
+  try {
+    const raw = await rawAdviceFor(advice, others);
+    if (raw.length === 0) {
+      vscode.window.showWarningMessage(`No Index Advisor entries were found for this advice, so nothing was removed. Refresh the list to see its current content.`);
+      return false;
+    }
+
+    await JobManager.runSQL(removeAdviceStatement(advice, raw));
+  } catch (e: any) {
+    vscode.window.showErrorMessage(e.message);
+    return false;
+  }
+
+  return true;
+}
+
+async function indexCreation(advice: AdvisedIndex): Promise<IndexCreation> {
+  let raw: RawAdvisedIndex[] = [];
+  try {
+    raw = await rawAdviceFor(advice);
+  } catch (e) {
+    // Falls back to the advice with these exact keys
+  }
+
   return {
     target: indexTarget(advice),
     nameTag: `IDX`,
     buildStatement: indexName => buildCreateIndexStatement(advice, indexName),
     warning: sortSequenceWarning(advice),
     afterCreate: {
-      statement: removeAdviceStatement(advice),
+      statement: removeAdviceStatement(advice, raw.length > 0 ? raw : [advice]),
       description: `Once the index is created, this advice is removed from the Index Advisor.`,
     },
   };
@@ -156,18 +225,23 @@ function openAdvisedIndexesWebview(target: string, advised: AdvisedIndex[], sql:
     actions: [
       { id: ADVISED_INDEX_ACTIONS.createIndex },
       { id: ADVISED_INDEX_ACTIONS.showStatement },
+      { id: ADVISED_INDEX_ACTIONS.remove, destructive: true },
     ],
   };
 
   const handlers: DataTableHandlers<AdvisedIndex> = {
     onAction: async (actionId, advice, table) => {
       if (actionId === ADVISED_INDEX_ACTIONS.createIndex) {
-        if (await createIndex(indexCreation(advice))) {
+        if (await createIndex(await indexCreation(advice))) {
           table.removeRow();
           onIndexCreated?.();
         }
       } else if (actionId === ADVISED_INDEX_ACTIONS.showStatement) {
-        await showCreateIndexStatement(indexCreation(advice));
+        await showCreateIndexStatement(await indexCreation(advice));
+      } else if (actionId === ADVISED_INDEX_ACTIONS.remove) {
+        if (await removeAdvice(advice, options.rows.filter(row => row !== advice))) {
+          table.removeRow();
+        }
       }
     },
   };

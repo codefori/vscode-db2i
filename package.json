@@ -698,6 +698,11 @@
         "category": "Db2 for i"
       },
       {
+        "command": "vscode-db2i.advisedIndexes.remove",
+        "title": "Remove from Index Advisor...",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.runEditorStatement",
         "title": "Run statement",
         "category": "Db2 for i",
@@ -781,34 +786,6 @@
         "title": "Move into Editor Area",
         "category": "Db2 for i",
         "icon": "$(link-external)"
-      },
-      {
-        "command": "vscode-db2i.resultset.panel.retrieveMoreRows",
-        "title": "Retrieve More Rows",
-        "category": "Db2 for i"
-      },
-      {
-        "command": "vscode-db2i.resultset.panel.retrieveAllRows",
-        "title": "Retrieve All Rows",
-        "category": "Db2 for i"
-      },
-      {
-        "command": "vscode-db2i.resultset.panel.refresh",
-        "title": "Refresh",
-        "category": "Db2 for i",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "vscode-db2i.resultset.panel.clear",
-        "title": "Clear Results",
-        "category": "Db2 for i",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "vscode-db2i.resultset.panel.copySql",
-        "title": "Copy SQL",
-        "category": "Db2 for i",
-        "icon": "$(copy)"
       },
       {
         "command": "vscode-db2i.dove.close",
@@ -1223,31 +1200,15 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.advisedIndexes.remove",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.resultset.settings",
           "when": "never"
         },
         {
           "command": "vscode-db2i.resultset.moveToEditor",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.retrieveMoreRows",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.retrieveAllRows",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.refresh",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.clear",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.copySql",
           "when": "never"
         },
         {
@@ -1772,6 +1733,11 @@
           "command": "vscode-db2i.advisedIndexes.showStatement",
           "when": "webviewSection == dtRow && dtAction_advisedShowStatement",
           "group": "navigation@2"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.remove",
+          "when": "webviewSection == dtRow && dtAction_advisedRemove",
+          "group": "9_destructive@1"
         }
       ],
       "editor/title": [
@@ -1786,22 +1752,22 @@
           "group": "navigation@1"
         },
         {
-          "submenu": "vscode-db2i.resultset.panel.retrieve",
+          "submenu": "vscode-db2i.resultset.retrieve",
           "group": "navigation@01",
           "when": "activeWebviewPanelId == sqlResultSet"
         },
         {
-          "command": "vscode-db2i.resultset.panel.refresh",
+          "command": "vscode-db2i.resultset.refresh",
           "group": "navigation@02",
           "when": "activeWebviewPanelId == sqlResultSet"
         },
         {
-          "command": "vscode-db2i.resultset.panel.clear",
+          "command": "vscode-db2i.resultset.clear",
           "group": "navigation@03",
           "when": "activeWebviewPanelId == sqlResultSet"
         },
         {
-          "command": "vscode-db2i.resultset.panel.copySql",
+          "command": "vscode-db2i.resultset.copySql",
           "group": "navigation@04",
           "when": "activeWebviewPanelId == sqlResultSet"
         },
@@ -1863,16 +1829,6 @@
           "group": "navigation@1"
         }
       ],
-      "vscode-db2i.resultset.panel.retrieve": [
-        {
-          "command": "vscode-db2i.resultset.panel.retrieveMoreRows",
-          "group": "navigation@0"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.retrieveAllRows",
-          "group": "navigation@1"
-        }
-      ],
       "vscode-db2i.jobManager.defaultSettings": [
         {
           "command": "vscode-db2i.jobManager.editDefaultJobProps",
@@ -1913,11 +1869,6 @@
       },
       {
         "id": "vscode-db2i.resultset.retrieve",
-        "label": "Retrieve...",
-        "icon": "$(git-stash)"
-      },
-      {
-        "id": "vscode-db2i.resultset.panel.retrieve",
         "label": "Retrieve...",
         "icon": "$(git-stash)"
       },

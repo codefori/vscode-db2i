@@ -322,6 +322,7 @@ export default class SchemaBrowser {
 
       vscode.commands.registerCommand(`vscode-db2i.advisedIndexes.createIndex`, (context) => runDataTableRowAction(ADVISED_INDEX_ACTIONS.createIndex, context)),
       vscode.commands.registerCommand(`vscode-db2i.advisedIndexes.showStatement`, (context) => runDataTableRowAction(ADVISED_INDEX_ACTIONS.showStatement, context)),
+      vscode.commands.registerCommand(`vscode-db2i.advisedIndexes.remove`, (context) => runDataTableRowAction(ADVISED_INDEX_ACTIONS.remove, context)),
 
       vscode.commands.registerCommand(`vscode-db2i.clearAdvisedIndexes`, async (object: SQLObject | SchemaItem) => {
         if (object) {

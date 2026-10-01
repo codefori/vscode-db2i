@@ -83,23 +83,30 @@ async function submittedJobName(output: any[]): Promise<string | undefined> {
   }
 }
 
-/** The live job log while the job runs, the spooled one after it ends */
+const IBMI_FS_EXTENSION = `halcyontechltd.vscode-ibmi-fs`;
+
+/**
+ * The job log view reads JOBLOG_INFO, which has nothing to show once the job has ended.
+ * IBM i FS, when installed, can still work with an ended job.
+ */
 async function showSubmittedJobLog(jobName: string): Promise<void> {
-  let hasLiveLog = false;
+  let hasJobLog = false;
   try {
     const rows = await JobManager.runSQL<{ MESSAGES: number }>(
       `select count(*) as MESSAGES from table(QSYS2.JOBLOG_INFO(?))`,
       { parameters: [jobName] }
     );
-    hasLiveLog = Number(rows[0]?.MESSAGES) > 0;
+    hasJobLog = Number(rows[0]?.MESSAGES) > 0;
   } catch (e) {
   }
 
-  const content = hasLiveLog
-    ? `select * from table(QSYS2.JOBLOG_INFO('${jobName}')) order by ORDINAL_POSITION`
-    : `select SPOOLED_DATA from table(SYSTOOLS.SPOOLED_FILE_DATA(JOB_NAME => '${jobName}', SPOOLED_FILE_NAME => 'QPJOBLOG')) order by ORDINAL_POSITION`;
-
-  vscode.commands.executeCommand(`vscode-db2i.runEditorStatement.inView`, { content, qualifier: `statement`, open: false });
+  if (hasJobLog) {
+    await vscode.commands.executeCommand(`code-for-ibmi.showJobLog`, jobName);
+  } else if (vscode.extensions.getExtension(IBMI_FS_EXTENSION)) {
+    await vscode.commands.executeCommand(`vscode-ibmi-fs.wrkjob`, jobName);
+  } else {
+    vscode.window.showInformationMessage(`Job ${jobName} has already ended, so its job log can only be found in spooled file QPJOBLOG.`);
+  }
 }
 
 /** Runs once the index exists, never if its creation failed */

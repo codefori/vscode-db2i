@@ -71,6 +71,15 @@ const ALLOWED_PREFIXES_EXCLUDE_QUALIFIER_FOR_HISTORY: StatementQualifier[] =
 let activePanelProvider: ResultSetPanelProvider | undefined;
 
 /**
+ * The result set actions are shared by the Results view and the result set editor tabs.
+ * An editor tab's toolbar passes the resource of its editor, the view's toolbar passes nothing.
+ */
+function resultSetTarget(resource?: vscode.Uri): ResultSetPanelProvider | undefined {
+  const fromEditorTab = resource instanceof vscode.Uri && resource.scheme === `webview-panel`;
+  return fromEditorTab ? activePanelProvider : resultSetProvider;
+}
+
+/**
  * Show a data table listing (MTIs, locks, …) in the Results view, in place of whatever
  * result set is there. The user can move it into an editor tab from the view's toolbar.
  */
@@ -144,27 +153,17 @@ export function initialise(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.resultsets');
     }),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveMoreRows`, () => resultSetProvider.retrieveMoreRows()),
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveMoreRows`, (resource?: vscode.Uri) => resultSetTarget(resource)?.retrieveMoreRows()),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveAllRows`, () => resultSetProvider.retrieveMoreRows(true)),
+    vscode.commands.registerCommand(`vscode-db2i.resultset.retrieveAllRows`, (resource?: vscode.Uri) => resultSetTarget(resource)?.retrieveMoreRows(true)),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.refresh`, async () => await resultSetProvider.refresh()),
+    vscode.commands.registerCommand(`vscode-db2i.resultset.refresh`, async (resource?: vscode.Uri) => await resultSetTarget(resource)?.refresh()),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, () => resultSetProvider.clear()),
+    vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, (resource?: vscode.Uri) => resultSetTarget(resource)?.clear()),
 
-    vscode.commands.registerCommand(`vscode-db2i.resultset.copySql`, () => resultSetProvider.copySql()),
+    vscode.commands.registerCommand(`vscode-db2i.resultset.copySql`, (resource?: vscode.Uri) => resultSetTarget(resource)?.copySql()),
 
     vscode.commands.registerCommand(`vscode-db2i.resultset.moveToEditor`, () => resultSetProvider.moveToEditor()),
-
-    vscode.commands.registerCommand(`vscode-db2i.resultset.panel.retrieveMoreRows`, () => activePanelProvider?.retrieveMoreRows()),
-
-    vscode.commands.registerCommand(`vscode-db2i.resultset.panel.retrieveAllRows`, () => activePanelProvider?.retrieveMoreRows(true)),
-
-    vscode.commands.registerCommand(`vscode-db2i.resultset.panel.refresh`, async () => await activePanelProvider?.refresh()),
-
-    vscode.commands.registerCommand(`vscode-db2i.resultset.panel.clear`, () => activePanelProvider?.clear()),
-
-    vscode.commands.registerCommand(`vscode-db2i.resultset.panel.copySql`, () => activePanelProvider?.copySql()),
 
     vscode.workspace.onDidChangeConfiguration(e => {
       // If the result set column headings setting has changed, update the header of the current result set

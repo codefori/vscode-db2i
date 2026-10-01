@@ -146,6 +146,11 @@
         "command": "vscode-db2i.advisedIndexes.showStatement",
         "title": "Show Statement",
         "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.advisedIndexes.remove",
+        "title": "Remove from Index Advisor...",
+        "category": "Db2 for i"
       }
     ],
     "submenus": [
@@ -244,6 +249,10 @@
         },
         {
           "command": "vscode-db2i.advisedIndexes.showStatement",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.remove",
           "when": "never"
         }
       ],
@@ -371,6 +380,11 @@
           "command": "vscode-db2i.advisedIndexes.showStatement",
           "when": "webviewSection == dtRow && dtAction_advisedShowStatement",
           "group": "navigation@2"
+        },
+        {
+          "command": "vscode-db2i.advisedIndexes.remove",
+          "when": "webviewSection == dtRow && dtAction_advisedRemove",
+          "group": "9_destructive@1"
         }
       ]
     },

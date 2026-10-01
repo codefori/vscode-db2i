@@ -169,34 +169,6 @@
         "title": "Move into Editor Area",
         "category": "Db2 for i",
         "icon": "$(link-external)"
-      },
-      {
-        "command": "vscode-db2i.resultset.panel.retrieveMoreRows",
-        "title": "Retrieve More Rows",
-        "category": "Db2 for i"
-      },
-      {
-        "command": "vscode-db2i.resultset.panel.retrieveAllRows",
-        "title": "Retrieve All Rows",
-        "category": "Db2 for i"
-      },
-      {
-        "command": "vscode-db2i.resultset.panel.refresh",
-        "title": "Refresh",
-        "category": "Db2 for i",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "vscode-db2i.resultset.panel.clear",
-        "title": "Clear Results",
-        "category": "Db2 for i",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "vscode-db2i.resultset.panel.copySql",
-        "title": "Copy SQL",
-        "category": "Db2 for i",
-        "icon": "$(copy)"
       }
     ],
     "submenus": [
@@ -209,11 +181,6 @@
         "id": "vscode-db2i.resultset.retrieve",
         "label": "Retrieve...",
         "icon": "$(git-stash)"
-      },
-      {
-        "id": "vscode-db2i.resultset.panel.retrieve",
-        "label": "Retrieve...",
-        "icon": "$(git-stash)"
       }
     ],
     "menus": {
@@ -224,26 +191,6 @@
         },
         {
           "command": "vscode-db2i.resultset.moveToEditor",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.retrieveMoreRows",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.retrieveAllRows",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.refresh",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.clear",
-          "when": "never"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.copySql",
           "when": "never"
         }
       ],
@@ -259,22 +206,22 @@
           "group": "navigation@1"
         },
         {
-          "submenu": "vscode-db2i.resultset.panel.retrieve",
+          "submenu": "vscode-db2i.resultset.retrieve",
           "group": "navigation@01",
           "when": "activeWebviewPanelId == sqlResultSet"
         },
         {
-          "command": "vscode-db2i.resultset.panel.refresh",
+          "command": "vscode-db2i.resultset.refresh",
           "group": "navigation@02",
           "when": "activeWebviewPanelId == sqlResultSet"
         },
         {
-          "command": "vscode-db2i.resultset.panel.clear",
+          "command": "vscode-db2i.resultset.clear",
           "group": "navigation@03",
           "when": "activeWebviewPanelId == sqlResultSet"
         },
         {
-          "command": "vscode-db2i.resultset.panel.copySql",
+          "command": "vscode-db2i.resultset.copySql",
           "group": "navigation@04",
           "when": "activeWebviewPanelId == sqlResultSet"
         }
@@ -361,16 +308,6 @@
           "command": "vscode-db2i.resultset.settings",
           "group": "navigation@10",
           "when": "view == vscode-db2i.resultset"
-        }
-      ],
-      "vscode-db2i.resultset.panel.retrieve": [
-        {
-          "command": "vscode-db2i.resultset.panel.retrieveMoreRows",
-          "group": "navigation@0"
-        },
-        {
-          "command": "vscode-db2i.resultset.panel.retrieveAllRows",
-          "group": "navigation@1"
         }
       ]
     },
