@@ -474,7 +474,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
             let i = 0;
             let adjustingColumn = undefined;
             const resultSetDiv = document.getElementById(htmlTableId);
-            const footerDiv = document.getElementById(footerId);
+            const messageSpanEl = document.getElementById(messageSpanId);
             columnMetaData.forEach(column => {
               const cell = document.createElement("div");
               const col = i++;
@@ -508,7 +508,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
                 resultSetDiv.style["grid-template-columns"] = columnTemplates.join(' ');
               });
               cell.appendChild(grip);
-              footerDiv.before(cell);
+              messageSpanEl.before(cell);
               columnTemplate += ' max-content';
               ${withCollapsed?
               `resultSetDiv.style.setProperty('--col-'+col,'200px');
@@ -540,7 +540,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
           }
 
           function appendRows(rows) {
-            const footerDiv = document.getElementById(footerId);
+            const messageSpanEl = document.getElementById(messageSpanId);
 
             for (const row of rows) {
               // Insert a row at the end of table
@@ -591,7 +591,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
                 rowDiv.appendChild(newCell);
                 currentColumn += 1;
               }
-              footerDiv.before(rowDiv);
+              messageSpanEl.before(rowDiv);
             }
           }
 
@@ -665,6 +665,7 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
       </head>
       <body style="padding: 0;">
         <div id="resultset">
+          <p style="padding-left: 20px; grid-column: 1 / -1;" id="messageSpan"></p>
           <div id="footer">
             <div id="updateMessage"></div>
             <div id="footer2">
@@ -673,7 +674,6 @@ export function generateScroller(uiId: string, basicSelect: string, parameters: 
             </div>
           </div>
         </div>
-        <p style="padding-left: 20px;" id="messageSpan"></p>
         <div id="spinnerContent" class="center-screen">
           <p id="loadingText">Running statement</p>
           <span class="loader"></span>

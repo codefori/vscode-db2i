@@ -5,7 +5,8 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     #resultset {
-      height: 100%;
+      max-height: 100vh;
+      overflow: auto;
       font-size: 0.9em;
       font-family: sans-serif;
       min-width: 100%;
@@ -14,7 +15,8 @@ export function getHeader(options: { withCollapsed?: boolean } = {}): string {
     }
 
     .header {
-      background-color: var(--vscode-banner-background);
+      background-color: var(--vscode-editor-background);
+      background-image: linear-gradient(var(--vscode-banner-background), var(--vscode-banner-background));
       color: var(--vscode-banner-foreground);
       text-align: left;
       position: sticky; /* Lock the header row to the top so it's always visible as rows are scrolled */
