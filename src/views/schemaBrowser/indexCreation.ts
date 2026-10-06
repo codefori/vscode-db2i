@@ -234,17 +234,9 @@ export async function showCreateIndexStatement(creation: IndexCreation): Promise
   await vscode.window.showTextDocument(textDoc);
 }
 
-export function formatBytes(bytes: number): string {
-  const units = [`bytes`, `KB`, `MB`, `GB`, `TB`];
-  let value = bytes;
-  let unit = 0;
-
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-
-  return `${unit === 0 ? value : value.toFixed(1)} ${units[unit]}`;
+/** Always in KB, so sizes stay comparable across rows */
+export function formatKilobytes(bytes: number): string {
+  return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
 /** Column names kept as-is (as opposed to title-cased) when turned into a header title */
@@ -259,15 +251,10 @@ export function prettyColumnTitle(column: string): string {
 
 /** Renders like `TO_CHAR(column, 'yyyy-mm-dd HH24:mi')`; falls back to the raw value if it isn't parseable */
 export function formatTimestamp(raw: string): string {
-  // Db2 renders TIMESTAMP as `yyyy-mm-dd-HH.mm.ss.ffffff`; normalize to something Date can parse
-  const isoLike = raw.replace(/^(\d{4}-\d{2}-\d{2})-(\d{2})\.(\d{2})\.(\d{2})/, `$1T$2:$3:$4`);
-  const date = new Date(isoLike);
-
-  if (isNaN(date.getTime())) return raw;
-
-  // UTC getters, since the raw value carries no time zone of its own
-  const pad = (n: number) => String(n).padStart(2, `0`);
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`;
+  // Db2 renders TIMESTAMP as `yyyy-mm-dd-HH.mm.ss.ffffff` or `yyyy-mm-dd HH:mm:ss.ffffff`.
+  // The raw value carries no time zone of its own, so it is reformatted as text: going through Date would shift it
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})[-T ](\d{2})[.:](\d{2})/);
+  return match ? `${match[1]} ${match[2]}:${match[3]}` : raw;
 }
 
 export interface LoadStats {

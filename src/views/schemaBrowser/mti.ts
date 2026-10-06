@@ -3,7 +3,7 @@ import { JobManager } from "../../config";
 import Statement from "../../database/statement";
 import { DataTableColumn, DataTableHandlers, DataTableOptions } from "../html/dataTable";
 import { showDataTable, showDataTableError, showDataTableLoading } from "../results";
-import { createIndex, formatBytes, formatTimestamp, IndexCreation, listFooter, LoadStats, prettyColumnTitle, qualifiedTable, showCreateIndexStatement } from "./indexCreation";
+import { createIndex, formatKilobytes, formatTimestamp, IndexCreation, listFooter, LoadStats, prettyColumnTitle, qualifiedTable, showCreateIndexStatement } from "./indexCreation";
 import { getMTIStatement } from "./statements";
 
 /** A row from `select * from table(qsys2.mti_info(...))`. Columns vary across IBM i releases (see `isSparse`), so only the fields actually used here are typed. */
@@ -78,7 +78,7 @@ function formatColumnValue(mti: MTIInfo, column: string): string {
   if (value === null || value === undefined) return ``;
 
   switch (column) {
-    case `MTI_SIZE`: return formatBytes(Number(value));
+    case `MTI_SIZE`: return formatKilobytes(Number(value));
     case `SPARSE`: return isSparse(mti) ? `Yes` : `No`;
     case `STATE`: return prettyState(String(value));
     case `CREATE_TIME`:
