@@ -22,7 +22,7 @@ import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ExplainTree } from "./explain/nodes";
 import { DataTableHandlers, DataTableOptions } from "../html/dataTable";
-import { DataTableExtras, ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
+import { DataTableExtras, ResultSetListing, ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 
 export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "md" | "cl" | "sql" | "rpg" | "udtf";
 
@@ -87,6 +87,12 @@ function resultSetTarget(resource?: vscode.Uri): ResultSetPanelProvider | undefi
  */
 export function showDataTable<T>(options: DataTableOptions<T>, handlers?: DataTableHandlers<T>, extras?: DataTableExtras<T>): Promise<void> {
   return resultSetProvider.showDataTable(options, handlers, extras);
+}
+
+/** Run a statement in the Results view and show its rows as a listing (MTIs, advised indexes, …) */
+export async function showListing<T>(sql: string, listing: ResultSetListing<T>): Promise<void> {
+  await resultSetProvider.ensureActivation();
+  await resultSetProvider.setScrolling({ basicSelect: sql, title: listing.heading, listing });
 }
 
 /** Loading placeholder in the Results view while a data table listing is fetched */

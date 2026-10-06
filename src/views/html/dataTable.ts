@@ -309,7 +309,13 @@ export function registerDataTable<T>(options: DataTableOptions<T>, handlers: Dat
 function rowActionContext<T>(post: (message: any) => void, options: DataTableOptions<T>, row: T): DataTableRowActionContext {
   return {
     removeRow: () => {
-      if (options.rows.includes(row)) {
+      const index = options.rows.indexOf(row);
+      if (index < 0) return;
+
+      if (options.streaming) {
+        options.rows.splice(index, 1);
+        post({ command: `removeRow`, row: index });
+      } else {
         updateDataTableRows(post, options, options.rows.filter(candidate => candidate !== row));
       }
     },
@@ -1140,6 +1146,36 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       MODEL.rows.push(...wireRows);
     }
 
+    function emptyStreamingText() {
+      return state.appliedQuery.trim() ? MODEL.emptyMessage : (MODEL.noRowsMessage || "No rows returned.");
+    }
+
+    // Rows are append-only, so a row's index is also its position on screen
+    function removeStreamingRow(index) {
+      const rowEls = grid.querySelectorAll(":scope > .dt-row");
+      if (!rowEls[index]) return;
+      rowEls[index].remove();
+      MODEL.rows.splice(index, 1);
+      state.zebraCount = MODEL.rows.length;
+
+      for (let i = index; i < MODEL.rows.length; i++) {
+        const rowEl = rowEls[i + 1];
+        MODEL.rows[i].i = i;
+        rowEl.dataset.i = String(i);
+        rowEl.className = "dt-row " + (i % 2 ? "even" : "odd");
+        if (rowEl.dataset.vscodeContext) {
+          const context = JSON.parse(rowEl.dataset.vscodeContext);
+          context.dtRow = i;
+          rowEl.dataset.vscodeContext = JSON.stringify(context);
+        }
+      }
+
+      updateStreamingStatus({});
+      if (MODEL.rows.length) fetchIfSentinelVisible();
+      else if (state.noMoreRows) showStreamingMessage(emptyStreamingText(), true);
+      else if (!state.isFetching) requestFetch(state.allRows);
+    }
+
     function requestFetch(allRows) {
       state.isFetching = true;
       if (MODEL.rows.length) el("dtStatus").textContent = "Loaded " + MODEL.rows.length + " rows. Fetching more…";
@@ -1484,12 +1520,15 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
               const affected = typeof data.updateCount === "number" && data.updateCount >= 0 ? data.updateCount : 0;
               showStreamingMessage("Statement executed with no result set returned. Rows affected: " + affected, false);
             } else {
-              showStreamingMessage(state.appliedQuery.trim() ? MODEL.emptyMessage : "No rows returned.", true);
+              showStreamingMessage(emptyStreamingText(), true);
             }
           } else {
             hideStreamingMessage();
             fetchIfSentinelVisible();
           }
+          break;
+        case "removeRow":
+          removeStreamingRow(data.row);
           break;
         case "cellResponse":
           if (data.id) handleCellResponse(data.id, data.success === true);

@@ -1,6 +1,6 @@
 import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, env, window } from "vscode";
 
-import { QueryResult } from "@ibm/mapepire-js";
+import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { openResultSetPanel, setCancelButtonVisibility } from ".";
 import { JobManager } from "../../config";
@@ -14,6 +14,7 @@ import {
   DataTableColumn,
   DataTableHandlers,
   DataTableOptions,
+  DataTableRowAction,
   UpdatableInfo,
   appendDataTableRows,
   handleDataTableMessage,
@@ -42,6 +43,20 @@ export interface ScrollerOptions {
   withCancel?: boolean;
   ref?: ObjectRef;
   title?: string;
+  listing?: ResultSetListing<any>;
+}
+
+/** A result set shown with its own columns and row actions (MTIs, advised indexes, …). Its rows are objects keyed by column name. */
+export interface ResultSetListing<T> {
+  heading: string;
+  /** Column ids must be the SQL column names */
+  columns: (columnMetaData: ColumnMetaData[]) => DataTableColumn<T>[];
+  actions?: DataTableRowAction<T>[];
+  onAction?: DataTableHandlers<T>[`onAction`];
+  loadingText?: string;
+  searchPlaceholder?: string;
+  emptyMessage?: string;
+  noRowsMessage?: string;
 }
 
 /** Toolbar actions of a data table listing */
@@ -126,6 +141,11 @@ function buildResultColumns(columnMetaData: any[], columnHeadings: string): Data
   }));
 }
 
+function buildListingColumns(listing: ResultSetListing<any>, columnMetaData: ColumnMetaData[]): DataTableColumn<any>[] {
+  const unsortable = new Set(columnMetaData.filter(c => UNSORTABLE_TYPES.has(String(c.type).toUpperCase())).map(c => c.name));
+  return listing.columns(columnMetaData).map(column => unsortable.has(column.id) ? { ...column, sortable: false } : column);
+}
+
 /** Types a "search all columns" `CAST(... AS VARCHAR(...))` can't meaningfully apply to */
 const SEARCH_EXCLUDED_TYPES = new Set([
   `BLOB`, `CLOB`, `DBCLOB`, `NCLOB`, `VARBIN`, `VARBINARY`, `BINARY`, `GRAPHIC`, `VARGRAPHIC`, `ROWID`, `DATALINK`, `XML`, `SQLXML`,
@@ -141,8 +161,8 @@ function escapeLikeText(text: string): string {
   return text.replace(/\\/g, `\\\\`).replace(/%/g, `\\%`).replace(/_/g, `\\_`);
 }
 
-/** SQL sent for the session's sort/search state */
-function buildQueryText(session: ResultSetSession): { sql: string; params: SqlParameter[] } {
+/** SQL sent for the session's sort/search state. `inlineSearch` writes the searched text as a literal instead of binding it. */
+function buildQueryText(session: ResultSetSession, inlineSearch = false): { sql: string; params: SqlParameter[] } {
   const baseParams = session.options.parameters ?? [];
   if (!session.sort && !session.search) {
     return { sql: session.baseSelect, params: baseParams };
@@ -152,20 +172,23 @@ function buildQueryText(session: ResultSetSession): { sql: string; params: SqlPa
   let sql = `SELECT * FROM (${session.baseSelect}) AS "DTQ"`;
 
   if (session.search && session.columnMetaData) {
-    const searchable = session.columnMetaData.filter((c: any) => !SEARCH_EXCLUDED_TYPES.has(String(c.type).toUpperCase()));
+    // A listing can hide columns
+    const shown = new Set(session.dtOptions.columns.map(c => c.id));
+    const searchable = session.columnMetaData.filter((c: any) => shown.has(c.name) && !SEARCH_EXCLUDED_TYPES.has(String(c.type).toUpperCase()));
     if (searchable.length > 0) {
       const likeText = `%${escapeLikeText(session.search)}%`;
+      const pattern = inlineSearch ? `'${likeText.replace(/'/g, `''`)}'` : `?`;
       // Cast to CCSID 37
       const clauses = searchable.map((c: any) => {
-        params.push(likeText);
-        return `UPPER(CAST(${quoteIdent(c.name)} AS VARCHAR(1024) CCSID 37)) LIKE UPPER(CAST(? AS VARCHAR(1024) CCSID 37)) ESCAPE '\\'`;
+        if (!inlineSearch) params.push(likeText);
+        return `UPPER(CAST(${quoteIdent(c.name)} AS VARCHAR(1024) CCSID 37)) LIKE UPPER(CAST(${pattern} AS VARCHAR(1024) CCSID 37)) ESCAPE '\\'`;
       });
       sql += ` WHERE ${clauses.join(` OR `)}`;
     }
   }
 
   if (session.sort) {
-    const index = session.dtOptions.columns.findIndex(c => c.id === session.sort!.columnId);
+    const index = (session.columnMetaData ?? []).findIndex((c: any) => c.name === session.sort!.columnId);
     if (index >= 0) {
       sql += ` ORDER BY ${index + 1} ${session.sort.direction === `desc` ? `DESC` : `ASC`}`;
     }
@@ -256,7 +279,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   }
 
   async copySql() {
-    const sql = this.tableSession ? this.tableSession.extras.sql : this.lastScrollerOptions?.basicSelect;
+    const session = this.session;
+    const current = session && (session.sort || session.search) ? buildQueryText(session, true).sql : undefined;
+    const sql = this.tableSession ? this.tableSession.extras.sql : current ?? this.lastScrollerOptions?.basicSelect;
     if (sql) {
       await env.clipboard.writeText(sql);
       window.setStatusBarMessage(`SQL statement copied to clipboard`, 3000);
@@ -341,7 +366,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   /** Update the result table column headings based on the configuration setting */
   async updateHeader() {
     const session = this.session;
-    if (this._view && session?.columnMetaData) {
+    if (this._view && session?.columnMetaData && !session.options.listing) {
       const columns = buildResultColumns(session.columnMetaData, Configuration.get<string>(`resultsets.columnHeadings`) || 'Name');
       updateDataTableColumns(msg => this._view?.webview.postMessage(msg), session.dtOptions, columns);
     }
@@ -465,16 +490,20 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     const carried = carriedQuery !== undefined;
     const carriedRows = carried ? from.dtOptions.rows : [];
     const inEditor = this.host === `panel`;
+    const listing = from.options.listing;
 
     const session: ResultSetSession = {
       ...from,
       dtOptions: {
-        title: from.options.basicSelect.replace(/\s+/g, ` `).trim(),
+        title: listing?.heading ?? from.options.basicSelect.replace(/\s+/g, ` `).trim(),
         columns: carried ? from.dtOptions.columns : [],
         rows: [],
+        actions: listing?.actions,
         search: from.serverQuery,
+        searchPlaceholder: listing?.searchPlaceholder,
         initialQuery: from.search,
-        emptyMessage: `No rows match the search.`,
+        emptyMessage: listing?.emptyMessage ?? `No rows match the search.`,
+        noRowsMessage: listing?.noRowsMessage,
         sort: from.sort,
         streaming: true,
         serverQuery: from.serverQuery,
@@ -482,7 +511,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         updatable: from.updatable,
         resizable: true,
         collapsedInitialWidth: Configuration.get<boolean>(`collapsedResultSet`) ? `200px` : undefined,
-        loadingText: from.options.isCL ? `Running CL command...` : `Running statement...`,
+        loadingText: listing?.loadingText ?? (from.options.isCL ? `Running CL command...` : `Running statement...`),
       },
     };
     const dtOptions = session.dtOptions;
@@ -522,7 +551,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           let query = this.currentQuery;
           if (query === undefined) {
             const { sql, params } = buildQueryText(session);
-            const prepared = await JobManager.getPagingStatement(sql, { parameters: params, isClCommand: options.isCL, isTerseResults: true });
+            const prepared = await JobManager.getPagingStatement(sql, { parameters: params, isClCommand: options.isCL, isTerseResults: !listing });
             // Superseded by a restart while preparing
             if (myEpoch !== this.queryEpoch) {
               prepared.close();
@@ -566,7 +595,9 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             // Statements without a result set have no columns
             const columnMetaData = queryResults.metadata?.columns;
             if (!columnsSent && columnMetaData) {
-              columns = buildResultColumns(columnMetaData, Configuration.get<string>(`resultsets.columnHeadings`) || 'Name');
+              columns = listing
+                ? buildListingColumns(listing, columnMetaData)
+                : buildResultColumns(columnMetaData, Configuration.get<string>(`resultsets.columnHeadings`) || 'Name');
               columnsSent = true;
               session.columnMetaData = columnMetaData;
             }
@@ -622,13 +653,16 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       },
 
       onOpenInEditor: () => this.moveResultSetToEditor(session),
+
+      onAction: listing?.onAction,
     };
 
-    this.setRouter(message => handleDataTableMessage(message, dtOptions, handlers, post));
+    const registration = listing?.actions?.length ? registerDataTable(dtOptions, handlers, post) : undefined;
+    this.setRouter(message => handleDataTableMessage(message, dtOptions, handlers, post), registration);
     this.session = session;
 
     if (this._view) {
-      this._view.webview.html = renderDataTable(dtOptions);
+      this._view.webview.html = renderDataTable(dtOptions, registration?.id);
       this.loadingState = false;
 
       if (carried) {
