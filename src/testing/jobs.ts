@@ -237,6 +237,33 @@ export const JobsSuite: TestSuite = {
       JobManager.closeJobById(newJob);
     }},
 
+    {name: `Current schema follows SET SCHEMA (system naming)`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [`QIWS`, `QSYS2`], naming: `system`});
+
+      assert.strictEqual(await newJob.getCurrentSchema(), `QIWS`);
+      assert.deepStrictEqual(await newJob.getSearchSchemas(), [`QIWS`, `QSYS2`]);
+
+      await newJob.query(`SET SCHEMA=QSYS2`).execute();
+      assert.strictEqual(await newJob.getCurrentSchema(), `QSYS2`);
+      assert.deepStrictEqual(await newJob.getSearchSchemas(), [`QSYS2`]);
+
+      await newJob.query(`set current schema SYSTOOLS`).execute();
+      assert.strictEqual(await newJob.getCurrentSchema(), `SYSTOOLS`);
+
+      JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Current schema follows SET SCHEMA (SQL naming)`, test: async () => {
+      const newJob = await JobManager.newJob({naming: `sql`});
+
+      await newJob.getCurrentSchema();
+
+      await newJob.query(`  set schema QIWS`).execute();
+      assert.strictEqual(await newJob.getCurrentSchema(), `QIWS`);
+
+      JobManager.closeJobById(newJob);
+    }},
+
     {name: `Binding parameters`, test: async () => {
       let newJob = await JobManager.newJob({libraries: [`QIWS`], naming: `system`});
 

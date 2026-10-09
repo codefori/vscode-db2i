@@ -38,11 +38,15 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
         toolTipItems.push(`[$(info) View Job Log](command:vscode-db2i.jobManager.viewJobLog)`);
       }
 
+      const currentSchema = Statement.delimName(await job.getCurrentSchema());
+
       if (job.getNaming() === `sql`) {
-        toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${Statement.delimName(await job.getCurrentSchema())}\``);
+        toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${currentSchema}\``);
       } else {
         toolTipItems.push([
           `System Naming.`,
+          ``,
+          `Current schema: \`${job.currentSchemaStore === `*LIBL` ? `*LIBL` : currentSchema}\``,
           ``,
           `Configured user library list for job:`,
           ``,
