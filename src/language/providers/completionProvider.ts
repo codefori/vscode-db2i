@@ -41,14 +41,20 @@ const completionTypes: { [index: string]: CompletionType } = {
     type: `aliases`,
     icon: CompletionItemKind.Reference,
   },
-  functions: {
+  logicals: {
     order: `e`,
+    label: `logical`,
+    type: `logicals`,
+    icon: CompletionItemKind.Interface,
+  },
+  functions: {
+    order: `f`,
     label: `function`,
     type: `functions`,
     icon: CompletionItemKind.Method
   },
   variables: {
-    order: `f`,
+    order: `g`,
     label: `variable`,
     type: `variables`,
     icon: CompletionItemKind.Variable,
@@ -148,7 +154,7 @@ async function getObjectCompletions(
   sqlTypes: { [index: string]: CompletionType }
 ): Promise<CompletionItem[]> {
   forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
-  const allObjects = await DbCache.getObjects(forSchema, Object.values(sqlTypes).map(k => k.type));
+  const allObjects = await DbCache.getObjects(forSchema, Object.values(sqlTypes).map(k => k.type), { excludeSourceFiles: true });
 
   return allObjects.map((value) => {
     const completionData = completionTypes[value.type];
@@ -161,6 +167,34 @@ async function getObjectCompletions(
     )
   }
   );
+}
+
+// Unqualified references resolve to the first schema that has the object, like the library list
+async function getColumnsForRef(ref: ObjectRef, searchSchemas: string[]): Promise<CompletionItem[]> {
+  if (!ref.object.name) {
+    return [];
+  }
+
+  for (const schema of ref.object.schema ? [ref.object.schema] : searchSchemas) {
+    const columns = await getObjectColumns(schema, ref.object.name, ref.isUDTF === true, useSystemNames());
+    if (columns.length > 0) {
+      return columns;
+    }
+  }
+
+  return [];
+}
+
+async function getObjectCompletionsForSchemas(
+  schemas: string[],
+  sqlTypes: { [index: string]: CompletionType }
+): Promise<CompletionItem[]> {
+  const results = await Promise.all(schemas.map(schema => getObjectCompletions(schema, sqlTypes)));
+
+  // When an object exists in many schemas, only the first one would be used
+  return results
+    .flat()
+    .filter((item, i, all) => all.findIndex(other => other.label === item.label && other.kind === item.kind) === i);
 }
 
 async function getCompletionItemsForSchema(
@@ -182,25 +216,21 @@ async function getCompletionItemsForSchema(
 
 async function getProcedures(
   refs: ObjectRef[],
-  defaultSchema?: string
+  searchSchemas: string[]
 ): Promise<CompletionItem[]> {
-  // Handle the case where refs is empty and defaultSchema is provided
-  if (refs.length === 0 && defaultSchema) {
-    const sanitizedSchema = Statement.noQuotes(
-      Statement.delimName(defaultSchema, true)
-    );
-    return getCompletionItemsForSchema(sanitizedSchema);
-  }
+  const schemas = refs.length === 0
+    ? searchSchemas
+    : refs.flatMap((ref) => ref.object.schema ? [ref.object.schema] : searchSchemas);
 
-  // Handle the general case
-  const promises = refs.map(async (ref) => {
-    const schema = ref.object.schema || defaultSchema || "";
-    const sanitizedSchema = Statement.noQuotes(
-      Statement.delimName(schema, true)
-    );
+  const promises = schemas
+    .filter((schema, i, all) => all.indexOf(schema) === i)
+    .map(async (schema) => {
+      const sanitizedSchema = Statement.noQuotes(
+        Statement.delimName(schema, true)
+      );
 
-    return getCompletionItemsForSchema(sanitizedSchema);
-  });
+      return getCompletionItemsForSchema(sanitizedSchema);
+    });
 
   const results = await Promise.allSettled(promises);
   return results
@@ -215,7 +245,7 @@ async function getCompletionItemsForTriggerDot(
   offset: number,
   trigger: string | undefined
 ): Promise<CompletionItem[]> {
-  const defaultLibrary = await getDefaultSchema();
+  const searchSchemas = await getSearchSchemas();
   let list: CompletionItem[] = [];
 
   const curRef = currentStatement.getReferenceByOffset(offset);
@@ -229,13 +259,6 @@ async function getCompletionItemsForTriggerDot(
   let curRefIdentifier: ObjectRef | undefined;
 
   const objectRefs = currentStatement.getObjectReferences();
-
-  // Set the default schema for all references without one
-  for (const ref of objectRefs) {
-    if (!ref.object.schema) {
-      ref.object.schema = defaultLibrary;
-    }
-  }
 
   curRefIdentifier = objectRefs.find(
     (ref) =>
@@ -270,19 +293,14 @@ async function getCompletionItemsForTriggerDot(
 
     // Else.. go do a table lookup
     if (!currentCte) {
-      const completionItems = await getObjectColumns(
-        curRefIdentifier.object.schema!,
-        curRefIdentifier.object.name,
-        curRefIdentifier.isUDTF === true,
-        useSystemNames()
-      );
+      const completionItems = await getColumnsForRef(curRefIdentifier, searchSchemas);
 
       list.push(...completionItems);
     }
   } else {
 
     if (currentStatement.type === StatementType.Call) {
-      const procs = await getProcedures([curRef], defaultLibrary);
+      const procs = await getProcedures([curRef], searchSchemas);
       list.push(...procs);
 
     } else {
@@ -330,7 +348,7 @@ function createCompletionItemForAlias(ref: ObjectRef) {
 }
 
 async function getCompletionItemsForRefs(currentStatement: LanguageStatement.default, offset: number, cteColumns?: string[]) {
-  const defaultSchema = await getDefaultSchema();
+  const searchSchemas = await getSearchSchemas();
   const objectRefs = currentStatement.getObjectReferences();
   const cteList = currentStatement.getCTEReferences();
 
@@ -343,19 +361,9 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   if (objectRefs.length === 0 && cteList.length === 0) {
     completionItems.push(...(await getCachedSchemas()));
   }
-  // Set the default schema for all references without one
-  for (let ref of objectRefs) {
-    if (!ref.object.schema) {
-      ref.object.schema = defaultSchema;
-    }
-  }
 
   // Fetch all the columns for tables that have references in the statement
-  const tableItemPromises = objectRefs.map((ref) =>
-    ref.object.name && ref.object.schema
-      ? getObjectColumns(ref.object.schema, ref.object.name, ref.isUDTF === true, useSystemNames())
-      : Promise.resolve([])
-  );
+  const tableItemPromises = objectRefs.map((ref) => getColumnsForRef(ref, searchSchemas));
   const results = await Promise.allSettled(tableItemPromises);
 
   // push table columns if the clause type is unknown
@@ -391,19 +399,18 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   if (tokenAtOffset === undefined && (curClause !== ClauseType.Unknown)) {
     // get all the completion items for objects in each referenced schema
     completionItems.push(
-      ...(await getObjectCompletions(defaultSchema, completionTypes))
+      ...(await getObjectCompletionsForSchemas(searchSchemas, completionTypes))
     );
   } else {
     // content assist invoked during incomplete reference
     // example: select * from sample.emp
     // --                               |
-    if (objectRefs[objectRefs.length - 1]) {
-      const curSchema = objectRefs[objectRefs.length - 1].object.schema;
-      if (curClause !== ClauseType.Unknown && tokenAtOffset && curSchema) {
-        completionItems.push(
-          ...(await getObjectCompletions(curSchema, completionTypes))
-        );
-      }
+    const lastRef = objectRefs[objectRefs.length - 1];
+    if (lastRef && curClause !== ClauseType.Unknown && tokenAtOffset) {
+      const schemas = lastRef.object.schema ? [lastRef.object.schema] : searchSchemas;
+      completionItems.push(
+        ...(await getObjectCompletionsForSchemas(schemas, completionTypes))
+      );
     }
   }
 
@@ -449,7 +456,7 @@ async function getCompletionItems(
   currentStatement: LanguageStatement.default,
   offset: number
 ) {
-  const defaultSchema = await getDefaultSchema();
+  const searchSchemas = await getSearchSchemas();
   const s = currentStatement.getTokenByOffset(offset) || null;
 
   if (trigger === "." || (s && s.type === `dot`) || trigger === "/") {
@@ -473,7 +480,7 @@ async function getCompletionItems(
   if (currentStatement && currentStatement.type === StatementType.Call) {
     const curClause = currentStatement.getClauseForOffset(offset);
     if (curClause === ClauseType.Unknown) {
-      return getProcedures(currentStatement.getObjectReferences(), defaultSchema);
+      return getProcedures(currentStatement.getObjectReferences(), searchSchemas);
     }
   }
 
@@ -616,11 +623,11 @@ export const completionProvider = languages.registerCompletionItemProvider(
   "/"
 );
 
-const getDefaultSchema = () => {
+const getSearchSchemas = () => {
   const currentJob = JobManager.getSelection();
   if (currentJob) {
-    return currentJob.job.getCurrentSchema()
+    return currentJob.job.getSearchSchemas()
   } else {
-    return Promise.resolve(`QGPL`);
+    return Promise.resolve([`QGPL`]);
   }
 }
