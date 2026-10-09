@@ -257,14 +257,8 @@ export function formatTimestamp(raw: string): string {
   return match ? `${match[1]} ${match[2]}:${match[3]}` : raw;
 }
 
-export interface LoadStats {
-  executionTimeMs: number;
-  jobId?: string;
-}
+const NUMERIC_TYPES = new Set([`SMALLINT`, `INTEGER`, `BIGINT`, `DECIMAL`, `NUMERIC`, `REAL`, `FLOAT`, `DOUBLE`, `DECFLOAT`]);
 
-/** Same wording as a query result set's footer */
-export function listFooter(noun: { one: string, many: string }, shown: number, total: number, stats: LoadStats): string {
-  const matching = shown === total ? `` : ` ${shown} match the search.`;
-  const job = stats.jobId ? ` ${stats.jobId}` : ``;
-  return `Loaded ${total} ${total === 1 ? noun.one : noun.many} in ${Math.round(stats.executionTimeMs)}ms.${matching} End of data.${job}`;
+export function isNumericType(type: string): boolean {
+  return NUMERIC_TYPES.has(type.toUpperCase());
 }

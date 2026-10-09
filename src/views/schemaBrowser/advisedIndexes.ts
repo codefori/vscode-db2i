@@ -1,10 +1,11 @@
+import { ColumnMetaData } from "@ibm/mapepire-js";
 import * as vscode from "vscode";
 import { JobManager } from "../../config";
 import Statement from "../../database/statement";
-import { DataTableColumn, DataTableHandlers, DataTableOptions } from "../html/dataTable";
-import { showDataTable, showDataTableError, showDataTableLoading } from "../results";
+import { DataTableColumn } from "../html/dataTable";
+import { showListing } from "../results";
 import { coversAdvice, hasSameKeys, RawAdvice } from "./adviceCoverage";
-import { createIndex, formatTimestamp, IndexCreation, IndexTarget, listFooter, LoadStats, prettyColumnTitle, qualifiedTable, showCreateIndexStatement } from "./indexCreation";
+import { createIndex, formatTimestamp, IndexCreation, IndexTarget, isNumericType, prettyColumnTitle, qualifiedTable, showCreateIndexStatement } from "./indexCreation";
 import { getAdvisedIndexesStatement } from "./statements";
 
 /** A row from `qsys2.condidxa` */
@@ -103,8 +104,22 @@ function removeAdviceStatement(advice: AdvisedIndex, raw: RawAdvisedIndex[]): st
 
 const REMOVE = `Remove`;
 
+function isUsable(advice: AdvisedIndex): boolean {
+  return Boolean(advice.TABLE_SCHEMA && advice.TABLE_NAME && advice.KEY_COLUMNS_ADVISED);
+}
+
+/** Read again, since the list only holds the pages of advice fetched so far */
+async function otherAdviceFor(advice: AdvisedIndex): Promise<AdvisedIndex[]> {
+  const advised = await JobManager.runSQL<AdvisedIndex>(getAdvisedIndexesStatement(advice.TABLE_SCHEMA, advice.TABLE_NAME));
+  const self = advised.findIndex(other => other.KEY_COLUMNS_ADVISED === advice.KEY_COLUMNS_ADVISED
+    && other.PARTITION_NAME === advice.PARTITION_NAME
+    && sameKind(other, advice));
+
+  return advised.filter((other, index) => index !== self && isUsable(other));
+}
+
 /** @returns whether the advice was removed */
-async function removeAdvice(advice: AdvisedIndex, others: AdvisedIndex[]): Promise<boolean> {
+async function removeAdvice(advice: AdvisedIndex): Promise<boolean> {
   const choice = await vscode.window.showWarningMessage(
     `Remove this advised index over ${qualifiedTable(indexTarget(advice))} from the Index Advisor?`,
     { modal: true, detail: `Key columns: ${advice.KEY_COLUMNS_ADVISED.trim()}\n\nNo index is created. The advice comes back if this index is advised again.` },
@@ -114,7 +129,7 @@ async function removeAdvice(advice: AdvisedIndex, others: AdvisedIndex[]): Promi
   if (choice !== REMOVE) return false;
 
   try {
-    const raw = await rawAdviceFor(advice, others);
+    const raw = await rawAdviceFor(advice, await otherAdviceFor(advice));
     if (raw.length === 0) {
       vscode.window.showWarningMessage(`No Index Advisor entries were found for this advice, so nothing was removed. Refresh the list to see its current content.`);
       return false;
@@ -163,89 +178,54 @@ const LEADING_COLUMNS = [`TABLE_NAME`, `KEY_COLUMNS_ADVISED`, `INDEX_TYPE`];
 
 const HIDDEN_COLUMNS = new Set([`SYSTEM_TABLE_SCHEMA`, `SYSTEM_TABLE_NAME`]);
 
-/** @returns whether any advised index was found */
-export async function pickAdvisedIndexAction(schema: string, table?: string, onIndexCreated?: () => void): Promise<boolean> {
+export function pickAdvisedIndexAction(schema: string, table?: string, onIndexCreated?: () => void): Promise<void> {
   const specificTable = table && table !== `*ALL` ? table : undefined;
   const target = schema === `*ALL`
     ? `all libraries`
     : specificTable
       ? `${Statement.delimName(schema)}.${Statement.delimName(specificTable)}`
       : Statement.delimName(schema);
-  const sql = getAdvisedIndexesStatement(schema, table);
-  const stats: LoadStats = { executionTimeMs: 0 };
-  const load = async () => {
-    const startTime = performance.now();
-    const advised = await JobManager.runSQL<AdvisedIndex>(sql);
-    stats.executionTimeMs = performance.now() - startTime;
-    stats.jobId = JobManager.getSelection()?.job.id;
-    return advised.filter(advice => advice.TABLE_SCHEMA && advice.TABLE_NAME && advice.KEY_COLUMNS_ADVISED);
-  };
-  let usable: AdvisedIndex[];
 
-  try {
-    await showDataTableLoading(`Fetching advised indexes for ${target}...`);
-    usable = await load();
-  } catch (e: any) {
-    showDataTableError(e.message);
-    return false;
-  }
-
-  openAdvisedIndexesWebview(target, usable, sql, load, stats, onIndexCreated);
-  return usable.length > 0;
-}
-
-/** Taken from the first row, since every row shares them */
-function advisedIndexColumns(advised: AdvisedIndex[]): DataTableColumn<AdvisedIndex>[] {
-  const first = advised[0];
-  if (!first) return [];
-
-  const available = Object.keys(first).filter(column => !HIDDEN_COLUMNS.has(column));
-  const ordered = [
-    ...LEADING_COLUMNS.filter(column => available.includes(column)),
-    ...available.filter(column => !LEADING_COLUMNS.includes(column)),
-  ];
-
-  return ordered.map(column => ({
-    id: column,
-    title: prettyColumnTitle(column),
-    value: (advice: AdvisedIndex) => formatColumnValue(advice, column),
-    align: typeof first[column] === `number` ? `right` : `left`,
-  }));
-}
-
-function openAdvisedIndexesWebview(target: string, advised: AdvisedIndex[], sql: string, reload: () => Promise<AdvisedIndex[]>, stats: LoadStats, onIndexCreated?: () => void) {
-  const options: DataTableOptions<AdvisedIndex> = {
-    title: `Advised indexes for ${target}`,
-    subtitle: (shown, total) => listFooter({ one: `advised index`, many: `advised indexes` }, shown, total, stats),
-    columns: advisedIndexColumns(advised),
-    rows: advised,
+  return showListing<AdvisedIndex>(getAdvisedIndexesStatement(schema, table), {
+    heading: `Advised indexes for ${target}`,
+    columns: advisedIndexColumns,
+    loadingText: `Fetching advised indexes for ${target}...`,
     searchPlaceholder: `Search advised indexes…`,
     emptyMessage: `No advised indexes match the search.`,
     noRowsMessage: `No advised indexes found for ${target}.`,
     actions: [
-      { id: ADVISED_INDEX_ACTIONS.createIndex },
-      { id: ADVISED_INDEX_ACTIONS.showStatement },
-      { id: ADVISED_INDEX_ACTIONS.remove, destructive: true },
+      { id: ADVISED_INDEX_ACTIONS.createIndex, when: isUsable },
+      { id: ADVISED_INDEX_ACTIONS.showStatement, when: isUsable },
+      { id: ADVISED_INDEX_ACTIONS.remove, when: isUsable, destructive: true },
     ],
-  };
-
-  const handlers: DataTableHandlers<AdvisedIndex> = {
-    onAction: async (actionId, advice, table) => {
+    onAction: async (actionId, advice, list) => {
       if (actionId === ADVISED_INDEX_ACTIONS.createIndex) {
         if (await createIndex(await indexCreation(advice))) {
-          table.removeRow();
+          list.removeRow();
           onIndexCreated?.();
         }
       } else if (actionId === ADVISED_INDEX_ACTIONS.showStatement) {
         await showCreateIndexStatement(await indexCreation(advice));
       } else if (actionId === ADVISED_INDEX_ACTIONS.remove) {
-        if (await removeAdvice(advice, options.rows.filter(row => row !== advice))) {
-          table.removeRow();
+        if (await removeAdvice(advice)) {
+          list.removeRow();
         }
       }
     },
-  };
+  });
+}
 
-  showDataTable(options, handlers, { sql, reload, columns: advisedIndexColumns })
-    .catch(e => vscode.window.showErrorMessage(`Could not show the advised indexes: ${e?.message ?? e}`));
+function advisedIndexColumns(columnMetaData: ColumnMetaData[]): DataTableColumn<AdvisedIndex>[] {
+  const available = columnMetaData.filter(column => !HIDDEN_COLUMNS.has(column.name));
+  const ordered = [
+    ...LEADING_COLUMNS.flatMap(name => available.filter(column => column.name === name)),
+    ...available.filter(column => !LEADING_COLUMNS.includes(column.name)),
+  ];
+
+  return ordered.map(column => ({
+    id: column.name,
+    title: prettyColumnTitle(column.name),
+    value: (advice: AdvisedIndex) => formatColumnValue(advice, column.name),
+    align: isNumericType(column.type) ? `right` : `left`,
+  }));
 }

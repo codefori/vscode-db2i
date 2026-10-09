@@ -64,6 +64,7 @@ function getColumnAttributes(column: TableColumn, useSystemName: boolean): strin
     `Column: ${shownName}`,
     `${useSystemName ? `SQL name` : `System name`}: ${alternateName}`,
     `Type: ${prepareParamType(column)}`,
+    ...(column.COLUMN_TEXT?.trim() ? [`Text: ${column.COLUMN_TEXT.trim()}`] : []),
     `HAS_DEFAULT: ${column.HAS_DEFAULT}`,
     `IS_IDENTITY: ${column.IS_IDENTITY}`,
     `IS_NULLABLE: ${column.IS_NULLABLE}`,
@@ -81,7 +82,7 @@ function getAllColumns(name: string, schema: string, items: CompletionItem[]) {
   );
 
   allCols.sortText = 'a@allCols';
-  allCols.insertText = items.map(item => item.label).join(", ");
+  allCols.insertText = items.map(item => typeof item.label === `string` ? item.label : item.label.label).join(", ");
   return allCols;
 }
 
@@ -123,15 +124,21 @@ async function getObjectColumns(
       return [];
     }
 
-    completionItems = columns.map((i) =>
-      createCompletionItem(
+    completionItems = columns.map((i) => {
+      const item = createCompletionItem(
         Statement.prettyName(useSystemNamesInColumn ? i.SYSTEM_COLUMN_NAME : i.COLUMN_NAME),
         CompletionItemKind.Field,
         getColumnAttributes(i, useSystemNamesInColumn),
         `Schema: ${schema}\nTable: ${name}\n`,
         `a@objectcolumn`
-      )
-    );
+      );
+
+      const text = i.COLUMN_TEXT?.trim();
+      if (text) {
+        item.label = { label: item.label as string, description: text };
+      }
+      return item;
+    });
   }
 
   const allCols = getAllColumns(name, schema, completionItems);

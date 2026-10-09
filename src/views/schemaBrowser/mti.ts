@@ -1,9 +1,8 @@
-import * as vscode from "vscode";
-import { JobManager } from "../../config";
+import { ColumnMetaData } from "@ibm/mapepire-js";
 import Statement from "../../database/statement";
-import { DataTableColumn, DataTableHandlers, DataTableOptions } from "../html/dataTable";
-import { showDataTable, showDataTableError, showDataTableLoading } from "../results";
-import { createIndex, formatKilobytes, formatTimestamp, IndexCreation, listFooter, LoadStats, prettyColumnTitle, qualifiedTable, showCreateIndexStatement } from "./indexCreation";
+import { DataTableColumn } from "../html/dataTable";
+import { showListing } from "../results";
+import { createIndex, formatKilobytes, formatTimestamp, IndexCreation, prettyColumnTitle, qualifiedTable, showCreateIndexStatement } from "./indexCreation";
 import { getMTIStatement } from "./statements";
 
 /** A row from `select * from table(qsys2.mti_info(...))`. Columns vary across IBM i releases (see `isSparse`), so only the fields actually used here are typed. */
@@ -92,72 +91,35 @@ function formatColumnValue(mti: MTIInfo, column: string): string {
 /** Internal SQE job identifiers, and native library/file names already shown via TABLE_SCHEMA/TABLE_NAME */
 const HIDDEN_COLUMNS = new Set([`JOB_NAME`, `JOB_USER`, `JOB_NUMBER`, `LIBRARY_NAME`, `FILE_NAME`]);
 
+function isUsable(mti: MTIInfo): boolean {
+  return Boolean(mti.TABLE_SCHEMA && mti.TABLE_NAME && mti.KEY_DEFINITION);
+}
+
 /**
- * Fetch the MTIs for a schema (or a single table within it) and open a table listing them with
- * "Create Index..." and "Show Statement" actions on every row.
+ * List the MTIs for a schema (or a single table within it) in the "Db2 for i" result panel,
+ * with "Create Index..." and "Show Statement" actions on every row.
  *
  * @param onIndexCreated called once an index is created or submitted, to refresh the caller's tree
- * @returns whether any MTI was found
  */
-export async function pickMTIAction(schema: string, table?: string, onIndexCreated?: () => void): Promise<boolean> {
+export function pickMTIAction(schema: string, table?: string, onIndexCreated?: () => void): Promise<void> {
   const specificTable = table && table !== `*ALL` ? table : undefined;
   const target = schema === `*ALL`
     ? `all libraries`
     : specificTable
       ? `${Statement.delimName(schema)}.${Statement.delimName(specificTable)}`
       : Statement.delimName(schema);
-  const sql = getMTIStatement(schema, table);
-  const stats: LoadStats = { executionTimeMs: 0 };
-  const load = async () => {
-    const startTime = performance.now();
-    const mtis = await JobManager.runSQL<MTIInfo>(sql);
-    stats.executionTimeMs = performance.now() - startTime;
-    stats.jobId = JobManager.getSelection()?.job.id;
-    return mtis.filter(mti => mti.TABLE_SCHEMA && mti.TABLE_NAME && mti.KEY_DEFINITION);
-  };
-  let usable: MTIInfo[];
 
-  try {
-    await showDataTableLoading(`Fetching MTIs for ${target}...`);
-    usable = await load();
-  } catch (e: any) {
-    showDataTableError(e.message);
-    return false;
-  }
-
-  openMTIWebview(target, usable, sql, load, stats, onIndexCreated);
-  return usable.length > 0;
-}
-
-/** Taken from the first row, since every row shares them */
-function mtiColumns(mtis: MTIInfo[]): DataTableColumn<MTIInfo>[] {
-  return mtis.length === 0 ? [] : Object.keys(mtis[0])
-    .filter(column => !HIDDEN_COLUMNS.has(column))
-    .map(column => ({
-      id: column,
-      title: prettyColumnTitle(column),
-      value: (mti: MTIInfo) => formatColumnValue(mti, column),
-      align: [`MTI_SIZE`, `KEYS`].includes(column) ? `right` : `left`,
-    }));
-}
-
-/** Show the MTI list in the "Db2 for i" result panel */
-function openMTIWebview(target: string, mtis: MTIInfo[], sql: string, reload: () => Promise<MTIInfo[]>, stats: LoadStats, onIndexCreated?: () => void) {
-  const options: DataTableOptions<MTIInfo> = {
-    title: `MTIs for ${target}`,
-    subtitle: (shown, total) => listFooter({ one: `MTI`, many: `MTIs` }, shown, total, stats),
-    columns: mtiColumns(mtis),
-    rows: mtis,
+  return showListing<MTIInfo>(getMTIStatement(schema, table), {
+    heading: `MTIs for ${target}`,
+    columns: mtiColumns,
+    loadingText: `Fetching MTIs for ${target}...`,
     searchPlaceholder: `Search MTIs…`,
     emptyMessage: `No MTIs match the search.`,
     noRowsMessage: `No MTIs found for ${target}.`,
     actions: [
-      { id: MTI_ACTIONS.createIndex },
-      { id: MTI_ACTIONS.showStatement },
+      { id: MTI_ACTIONS.createIndex, when: isUsable },
+      { id: MTI_ACTIONS.showStatement, when: isUsable },
     ],
-  };
-
-  const handlers: DataTableHandlers<MTIInfo> = {
     onAction: async (actionId, mti) => {
       if (actionId === MTI_ACTIONS.createIndex) {
         if (await createIndex(indexCreation(mti))) {
@@ -167,8 +129,17 @@ function openMTIWebview(target: string, mtis: MTIInfo[], sql: string, reload: ()
         await showCreateIndexStatement(indexCreation(mti));
       }
     },
-  };
+  });
+}
 
-  showDataTable(options, handlers, { sql, reload, columns: mtiColumns })
-    .catch(e => vscode.window.showErrorMessage(`Could not show the MTI list: ${e?.message ?? e}`));
+function mtiColumns(columnMetaData: ColumnMetaData[]): DataTableColumn<MTIInfo>[] {
+  return columnMetaData
+    .map(column => column.name)
+    .filter(column => !HIDDEN_COLUMNS.has(column))
+    .map(column => ({
+      id: column,
+      title: prettyColumnTitle(column),
+      value: (mti: MTIInfo) => formatColumnValue(mti, column),
+      align: [`MTI_SIZE`, `KEYS`].includes(column) ? `right` : `left`,
+    }));
 }
