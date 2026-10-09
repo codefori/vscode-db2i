@@ -501,6 +501,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       color: var(--dt-null-color);
     }
 
+    /* Keeps an empty value tall enough to show the caret and the edit outline */
+    .dt-hoverable { min-height: 1lh; }
     .dt-hoverable[contenteditable="true"] {
       outline: 1px solid var(--dt-accent);
       outline-offset: -1px;
@@ -1300,10 +1302,11 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       };
 
       grid.addEventListener("click", (e) => {
-        const hoverable = e.target.closest(".dt-hoverable");
-        if (!hoverable) return;
-        const cellDiv = hoverable.closest(".dt-c");
+        // Resolve from the cell: an empty value leaves nothing of .dt-hoverable to click on
+        const cellDiv = e.target.closest(".dt-c");
         if (!cellDiv) return;
+        const hoverable = cellDiv.querySelector(".dt-hoverable");
+        if (!hoverable) return;
         const chosenColumn = cellDiv.dataset.col;
         if (!chosenColumn || chosenColumn === "RRN") return;
         const chosenColumnDetail = updateTable.columns.find((c) => c.name === chosenColumn);
