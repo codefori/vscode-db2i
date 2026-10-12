@@ -63,6 +63,10 @@ const completionTypes: { [index: string]: CompletionType } = {
 
 
 
+function getLabelText(item: CompletionItem): string {
+  return typeof item.label === `string` ? item.label : item.label.label;
+}
+
 function getColumnAttributes(column: TableColumn, useSystemName: boolean): string {
   const shownName = useSystemName ? column.SYSTEM_COLUMN_NAME : column.COLUMN_NAME;
   const alternateName = useSystemName ? column.COLUMN_NAME : column.SYSTEM_COLUMN_NAME;
@@ -88,7 +92,7 @@ function getAllColumns(name: string, schema: string, items: CompletionItem[]) {
   );
 
   allCols.sortText = 'a@allCols';
-  allCols.insertText = items.map(item => typeof item.label === `string` ? item.label : item.label.label).join(", ");
+  allCols.insertText = items.map(getLabelText).join(", ");
   return allCols;
 }
 
@@ -155,25 +159,42 @@ async function getObjectColumns(
 
 /**
  * Gets the completion items for objects in a schema
+ *
+ * @param qualifyOrder when set, items are proposed as `schema.object` and sorted after this position in the search schemas
  */
 async function getObjectCompletions(
   forSchema: string,
-  sqlTypes: { [index: string]: CompletionType }
+  sqlTypes: { [index: string]: CompletionType },
+  qualifyOrder?: number
 ): Promise<CompletionItem[]> {
   forSchema = Statement.noQuotes(Statement.delimName(forSchema, true));
   const allObjects = await DbCache.getObjects(forSchema, Object.values(sqlTypes).map(k => k.type), { excludeSourceFiles: true });
 
   return allObjects.map((value) => {
     const completionData = completionTypes[value.type];
-    return createCompletionItem(
-      Statement.prettyName(value.name),
+    const name = Statement.prettyName(value.name);
+    const label = qualifyOrder === undefined ? name : `${Statement.prettyName(value.schema)}.${name}`;
+    const text = value.text?.trim();
+
+    const item = createCompletionItem(
+      label,
       completionData.icon,
       completionData.label,
-      `Schema: ${value.schema}`,
-      completionData.order
-    )
-  }
-  );
+      [`Schema: ${value.schema}`, ...(text ? [`Text: ${text}`] : [])].join(`\n\n`),
+      qualifyOrder === undefined ? completionData.order : `b${String(qualifyOrder).padStart(3, `0`)}${completionData.order}`
+    );
+
+    if (qualifyOrder !== undefined) {
+      // Typing either the object or the schema name should find the item
+      item.filterText = `${name} ${label}`;
+    }
+
+    if (text) {
+      item.label = { label, description: text };
+    }
+
+    return item;
+  });
 }
 
 // Unqualified references resolve to the first schema that has the object, like the library list
@@ -196,12 +217,13 @@ async function getObjectCompletionsForSchemas(
   schemas: string[],
   sqlTypes: { [index: string]: CompletionType }
 ): Promise<CompletionItem[]> {
-  const results = await Promise.all(schemas.map(schema => getObjectCompletions(schema, sqlTypes)));
+  // With many schemas (system naming on *LIBL), objects are qualified so the same name can be picked from any of them
+  const qualify = schemas.length > 1;
+  const results = await Promise.all(schemas.map((schema, i) => getObjectCompletions(schema, sqlTypes, qualify ? i : undefined)));
 
-  // When an object exists in many schemas, only the first one would be used
   return results
     .flat()
-    .filter((item, i, all) => all.findIndex(other => other.label === item.label && other.kind === item.kind) === i);
+    .filter((item, i, all) => all.findIndex(other => getLabelText(other) === getLabelText(item) && other.kind === item.kind) === i);
 }
 
 async function getCompletionItemsForSchema(
@@ -322,19 +344,23 @@ async function getCompletionItemsForTriggerDot(
   return list;
 }
 
-async function getCachedSchemas() {
+// Schemas are listed after the objects, starting with the ones being searched (library list or current schema)
+async function getCachedSchemas(searchSchemas: string[]) {
   const allSchemas: BasicSQLObject[] = await DbCache.getObjects(
     '',
     [`schemas`]
   );
-  const completionItems: CompletionItem[] = allSchemas.map((schema) =>
-    createCompletionItem(
+  const searchOrder = searchSchemas.map(schema => Statement.noQuotes(Statement.delimName(schema, true)));
+  const completionItems: CompletionItem[] = allSchemas.map((schema) => {
+    const position = searchOrder.indexOf(schema.name);
+    return createCompletionItem(
       Statement.prettyName(schema.name),
       CompletionItemKind.Module,
       `Schema`,
-      `Text: ${schema.text}`
-    )
-  );
+      schema.text ? `Text: ${schema.text}` : undefined,
+      position >= 0 ? `y${String(position).padStart(3, `0`)}` : `z`
+    );
+  });
 
   return completionItems;
 }
@@ -366,7 +392,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
 
   // Get all the schemas
   if (objectRefs.length === 0 && cteList.length === 0) {
-    completionItems.push(...(await getCachedSchemas()));
+    completionItems.push(...(await getCachedSchemas(searchSchemas)));
   }
 
   // Fetch all the columns for tables that have references in the statement
