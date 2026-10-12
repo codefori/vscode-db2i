@@ -506,6 +506,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         noRowsMessage: listing?.noRowsMessage,
         sort: from.sort,
         streaming: true,
+        awaitingRows: carried,
         serverQuery: from.serverQuery,
         cancellable: from.options.withCancel === true || inEditor,
         updatable: from.updatable,

@@ -97,6 +97,8 @@ export interface DataTableOptions<T> {
    * disabled (meaningless over an unknown-total, partially-loaded set).
    */
   streaming?: boolean;
+  /** With `streaming: true` — the first rows are pushed with {@link appendDataTableRows}, so the table must not ask for them itself */
+  awaitingRows?: boolean;
   /** With `streaming: true` — routes sort/search through `handlers.onSortChange`/`onSearchChange` instead of disabling them, so the caller can re-run the query server-side */
   serverQuery?: boolean;
   /** Enables click-to-edit cells that write back with an `UPDATE ... WHERE ...` statement */
@@ -287,6 +289,7 @@ function toWire<T>(options: DataTableOptions<T>, tableId: string) {
     initialQuery: options.initialQuery ?? ``,
     canOpenInEditor: streaming ? false : options.openInEditor === true,
     streaming,
+    awaitingRows: streaming && options.awaitingRows === true,
     serverQuery,
     updatable: options.updatable ?? null,
     resizable: options.resizable === true,
@@ -711,7 +714,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       sortCol: MODEL.initialSort,
       sortDir: MODEL.initialDir,
       view: [],
-      isFetching: false,
+      // awaitingRows: held until the first appendRows, so the sentinel can't restart the query
+      isFetching: MODEL.awaitingRows,
       noMoreRows: false,
       isDone: false,
       allRows: false,
