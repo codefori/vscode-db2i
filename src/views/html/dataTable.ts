@@ -226,6 +226,20 @@ function nullableColumnIds(updatable: UpdatableInfo | undefined): Set<string> | 
   return updatable ? new Set(updatable.columns.filter(c => c.isNullable).map(c => c.name)) : undefined;
 }
 
+/** Structured values (e.g. an ARRAY column, which the driver returns as an object) become JSON text instead of `[object Object]` */
+function plainValue(value: unknown): string | number | null | undefined {
+  if (value === null || value === undefined) return value as null | undefined;
+  if (typeof value === `string` || typeof value === `number`) return value;
+  if (typeof value === `object`) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      // Circular or otherwise unserialisable — fall through to String()
+    }
+  }
+  return String(value);
+}
+
 function rowToWire<T>(
   row: T,
   i: number,
@@ -234,7 +248,7 @@ function rowToWire<T>(
   wrapEditable: boolean,
   nullableIds: Set<string> | undefined,
 ): WireRow {
-  const rawValues = columns.map(col => col.value(row));
+  const rawValues = columns.map(col => plainValue(col.value(row)));
   const cells = columns.map((col, c) =>
     col.html ? col.html(row) : formatCellValue(rawValues[c], wrapEditable, !!nullableIds?.has(col.id)),
   );
