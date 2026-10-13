@@ -397,10 +397,7 @@ async function runHandler(options?: StatementInfo) {
     const statement = statementDetail.statement;
     const ref = statement?.getObjectReferences()?.[0];
 
-    let possibleTitle = `SQL Results`;
-    if (ref && ref.object.name) {
-      possibleTitle = (ref.object.schema ? ref.object.schema + `.` : ``) + ref.object.name;
-    }
+    const possibleTitle = `SQL Results`;
 
     if (ref && (statement?.type === StatementType.Create || statement?.type === StatementType.Alter)) {
       const databaseObj =
