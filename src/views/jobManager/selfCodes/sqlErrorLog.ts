@@ -1,10 +1,11 @@
+import { ColumnMetaData } from "@ibm/mapepire-js";
 import * as vscode from "vscode";
 import { getInstance } from "../../../base";
 import { JobManager } from "../../../config";
 import Statement from "../../../database/statement";
-import { DataTableColumn, DataTableHandlers, DataTableOptions } from "../../html/dataTable";
-import { showDataTable, showDataTableError, showDataTableLoading } from "../../results";
-import { formatTimestamp, listFooter, LoadStats, prettyColumnTitle } from "../../schemaBrowser/indexCreation";
+import { DataTableColumn } from "../../html/dataTable";
+import { showListing } from "../../results";
+import { formatTimestamp, isNumericType, prettyColumnTitle } from "../../schemaBrowser/indexCreation";
 
 /** A row from `QSYS2.SQL_ERROR_LOG` */
 interface SqlErrorLogEntry {
@@ -61,21 +62,18 @@ const LEADING_COLUMNS = [`LOGGED_TIME`, `LOGGED_SQLCODE`, `LOGGED_SQLSTATE`, `NU
 
 const HIDDEN_COLUMNS = new Set([`INITIAL_STACK`]);
 
-function sqlErrorLogColumns(entries: SqlErrorLogEntry[]): DataTableColumn<SqlErrorLogEntry>[] {
-  const first = entries[0];
-  if (!first) return [];
-
-  const available = Object.keys(first).filter(column => !HIDDEN_COLUMNS.has(column));
+function sqlErrorLogColumns(columnMetaData: ColumnMetaData[]): DataTableColumn<SqlErrorLogEntry>[] {
+  const available = columnMetaData.filter(column => !HIDDEN_COLUMNS.has(column.name));
   const ordered = [
-    ...LEADING_COLUMNS.filter(column => available.includes(column)),
-    ...available.filter(column => !LEADING_COLUMNS.includes(column)),
+    ...LEADING_COLUMNS.flatMap(name => available.filter(column => column.name === name)),
+    ...available.filter(column => !LEADING_COLUMNS.includes(column.name)),
   ];
 
   return ordered.map(column => ({
-    id: column,
-    title: prettyColumnTitle(column),
-    value: (entry: SqlErrorLogEntry) => formatColumnValue(entry, column),
-    align: typeof first[column] === `number` ? `right` : `left`,
+    id: column.name,
+    title: prettyColumnTitle(column.name),
+    value: (entry: SqlErrorLogEntry) => formatColumnValue(entry, column.name),
+    align: isNumericType(column.type) ? `right` : `left`,
   }));
 }
 
@@ -142,46 +140,21 @@ export async function viewOtherSelfLogs(): Promise<void> {
   if (!scope) return;
 
   const target = scopeTarget(scope);
-  const sql = sqlErrorLogStatement(scope);
-  const stats: LoadStats = { executionTimeMs: 0 };
-  const load = async () => {
-    const startTime = performance.now();
-    const entries = await JobManager.runSQL<SqlErrorLogEntry>(sql);
-    stats.executionTimeMs = performance.now() - startTime;
-    stats.jobId = JobManager.getSelection()?.job.id;
-    return entries;
-  };
-  let entries: SqlErrorLogEntry[];
 
-  try {
-    await showDataTableLoading(`Fetching the SQL error log for ${target}...`);
-    entries = await load();
-  } catch (e: any) {
-    showDataTableError(e.message);
-    return;
-  }
-
-  const options: DataTableOptions<SqlErrorLogEntry> = {
-    title: `SQL Error Log for ${target}`,
-    subtitle: (shown, total) => listFooter({ one: `logged error`, many: `logged errors` }, shown, total, stats),
-    columns: sqlErrorLogColumns(entries),
-    rows: entries,
+  await showListing<SqlErrorLogEntry>(sqlErrorLogStatement(scope), {
+    heading: `SQL Error Log for ${target}`,
+    columns: sqlErrorLogColumns,
+    loadingText: `Fetching the SQL error log for ${target}...`,
     searchPlaceholder: `Search logged errors…`,
     emptyMessage: `No logged errors match the search.`,
     noRowsMessage: `No errors were logged by SELF for ${target}.`,
     actions: [
       { id: SQL_ERROR_LOG_ACTIONS.openStatement, primary: true, when: entry => statementText(entry) !== undefined },
     ],
-  };
-
-  const handlers: DataTableHandlers<SqlErrorLogEntry> = {
     onAction: async (actionId, entry) => {
       if (actionId === SQL_ERROR_LOG_ACTIONS.openStatement) {
         await openStatement(entry);
       }
     },
-  };
-
-  showDataTable(options, handlers, { sql, reload: load, columns: sqlErrorLogColumns })
-    .catch(e => vscode.window.showErrorMessage(`Could not show the SQL error log: ${e?.message ?? e}`));
+  });
 }
