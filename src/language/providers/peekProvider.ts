@@ -3,6 +3,7 @@ import { JobManager } from "../../config";
 import Schemas from "../../database/schemas";
 import Statement from "../../database/statement";
 import { remoteAssistIsEnabled } from "./logic/available";
+import { getRoutineSchemaFromPath, getRoutineType } from "./logic/callable";
 import { getSqlDocument } from "./logic/parse";
 
 
@@ -38,7 +39,13 @@ export const peekProvider = languages.registerDefinitionProvider({ language: `sq
         //  - if system naming is in use, then don't pass a library and the library list will be used
         const schema = ref.object.schema ? Statement.delimName(ref.object.schema, true) : naming === `sql` ? Statement.delimName(defaultSchema) : undefined;
 
-        const possibleObjects = await Schemas.resolveObjects([{name, schema}], [`*LIB`]);
+        // Unqualified routines resolve through the SQL path
+        const routineType = ref.object.schema ? undefined : getRoutineType(statementAt, ref);
+        const pathSchema = routineType ? await getRoutineSchemaFromPath(currentJob.job, name, routineType) : undefined;
+
+        const possibleObjects = pathSchema
+          ? [{ schema: pathSchema, name: Statement.noQuotes(name), sqlType: routineType! }]
+          : await Schemas.resolveObjects([{name, schema}], [`*LIB`]);
 
         let totalBlocks: string[] = [];
 

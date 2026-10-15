@@ -38,15 +38,29 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
         toolTipItems.push(`[$(info) View Job Log](command:vscode-db2i.jobManager.viewJobLog)`);
       }
 
+      const currentSchema = Statement.delimName(await job.getCurrentSchema());
+
       if (job.getNaming() === `sql`) {
-        toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${Statement.delimName(await job.getCurrentSchema())}\``);
+        const path = await job.getCurrentPath();
+        toolTipItems.push([
+          `SQL Naming.`,
+          ``,
+          `Current schema: \`${currentSchema}\``,
+          ``,
+          `Current path: ${path ? path.map(schema => `\`${schema}\``).join(`, `) : `\`*LIBL\``}`
+        ].join(`\n`));
       } else {
+        const libraries = await job.getLibraryList();
         toolTipItems.push([
           `System Naming.`,
           ``,
-          `Configured user library list for job:`,
+          `Current schema: \`${job.currentSchemaStore === `*LIBL` ? `*LIBL` : currentSchema}\``,
           ``,
-          ...(job.options?.libraries?.map((lib, i) => `${i+1}. \`${lib}\``) || ['N/A'])
+          `Library list for job:`,
+          ``,
+          ...(libraries.length ? libraries.map((lib, i) => `${i+1}. \`${lib}\``) : ['N/A']),
+          ``,
+          `[$(list-ordered) Change library list](command:vscode-db2i.jobManager.changeLibraryList)`
         ].join(`\n`));
       }
 
