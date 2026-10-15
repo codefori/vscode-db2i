@@ -238,10 +238,10 @@ export const JobsSuite: TestSuite = {
     }},
 
     {name: `Current schema follows SET SCHEMA (system naming)`, test: async () => {
-      const newJob = await JobManager.newJob({libraries: [`QIWS`, `QSYS2`], naming: `system`});
+      const newJob = await JobManager.newJob({libraries: [`QIWS`, `SYSTOOLS`], naming: `system`});
 
       assert.strictEqual(await newJob.getCurrentSchema(), `QIWS`);
-      assert.deepStrictEqual(await newJob.getSearchSchemas(), [`QIWS`, `QSYS2`]);
+      assert.deepStrictEqual(await newJob.getSearchSchemas(), [`QIWS`, `SYSTOOLS`]);
 
       await newJob.query(`SET SCHEMA=QSYS2`).execute();
       assert.strictEqual(await newJob.getCurrentSchema(), `QSYS2`);
@@ -249,6 +249,24 @@ export const JobsSuite: TestSuite = {
 
       await newJob.query(`set current schema SYSTOOLS`).execute();
       assert.strictEqual(await newJob.getCurrentSchema(), `SYSTOOLS`);
+
+      JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Library list follows CL commands (system naming)`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [`QIWS`], naming: `system`});
+
+      assert.ok(!(await newJob.getSearchSchemas()).includes(`SYSTOOLS`));
+
+      await newJob.query(`ADDLIBLE SYSTOOLS`, {isClCommand: true}).execute();
+      assert.ok((await newJob.getSearchSchemas()).includes(`SYSTOOLS`));
+
+      await newJob.query(`CALL QSYS2.QCMDEXC('RMVLIBLE SYSTOOLS')`).execute();
+      assert.ok(!(await newJob.getSearchSchemas()).includes(`SYSTOOLS`));
+
+      await newJob.setLibraryList([`SYSTOOLS`, `QIWS`]);
+      assert.deepStrictEqual(await newJob.getLibraryList(), [`SYSTOOLS`, `QIWS`]);
+      assert.deepStrictEqual(newJob.options.libraries, [`SYSTOOLS`, `QIWS`]);
 
       JobManager.closeJobById(newJob);
     }},

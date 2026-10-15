@@ -43,14 +43,17 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
       if (job.getNaming() === `sql`) {
         toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${currentSchema}\``);
       } else {
+        const libraries = await job.getLibraryList();
         toolTipItems.push([
           `System Naming.`,
           ``,
           `Current schema: \`${job.currentSchemaStore === `*LIBL` ? `*LIBL` : currentSchema}\``,
           ``,
-          `Configured user library list for job:`,
+          `Library list for job:`,
           ``,
-          ...(job.options?.libraries?.map((lib, i) => `${i+1}. \`${lib}\``) || ['N/A'])
+          ...(libraries.length ? libraries.map((lib, i) => `${i+1}. \`${lib}\``) : ['N/A']),
+          ``,
+          `[$(list-ordered) Change library list](command:vscode-db2i.jobManager.changeLibraryList)`
         ].join(`\n`));
       }
 
