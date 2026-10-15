@@ -109,10 +109,8 @@ export class JobManagerView implements TreeDataProvider<any> {
         const id = node ? node.label as string : undefined;
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
-          // With system naming the library list is changed on the running job (Change Library List), not here
-          const excludeOptions: (keyof JDBCOptions)[] = selected.job.getNaming() === `system` ? [`libraries`] : [];
-
-          editJobUi(selected.job.options, selected.name, excludeOptions).then(newOptions => {
+          // The library list only applies to saved configurations: on a running job it is changed with Change Library List
+          editJobUi(selected.job.options, selected.name, [`libraries`]).then(newOptions => {
             if (newOptions) {
               window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
                 progress.report({ message: `Ending current job` });
@@ -141,7 +139,7 @@ export class JobManagerView implements TreeDataProvider<any> {
           const current = await selected.job.getLibraryList();
           const input = await window.showInputBox({
             title: `Change library list for ${selected.name}`,
-            prompt: `Libraries separated by commas or spaces. The first entry is the current library. Applied to the running job with CHGLIBL.`,
+            prompt: `User libraries separated by commas or spaces. Applied to the running job with CHGLIBL, the current library is not changed.`,
             value: current.join(`, `),
             validateInput: (value) => {
               const invalid = splitLibraries(value).find(lib => !/^[A-Z$#@][A-Z0-9$#@_.]{0,9}$/i.test(lib));

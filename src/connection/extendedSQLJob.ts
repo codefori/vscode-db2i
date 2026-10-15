@@ -2,6 +2,7 @@ import { SQLJob } from "@ibm/mapepire-js";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { QueryOptions, QueryResult } from "@ibm/mapepire-js/dist/src/types";
 import { getInstance } from "../base";
+import Statement from "../database/statement";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import { JobLogEntry } from "./types";
 
@@ -9,11 +10,14 @@ export type ExtendedSQLJob = SQLJob & {
   selfState: SelfValue;
   currentSchemaStore?: string;
   libraryListStore?: LibraryListEntry[];
+  currentPathStore?: string[];
   resetCurrentSchemaCache(): void
   resetLibraryListCache(): void
+  resetCurrentPathCache(): void
   getSelfCode(): SelfValue
   getCurrentSchema(): Promise<string>
   getSearchSchemas(): Promise<string[]>
+  getCurrentPath(): Promise<string[] | undefined>
   getLibraryList(): Promise<string[]>
   setLibraryList(libraries: string[]): Promise<void>
   getNaming(): undefined | "sql" | "system"
@@ -28,6 +32,7 @@ interface LibraryListEntry {
 }
 
 const CHANGES_CURRENT_SCHEMA = /\bSET\s+(CURRENT\s+)?SCHEMA\b/i;
+const CHANGES_CURRENT_PATH = /\bSET\s+((CURRENT\s+)?(FUNCTION\s+)?PATH|CURRENT_PATH)\b/i;
 // CL commands and calls (QCMDEXC or any program/procedure) can change the job library list
 const MAY_CHANGE_LIBRARY_LIST = /\b(CALL|QCMDEXC)\b/i;
 
@@ -37,6 +42,7 @@ export function extendSQLJob(job: SQLJob) {
 
   wrappedJob.resetCurrentSchemaCache = () => delete wrappedJob.currentSchemaStore;
   wrappedJob.resetLibraryListCache = () => delete wrappedJob.libraryListStore;
+  wrappedJob.resetCurrentPathCache = () => delete wrappedJob.currentPathStore;
   wrappedJob.getSelfCode = () => wrappedJob.selfState;
 
   const baseQuery = wrappedJob.query;
@@ -45,8 +51,9 @@ export function extendSQLJob(job: SQLJob) {
 
     const changesSchema = CHANGES_CURRENT_SCHEMA.test(sql);
     const changesLibraryList = opts?.isClCommand === true || MAY_CHANGE_LIBRARY_LIST.test(sql);
+    const changesPath = CHANGES_CURRENT_PATH.test(sql);
 
-    if (changesSchema || changesLibraryList) {
+    if (changesSchema || changesLibraryList || changesPath) {
       const baseExecute = statement.execute.bind(statement);
       statement.execute = async (rowsToFetch?: number) => {
         try {
@@ -54,6 +61,7 @@ export function extendSQLJob(job: SQLJob) {
         } finally {
           if (changesSchema) wrappedJob.resetCurrentSchemaCache();
           if (changesLibraryList) wrappedJob.resetLibraryListCache();
+          if (changesPath) wrappedJob.resetCurrentPathCache();
         }
       }
     }
@@ -80,12 +88,12 @@ export function extendSQLJob(job: SQLJob) {
     return libraryList[0]?.schema || wrappedJob.options?.libraries?.[0] || `QGPL`;
   }
 
-  // Current library and user portion of the job library list, as it is right now on the job
+  // User portion of the job library list, as it is right now on the job (the current library is ignored)
   const getLibraryListEntries = async (): Promise<LibraryListEntry[]> => {
     if (!wrappedJob.libraryListStore) {
       try {
         const result = await wrappedJob.execute<{ SCHEMA_NAME: string | null, SYSTEM_SCHEMA_NAME: string }>(
-          `select SCHEMA_NAME, SYSTEM_SCHEMA_NAME from QSYS2.LIBRARY_LIST_INFO where TYPE in ('CURRENT', 'USER') order by ORDINAL_POSITION`
+          `select SCHEMA_NAME, SYSTEM_SCHEMA_NAME from QSYS2.LIBRARY_LIST_INFO where TYPE = 'USER' order by ORDINAL_POSITION`
         );
         if (result.success) {
           wrappedJob.libraryListStore = result.data.map(row => ({
@@ -104,11 +112,11 @@ export function extendSQLJob(job: SQLJob) {
   wrappedJob.getLibraryList = async () => (await getLibraryListEntries()).map(entry => entry.system);
 
   wrappedJob.setLibraryList = async (libraries: string[]) => {
-    const [curlib, ...userLibraries] = libraries.map(lib => lib.toUpperCase());
-    const libl = userLibraries.filter((lib, i, all) => lib !== curlib && all.indexOf(lib) === i);
+    const libl = libraries.map(lib => lib.toUpperCase()).filter((lib, i, all) => all.indexOf(lib) === i);
 
+    // The current library is left as it is
     const result = await wrappedJob.execute<{ SUMMARY: string }>(
-      `CHGLIBL LIBL(${libl.length ? libl.join(` `) : `*NONE`}) CURLIB(${curlib || `*CRTDFT`})`,
+      `CHGLIBL LIBL(${libl.length ? libl.join(` `) : `*NONE`})`,
       { isClCommand: true }
     );
 
@@ -117,7 +125,7 @@ export function extendSQLJob(job: SQLJob) {
     }
 
     // So a restarted job (e.g. after editing its properties) keeps the same library list
-    wrappedJob.options.libraries = curlib ? [curlib, ...libl] : libl;
+    wrappedJob.options.libraries = libl;
   }
 
   wrappedJob.getSearchSchemas = async () => {
@@ -131,6 +139,29 @@ export function extendSQLJob(job: SQLJob) {
     }
 
     return [currentSchema];
+  }
+
+  // Schemas used to resolve unqualified routines, global variables and types.
+  // undefined when the path is *LIBL (the default with system naming), so the library list is used instead
+  wrappedJob.getCurrentPath = async () => {
+    if (!wrappedJob.currentPathStore) {
+      try {
+        const result = await wrappedJob.execute<{ '00001': string }>(`values (current path)`);
+        if (result.success && result.data.length > 0) {
+          // e.g. "QSYS","QSYS2","SYSPROC","SYSIBMADM","USER" or *LIBL
+          const path = result.data[0]['00001'] || ``;
+          wrappedJob.currentPathStore = Array.from(path.matchAll(/"((?:[^"]|"")*)"|([^\s,]+)/g))
+            .map(match => match[1] !== undefined ? Statement.delimName(match[1].replace(/""/g, `"`)) : match[2]);
+        }
+      } catch (e) {}
+    }
+
+    const path = wrappedJob.currentPathStore;
+    if (!path || path.length === 0 || path.includes(`*LIBL`)) {
+      return undefined;
+    }
+
+    return path;
   }
 
   wrappedJob.getNaming = () => wrappedJob.options.naming;

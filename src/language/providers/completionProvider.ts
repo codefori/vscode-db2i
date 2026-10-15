@@ -63,6 +63,10 @@ const completionTypes: { [index: string]: CompletionType } = {
 
 
 
+// Unqualified functions and global variables resolve through the SQL path, the other objects through the current schema or library list
+const { functions, variables, ...objectTypes } = completionTypes;
+const pathTypes = { functions, variables };
+
 function getLabelText(item: CompletionItem): string {
   return typeof item.label === `string` ? item.label : item.label.label;
 }
@@ -215,15 +219,32 @@ async function getColumnsForRef(ref: ObjectRef, searchSchemas: string[]): Promis
 
 async function getObjectCompletionsForSchemas(
   schemas: string[],
-  sqlTypes: { [index: string]: CompletionType }
-): Promise<CompletionItem[]> {
+  sqlTypes: { [index: string]: CompletionType },
   // With many schemas (system naming on *LIBL), objects are qualified so the same name can be picked from any of them
-  const qualify = schemas.length > 1;
+  qualify = schemas.length > 1
+): Promise<CompletionItem[]> {
   const results = await Promise.all(schemas.map((schema, i) => getObjectCompletions(schema, sqlTypes, qualify ? i : undefined)));
 
   return results
     .flat()
     .filter((item, i, all) => all.findIndex(other => getLabelText(other) === getLabelText(item) && other.kind === item.kind) === i);
+}
+
+/**
+ * Gets the completion items for unqualified objects.
+ * With an explicit SQL path, functions and variables are proposed unqualified from it: the first schema in the path wins, like Db2 does.
+ */
+async function getUnqualifiedObjectCompletions(searchSchemas: string[], path: string[] | undefined): Promise<CompletionItem[]> {
+  if (!path) {
+    return getObjectCompletionsForSchemas(searchSchemas, completionTypes);
+  }
+
+  const results = await Promise.all([
+    getObjectCompletionsForSchemas(searchSchemas, objectTypes),
+    getObjectCompletionsForSchemas(path, pathTypes, false)
+  ]);
+
+  return results.flat();
 }
 
 async function getCompletionItemsForSchema(
@@ -382,6 +403,7 @@ function createCompletionItemForAlias(ref: ObjectRef) {
 
 async function getCompletionItemsForRefs(currentStatement: LanguageStatement.default, offset: number, cteColumns?: string[]) {
   const searchSchemas = await getSearchSchemas();
+  const path = await getCurrentPath();
   const objectRefs = currentStatement.getObjectReferences();
   const cteList = currentStatement.getCTEReferences();
 
@@ -432,7 +454,7 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
   if (tokenAtOffset === undefined && (curClause !== ClauseType.Unknown)) {
     // get all the completion items for objects in each referenced schema
     completionItems.push(
-      ...(await getObjectCompletionsForSchemas(searchSchemas, completionTypes))
+      ...(await getUnqualifiedObjectCompletions(searchSchemas, path))
     );
   } else {
     // content assist invoked during incomplete reference
@@ -440,9 +462,10 @@ async function getCompletionItemsForRefs(currentStatement: LanguageStatement.def
     // --                               |
     const lastRef = objectRefs[objectRefs.length - 1];
     if (lastRef && curClause !== ClauseType.Unknown && tokenAtOffset) {
-      const schemas = lastRef.object.schema ? [lastRef.object.schema] : searchSchemas;
       completionItems.push(
-        ...(await getObjectCompletionsForSchemas(schemas, completionTypes))
+        ...(lastRef.object.schema
+          ? await getObjectCompletionsForSchemas([lastRef.object.schema], completionTypes)
+          : await getUnqualifiedObjectCompletions(searchSchemas, path))
       );
     }
   }
@@ -513,7 +536,9 @@ async function getCompletionItems(
   if (currentStatement && currentStatement.type === StatementType.Call) {
     const curClause = currentStatement.getClauseForOffset(offset);
     if (curClause === ClauseType.Unknown) {
-      return getProcedures(currentStatement.getObjectReferences(), searchSchemas);
+      // Unqualified procedures resolve through the SQL path
+      const path = await getCurrentPath();
+      return getProcedures(currentStatement.getObjectReferences(), path || searchSchemas);
     }
   }
 
@@ -663,4 +688,9 @@ const getSearchSchemas = () => {
   } else {
     return Promise.resolve([`QGPL`]);
   }
+}
+
+const getCurrentPath = () => {
+  const currentJob = JobManager.getSelection();
+  return currentJob ? currentJob.job.getCurrentPath() : Promise.resolve(undefined);
 }

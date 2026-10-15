@@ -41,7 +41,14 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
       const currentSchema = Statement.delimName(await job.getCurrentSchema());
 
       if (job.getNaming() === `sql`) {
-        toolTipItems.push(`SQL Naming.\n\nCurrent schema: \`${currentSchema}\``);
+        const path = await job.getCurrentPath();
+        toolTipItems.push([
+          `SQL Naming.`,
+          ``,
+          `Current schema: \`${currentSchema}\``,
+          ``,
+          `Current path: ${path ? path.map(schema => `\`${schema}\``).join(`, `) : `\`*LIBL\``}`
+        ].join(`\n`));
       } else {
         const libraries = await job.getLibraryList();
         toolTipItems.push([
