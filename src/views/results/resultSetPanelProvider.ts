@@ -7,7 +7,8 @@ import { JobManager } from "../../config";
 import Configuration from "../../configuration";
 import Statement from "../../database/statement";
 import Table from "../../database/table";
-import { ObjectRef } from "../../language/sql/types";
+import Document from "../../language/sql/document";
+import { ObjectRef, StatementType } from "../../language/sql/types";
 import { TableColumn } from "../../types";
 import {
   BasicColumn,
@@ -150,6 +151,15 @@ function buildListingColumns(listing: ResultSetListing<any>, columnMetaData: Col
 const SEARCH_EXCLUDED_TYPES = new Set([
   `BLOB`, `CLOB`, `DBCLOB`, `NCLOB`, `VARBIN`, `VARBINARY`, `BINARY`, `GRAPHIC`, `VARGRAPHIC`, `ROWID`, `DATALINK`, `XML`, `SQLXML`,
 ]);
+
+/** A CALL's result set can't be wrapped in `SELECT * FROM (...)`, so it can't be sorted or searched server-side */
+function isProcedureCall(sql: string): boolean {
+  try {
+    return new Document(sql).statements[0]?.type === StatementType.Call;
+  } catch {
+    return /^\s*call\b/i.test(sql);
+  }
+}
 
 /** Double-quotes an identifier for interpolation into generated SQL, escaping embedded `"` (unlike `Statement.delimName`, which doesn't) */
 function quoteIdent(id: string): string {
@@ -471,8 +481,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       options: this.lastScrollerOptions,
       baseSelect: basicSelect,
       updatable,
-      // Excludes CL (not a SELECT) and explain-with-run (its `queryId` ties it to an existing engine run).
-      serverQuery: !options.isCL && options.queryId === undefined,
+      // Excludes CL and CALL (not a SELECT) and explain-with-run (its `queryId` ties it to an existing engine run).
+      serverQuery: !options.isCL && options.queryId === undefined && !isProcedureCall(basicSelect),
       search: ``,
       dtOptions: { columns: [], rows: [] },
       isDone: false,
