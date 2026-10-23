@@ -97,6 +97,8 @@ export interface DataTableOptions<T> {
    * disabled (meaningless over an unknown-total, partially-loaded set).
    */
   streaming?: boolean;
+  /** With `streaming: true` — the first rows are pushed with {@link appendDataTableRows}, so the table must not ask for them itself */
+  awaitingRows?: boolean;
   /** With `streaming: true` — routes sort/search through `handlers.onSortChange`/`onSearchChange` instead of disabling them, so the caller can re-run the query server-side */
   serverQuery?: boolean;
   /** Enables click-to-edit cells that write back with an `UPDATE ... WHERE ...` statement */
@@ -224,6 +226,20 @@ function nullableColumnIds(updatable: UpdatableInfo | undefined): Set<string> | 
   return updatable ? new Set(updatable.columns.filter(c => c.isNullable).map(c => c.name)) : undefined;
 }
 
+/** Structured values (e.g. an ARRAY column, which the driver returns as an object) become JSON text instead of `[object Object]` */
+function plainValue(value: unknown): string | number | null | undefined {
+  if (value === null || value === undefined) return value as null | undefined;
+  if (typeof value === `string` || typeof value === `number`) return value;
+  if (typeof value === `object`) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      // Circular or otherwise unserialisable — fall through to String()
+    }
+  }
+  return String(value);
+}
+
 function rowToWire<T>(
   row: T,
   i: number,
@@ -232,7 +248,7 @@ function rowToWire<T>(
   wrapEditable: boolean,
   nullableIds: Set<string> | undefined,
 ): WireRow {
-  const rawValues = columns.map(col => col.value(row));
+  const rawValues = columns.map(col => plainValue(col.value(row)));
   const cells = columns.map((col, c) =>
     col.html ? col.html(row) : formatCellValue(rawValues[c], wrapEditable, !!nullableIds?.has(col.id)),
   );
@@ -287,6 +303,7 @@ function toWire<T>(options: DataTableOptions<T>, tableId: string) {
     initialQuery: options.initialQuery ?? ``,
     canOpenInEditor: streaming ? false : options.openInEditor === true,
     streaming,
+    awaitingRows: streaming && options.awaitingRows === true,
     serverQuery,
     updatable: options.updatable ?? null,
     resizable: options.resizable === true,
@@ -309,7 +326,13 @@ export function registerDataTable<T>(options: DataTableOptions<T>, handlers: Dat
 function rowActionContext<T>(post: (message: any) => void, options: DataTableOptions<T>, row: T): DataTableRowActionContext {
   return {
     removeRow: () => {
-      if (options.rows.includes(row)) {
+      const index = options.rows.indexOf(row);
+      if (index < 0) return;
+
+      if (options.streaming) {
+        options.rows.splice(index, 1);
+        post({ command: `removeRow`, row: index });
+      } else {
         updateDataTableRows(post, options, options.rows.filter(candidate => candidate !== row));
       }
     },
@@ -495,6 +518,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       color: var(--dt-null-color);
     }
 
+    /* Keeps an empty value tall enough to show the caret and the edit outline */
+    .dt-hoverable { min-height: 1lh; }
     .dt-hoverable[contenteditable="true"] {
       outline: 1px solid var(--dt-accent);
       outline-offset: -1px;
@@ -703,7 +728,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       sortCol: MODEL.initialSort,
       sortDir: MODEL.initialDir,
       view: [],
-      isFetching: false,
+      // awaitingRows: held until the first appendRows, so the sentinel can't restart the query
+      isFetching: MODEL.awaitingRows,
       noMoreRows: false,
       isDone: false,
       allRows: false,
@@ -1140,6 +1166,36 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       MODEL.rows.push(...wireRows);
     }
 
+    function emptyStreamingText() {
+      return state.appliedQuery.trim() ? MODEL.emptyMessage : (MODEL.noRowsMessage || "No rows returned.");
+    }
+
+    // Rows are append-only, so a row's index is also its position on screen
+    function removeStreamingRow(index) {
+      const rowEls = grid.querySelectorAll(":scope > .dt-row");
+      if (!rowEls[index]) return;
+      rowEls[index].remove();
+      MODEL.rows.splice(index, 1);
+      state.zebraCount = MODEL.rows.length;
+
+      for (let i = index; i < MODEL.rows.length; i++) {
+        const rowEl = rowEls[i + 1];
+        MODEL.rows[i].i = i;
+        rowEl.dataset.i = String(i);
+        rowEl.className = "dt-row " + (i % 2 ? "even" : "odd");
+        if (rowEl.dataset.vscodeContext) {
+          const context = JSON.parse(rowEl.dataset.vscodeContext);
+          context.dtRow = i;
+          rowEl.dataset.vscodeContext = JSON.stringify(context);
+        }
+      }
+
+      updateStreamingStatus({});
+      if (MODEL.rows.length) fetchIfSentinelVisible();
+      else if (state.noMoreRows) showStreamingMessage(emptyStreamingText(), true);
+      else if (!state.isFetching) requestFetch(state.allRows);
+    }
+
     function requestFetch(allRows) {
       state.isFetching = true;
       if (MODEL.rows.length) el("dtStatus").textContent = "Loaded " + MODEL.rows.length + " rows. Fetching more…";
@@ -1264,10 +1320,11 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       };
 
       grid.addEventListener("click", (e) => {
-        const hoverable = e.target.closest(".dt-hoverable");
-        if (!hoverable) return;
-        const cellDiv = hoverable.closest(".dt-c");
+        // Resolve from the cell: an empty value leaves nothing of .dt-hoverable to click on
+        const cellDiv = e.target.closest(".dt-c");
         if (!cellDiv) return;
+        const hoverable = cellDiv.querySelector(".dt-hoverable");
+        if (!hoverable) return;
         const chosenColumn = cellDiv.dataset.col;
         if (!chosenColumn || chosenColumn === "RRN") return;
         const chosenColumnDetail = updateTable.columns.find((c) => c.name === chosenColumn);
@@ -1484,12 +1541,15 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
               const affected = typeof data.updateCount === "number" && data.updateCount >= 0 ? data.updateCount : 0;
               showStreamingMessage("Statement executed with no result set returned. Rows affected: " + affected, false);
             } else {
-              showStreamingMessage(state.appliedQuery.trim() ? MODEL.emptyMessage : "No rows returned.", true);
+              showStreamingMessage(emptyStreamingText(), true);
             }
           } else {
             hideStreamingMessage();
             fetchIfSentinelVisible();
           }
+          break;
+        case "removeRow":
+          removeStreamingRow(data.row);
           break;
         case "cellResponse":
           if (data.id) handleCellResponse(data.id, data.success === true);
