@@ -1,4 +1,4 @@
-import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, env, window } from "vscode";
+import { CancellationToken, ProgressLocation, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, env, window } from "vscode";
 
 import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
@@ -31,6 +31,7 @@ import {
 } from "../html/dataTable";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { statementDone } from "./editorUi";
+import { EXPORT_FORMATS, ExportFormat, ExportTable, openResultsAs } from "./export";
 import * as html from "./html";
 
 export type SqlParameter = string | number;
@@ -234,6 +235,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   private fetchingEpoch: number | undefined;
   /** Bumped on every restart so a superseded in-flight fetch can drop its stale result */
   private queryEpoch = 0;
+  /** Resolved when a fetch ends or the shown result changes */
+  private fetchWaiters: (() => void)[] = [];
 
   constructor(readonly host: ResultSetHost = `view`) { }
 
@@ -261,9 +264,13 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       return;
     }
 
+    this.requestFetch(allRows === true);
+  }
+
+  private requestFetch(allRows: boolean) {
     this._view?.webview.postMessage({
       command: `requestFetch`,
-      allRows: allRows === true,
+      allRows,
       queryId: this.currentQuery?.getId(),
     });
   }
@@ -298,6 +305,71 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     } else {
       window.showInformationMessage(`There is no SQL statement to copy.`);
     }
+  }
+
+  async exportResults(format: ExportFormat) {
+    const table = await this.getRowsToExport(format);
+    if (table) {
+      await openResultsAs(format, table);
+    }
+  }
+
+  private async getRowsToExport(format: ExportFormat): Promise<ExportTable | undefined> {
+    const session = this.session;
+    const tableSession = this.tableSession;
+    const dtOptions = session?.dtOptions ?? tableSession?.options;
+
+    if (!dtOptions || dtOptions.columns.length === 0) {
+      window.showInformationMessage(`There are no results to export.`);
+      return;
+    }
+
+    if (session && !session.isDone) {
+      const loaded = dtOptions.rows.length;
+      const choice = await window.showQuickPick([
+        { label: `All rows`, detail: `Retrieves the remaining rows first`, allRows: true },
+        { label: `Loaded rows only`, detail: `${loaded} row${loaded === 1 ? `` : `s`}`, allRows: false },
+      ], { title: `Export as ${EXPORT_FORMATS[format].label}`, placeHolder: `Not all rows have been retrieved yet` });
+
+      if (!choice || (choice.allRows && !await this.retrieveAllRows(session))) return;
+    }
+
+    if (this.session !== session || this.tableSession !== tableSession) return;
+
+    if (dtOptions.rows.length === 0) {
+      window.showInformationMessage(`There are no rows to export.`);
+      return;
+    }
+
+    const columns = dtOptions.columns;
+    return {
+      columns: columns.map(column => column.id),
+      rows: dtOptions.rows.map(row => columns.map(column => column.value(row))),
+    };
+  }
+
+  /** Retrieves the rest of the rows through the table, so it shows them too. False when cancelled or the result changed. */
+  private retrieveAllRows(session: ResultSetSession): Thenable<boolean> {
+    return window.withProgress({ location: ProgressLocation.Notification, title: `Retrieving all rows...`, cancellable: true }, async (_progress, token) => {
+      const cancellation = token.onCancellationRequested(() => this.settleFetchWaiters());
+      try {
+        while (this.session === session && !session.isDone && !token.isCancellationRequested) {
+          const fetched = new Promise<void>(resolve => this.fetchWaiters.push(resolve));
+          // Ignored by the table while it is fetching, so ask again once that fetch ends
+          this.requestFetch(true);
+          await fetched;
+        }
+        return this.session === session && session.isDone;
+      } finally {
+        cancellation.dispose();
+      }
+    });
+  }
+
+  private settleFetchWaiters() {
+    const waiters = this.fetchWaiters;
+    this.fetchWaiters = [];
+    waiters.forEach(resolve => resolve());
   }
 
   moveToEditor() {
@@ -632,16 +704,23 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           // Also on a superseded fetch's early return, unless a newer fetch now owns the button
           if (this.fetchingEpoch === undefined) setCancelButtonVisibility(false);
           updateStatusBar();
+          this.settleFetchWaiters();
         }
       },
 
-      onCellUpdate: async ({ id, statement, bindings }) => {
+      onCellUpdate: async ({ id, statement, bindings, cell }) => {
+        const editedRow = cell ? dtOptions.rows[cell.row] : undefined;
         try {
           await JobManager.runSQL(statement, { parameters: bindings });
           const substatement = bindings.length
             ? `bind: ${bindings.map(binding => typeof binding === 'string' ? `'${binding}'` : String(binding)).join(', ')}`
             : undefined;
           commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement, substatement);
+
+          // Keep the rows in step with the table, for exports and moves to the editor
+          const index = (session.columnMetaData ?? []).findIndex((column: any) => column.name === cell?.column);
+          if (editedRow && index >= 0) editedRow[index] = cell!.value;
+
           postDataTableCellResponse(post, id, true);
         } catch (e: any) {
           postDataTableCellResponse(post, id, false);
@@ -825,6 +904,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     this.tableRegistration = registration;
     this.session = undefined;
     this.tableSession = undefined;
+    this.settleFetchWaiters();
   }
 }
 

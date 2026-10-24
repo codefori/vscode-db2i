@@ -139,8 +139,8 @@ export interface DataTableHandlers<T> {
   onSortChange?: (sort: { columnId: string; direction: "asc" | "desc" } | undefined) => void | Promise<void>;
   /** `serverQuery` only — fired (debounced) when the search box's text changes */
   onSearchChange?: (params: { query: string }) => void | Promise<void>;
-  /** Fired when the user finishes editing an updatable cell */
-  onCellUpdate?: (params: { id: number; statement: string; bindings: (string | number)[] }) => void | Promise<void>;
+  /** Fired when the user finishes editing an updatable cell. `cell` locates the edit in `rows` (by index and column id) with its new value. */
+  onCellUpdate?: (params: { id: number; statement: string; bindings: (string | number)[]; cell?: { row: number; column: string; value: string | number | null } }) => void | Promise<void>;
   /** Fired when the user clicks the in-webview Cancel button (see `cancellable`) */
   onCancel?: () => void | Promise<void>;
 }
@@ -1305,10 +1305,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         cellNode.classList.toggle("dt-null", wasNull);
       }
 
-      function requestCellUpdate(cellNode, originalValue, wasNull, statement, bindings) {
+      function requestCellUpdate(cellNode, originalValue, wasNull, statement, bindings, cell) {
         const id = ++cellCounter;
         updateRequests[id] = { cellNode, originalValue, wasNull };
-        vscode.postMessage({ command: "update", id, update: statement, bindings });
+        vscode.postMessage({ command: "update", id, update: statement, bindings, cell });
       }
 
       handleCellResponse = function (id, success) {
@@ -1475,7 +1475,9 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
             editableNode.classList.remove("dt-null");
           }
 
-          requestCellUpdate(editableNode, originalValue, wasNull, sql.updateStatement, sql.bindings);
+          const value = nullify ? null : (chosenColumnDetail.jsType === "number" ? Number(newValue) : newValue);
+          const cell = { row: Number(rowEl.dataset.i), column: chosenColumn, value };
+          requestCellUpdate(editableNode, originalValue, wasNull, sql.updateStatement, sql.bindings, cell);
         };
 
         editableNode.addEventListener("blur", (ev) => { ev.stopPropagation(); finishEditing(); }, { once: true });
@@ -1631,7 +1633,7 @@ export async function handleDataTableMessage<T>(
       return true;
     }
     case `update`: {
-      await handlers.onCellUpdate?.({ id: message.id, statement: message.update, bindings: message.bindings ?? [] });
+      await handlers.onCellUpdate?.({ id: message.id, statement: message.update, bindings: message.bindings ?? [], cell: message.cell });
       return true;
     }
     case `cancel`: {

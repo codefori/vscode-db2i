@@ -815,6 +815,26 @@
         "icon": "$(copy)"
       },
       {
+        "command": "vscode-db2i.resultset.export.csv",
+        "title": "Export as CSV",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.resultset.export.json",
+        "title": "Export as JSON",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.resultset.export.md",
+        "title": "Export as Markdown",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.resultset.export.sql",
+        "title": "Export as SQL INSERT",
+        "category": "Db2 for i"
+      },
+      {
         "command": "vscode-db2i.resultset.moveToEditor",
         "title": "Move into Editor Area",
         "category": "Db2 for i",
@@ -1462,8 +1482,13 @@
           "when": "view == vscode-db2i.resultset"
         },
         {
-          "command": "vscode-db2i.resultset.moveToEditor",
+          "submenu": "vscode-db2i.resultset.export",
           "group": "navigation@05",
+          "when": "view == vscode-db2i.resultset"
+        },
+        {
+          "command": "vscode-db2i.resultset.moveToEditor",
+          "group": "navigation@06",
           "when": "view == vscode-db2i.resultset"
         },
         {
@@ -1862,6 +1887,11 @@
           "when": "activeWebviewPanelId == sqlResultSet"
         },
         {
+          "submenu": "vscode-db2i.resultset.export",
+          "group": "navigation@05",
+          "when": "activeWebviewPanelId == sqlResultSet"
+        },
+        {
           "command": "vscode-db2i.syntax.checkDocument",
           "when": "editorLangId == sql && code-for-ibmi:connected == true",
           "group": "navigation"
@@ -1919,6 +1949,24 @@
           "group": "navigation@1"
         }
       ],
+      "vscode-db2i.resultset.export": [
+        {
+          "command": "vscode-db2i.resultset.export.csv",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vscode-db2i.resultset.export.json",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.resultset.export.md",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vscode-db2i.resultset.export.sql",
+          "group": "navigation@3"
+        }
+      ],
       "vscode-db2i.jobManager.defaultSettings": [
         {
           "command": "vscode-db2i.jobManager.editDefaultJobProps",
@@ -1961,6 +2009,11 @@
         "id": "vscode-db2i.resultset.retrieve",
         "label": "Retrieve...",
         "icon": "$(git-stash)"
+      },
+      {
+        "id": "vscode-db2i.resultset.export",
+        "label": "Export...",
+        "icon": "$(export)"
       },
       {
         "id": "vscode-db2i.jobManager.defaultSettings",
