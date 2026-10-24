@@ -69,6 +69,19 @@
               "Semicolon",
               "Tab"
             ]
+          },
+          "vscode-db2i.codegen.csvDecimalSeparator": {
+            "type": "string",
+            "description": "Decimal separator used for numeric values in CSV output",
+            "default": "Period",
+            "enum": [
+              "Period",
+              "Comma"
+            ],
+            "enumDescriptions": [
+              "Period (1234.56)",
+              "Comma (1234,56)"
+            ]
           }
         }
       }
