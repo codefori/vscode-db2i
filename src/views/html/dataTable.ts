@@ -111,6 +111,8 @@ export interface DataTableOptions<T> {
   cancellable?: boolean;
   /** Spinner + text shown until the first page of data arrives (streaming) or the table is rendered (static, if set) */
   loadingText?: string;
+  /** Text always shown in the info popup */
+  info?: string;
 }
 
 /** What the user is currently looking at — carried over when the table moves to the editor */
@@ -310,6 +312,7 @@ function toWire<T>(options: DataTableOptions<T>, tableId: string) {
     collapsedInitialWidth: options.collapsedInitialWidth ?? null,
     cancellable: options.cancellable === true,
     loadingText: options.loadingText ?? null,
+    info: options.info ?? ``,
   };
 }
 
@@ -657,7 +660,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
   <div id="toolbar" ${showToolbar ? `` : `style="display:none"`}>
     <span id="title" title="${escapeHtml(model.title)}">${escapeHtml(model.title)}</span>
     <span id="toolbarEnd">
-      <span id="dtModified" role="button" tabindex="0" aria-label="Sort or filter applied" aria-controls="dtModifiedPopup" aria-expanded="false" hidden>
+      <span id="dtModified" role="button" tabindex="0" aria-label="Query details" aria-controls="dtModifiedPopup" aria-expanded="false" hidden>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
           <circle cx="8" cy="8" r="6.4"/>
           <path d="M8 7.2v4.3" stroke-linecap="round"/>
@@ -1001,9 +1004,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     let modifiedPinned = false;
 
     function setModification(text) {
-      modifiedIcon.hidden = !text;
-      modifiedPopup.textContent = text || "";
-      if (!text) hideModificationPopup();
+      const shown = [text, MODEL.info].filter(Boolean).join("\\n\\n");
+      modifiedIcon.hidden = !shown;
+      modifiedPopup.textContent = shown;
+      if (!shown) hideModificationPopup();
       else if (!modifiedPopup.hidden) placeModificationPopup();
     }
 
@@ -1058,6 +1062,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       if (e.key === "Escape" && !modifiedPopup.hidden) hideModificationPopup();
     });
     window.addEventListener("resize", () => { if (!modifiedPopup.hidden) placeModificationPopup(); });
+    setModification("");
 
     function localModificationText() {
       const lines = [];

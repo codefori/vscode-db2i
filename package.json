@@ -816,22 +816,22 @@
       },
       {
         "command": "vscode-db2i.resultset.export.csv",
-        "title": "Export as CSV",
+        "title": "Copy as CSV",
         "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.resultset.export.json",
-        "title": "Export as JSON",
+        "title": "Copy as JSON",
         "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.resultset.export.md",
-        "title": "Export as Markdown",
+        "title": "Copy as Markdown",
         "category": "Db2 for i"
       },
       {
         "command": "vscode-db2i.resultset.export.sql",
-        "title": "Export as SQL INSERT",
+        "title": "Copy as SQL INSERT",
         "category": "Db2 for i"
       },
       {
@@ -2012,8 +2012,8 @@
       },
       {
         "id": "vscode-db2i.resultset.export",
-        "label": "Export...",
-        "icon": "$(export)"
+        "label": "Copy to Clipboard...",
+        "icon": "$(clippy)"
       },
       {
         "id": "vscode-db2i.jobManager.defaultSettings",

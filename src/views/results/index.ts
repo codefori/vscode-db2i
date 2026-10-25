@@ -492,6 +492,7 @@ async function runHandler(options?: StatementInfo) {
               withCancel: inWindow,
               ref: updatableTable,
               parameters,
+              parameterNames: hasParameters(statementDetail.bindInfo) ? statementDetail.bindInfo!.parameterNames : undefined,
               uiId,
               title: possibleTitle,
             })

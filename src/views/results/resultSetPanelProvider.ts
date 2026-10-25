@@ -3,6 +3,7 @@ import { CancellationToken, ProgressLocation, WebviewPanel, WebviewView, Webview
 import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { openResultSetPanel, setCancelButtonVisibility } from ".";
+import { describeParameters, inlineParameters } from "./parameterInfo";
 import { JobManager } from "../../config";
 import Configuration from "../../configuration";
 import Statement from "../../database/statement";
@@ -31,7 +32,7 @@ import {
 } from "../html/dataTable";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { statementDone } from "./editorUi";
-import { EXPORT_FORMATS, ExportFormat, ExportTable, openResultsAs } from "./export";
+import { EXPORT_FORMATS, ExportFormat, ExportTable, copyResultsAs } from "./export";
 import * as html from "./html";
 
 export type SqlParameter = string | number;
@@ -40,6 +41,8 @@ export interface ScrollerOptions {
   uiId?: string;
   basicSelect: string;
   parameters?: SqlParameter[];
+  /** Marker names, undefined for `?` */
+  parameterNames?: (string | undefined)[];
   isCL?: boolean;
   queryId?: string;
   withCancel?: boolean;
@@ -298,7 +301,10 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   async copySql() {
     const session = this.session;
     const current = session && (session.sort || session.search) ? buildQueryText(session, true).sql : undefined;
-    const sql = this.tableSession ? this.tableSession.extras.sql : current ?? this.lastScrollerOptions?.basicSelect;
+    const statement = current ?? this.lastScrollerOptions?.basicSelect;
+    const sql = this.tableSession
+      ? this.tableSession.extras.sql
+      : statement && inlineParameters(statement, session?.options.parameters ?? this.lastScrollerOptions?.parameters);
     if (sql) {
       await env.clipboard.writeText(sql);
       window.setStatusBarMessage(`SQL statement copied to clipboard`, 3000);
@@ -310,7 +316,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   async exportResults(format: ExportFormat) {
     const table = await this.getRowsToExport(format);
     if (table) {
-      await openResultsAs(format, table);
+      await copyResultsAs(format, table);
     }
   }
 
@@ -320,7 +326,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     const dtOptions = session?.dtOptions ?? tableSession?.options;
 
     if (!dtOptions || dtOptions.columns.length === 0) {
-      window.showInformationMessage(`There are no results to export.`);
+      window.showInformationMessage(`There are no results to copy.`);
       return;
     }
 
@@ -329,7 +335,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       const choice = await window.showQuickPick([
         { label: `All rows`, detail: `Retrieves the remaining rows first`, allRows: true },
         { label: `Loaded rows only`, detail: `${loaded} row${loaded === 1 ? `` : `s`}`, allRows: false },
-      ], { title: `Export as ${EXPORT_FORMATS[format].label}`, placeHolder: `Not all rows have been retrieved yet` });
+      ], { title: `Copy as ${EXPORT_FORMATS[format].label}`, placeHolder: `Not all rows have been retrieved yet` });
 
       if (!choice || (choice.allRows && !await this.retrieveAllRows(session))) return;
     }
@@ -337,7 +343,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     if (this.session !== session || this.tableSession !== tableSession) return;
 
     if (dtOptions.rows.length === 0) {
-      window.showInformationMessage(`There are no rows to export.`);
+      window.showInformationMessage(`There are no rows to copy.`);
       return;
     }
 
@@ -587,6 +593,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         emptyMessage: listing?.emptyMessage ?? `No rows match the search.`,
         noRowsMessage: listing?.noRowsMessage,
         sort: from.sort,
+        info: describeParameters(from.options.parameters ?? [], from.options.parameterNames),
         streaming: true,
         awaitingRows: carried,
         serverQuery: from.serverQuery,
