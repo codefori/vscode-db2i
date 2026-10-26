@@ -33,6 +33,8 @@ export interface DataTableColumn<T> {
   sortable?: boolean;
   /** Native tooltip shown on the header cell, e.g. a SQL type description */
   headerTooltip?: string;
+  /** Label/value pairs shown in a hover table on the header cell, instead of `headerTooltip` */
+  headerDetails?: [string, string][];
 }
 
 /** Right-click row action: contribute a `webview/context` command with `when: webviewSection == dtRow && dtAction_<id>` that calls {@link runDataTableRowAction} */
@@ -111,6 +113,8 @@ export interface DataTableOptions<T> {
   cancellable?: boolean;
   /** Spinner + text shown until the first page of data arrives (streaming) or the table is rendered (static, if set) */
   loadingText?: string;
+  /** Text always shown in the info popup */
+  info?: string;
 }
 
 /** What the user is currently looking at — carried over when the table moves to the editor */
@@ -139,8 +143,8 @@ export interface DataTableHandlers<T> {
   onSortChange?: (sort: { columnId: string; direction: "asc" | "desc" } | undefined) => void | Promise<void>;
   /** `serverQuery` only — fired (debounced) when the search box's text changes */
   onSearchChange?: (params: { query: string }) => void | Promise<void>;
-  /** Fired when the user finishes editing an updatable cell */
-  onCellUpdate?: (params: { id: number; statement: string; bindings: (string | number)[] }) => void | Promise<void>;
+  /** Fired when the user finishes editing an updatable cell. `cell` locates the edit in `rows` (by index and column id) with its new value. */
+  onCellUpdate?: (params: { id: number; statement: string; bindings: (string | number)[]; cell?: { row: number; column: string; value: string | number | null } }) => void | Promise<void>;
   /** Fired when the user clicks the in-webview Cancel button (see `cancellable`) */
   onCancel?: () => void | Promise<void>;
 }
@@ -194,6 +198,7 @@ interface WireColumn {
   align: "left" | "right" | "center";
   sortable: boolean;
   tooltip: string;
+  details: [string, string][];
 }
 
 interface WireRow {
@@ -218,7 +223,8 @@ function toWireColumns<T>(columns: DataTableColumn<T>[], streaming: boolean, ser
     track: col.width ?? `max-content`,
     align: col.align ?? `left`,
     sortable: streaming && !serverQuery ? false : col.sortable !== false,
-    tooltip: col.headerTooltip ?? ``,
+    tooltip: col.headerDetails?.length ? `` : col.headerTooltip ?? ``,
+    details: col.headerDetails ?? [],
   }));
 }
 
@@ -310,6 +316,7 @@ function toWire<T>(options: DataTableOptions<T>, tableId: string) {
     collapsedInitialWidth: options.collapsedInitialWidth ?? null,
     cancellable: options.cancellable === true,
     loadingText: options.loadingText ?? null,
+    info: options.info ?? ``,
   };
 }
 
@@ -448,6 +455,26 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
     }
     #dtModifiedPopup[hidden] { display: none; }
+    #dtHeaderHover {
+      position: fixed;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 2px 12px;
+      margin: 0;
+      max-width: min(480px, calc(100vw - 16px));
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: var(--vscode-font-size, 13px);
+      color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+      background-color: var(--vscode-editorHoverWidget-background, var(--vscode-editor-background));
+      border: 1px solid var(--vscode-editorHoverWidget-border, var(--dt-border));
+      box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+      pointer-events: none;
+    }
+    #dtHeaderHover[hidden] { display: none; }
+    #dtHeaderHover dt { font-weight: 600; }
+    #dtHeaderHover dd { margin: 0; overflow-wrap: anywhere; }
     #openInEditor { flex: 0 0 auto; }
     #openInEditor svg { display: block; }
 
@@ -657,7 +684,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
   <div id="toolbar" ${showToolbar ? `` : `style="display:none"`}>
     <span id="title" title="${escapeHtml(model.title)}">${escapeHtml(model.title)}</span>
     <span id="toolbarEnd">
-      <span id="dtModified" role="button" tabindex="0" aria-label="Sort or filter applied" aria-controls="dtModifiedPopup" aria-expanded="false" hidden>
+      <span id="dtModified" role="button" tabindex="0" aria-label="Query details" aria-controls="dtModifiedPopup" aria-expanded="false" hidden>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
           <circle cx="8" cy="8" r="6.4"/>
           <path d="M8 7.2v4.3" stroke-linecap="round"/>
@@ -684,6 +711,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     </span>
   </div>
 
+  <dl id="dtHeaderHover" role="tooltip" hidden></dl>
   <div id="gridScroll">
     <div id="grid"></div>
     <div id="empty">${escapeHtml(model.emptyMessage)}</div>
@@ -755,6 +783,44 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     }
 
     // ----- header ----------------------------------------------------------
+    let headerHoverTimer;
+
+    function showHeaderHover(h, index) {
+      const details = MODEL.columns[index]?.details;
+      if (!details || !details.length || !h.isConnected) return;
+      const hover = el("dtHeaderHover");
+      hover.replaceChildren(...details.flatMap(([label, value]) => {
+        const dt = document.createElement("dt");
+        dt.textContent = label;
+        const dd = document.createElement("dd");
+        dd.textContent = value;
+        return [dt, dd];
+      }));
+      hover.hidden = false;
+      const rect = h.getBoundingClientRect();
+      const margin = 8;
+      const left = Math.min(rect.left, window.innerWidth - hover.offsetWidth - margin);
+      hover.style.left = Math.max(margin, left) + "px";
+      hover.style.top = (rect.bottom + 4) + "px";
+    }
+
+    function hideHeaderHover() {
+      clearTimeout(headerHoverTimer);
+      el("dtHeaderHover").hidden = true;
+    }
+
+    function attachHeaderHover(h, index) {
+      h.addEventListener("mouseenter", () => {
+        clearTimeout(headerHoverTimer);
+        headerHoverTimer = setTimeout(() => showHeaderHover(h, index), 500);
+      });
+      h.addEventListener("mouseleave", hideHeaderHover);
+      h.addEventListener("mousedown", hideHeaderHover);
+    }
+
+    el("gridScroll").addEventListener("scroll", hideHeaderHover, { passive: true });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideHeaderHover(); });
+
     function attachGrip(headerCell, index) {
       const grip = document.createElement("div");
       grip.className = "dt-grip";
@@ -785,6 +851,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     }
 
     function buildHeader() {
+      hideHeaderHover();
       Array.from(grid.querySelectorAll(":scope > .dt-h")).forEach((n) => n.remove());
       grid.style.gridTemplateColumns = gridTemplate();
       MODEL.columns.forEach((col, index) => {
@@ -796,6 +863,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         label.textContent = col.title;
         h.appendChild(label);
         if (col.sortable) h.addEventListener("click", () => toggleSort(index));
+        attachHeaderHover(h, index);
         const arrow = document.createElement("span");
         arrow.className = "arrow";
         arrow.dataset.for = String(index);
@@ -1001,9 +1069,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     let modifiedPinned = false;
 
     function setModification(text) {
-      modifiedIcon.hidden = !text;
-      modifiedPopup.textContent = text || "";
-      if (!text) hideModificationPopup();
+      const shown = [text, MODEL.info].filter(Boolean).join("\\n\\n");
+      modifiedIcon.hidden = !shown;
+      modifiedPopup.textContent = shown;
+      if (!shown) hideModificationPopup();
       else if (!modifiedPopup.hidden) placeModificationPopup();
     }
 
@@ -1058,6 +1127,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       if (e.key === "Escape" && !modifiedPopup.hidden) hideModificationPopup();
     });
     window.addEventListener("resize", () => { if (!modifiedPopup.hidden) placeModificationPopup(); });
+    setModification("");
 
     function localModificationText() {
       const lines = [];
@@ -1305,10 +1375,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         cellNode.classList.toggle("dt-null", wasNull);
       }
 
-      function requestCellUpdate(cellNode, originalValue, wasNull, statement, bindings) {
+      function requestCellUpdate(cellNode, originalValue, wasNull, statement, bindings, cell) {
         const id = ++cellCounter;
         updateRequests[id] = { cellNode, originalValue, wasNull };
-        vscode.postMessage({ command: "update", id, update: statement, bindings });
+        vscode.postMessage({ command: "update", id, update: statement, bindings, cell });
       }
 
       handleCellResponse = function (id, success) {
@@ -1475,7 +1545,9 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
             editableNode.classList.remove("dt-null");
           }
 
-          requestCellUpdate(editableNode, originalValue, wasNull, sql.updateStatement, sql.bindings);
+          const value = nullify ? null : (chosenColumnDetail.jsType === "number" ? Number(newValue) : newValue);
+          const cell = { row: Number(rowEl.dataset.i), column: chosenColumn, value };
+          requestCellUpdate(editableNode, originalValue, wasNull, sql.updateStatement, sql.bindings, cell);
         };
 
         editableNode.addEventListener("blur", (ev) => { ev.stopPropagation(); finishEditing(); }, { once: true });
@@ -1631,7 +1703,7 @@ export async function handleDataTableMessage<T>(
       return true;
     }
     case `update`: {
-      await handlers.onCellUpdate?.({ id: message.id, statement: message.update, bindings: message.bindings ?? [] });
+      await handlers.onCellUpdate?.({ id: message.id, statement: message.update, bindings: message.bindings ?? [], cell: message.cell });
       return true;
     }
     case `cancel`: {

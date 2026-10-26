@@ -1,8 +1,6 @@
 import * as vscode from "vscode";
 import { SnippetString, TreeView, ViewColumn, window } from "vscode";
 
-import * as csv from "csv/sync";
-
 import { JobManager } from "../../config";
 import Configuration from "../../configuration";
 import { ExplainType } from "../../connection/types";
@@ -16,6 +14,7 @@ import { updateStatusBar } from "../jobManager/statusBar";
 import { getLiteralsFromStatement, getPriorBindableStatement, hasParameters, promptForParameterValues } from "./binding";
 import { queryResultToRpgDs, queryResultToUdtf } from "./codegen";
 import { registerRunStatement } from "./editorUi";
+import { EXPORT_FORMATS, ExportFormat, isExportFormat, openResultsAs } from "./export";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
@@ -44,19 +43,6 @@ export interface ParsedStatementInfo extends StatementInfo {
   embeddedInfo?: ParsedEmbeddedStatement;
   bindInfo?: ParsedEmbeddedStatement & { parameterNames: (string | undefined)[] };
 }
-
-const DelimValue = new Map(Object.entries({
-  Comma: `,`,
-  Semicolon: `;`,
-  Tab: `\t`
-}));
-
-const DecimalSeparatorValue = new Map(Object.entries({
-  Period: `.`,
-  Comma: `,`
-}));
-
-const DecimalColumnTypes = [`DECIMAL`, `NUMERIC`, `DECFLOAT`, `DOUBLE`, `FLOAT`, `REAL`];
 
 export function setCancelButtonVisibility(visible: boolean) {
   vscode.commands.executeCommand(`setContext`, `vscode-db2i:statementCanCancel`, visible);
@@ -177,6 +163,10 @@ export function initialise(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`vscode-db2i.resultset.clear`, (resource?: vscode.Uri) => resultSetTarget(resource)?.clear()),
 
     vscode.commands.registerCommand(`vscode-db2i.resultset.copySql`, (resource?: vscode.Uri) => resultSetTarget(resource)?.copySql()),
+
+    ...(Object.keys(EXPORT_FORMATS) as ExportFormat[]).map(format =>
+      vscode.commands.registerCommand(`vscode-db2i.resultset.export.${format}`, (resource?: vscode.Uri) => resultSetTarget(resource)?.exportResults(format))
+    ),
 
     vscode.commands.registerCommand(`vscode-db2i.resultset.moveToEditor`, () => resultSetProvider.moveToEditor()),
 
@@ -502,6 +492,7 @@ async function runHandler(options?: StatementInfo) {
               withCancel: inWindow,
               ref: updatableTable,
               parameters,
+              parameterNames: hasParameters(statementDetail.bindInfo) ? statementDetail.bindInfo!.parameterNames : undefined,
               uiId,
               title: possibleTitle,
             })
@@ -588,131 +579,15 @@ async function runHandler(options?: StatementInfo) {
 
           setCancelButtonVisibility(true);
           updateStatusBar({ executing: true });
-          const result = await JobManager.runSQLVerbose<any>(runContent, parameters.length ? { parameters } : undefined);
+          const result = await JobManager.runSQLVerbose<unknown[]>(runContent, { parameters: parameters.length ? parameters : undefined, isTerseResults: true });
           const data = result.data;
           setCancelButtonVisibility(false);
 
           if (data.length > 0) {
-            switch (statementDetail.qualifier) {
-
-              case `csv`:
-              case `json`:
-              case `md`:
-              case `sql`:
-                let content = ``;
-                switch (statementDetail.qualifier) {
-                  case `csv`:
-                    const delimiter = DelimValue.get(Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`);
-                    const decimalSeparator = DecimalSeparatorValue.get(Configuration.get<string>(`codegen.csvDecimalSeparator`) || `Period`)!;
-                    const formatNumber = (value: number | string) => String(value).replace(`.`, decimalSeparator);
-
-                    // Use metadata to handle duplicate column names properly
-                    if (result.metadata && result.metadata.columns) {
-                      const columnNames = result.metadata.columns.map(col => col.name);
-                      const decimalColumns = result.metadata.columns.map(col => DecimalColumnTypes.includes(col.type));
-
-                      // Build CSV manually to preserve duplicate column names
-                      const rows: string[][] = [];
-
-                      // Add header row
-                      rows.push(columnNames.map(name => `"${String(name).replace(/"/g, '""')}"`));
-                      // Add data rows - use column index to get values in correct order
-                      for (const row of data) {
-                        const values = columnNames.map((name, i) => {
-                          const value = row[name];
-                          if (value === null || value === undefined) {
-                            return '';
-                          }
-                          if (typeof value === `number` || decimalColumns[i]) {
-                            return `"${formatNumber(value)}"`;
-                          }
-                          return `"${String(value).replace(/"/g, '""')}"`;
-                        });
-                        rows.push(values);
-                      }
-
-                      content = rows.map(row => row.join(delimiter)).join('\n');
-                    } else {
-                      // Fallback to original method if no metadata
-                      content = csv.stringify(data, {
-                        header: true,
-                        quoted_string: true,
-                        delimiter: delimiter,
-                        cast: { number: value => formatNumber(value) }
-                      });
-                    }
-                    break;
-                  case `json`: content = JSON.stringify(data, null, 2); break;
-
-                  case `md`:
-                    const mdKeys = Object.keys(data[0]);
-
-                    // Calculate column widths
-                    const columnWidths = mdKeys.map(key => {
-                      const headerWidth = key.length;
-                      const dataWidth = Math.max(...data.map((row: any) => {
-                        if (row[key] === null) return 4; // 'NULL'.length
-                        return String(row[key]).replace(/\|/g, `\\|`).replace(/\n/g, ` `).length;
-                      }));
-                      return Math.max(headerWidth, dataWidth);
-                    });
-
-                    // Generate aligned header
-                    const header = `| ${mdKeys.map((key, i) => key.padEnd(columnWidths[i])).join(` | `)} |`;
-                    const separator = `| ${columnWidths.map(width => `-`.repeat(width)).join(` | `)} |`;
-
-                    // Generate aligned rows
-                    const rows = data.map((row: any) =>
-                      `| ${mdKeys.map((key, i) => {
-                        const value = row[key] === null ?
-                          `NULL` :
-                          String(row[key]).replace(/\|/g, `\\|`).replace(/\n/g, ` `);
-                        return value.padEnd(columnWidths[i]);
-                      }).join(` | `)} |`
-                    ).join(`\n`);
-
-                    content = `${header}\n${separator}\n${rows}`;
-                    break;
-
-                  case `sql`:
-                    const keys = Object.keys(data[0]);
-
-                    // split array into groups of 1k
-                    const insertLimit = 1000;
-                    const dataChunks = [];
-                    for (let i = 0; i < data.length; i += insertLimit) {
-                      dataChunks.push(data.slice(i, i + insertLimit));
-                    }
-
-                    content = `-- Generated ${dataChunks.length} insert statement${dataChunks.length === 1 ? `` : `s`}\n\n`;
-
-                    for (const data of dataChunks) {
-                      const insertStatement = [
-                        `insert into TABLE (`,
-                        `  ${keys.join(`, `)}`,
-                        `) values `,
-                        data.map((row: any) => `  (${keys.map(key => {
-                          if (row[key] === null) return `null`;
-                          if (typeof row[key] === `string`) return `'${String(row[key]).replace(/'/g, `''`)}'`;
-                          return row[key];
-                        }).join(`, `)})`
-                        ).join(`,\n`),
-                      ];
-                      content += insertStatement.join(`\n`) + `;\n`;
-                    }
-                    break;
-                }
-
-                const languageMap: { [key: string]: string } = {
-                  'md': 'markdown',
-                  'csv': 'csv',
-                  'json': 'json',
-                  'sql': 'sql'
-                };
-                const textDoc = await vscode.workspace.openTextDocument({ language: languageMap[statementDetail.qualifier] || statementDetail.qualifier, content });
-                await vscode.window.showTextDocument(textDoc);
-                chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
-                break;
+            if (isExportFormat(statementDetail.qualifier)) {
+              const columns = result.metadata.columns;
+              await openResultsAs(statementDetail.qualifier, { columns: columns.map(column => column.name), types: columns.map(column => column.type), rows: data });
+              chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
             }
 
           } else {
