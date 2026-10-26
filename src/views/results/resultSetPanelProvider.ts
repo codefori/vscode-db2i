@@ -32,7 +32,7 @@ import {
 } from "../html/dataTable";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { statementDone } from "./editorUi";
-import { EXPORT_FORMATS, ExportFormat, ExportTable, copyResultsAs } from "./export";
+import { EXPORT_FORMATS, ExportFormat, ExportTable, openResultsAs } from "./export";
 import * as html from "./html";
 
 export type SqlParameter = string | number;
@@ -316,7 +316,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   async exportResults(format: ExportFormat) {
     const table = await this.getRowsToExport(format);
     if (table) {
-      await copyResultsAs(format, table);
+      await openResultsAs(format, table);
     }
   }
 
@@ -326,7 +326,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     const dtOptions = session?.dtOptions ?? tableSession?.options;
 
     if (!dtOptions || dtOptions.columns.length === 0) {
-      window.showInformationMessage(`There are no results to copy.`);
+      window.showInformationMessage(`There are no results to open.`);
       return;
     }
 
@@ -335,7 +335,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       const choice = await window.showQuickPick([
         { label: `All rows`, detail: `Retrieves the remaining rows first`, allRows: true },
         { label: `Loaded rows only`, detail: `${loaded} row${loaded === 1 ? `` : `s`}`, allRows: false },
-      ], { title: `Copy as ${EXPORT_FORMATS[format].label}`, placeHolder: `Not all rows have been retrieved yet` });
+      ], { title: `Export as ${EXPORT_FORMATS[format].label}`, placeHolder: `Not all rows have been retrieved yet` });
 
       if (!choice || (choice.allRows && !await this.retrieveAllRows(session))) return;
     }
@@ -343,7 +343,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     if (this.session !== session || this.tableSession !== tableSession) return;
 
     if (dtOptions.rows.length === 0) {
-      window.showInformationMessage(`There are no rows to copy.`);
+      window.showInformationMessage(`There are no rows to open.`);
       return;
     }
 

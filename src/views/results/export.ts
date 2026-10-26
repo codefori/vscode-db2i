@@ -1,4 +1,4 @@
-import { env, window, workspace } from "vscode";
+import { window, workspace } from "vscode";
 import Configuration from "../../configuration";
 
 export type ExportFormat = `csv` | `json` | `md` | `sql`;
@@ -42,12 +42,6 @@ function formatWithSettings(format: ExportFormat, table: ExportTable): string {
 export async function openResultsAs(format: ExportFormat, table: ExportTable) {
   const document = await workspace.openTextDocument({ language: EXPORT_FORMATS[format].language, content: formatWithSettings(format, table) });
   await window.showTextDocument(document);
-}
-
-export async function copyResultsAs(format: ExportFormat, table: ExportTable) {
-  await env.clipboard.writeText(formatWithSettings(format, table));
-  const rows = table.rows.length;
-  window.showInformationMessage(`Copied ${rows} row${rows === 1 ? `` : `s`} to the clipboard as ${EXPORT_FORMATS[format].label}.`);
 }
 
 const isNull = (value: unknown) => value === null || value === undefined;
