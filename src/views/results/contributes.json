@@ -62,12 +62,25 @@
           },
           "vscode-db2i.codegen.csvColumnDelimiter": {
             "type": "string",
-            "description": "Delimiter",
+            "description": "Column delimiter used when exporting a result set in CSV format",
             "default": "Comma",
             "enum": [
               "Comma",
               "Semicolon",
               "Tab"
+            ]
+          },
+          "vscode-db2i.codegen.csvDecimalSeparator": {
+            "type": "string",
+            "description": "Decimal separator used for numeric values when exporting a result set in CSV format",
+            "default": "Period",
+            "enum": [
+              "Period",
+              "Comma"
+            ],
+            "enumDescriptions": [
+              "Period (1234.56)",
+              "Comma (1234,56)"
             ]
           }
         }

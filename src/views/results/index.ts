@@ -51,6 +51,13 @@ const DelimValue = new Map(Object.entries({
   Tab: `\t`
 }));
 
+const DecimalSeparatorValue = new Map(Object.entries({
+  Period: `.`,
+  Comma: `,`
+}));
+
+const DecimalColumnTypes = [`DECIMAL`, `NUMERIC`, `DECFLOAT`, `DOUBLE`, `FLOAT`, `REAL`];
+
 export function setCancelButtonVisibility(visible: boolean) {
   vscode.commands.executeCommand(`setContext`, `vscode-db2i:statementCanCancel`, visible);
 }
@@ -596,10 +603,13 @@ async function runHandler(options?: StatementInfo) {
                 switch (statementDetail.qualifier) {
                   case `csv`:
                     const delimiter = DelimValue.get(Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`);
+                    const decimalSeparator = DecimalSeparatorValue.get(Configuration.get<string>(`codegen.csvDecimalSeparator`) || `Period`)!;
+                    const formatNumber = (value: number | string) => String(value).replace(`.`, decimalSeparator);
 
                     // Use metadata to handle duplicate column names properly
                     if (result.metadata && result.metadata.columns) {
                       const columnNames = result.metadata.columns.map(col => col.name);
+                      const decimalColumns = result.metadata.columns.map(col => DecimalColumnTypes.includes(col.type));
 
                       // Build CSV manually to preserve duplicate column names
                       const rows: string[][] = [];
@@ -608,10 +618,13 @@ async function runHandler(options?: StatementInfo) {
                       rows.push(columnNames.map(name => `"${String(name).replace(/"/g, '""')}"`));
                       // Add data rows - use column index to get values in correct order
                       for (const row of data) {
-                        const values = columnNames.map(name => {
+                        const values = columnNames.map((name, i) => {
                           const value = row[name];
                           if (value === null || value === undefined) {
                             return '';
+                          }
+                          if (typeof value === `number` || decimalColumns[i]) {
+                            return `"${formatNumber(value)}"`;
                           }
                           return `"${String(value).replace(/"/g, '""')}"`;
                         });
@@ -624,7 +637,8 @@ async function runHandler(options?: StatementInfo) {
                       content = csv.stringify(data, {
                         header: true,
                         quoted_string: true,
-                        delimiter: delimiter
+                        delimiter: delimiter,
+                        cast: { number: value => formatNumber(value) }
                       });
                     }
                     break;
