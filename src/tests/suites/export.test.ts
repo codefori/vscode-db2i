@@ -23,7 +23,18 @@ test('Export to CSV', () => {
     `"2",,"20"`,
   ].join(`\n`));
 
-  expect(formatResults(`csv`, table, `;`).split(`\n`)[2]).toBe(`"2";;"20"`);
+  expect(formatResults(`csv`, table, { delimiter: `;` }).split(`\n`)[2]).toBe(`"2";;"20"`);
+});
+
+test('Export to CSV with a decimal separator', () => {
+  const prices = {
+    columns: [`ID`, `PRICE`, `CODE`, `BIG`],
+    types: [`INTEGER`, `DECIMAL`, `VARCHAR`, `DECFLOAT`],
+    rows: [[1, 12.5, `A.1`, `1234.5678`]],
+  };
+
+  expect(formatResults(`csv`, prices, { delimiter: `;`, decimalSeparator: `,` }).split(`\n`)[1]).toBe(`"1";"12,5";"A.1";"1234,5678"`);
+  expect(formatResults(`csv`, prices).split(`\n`)[1]).toBe(`"1","12.5","A.1","1234.5678"`);
 });
 
 test('Export to JSON', () => {

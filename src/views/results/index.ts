@@ -585,7 +585,8 @@ async function runHandler(options?: StatementInfo) {
 
           if (data.length > 0) {
             if (isExportFormat(statementDetail.qualifier)) {
-              await openResultsAs(statementDetail.qualifier, { columns: result.metadata.columns.map(column => column.name), rows: data });
+              const columns = result.metadata.columns;
+              await openResultsAs(statementDetail.qualifier, { columns: columns.map(column => column.name), types: columns.map(column => column.type), rows: data });
               chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
             }
 
