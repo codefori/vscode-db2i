@@ -33,6 +33,8 @@ export interface DataTableColumn<T> {
   sortable?: boolean;
   /** Native tooltip shown on the header cell, e.g. a SQL type description */
   headerTooltip?: string;
+  /** Label/value pairs shown in a hover table on the header cell, instead of `headerTooltip` */
+  headerDetails?: [string, string][];
 }
 
 /** Right-click row action: contribute a `webview/context` command with `when: webviewSection == dtRow && dtAction_<id>` that calls {@link runDataTableRowAction} */
@@ -196,6 +198,7 @@ interface WireColumn {
   align: "left" | "right" | "center";
   sortable: boolean;
   tooltip: string;
+  details: [string, string][];
 }
 
 interface WireRow {
@@ -220,7 +223,8 @@ function toWireColumns<T>(columns: DataTableColumn<T>[], streaming: boolean, ser
     track: col.width ?? `max-content`,
     align: col.align ?? `left`,
     sortable: streaming && !serverQuery ? false : col.sortable !== false,
-    tooltip: col.headerTooltip ?? ``,
+    tooltip: col.headerDetails?.length ? `` : col.headerTooltip ?? ``,
+    details: col.headerDetails ?? [],
   }));
 }
 
@@ -451,6 +455,26 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
     }
     #dtModifiedPopup[hidden] { display: none; }
+    #dtHeaderHover {
+      position: fixed;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 2px 12px;
+      margin: 0;
+      max-width: min(480px, calc(100vw - 16px));
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: var(--vscode-font-size, 13px);
+      color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+      background-color: var(--vscode-editorHoverWidget-background, var(--vscode-editor-background));
+      border: 1px solid var(--vscode-editorHoverWidget-border, var(--dt-border));
+      box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+      pointer-events: none;
+    }
+    #dtHeaderHover[hidden] { display: none; }
+    #dtHeaderHover dt { font-weight: 600; }
+    #dtHeaderHover dd { margin: 0; overflow-wrap: anywhere; }
     #openInEditor { flex: 0 0 auto; }
     #openInEditor svg { display: block; }
 
@@ -687,6 +711,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     </span>
   </div>
 
+  <dl id="dtHeaderHover" role="tooltip" hidden></dl>
   <div id="gridScroll">
     <div id="grid"></div>
     <div id="empty">${escapeHtml(model.emptyMessage)}</div>
@@ -758,6 +783,44 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     }
 
     // ----- header ----------------------------------------------------------
+    let headerHoverTimer;
+
+    function showHeaderHover(h, index) {
+      const details = MODEL.columns[index]?.details;
+      if (!details || !details.length || !h.isConnected) return;
+      const hover = el("dtHeaderHover");
+      hover.replaceChildren(...details.flatMap(([label, value]) => {
+        const dt = document.createElement("dt");
+        dt.textContent = label;
+        const dd = document.createElement("dd");
+        dd.textContent = value;
+        return [dt, dd];
+      }));
+      hover.hidden = false;
+      const rect = h.getBoundingClientRect();
+      const margin = 8;
+      const left = Math.min(rect.left, window.innerWidth - hover.offsetWidth - margin);
+      hover.style.left = Math.max(margin, left) + "px";
+      hover.style.top = (rect.bottom + 4) + "px";
+    }
+
+    function hideHeaderHover() {
+      clearTimeout(headerHoverTimer);
+      el("dtHeaderHover").hidden = true;
+    }
+
+    function attachHeaderHover(h, index) {
+      h.addEventListener("mouseenter", () => {
+        clearTimeout(headerHoverTimer);
+        headerHoverTimer = setTimeout(() => showHeaderHover(h, index), 500);
+      });
+      h.addEventListener("mouseleave", hideHeaderHover);
+      h.addEventListener("mousedown", hideHeaderHover);
+    }
+
+    el("gridScroll").addEventListener("scroll", hideHeaderHover, { passive: true });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideHeaderHover(); });
+
     function attachGrip(headerCell, index) {
       const grip = document.createElement("div");
       grip.className = "dt-grip";
@@ -788,6 +851,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     }
 
     function buildHeader() {
+      hideHeaderHover();
       Array.from(grid.querySelectorAll(":scope > .dt-h")).forEach((n) => n.remove());
       grid.style.gridTemplateColumns = gridTemplate();
       MODEL.columns.forEach((col, index) => {
@@ -799,6 +863,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         label.textContent = col.title;
         h.appendChild(label);
         if (col.sortable) h.addEventListener("click", () => toggleSort(index));
+        attachHeaderHover(h, index);
         const arrow = document.createElement("span");
         arrow.className = "arrow";
         arrow.dataset.for = String(index);

@@ -4,6 +4,7 @@ import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { openResultSetPanel, setCancelButtonVisibility } from ".";
 import { describeParameters, inlineParameters } from "./parameterInfo";
+import { resultColumnDetails } from "./columnDetails";
 import { JobManager } from "../../config";
 import Configuration from "../../configuration";
 import Statement from "../../database/statement";
@@ -107,29 +108,6 @@ function resultColumnTitle(column: any, columnHeadings: string): string {
   }
 }
 
-function resultColumnTooltip(column: any, columnHeadings: string): string {
-  let title: string;
-  switch (column.type) {
-    case `CHAR`: case `VARCHAR`: case `CLOB`: case `BINARY`: case `VARBINARY`: case `BLOB`:
-    case `GRAPHIC`: case `VARGRAPHIC`: case `DBCLOB`: case `NCHAR`: case `NVARCHAR`: case `NCLOB`:
-    case `FLOAT`: case `DECFLOAT`: case `DATALINK`:
-      title = `${column.type}(${column.precision})`;
-      break;
-    case `DECIMAL`: case `NUMERIC`:
-      title = `${column.type}(${column.precision}, ${column.scale})`;
-      break;
-    default:
-      title = column.type;
-  }
-  title += `\n`;
-  switch (columnHeadings) {
-    case `Name`: title += column.label; break;
-    case `Both`: break;
-    default: title += column.name;
-  }
-  return title;
-}
-
 /** Types Db2 does not allow in an ORDER BY (SQL0134 / SQL20353) */
 const UNSORTABLE_TYPES = new Set([
   `BLOB`, `CLOB`, `DBCLOB`, `NCLOB`, `XML`, `SQLXML`, `DATALINK`,
@@ -141,7 +119,7 @@ function buildResultColumns(columnMetaData: any[], columnHeadings: string): Data
     id: column.name,
     title: resultColumnTitle(column, columnHeadings),
     value: (row: any[]) => row[i],
-    headerTooltip: resultColumnTooltip(column, columnHeadings),
+    headerDetails: resultColumnDetails(column),
     sortable: !UNSORTABLE_TYPES.has(String(column.type).toUpperCase()),
   }));
 }
