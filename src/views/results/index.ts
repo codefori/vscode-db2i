@@ -603,7 +603,7 @@ async function runHandler(options?: StatementInfo) {
                 switch (statementDetail.qualifier) {
                   case `csv`:
                     const delimiter = DelimValue.get(Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`);
-                    const decimalSeparator = DecimalSeparatorValue.get(Configuration.get<string>(`codegen.csvDecimalSeparator`) || `Period`);
+                    const decimalSeparator = DecimalSeparatorValue.get(Configuration.get<string>(`codegen.csvDecimalSeparator`) || `Period`)!;
                     const formatNumber = (value: number | string) => String(value).replace(`.`, decimalSeparator);
 
                     // Use metadata to handle duplicate column names properly
