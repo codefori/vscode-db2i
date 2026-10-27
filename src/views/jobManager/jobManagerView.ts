@@ -108,8 +108,11 @@ export class JobManagerView implements TreeDataProvider<any> {
         const id = node ? node.label as string : undefined;
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
+          const currentLibraryCleared = selected.job.currentLibraryCleared;
           editJobUi(selected.job.options, selected.name).then(newOptions => {
             if (newOptions) {
+              // Keep the cleared current library as long as the first library is still empty
+              const clearCurrentLibrary = currentLibraryCleared === true && !newOptions.libraries?.[0];
               window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
                 progress.report({ message: `Ending current job` });
 
@@ -118,9 +121,9 @@ export class JobManagerView implements TreeDataProvider<any> {
                 progress.report({ message: `Starting new job` });
 
                 try {
-                  selected.job = await JobManager.newJob(newOptions);
-                } catch (e) {
-                  window.showErrorMessage(`Failed to start new job with updated properties.`);
+                  selected.job = await JobManager.newJob(newOptions, undefined, clearCurrentLibrary);
+                } catch (e: any) {
+                  window.showErrorMessage(`Failed to start new job with updated properties: ${e?.message || e}`);
                 }
 
                 this.refresh();

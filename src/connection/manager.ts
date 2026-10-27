@@ -26,12 +26,15 @@ export class SQLJobManager {
 
   constructor() { }
 
-  async newJob(options?: JDBCOptions, name?: string) {
+  /**
+   * @param clearCurrentLibrary clears the job's current library after connecting (used when recreating a job that had it cleared)
+   */
+  async newJob(options?: JDBCOptions, name?: string, clearCurrentLibrary = false) {
     const connection = getInstance().getConnection()!;
     const config = connection.getConfig();
     const mapepire = await connection.getComponent<any>("mapepire");
 
-    let resetCurrentLibrary = false;
+    let resetCurrentLibrary = clearCurrentLibrary;
 
     if (!options) {
       options = ConfigManager.getDefaultConfig();
@@ -57,10 +60,11 @@ export class SQLJobManager {
       const newJob = extendSQLJob(await mapepire.newJob(connection, { jdbc: options }));
 
       if (resetCurrentLibrary) {
-        const result = await newJob.execute(`CHGCURLIB CURLIB(*CRTDFT)`, { isClCommand: true }).catch(() => undefined);
-        if (!result?.success) {
+        // Called through QCMDEXC rather than as a CL command, which fails on jobs using a comma as decimal separator
+        const result = await newJob.execute(`CALL QSYS2.QCMDEXC('CHGCURLIB CURLIB(*CRTDFT)')`).catch((e: any) => ({ success: false, error: e?.message || String(e) }));
+        if (!result.success) {
           await newJob.close();
-          throw new Error(`Unable to clear the current library of the new SQL job`);
+          throw new Error(`Unable to clear the current library of the new SQL job (${result.error || `unknown error`})`);
         }
         newJob.currentLibraryCleared = true;
       }
