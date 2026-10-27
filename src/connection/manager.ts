@@ -57,7 +57,12 @@ export class SQLJobManager {
       const newJob = extendSQLJob(await mapepire.newJob(connection, { jdbc: options }));
 
       if (resetCurrentLibrary) {
-        await newJob.execute(`CHGCURLIB CURLIB(*CRTDFT)`, { isClCommand: true });
+        const result = await newJob.execute(`CHGCURLIB CURLIB(*CRTDFT)`, { isClCommand: true }).catch(() => undefined);
+        if (!result?.success) {
+          await newJob.close();
+          throw new Error(`Unable to clear the current library of the new SQL job`);
+        }
+        newJob.currentLibraryCleared = true;
       }
 
       if (osDetail) {

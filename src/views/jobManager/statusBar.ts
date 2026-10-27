@@ -46,7 +46,7 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
           ``,
           `Configured user library list for job:`,
           ``,
-          ...(job.options?.libraries?.map((lib, i) => `${i+1}. \`${lib || `*CRTDFT`}\``) || ['N/A'])
+          ...(job.options?.libraries?.map((lib, i) => `${i+1}. \`${i === 0 && job.currentLibraryCleared ? `*CRTDFT` : lib}\``) || ['N/A'])
         ].join(`\n`));
       }
 

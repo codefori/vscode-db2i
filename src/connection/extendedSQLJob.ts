@@ -7,6 +7,7 @@ import { JobLogEntry } from "./types";
 export type ExtendedSQLJob = SQLJob & {
   selfState: SelfValue;
   currentSchemaStore?: string;
+  currentLibraryCleared?: boolean;
   resetCurrentSchemaCache(): void
   getSelfCode(): SelfValue
   getCurrentSchema(): Promise<string>
