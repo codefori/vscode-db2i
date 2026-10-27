@@ -2,7 +2,7 @@ import { JDBCOptions } from "@ibm/mapepire-js/dist/src/types";
 import * as vscode from "vscode";
 import { ProgressLocation, TreeDataProvider, TreeItemCollapsibleState, Uri, commands, env, window } from "vscode";
 import { JobManager } from "../../config";
-import { JobInfo } from "../../connection/manager";
+import { JobInfo, SQLJobManager } from "../../connection/manager";
 import { TransactionEndType } from "../../connection/types";
 import { Db2foriOutput } from "../../extension";
 import { sqlLanguageStatus } from "../../language/providers";
@@ -108,8 +108,10 @@ export class JobManagerView implements TreeDataProvider<any> {
         const id = node ? node.label as string : undefined;
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
+          const previousJob = selected.job;
           editJobUi(selected.job.options, selected.name).then(newOptions => {
             if (newOptions) {
+              const currentLibrary = SQLJobManager.getRecreatedCurrentLibrary(previousJob, newOptions);
               window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
                 progress.report({ message: `Ending current job` });
 
@@ -118,9 +120,9 @@ export class JobManagerView implements TreeDataProvider<any> {
                 progress.report({ message: `Starting new job` });
 
                 try {
-                  selected.job = await JobManager.newJob(newOptions);
-                } catch (e) {
-                  window.showErrorMessage(`Failed to start new job with updated properties.`);
+                  selected.job = await JobManager.newJob(newOptions, undefined, currentLibrary);
+                } catch (e: any) {
+                  window.showErrorMessage(`Failed to start new job with updated properties: ${e?.message || e}`);
                 }
 
                 this.refresh();

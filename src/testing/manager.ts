@@ -1,6 +1,17 @@
 import assert from "assert";
 import { TestSuite } from ".";
-import { JobManager } from "../config";
+import { getInstance } from "../base";
+import { Config, JobManager } from "../config";
+import { ExtendedSQLJob } from "../connection/extendedSQLJob";
+import { SQLJobManager } from "../connection/manager";
+
+async function getLibraryList(job: ExtendedSQLJob) {
+  const result = await job.query<{ SYSTEM_SCHEMA_NAME: string, TYPE: string }>(`select SYSTEM_SCHEMA_NAME, TYPE from QSYS2.LIBRARY_LIST_INFO`).execute();
+  return {
+    current: result.data.filter(row => row.TYPE === `CURRENT`).map(row => row.SYSTEM_SCHEMA_NAME),
+    user: result.data.filter(row => row.TYPE === `USER`).map(row => row.SYSTEM_SCHEMA_NAME)
+  };
+}
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,
@@ -75,6 +86,115 @@ export const ManagerSuite: TestSuite = {
       assert.strictEqual(JobManager.getSelection()?.name, runningJobs[0].name);
 
       await JobManager.endAll();
+    }},
+
+    {name: `Current library can be cleared`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [``, `QIWS`], naming: `system`}, undefined, `*CRTDFT`);
+      assert.strictEqual(newJob.appliedCurrentLibrary, `*CRTDFT`);
+
+      const libraryList = await getLibraryList(newJob);
+      assert.deepStrictEqual(libraryList.current, []);
+      assert.ok(libraryList.user.includes(`QIWS`));
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Current library can be cleared with comma decimal separator`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [``, `QIWS`], naming: `system`, "decimal separator": `,`}, undefined, `*CRTDFT`);
+      assert.strictEqual(newJob.appliedCurrentLibrary, `*CRTDFT`);
+
+      const libraryList = await getLibraryList(newJob);
+      assert.deepStrictEqual(libraryList.current, []);
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Read only jobs start without setting the current library`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [``, `QIWS`], naming: `system`, access: `read only`}, undefined, `*CRTDFT`);
+      assert.strictEqual(newJob.appliedCurrentLibrary, undefined);
+
+      const libraryList = await getLibraryList(newJob);
+      assert.ok(libraryList.user.includes(`QIWS`));
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Current library can be set`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [`QIWS`, `QGPL`], naming: `system`}, undefined, `QIWS`);
+      assert.strictEqual(newJob.appliedCurrentLibrary, `QIWS`);
+
+      const libraryList = await getLibraryList(newJob);
+      assert.deepStrictEqual(libraryList.current, [`QIWS`]);
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Explicit options leave the current library unchanged`, test: async () => {
+      // Baseline: the user profile's current library, from a job without a library override
+      const baselineJob = await JobManager.newJob({naming: `system`});
+      const baseline = await getLibraryList(baselineJob);
+      await JobManager.closeJobById(baselineJob);
+
+      const newJob = await JobManager.newJob({libraries: [`QIWS`, `QGPL`], naming: `system`});
+      assert.strictEqual(newJob.appliedCurrentLibrary, undefined);
+
+      // The JDBC driver does not use the first library as current library
+      const libraryList = await getLibraryList(newJob);
+      assert.deepStrictEqual(libraryList.current, baseline.current);
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Recreated job current library`, test: async () => {
+      const followingJob = {appliedCurrentLibrary: `QIWS`} as ExtendedSQLJob;
+      const explicitJob = {appliedCurrentLibrary: undefined} as ExtendedSQLJob;
+
+      assert.strictEqual(SQLJobManager.getRecreatedCurrentLibrary(followingJob, {libraries: [`QGPL`, `QIWS`]}), `QGPL`);
+      assert.strictEqual(SQLJobManager.getRecreatedCurrentLibrary(followingJob, {libraries: [`QIWS QGPL`]}), `QIWS`);
+      assert.strictEqual(SQLJobManager.getRecreatedCurrentLibrary(followingJob, {libraries: [``, `QIWS`]}), `*CRTDFT`);
+      assert.strictEqual(SQLJobManager.getRecreatedCurrentLibrary(followingJob, {}), `*CRTDFT`);
+      assert.strictEqual(SQLJobManager.getRecreatedCurrentLibrary(explicitJob, {libraries: [`QIWS`, `QGPL`]}), undefined);
+    }},
+
+    {name: `Recreating a job with space-separated libraries`, test: async () => {
+      const previousJob = await JobManager.newJob({libraries: [``, `QGPL`], naming: `system`}, undefined, `*CRTDFT`);
+      await JobManager.closeJobById(previousJob);
+
+      // As entered in the library list editor
+      const newOptions = {...previousJob.options, libraries: [`QIWS QGPL`]};
+      const newJob = await JobManager.newJob(newOptions, undefined, SQLJobManager.getRecreatedCurrentLibrary(previousJob, newOptions));
+      assert.strictEqual(newJob.appliedCurrentLibrary, `QIWS`);
+
+      const libraryList = await getLibraryList(newJob);
+      assert.deepStrictEqual(libraryList.current, [`QIWS`]);
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Default job follows the connection current library`, test: async () => {
+      const connection = getInstance().getConnection()!;
+      const currentLibrary = connection.getConfig().currentLibrary;
+
+      // A startup configuration would be used instead of the connection settings
+      const startUpConfigList = Config.getStartUpConfigList();
+      await Config.setStartUpConfigList(startUpConfigList.filter(item => item.connectionName !== connection.currentConnectionName));
+
+      try {
+        const newJob = await JobManager.newJob();
+
+        const libraryList = await getLibraryList(newJob);
+        if (currentLibrary) {
+          assert.strictEqual(newJob.appliedCurrentLibrary, currentLibrary);
+          assert.deepStrictEqual(libraryList.current, [currentLibrary.toUpperCase()]);
+        } else {
+          assert.strictEqual(newJob.appliedCurrentLibrary, `*CRTDFT`);
+          assert.deepStrictEqual(libraryList.current, []);
+        }
+
+        await JobManager.closeJobById(newJob);
+      } finally {
+        await Config.setStartUpConfigList(startUpConfigList);
+      }
     }}
   ]
 }

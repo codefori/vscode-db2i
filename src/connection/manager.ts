@@ -26,7 +26,10 @@ export class SQLJobManager {
 
   constructor() { }
 
-  async newJob(options?: JDBCOptions, name?: string) {
+  /**
+   * @param currentLibrary current library to set after connecting (a library name or `*CRTDFT`), since the JDBC driver never sets it from the library list
+   */
+  async newJob(options?: JDBCOptions, name?: string, currentLibrary?: string) {
     const connection = getInstance().getConnection()!;
     const config = connection.getConfig();
     const mapepire = await connection.getComponent<any>("mapepire");
@@ -45,12 +48,25 @@ export class SQLJobManager {
 
       if (!options.libraries) {
         options.libraries = [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)];
+        // The job keeps the user profile's current library otherwise
+        currentLibrary = config.currentLibrary || `*CRTDFT`;
       }
     }
 
     try {
       this.creatingJobs += 1;
       const newJob = extendSQLJob(await mapepire.newJob(connection, { jdbc: options }));
+
+      // Read only jobs only allow SELECT statements, so they keep the user profile's current library
+      if (currentLibrary && options.access !== `read only`) {
+        // Called through QCMDEXC rather than as a CL command, which fails on jobs using a comma as decimal separator
+        const result = await newJob.execute(`CALL QSYS2.QCMDEXC('CHGCURLIB CURLIB(${currentLibrary})')`).catch((e: any) => ({ success: false, error: e?.message || String(e) }));
+        if (!result.success) {
+          await newJob.close();
+          throw new Error(`Unable to set the current library of the new SQL job to ${currentLibrary} (${result.error || `unknown error`})`);
+        }
+        newJob.appliedCurrentLibrary = currentLibrary;
+      }
 
       if (osDetail) {
         const features = osDetail.getFeatures();
@@ -193,6 +209,20 @@ export class SQLJobManager {
         throw new Error(`Active SQL job is required. Please spin one up in the 'SQL Job Manager' view and try again.`);
       }
     }
+  }
+
+  /**
+   * Current library to pass to {@link newJob} when recreating a job with new options.
+   * Jobs that followed the connection's current library keep doing so from the (possibly edited) first library.
+   */
+  static getRecreatedCurrentLibrary(job: ExtendedSQLJob, newOptions: JDBCOptions): string | undefined {
+    if (job.appliedCurrentLibrary === undefined) {
+      return undefined;
+    }
+
+    // The library list editor also accepts space-separated names, while CHGCURLIB takes a single library
+    const firstLibrary = newOptions.libraries?.[0]?.trim().split(/\s+/)[0];
+    return firstLibrary || `*CRTDFT`;
   }
 
   static getSelfDefault(): SelfValue {
