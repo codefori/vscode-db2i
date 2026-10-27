@@ -210,6 +210,20 @@ export class SQLJobManager {
     }
   }
 
+  /**
+   * Current library to pass to {@link newJob} when recreating a job with new options.
+   * Jobs that followed the connection's current library keep doing so from the (possibly edited) first library.
+   */
+  static getRecreatedCurrentLibrary(job: ExtendedSQLJob, newOptions: JDBCOptions): string | undefined {
+    if (job.appliedCurrentLibrary === undefined) {
+      return undefined;
+    }
+
+    // The library list editor also accepts space-separated names, while CHGCURLIB takes a single library
+    const firstLibrary = newOptions.libraries?.[0]?.trim().split(/\s+/)[0];
+    return firstLibrary || `*CRTDFT`;
+  }
+
   static getSelfDefault(): SelfValue {
     return Configuration.get<SelfValue>(`jobManager.jobSelfDefault`) || `*NONE`;
   }

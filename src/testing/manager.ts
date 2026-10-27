@@ -3,6 +3,7 @@ import { TestSuite } from ".";
 import { getInstance } from "../base";
 import { Config, JobManager } from "../config";
 import { ExtendedSQLJob } from "../connection/extendedSQLJob";
+import { SQLJobManager } from "../connection/manager";
 
 async function getLibraryList(job: ExtendedSQLJob) {
   const result = await job.query<{ SYSTEM_SCHEMA_NAME: string, TYPE: string }>(`select SYSTEM_SCHEMA_NAME, TYPE from QSYS2.LIBRARY_LIST_INFO`).execute();
@@ -130,6 +131,32 @@ export const ManagerSuite: TestSuite = {
       // The JDBC driver does not use the first library as current library
       const libraryList = await getLibraryList(newJob);
       assert.deepStrictEqual(libraryList.current, baseline.current);
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Recreated job current library`, test: async () => {
+      const followingJob = {appliedCurrentLibrary: `QIWS`} as ExtendedSQLJob;
+      const explicitJob = {appliedCurrentLibrary: undefined} as ExtendedSQLJob;
+
+      assert.strictEqual(SQLJobManager.getRecreatedCurrentLibrary(followingJob, {libraries: [`QGPL`, `QIWS`]}), `QGPL`);
+      assert.strictEqual(SQLJobManager.getRecreatedCurrentLibrary(followingJob, {libraries: [`QIWS QGPL`]}), `QIWS`);
+      assert.strictEqual(SQLJobManager.getRecreatedCurrentLibrary(followingJob, {libraries: [``, `QIWS`]}), `*CRTDFT`);
+      assert.strictEqual(SQLJobManager.getRecreatedCurrentLibrary(followingJob, {}), `*CRTDFT`);
+      assert.strictEqual(SQLJobManager.getRecreatedCurrentLibrary(explicitJob, {libraries: [`QIWS`, `QGPL`]}), undefined);
+    }},
+
+    {name: `Recreating a job with space-separated libraries`, test: async () => {
+      const previousJob = await JobManager.newJob({libraries: [``, `QGPL`], naming: `system`}, undefined, `*CRTDFT`);
+      await JobManager.closeJobById(previousJob);
+
+      // As entered in the library list editor
+      const newOptions = {...previousJob.options, libraries: [`QIWS QGPL`]};
+      const newJob = await JobManager.newJob(newOptions, undefined, SQLJobManager.getRecreatedCurrentLibrary(previousJob, newOptions));
+      assert.strictEqual(newJob.appliedCurrentLibrary, `QIWS`);
+
+      const libraryList = await getLibraryList(newJob);
+      assert.deepStrictEqual(libraryList.current, [`QIWS`]);
 
       await JobManager.closeJobById(newJob);
     }},
