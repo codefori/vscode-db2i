@@ -57,7 +57,8 @@ export class SQLJobManager {
       this.creatingJobs += 1;
       const newJob = extendSQLJob(await mapepire.newJob(connection, { jdbc: options }));
 
-      if (currentLibrary) {
+      // Read only jobs only allow SELECT statements, so they keep the user profile's current library
+      if (currentLibrary && options.access !== `read only`) {
         // Called through QCMDEXC rather than as a CL command, which fails on jobs using a comma as decimal separator
         const result = await newJob.execute(`CALL QSYS2.QCMDEXC('CHGCURLIB CURLIB(${currentLibrary})')`).catch((e: any) => ({ success: false, error: e?.message || String(e) }));
         if (!result.success) {

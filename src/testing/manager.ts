@@ -109,6 +109,16 @@ export const ManagerSuite: TestSuite = {
       await JobManager.closeJobById(newJob);
     }},
 
+    {name: `Read only jobs start without setting the current library`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [``, `QIWS`], naming: `system`, access: `read only`}, undefined, `*CRTDFT`);
+      assert.strictEqual(newJob.appliedCurrentLibrary, undefined);
+
+      const libraryList = await getLibraryList(newJob);
+      assert.ok(libraryList.user.includes(`QIWS`));
+
+      await JobManager.closeJobById(newJob);
+    }},
+
     {name: `Current library can be set`, test: async () => {
       const newJob = await JobManager.newJob({libraries: [`QIWS`, `QGPL`], naming: `system`}, undefined, `QIWS`);
       assert.strictEqual(newJob.appliedCurrentLibrary, `QIWS`);
