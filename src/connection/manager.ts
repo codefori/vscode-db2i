@@ -31,6 +31,8 @@ export class SQLJobManager {
     const config = connection.getConfig();
     const mapepire = await connection.getComponent<any>("mapepire");
 
+    let resetCurrentLibrary = false;
+
     if (!options) {
       options = ConfigManager.getDefaultConfig();
       const startUpConfigList = Config.getStartUpConfigList();
@@ -45,12 +47,18 @@ export class SQLJobManager {
 
       if (!options.libraries) {
         options.libraries = [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)];
+        // An empty first entry leaves the job's default current library in place, so it must be cleared after connecting
+        resetCurrentLibrary = !config.currentLibrary;
       }
     }
 
     try {
       this.creatingJobs += 1;
       const newJob = extendSQLJob(await mapepire.newJob(connection, { jdbc: options }));
+
+      if (resetCurrentLibrary) {
+        await newJob.execute(`CHGCURLIB CURLIB(*CRTDFT)`, { isClCommand: true });
+      }
 
       if (osDetail) {
         const features = osDetail.getFeatures();
