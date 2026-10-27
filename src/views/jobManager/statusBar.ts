@@ -46,7 +46,8 @@ export async function updateStatusBar(options: {newJob?: boolean, canceling?: bo
           ``,
           `Configured user library list for job:`,
           ``,
-          ...(job.options?.libraries?.map((lib, i) => `${i+1}. \`${i === 0 && job.appliedCurrentLibrary ? job.appliedCurrentLibrary : lib}\``) || ['N/A'])
+          // Entries can hold space-separated names, so only the first name is replaced by the applied current library
+          ...(job.options?.libraries?.flatMap(lib => lib.trim().split(/\s+/)).map((lib, i) => `${i+1}. \`${i === 0 && job.appliedCurrentLibrary ? job.appliedCurrentLibrary : lib}\``) || ['N/A'])
         ].join(`\n`));
       }
 
