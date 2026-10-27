@@ -1,7 +1,7 @@
 import assert from "assert";
 import { TestSuite } from ".";
 import { getInstance } from "../base";
-import { JobManager } from "../config";
+import { Config, JobManager } from "../config";
 import { ExtendedSQLJob } from "../connection/extendedSQLJob";
 
 async function getLibraryList(job: ExtendedSQLJob) {
@@ -119,30 +119,45 @@ export const ManagerSuite: TestSuite = {
     }},
 
     {name: `Explicit options leave the current library unchanged`, test: async () => {
+      // Baseline: the user profile's current library, from a job without a library override
+      const baselineJob = await JobManager.newJob({naming: `system`});
+      const baseline = await getLibraryList(baselineJob);
+      await JobManager.closeJobById(baselineJob);
+
       const newJob = await JobManager.newJob({libraries: [`QIWS`, `QGPL`], naming: `system`});
       assert.strictEqual(newJob.appliedCurrentLibrary, undefined);
 
       // The JDBC driver does not use the first library as current library
       const libraryList = await getLibraryList(newJob);
-      assert.notDeepStrictEqual(libraryList.current, [`QIWS`]);
+      assert.deepStrictEqual(libraryList.current, baseline.current);
 
       await JobManager.closeJobById(newJob);
     }},
 
     {name: `Default job follows the connection current library`, test: async () => {
-      const currentLibrary = getInstance().getConnection()!.getConfig().currentLibrary;
-      const newJob = await JobManager.newJob();
+      const connection = getInstance().getConnection()!;
+      const currentLibrary = connection.getConfig().currentLibrary;
 
-      const libraryList = await getLibraryList(newJob);
-      if (currentLibrary) {
-        assert.strictEqual(newJob.appliedCurrentLibrary, currentLibrary);
-        assert.deepStrictEqual(libraryList.current, [currentLibrary.toUpperCase()]);
-      } else {
-        assert.strictEqual(newJob.appliedCurrentLibrary, `*CRTDFT`);
-        assert.deepStrictEqual(libraryList.current, []);
+      // A startup configuration would be used instead of the connection settings
+      const startUpConfigList = Config.getStartUpConfigList();
+      await Config.setStartUpConfigList(startUpConfigList.filter(item => item.connectionName !== connection.currentConnectionName));
+
+      try {
+        const newJob = await JobManager.newJob();
+
+        const libraryList = await getLibraryList(newJob);
+        if (currentLibrary) {
+          assert.strictEqual(newJob.appliedCurrentLibrary, currentLibrary);
+          assert.deepStrictEqual(libraryList.current, [currentLibrary.toUpperCase()]);
+        } else {
+          assert.strictEqual(newJob.appliedCurrentLibrary, `*CRTDFT`);
+          assert.deepStrictEqual(libraryList.current, []);
+        }
+
+        await JobManager.closeJobById(newJob);
+      } finally {
+        await Config.setStartUpConfigList(startUpConfigList);
       }
-
-      await JobManager.closeJobById(newJob);
     }}
   ]
 }

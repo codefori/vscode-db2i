@@ -112,7 +112,9 @@ export class JobManagerView implements TreeDataProvider<any> {
           editJobUi(selected.job.options, selected.name).then(newOptions => {
             if (newOptions) {
               // Jobs that followed the connection's current library keep doing so from the (possibly edited) first library
-              const currentLibrary = setsCurrentLibrary ? (newOptions.libraries?.[0] || `*CRTDFT`) : undefined;
+              // The library list editor also accepts space-separated names, while CHGCURLIB takes a single library
+              const firstLibrary = newOptions.libraries?.[0]?.trim().split(/\s+/)[0];
+              const currentLibrary = setsCurrentLibrary ? (firstLibrary || `*CRTDFT`) : undefined;
               window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
                 progress.report({ message: `Ending current job` });
 
