@@ -27,14 +27,12 @@ export class SQLJobManager {
   constructor() { }
 
   /**
-   * @param clearCurrentLibrary clears the job's current library after connecting (used when recreating a job that had it cleared)
+   * @param currentLibrary current library to set after connecting (a library name or `*CRTDFT`), since the JDBC driver never sets it from the library list
    */
-  async newJob(options?: JDBCOptions, name?: string, clearCurrentLibrary = false) {
+  async newJob(options?: JDBCOptions, name?: string, currentLibrary?: string) {
     const connection = getInstance().getConnection()!;
     const config = connection.getConfig();
     const mapepire = await connection.getComponent<any>("mapepire");
-
-    let resetCurrentLibrary = clearCurrentLibrary;
 
     if (!options) {
       options = ConfigManager.getDefaultConfig();
@@ -50,8 +48,8 @@ export class SQLJobManager {
 
       if (!options.libraries) {
         options.libraries = [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)];
-        // An empty first entry leaves the job's default current library in place, so it must be cleared after connecting
-        resetCurrentLibrary = !config.currentLibrary;
+        // The job keeps the user profile's current library otherwise
+        currentLibrary = config.currentLibrary || `*CRTDFT`;
       }
     }
 
@@ -59,14 +57,14 @@ export class SQLJobManager {
       this.creatingJobs += 1;
       const newJob = extendSQLJob(await mapepire.newJob(connection, { jdbc: options }));
 
-      if (resetCurrentLibrary) {
+      if (currentLibrary) {
         // Called through QCMDEXC rather than as a CL command, which fails on jobs using a comma as decimal separator
-        const result = await newJob.execute(`CALL QSYS2.QCMDEXC('CHGCURLIB CURLIB(*CRTDFT)')`).catch((e: any) => ({ success: false, error: e?.message || String(e) }));
+        const result = await newJob.execute(`CALL QSYS2.QCMDEXC('CHGCURLIB CURLIB(${currentLibrary})')`).catch((e: any) => ({ success: false, error: e?.message || String(e) }));
         if (!result.success) {
           await newJob.close();
-          throw new Error(`Unable to clear the current library of the new SQL job (${result.error || `unknown error`})`);
+          throw new Error(`Unable to set the current library of the new SQL job to ${currentLibrary} (${result.error || `unknown error`})`);
         }
-        newJob.currentLibraryCleared = true;
+        newJob.appliedCurrentLibrary = currentLibrary;
       }
 
       if (osDetail) {

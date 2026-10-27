@@ -1,6 +1,16 @@
 import assert from "assert";
 import { TestSuite } from ".";
+import { getInstance } from "../base";
 import { JobManager } from "../config";
+import { ExtendedSQLJob } from "../connection/extendedSQLJob";
+
+async function getLibraryList(job: ExtendedSQLJob) {
+  const result = await job.query<{ SYSTEM_SCHEMA_NAME: string, TYPE: string }>(`select SYSTEM_SCHEMA_NAME, TYPE from QSYS2.LIBRARY_LIST_INFO`).execute();
+  return {
+    current: result.data.filter(row => row.TYPE === `CURRENT`).map(row => row.SYSTEM_SCHEMA_NAME),
+    user: result.data.filter(row => row.TYPE === `USER`).map(row => row.SYSTEM_SCHEMA_NAME)
+  };
+}
 
 export const ManagerSuite: TestSuite = {
   name: `Job manager tests`,
@@ -75,6 +85,64 @@ export const ManagerSuite: TestSuite = {
       assert.strictEqual(JobManager.getSelection()?.name, runningJobs[0].name);
 
       await JobManager.endAll();
+    }},
+
+    {name: `Current library can be cleared`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [``, `QIWS`], naming: `system`}, undefined, `*CRTDFT`);
+      assert.strictEqual(newJob.appliedCurrentLibrary, `*CRTDFT`);
+
+      const libraryList = await getLibraryList(newJob);
+      assert.deepStrictEqual(libraryList.current, []);
+      assert.ok(libraryList.user.includes(`QIWS`));
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Current library can be cleared with comma decimal separator`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [``, `QIWS`], naming: `system`, "decimal separator": `,`}, undefined, `*CRTDFT`);
+      assert.strictEqual(newJob.appliedCurrentLibrary, `*CRTDFT`);
+
+      const libraryList = await getLibraryList(newJob);
+      assert.deepStrictEqual(libraryList.current, []);
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Current library can be set`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [`QIWS`, `QGPL`], naming: `system`}, undefined, `QIWS`);
+      assert.strictEqual(newJob.appliedCurrentLibrary, `QIWS`);
+
+      const libraryList = await getLibraryList(newJob);
+      assert.deepStrictEqual(libraryList.current, [`QIWS`]);
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Explicit options leave the current library unchanged`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [`QIWS`, `QGPL`], naming: `system`});
+      assert.strictEqual(newJob.appliedCurrentLibrary, undefined);
+
+      // The JDBC driver does not use the first library as current library
+      const libraryList = await getLibraryList(newJob);
+      assert.notDeepStrictEqual(libraryList.current, [`QIWS`]);
+
+      await JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Default job follows the connection current library`, test: async () => {
+      const currentLibrary = getInstance().getConnection()!.getConfig().currentLibrary;
+      const newJob = await JobManager.newJob();
+
+      const libraryList = await getLibraryList(newJob);
+      if (currentLibrary) {
+        assert.strictEqual(newJob.appliedCurrentLibrary, currentLibrary);
+        assert.deepStrictEqual(libraryList.current, [currentLibrary.toUpperCase()]);
+      } else {
+        assert.strictEqual(newJob.appliedCurrentLibrary, `*CRTDFT`);
+        assert.deepStrictEqual(libraryList.current, []);
+      }
+
+      await JobManager.closeJobById(newJob);
     }}
   ]
 }
