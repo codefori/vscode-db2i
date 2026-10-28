@@ -6,7 +6,7 @@ import { BasicSQLObject, ResolvedSqlObject } from "../types";
 import Statement from "./statement";
 
 export type SQLType = "schemas" | "tables" | "views" | "aliases" | "masks" | "constraints" | "functions" | "variables" | "indexes" | "procedures" | "receivers" | "journals" | "permissions" | "sequences" | "packages" | "triggers" | "types" | "logicals";
-export type PageData = { filter?: string, offset?: number, limit?: number, sort?: boolean };
+export type PageData = { filter?: string, offset?: number, limit?: number, sort?: boolean, excludeSourceFiles?: boolean };
 
 const typeMap = {
   'tables': [`T`, `P`, `M`],
@@ -282,7 +282,7 @@ export default class Schemas {
               `from QSYS2.SYSTABLES`,
               `where TABLE_SCHEMA = ? and TABLE_TYPE in (${typeMap[type]
                 .map((item) => `'${item}'`)
-                .join(`, `)}) ${filter.clause}`,
+                .join(`, `)}) ${details.excludeSourceFiles ? `and coalesce(FILE_TYPE, 'D') <> 'S'` : ``} ${filter.clause}`,
             ].join(` `)
           );
 

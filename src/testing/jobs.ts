@@ -237,6 +237,67 @@ export const JobsSuite: TestSuite = {
       JobManager.closeJobById(newJob);
     }},
 
+    {name: `Current schema follows SET SCHEMA (system naming)`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [`QIWS`, `SYSTOOLS`], naming: `system`});
+
+      assert.ok((await newJob.getSearchSchemas()).includes(`SYSTOOLS`));
+
+      await newJob.query(`SET SCHEMA=QSYS2`).execute();
+      assert.strictEqual(await newJob.getCurrentSchema(), `QSYS2`);
+      assert.deepStrictEqual(await newJob.getSearchSchemas(), [`QSYS2`]);
+
+      await newJob.query(`set current schema SYSTOOLS`).execute();
+      assert.strictEqual(await newJob.getCurrentSchema(), `SYSTOOLS`);
+
+      JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Library list follows CL commands (system naming)`, test: async () => {
+      const newJob = await JobManager.newJob({libraries: [`QIWS`], naming: `system`});
+
+      assert.ok(!(await newJob.getSearchSchemas()).includes(`SYSTOOLS`));
+
+      await newJob.query(`ADDLIBLE SYSTOOLS`, {isClCommand: true}).execute();
+      assert.ok((await newJob.getSearchSchemas()).includes(`SYSTOOLS`));
+
+      await newJob.query(`CALL QSYS2.QCMDEXC('RMVLIBLE SYSTOOLS')`).execute();
+      assert.ok(!(await newJob.getSearchSchemas()).includes(`SYSTOOLS`));
+
+      await newJob.setLibraryList([`SYSTOOLS`, `QIWS`]);
+      assert.deepStrictEqual(await newJob.getLibraryList(), [`SYSTOOLS`, `QIWS`]);
+      assert.deepStrictEqual(newJob.options.libraries, [`SYSTOOLS`, `QIWS`]);
+
+      JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Current path follows SET PATH`, test: async () => {
+      const systemJob = await JobManager.newJob({naming: `system`});
+      assert.strictEqual(await systemJob.getCurrentPath(), undefined);
+      JobManager.closeJobById(systemJob);
+
+      const newJob = await JobManager.newJob({naming: `sql`});
+      assert.ok((await newJob.getCurrentPath())?.includes(`QSYS2`));
+
+      await newJob.query(`SET PATH = SYSTOOLS, QSYS2`).execute();
+      assert.ok((await newJob.getCurrentPath())?.includes(`SYSTOOLS`));
+
+      await newJob.query(`SET CURRENT PATH = *LIBL`).execute();
+      assert.strictEqual(await newJob.getCurrentPath(), undefined);
+
+      JobManager.closeJobById(newJob);
+    }},
+
+    {name: `Current schema follows SET SCHEMA (SQL naming)`, test: async () => {
+      const newJob = await JobManager.newJob({naming: `sql`});
+
+      await newJob.getCurrentSchema();
+
+      await newJob.query(`  set schema QIWS`).execute();
+      assert.strictEqual(await newJob.getCurrentSchema(), `QIWS`);
+
+      JobManager.closeJobById(newJob);
+    }},
+
     {name: `Binding parameters`, test: async () => {
       let newJob = await JobManager.newJob({libraries: [`QIWS`], naming: `system`});
 
