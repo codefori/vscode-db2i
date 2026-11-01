@@ -7,6 +7,12 @@ interface IRunInTerminalParameters {
 
 export const RUN_SQL_TOOL_ID = 'vscode-db2i-chat-sqlRunnerTool';
 
+export function serializeSqlToolResult(result: unknown) {
+	return JSON.stringify(result === undefined
+		? { success: true, hasResultSet: false, rows: [] }
+		: { success: true, hasResultSet: true, rows: result });
+}
+
 export function registerSqlRunTool(context: ExtensionContext) {
   context.subscriptions.push(lm.registerTool(RUN_SQL_TOOL_ID, new RunSqlTool()));
 }
@@ -27,7 +33,7 @@ class RunSqlTool
 
 		const result = await JobManager.runSQL(trimmed);
 
-		return new LanguageModelToolResult([new LanguageModelTextPart(JSON.stringify(result))]);
+		return new LanguageModelToolResult([new LanguageModelTextPart(serializeSqlToolResult(result))]);
 	}
 
 	async prepareInvocation(
