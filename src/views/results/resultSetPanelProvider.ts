@@ -1,12 +1,15 @@
-import { CancellationToken, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, env, window } from "vscode";
+import { CancellationToken, ProgressLocation, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, env, window } from "vscode";
 
 import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
-import { openResultSetPanel, setCancelButtonVisibility } from ".";
+import { openResultSetPanel, setCancelButtonVisibility, updatePanelEditMode } from ".";
+import { describeParameters, inlineParameters } from "./parameterInfo";
+import { resultColumnDetails } from "./columnDetails";
 import { JobManager } from "../../config";
 import Configuration from "../../configuration";
 import Statement from "../../database/statement";
 import Table from "../../database/table";
+import { isGeneratedColumn } from "../../database/crud";
 import Document from "../../language/sql/document";
 import { ObjectRef, StatementType } from "../../language/sql/types";
 import { TableColumn } from "../../types";
@@ -16,12 +19,15 @@ import {
   DataTableHandlers,
   DataTableOptions,
   DataTableRowAction,
+  DataTableRowActionContext,
   UpdatableInfo,
   appendDataTableRows,
   handleDataTableMessage,
   postDataTableCellResponse,
+  postDataTableInsertResponse,
   registerDataTable,
   renderDataTable,
+  requestDataTableAddRow,
   requestDataTableOpenInEditor,
   resetDataTableRows,
   setDataTableLoading,
@@ -31,7 +37,9 @@ import {
 } from "../html/dataTable";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { statementDone } from "./editorUi";
+import { EXPORT_FORMATS, ExportFormat, ExportTable, openResultsAs } from "./export";
 import * as html from "./html";
+import { RESULT_ROW_ACTIONS, buildDeleteStatement } from "./rowChanges";
 
 export type SqlParameter = string | number;
 
@@ -39,13 +47,20 @@ export interface ScrollerOptions {
   uiId?: string;
   basicSelect: string;
   parameters?: SqlParameter[];
+  /** Marker names, undefined for `?` */
+  parameterNames?: (string | undefined)[];
   isCL?: boolean;
   queryId?: string;
   withCancel?: boolean;
   ref?: ObjectRef;
+  /** Table of a SELECT run without `update:`, so it can be re-run as updatable */
+  editableRef?: ObjectRef;
   title?: string;
   listing?: ResultSetListing<any>;
 }
+
+/** `updatable`: rows can be edited, added and deleted. `available`: the statement can be re-run as updatable. */
+export type ResultEditMode = `updatable` | `available`;
 
 /** A result set shown with its own columns and row actions (MTIs, advised indexes, …). Its rows are objects keyed by column name. */
 export interface ResultSetListing<T> {
@@ -103,29 +118,6 @@ function resultColumnTitle(column: any, columnHeadings: string): string {
   }
 }
 
-function resultColumnTooltip(column: any, columnHeadings: string): string {
-  let title: string;
-  switch (column.type) {
-    case `CHAR`: case `VARCHAR`: case `CLOB`: case `BINARY`: case `VARBINARY`: case `BLOB`:
-    case `GRAPHIC`: case `VARGRAPHIC`: case `DBCLOB`: case `NCHAR`: case `NVARCHAR`: case `NCLOB`:
-    case `FLOAT`: case `DECFLOAT`: case `DATALINK`:
-      title = `${column.type}(${column.precision})`;
-      break;
-    case `DECIMAL`: case `NUMERIC`:
-      title = `${column.type}(${column.precision}, ${column.scale})`;
-      break;
-    default:
-      title = column.type;
-  }
-  title += `\n`;
-  switch (columnHeadings) {
-    case `Name`: title += column.label; break;
-    case `Both`: break;
-    default: title += column.name;
-  }
-  return title;
-}
-
 /** Types Db2 does not allow in an ORDER BY (SQL0134 / SQL20353) */
 const UNSORTABLE_TYPES = new Set([
   `BLOB`, `CLOB`, `DBCLOB`, `NCLOB`, `XML`, `SQLXML`, `DATALINK`,
@@ -137,7 +129,7 @@ function buildResultColumns(columnMetaData: any[], columnHeadings: string): Data
     id: column.name,
     title: resultColumnTitle(column, columnHeadings),
     value: (row: any[]) => row[i],
-    headerTooltip: resultColumnTooltip(column, columnHeadings),
+    headerDetails: resultColumnDetails(column),
     sortable: !UNSORTABLE_TYPES.has(String(column.type).toUpperCase()),
   }));
 }
@@ -234,6 +226,10 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   private fetchingEpoch: number | undefined;
   /** Bumped on every restart so a superseded in-flight fetch can drop its stale result */
   private queryEpoch = 0;
+  /** Resolved when a fetch ends or the shown result changes */
+  private fetchWaiters: (() => void)[] = [];
+  /** Shows the add-row or make-updatable toolbar action */
+  editMode: ResultEditMode | undefined;
 
   constructor(readonly host: ResultSetHost = `view`) { }
 
@@ -261,9 +257,13 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       return;
     }
 
+    this.requestFetch(allRows === true);
+  }
+
+  private requestFetch(allRows: boolean) {
     this._view?.webview.postMessage({
       command: `requestFetch`,
-      allRows: allRows === true,
+      allRows,
       queryId: this.currentQuery?.getId(),
     });
   }
@@ -291,12 +291,128 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
   async copySql() {
     const session = this.session;
     const current = session && (session.sort || session.search) ? buildQueryText(session, true).sql : undefined;
-    const sql = this.tableSession ? this.tableSession.extras.sql : current ?? this.lastScrollerOptions?.basicSelect;
+    const statement = current ?? this.lastScrollerOptions?.basicSelect;
+    const sql = this.tableSession
+      ? this.tableSession.extras.sql
+      : statement && inlineParameters(statement, session?.options.parameters ?? this.lastScrollerOptions?.parameters);
     if (sql) {
       await env.clipboard.writeText(sql);
       window.setStatusBarMessage(`SQL statement copied to clipboard`, 3000);
     } else {
       window.showInformationMessage(`There is no SQL statement to copy.`);
+    }
+  }
+
+  async exportResults(format: ExportFormat) {
+    const table = await this.getRowsToExport(format);
+    if (table) {
+      await openResultsAs(format, table);
+    }
+  }
+
+  private async getRowsToExport(format: ExportFormat): Promise<ExportTable | undefined> {
+    const session = this.session;
+    const tableSession = this.tableSession;
+    const dtOptions = session?.dtOptions ?? tableSession?.options;
+
+    if (!dtOptions || dtOptions.columns.length === 0) {
+      window.showInformationMessage(`There are no results to open.`);
+      return;
+    }
+
+    if (session && !session.isDone) {
+      const loaded = dtOptions.rows.length;
+      const choice = await window.showQuickPick([
+        { label: `All rows`, detail: `Retrieves the remaining rows first`, allRows: true },
+        { label: `Loaded rows only`, detail: `${loaded} row${loaded === 1 ? `` : `s`}`, allRows: false },
+      ], { title: `Export as ${EXPORT_FORMATS[format].label}`, placeHolder: `Not all rows have been retrieved yet` });
+
+      if (!choice || (choice.allRows && !await this.retrieveAllRows(session))) return;
+    }
+
+    if (this.session !== session || this.tableSession !== tableSession) return;
+
+    if (dtOptions.rows.length === 0) {
+      window.showInformationMessage(`There are no rows to open.`);
+      return;
+    }
+
+    const columns = dtOptions.columns;
+    const metaData: any[] = session?.columnMetaData ?? [];
+    return {
+      columns: columns.map(column => column.id),
+      types: columns.map((column, i) => (metaData[i]?.name === column.id ? metaData[i] : metaData.find(meta => meta.name === column.id))?.type),
+      rows: dtOptions.rows.map(row => columns.map(column => column.value(row))),
+    };
+  }
+
+  /** Retrieves the rest of the rows through the table, so it shows them too. False when cancelled or the result changed. */
+  private retrieveAllRows(session: ResultSetSession): Thenable<boolean> {
+    return window.withProgress({ location: ProgressLocation.Notification, title: `Retrieving all rows...`, cancellable: true }, async (_progress, token) => {
+      const cancellation = token.onCancellationRequested(() => this.settleFetchWaiters());
+      try {
+        while (this.session === session && !session.isDone && !token.isCancellationRequested) {
+          const fetched = new Promise<void>(resolve => this.fetchWaiters.push(resolve));
+          // Ignored by the table while it is fetching, so ask again once that fetch ends
+          this.requestFetch(true);
+          await fetched;
+        }
+        return this.session === session && session.isDone;
+      } finally {
+        cancellation.dispose();
+      }
+    });
+  }
+
+  private settleFetchWaiters() {
+    const waiters = this.fetchWaiters;
+    this.fetchWaiters = [];
+    waiters.forEach(resolve => resolve());
+  }
+
+  addRow() {
+    if (this.session?.updatable) {
+      requestDataTableAddRow(msg => this._view?.webview.postMessage(msg));
+    } else {
+      window.showInformationMessage(`Rows can only be added to an updatable result set.`);
+    }
+  }
+
+  /** Re-runs the statement as if it had the `update:` prefix */
+  async makeUpdatable() {
+    const options = this.session?.options;
+    if (!options?.editableRef || this.session?.updatable) {
+      window.showInformationMessage(`This result set cannot be made updatable.`);
+      return;
+    }
+    await this.rerun({ ...options, ref: options.editableRef });
+  }
+
+  /** Re-runs the statement without the `update:` prefix */
+  async exitEditMode() {
+    const options = this.session?.options;
+    if (!options || !this.session?.updatable) {
+      window.showInformationMessage(`This result set is not in edit mode.`);
+      return;
+    }
+    await this.rerun({ ...options, ref: undefined });
+  }
+
+  private async rerun(options: ScrollerOptions) {
+    if (this.currentQuery) {
+      await this.currentQuery.close();
+      this.currentQuery = undefined;
+    }
+    await this.setScrolling(options);
+  }
+
+  private setEditMode(mode: ResultEditMode | undefined) {
+    if (this.editMode === mode) return;
+    this.editMode = mode;
+    if (this.host === `view`) {
+      commands.executeCommand(`setContext`, `vscode-db2i:resultSetEditMode`, mode);
+    } else {
+      updatePanelEditMode(this);
     }
   }
 
@@ -423,14 +539,22 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
             if (tableInfo.length > 0) {
               let currentColumns: BasicColumn[] | undefined;
 
+              // Rows are identified by the primary or unique key (like the generated CRUD statements), else by the identity column, else by RRN
+              const isSessionTable = [`SESSION`, `QTEMP`].includes(goodSchema);
+              const keyColumns = !isSessionTable && Configuration.get<boolean>(`schemaBrowser.crudUseKeyColumns`) !== false
+                ? await Table.getKeyColumns(goodSchema, goodName)
+                : [];
+              const usableKey = keyColumns.length > 0 && keyColumns.every(name => tableInfo.some(column => column.COLUMN_NAME === name && !uneditableTypes.includes(column.DATA_TYPE)));
+
               currentColumns = tableInfo
                 .filter((column) => !uneditableTypes.includes(column.DATA_TYPE))
                 .map((column) => ({
                   name: column.COLUMN_NAME,
                   jsType: column.NUMERIC_PRECISION ? `number` : `asString`,
-                  useInWhere: column.IS_IDENTITY === `YES`,
+                  useInWhere: usableKey ? keyColumns.includes(column.COLUMN_NAME) : column.IS_IDENTITY === `YES`,
                   isNullable: column.IS_NULLABLE === `Y`,
-                  maxInputLength: column.CHARACTER_MAXIMUM_LENGTH
+                  maxInputLength: column.CHARACTER_MAXIMUM_LENGTH,
+                  insertable: !isGeneratedColumn(column),
                 }));
 
               if (!currentColumns.some(c => c.useInWhere)) {
@@ -462,7 +586,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 }
 
                 basicSelect = `select rrn(${cName}) as RRN, ${possibleColumnList} from ${schema}.${options.ref.object.name} as ${cName} ${fromWhereClause || ``}`;
-                currentColumns = [{ name: `RRN`, jsType: `number`, isNullable: false, useInWhere: true }, ...currentColumns];
+                currentColumns = [{ name: `RRN`, jsType: `number`, isNullable: false, useInWhere: true, insertable: false }, ...currentColumns];
               }
 
               updatable = {
@@ -501,6 +625,12 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     const carriedRows = carried ? from.dtOptions.rows : [];
     const inEditor = this.host === `panel`;
     const listing = from.options.listing;
+    const updatable = from.updatable;
+    const columnNames = () => (session.columnMetaData ?? []).map((column: any) => column.name);
+
+    const rowActions: DataTableRowAction<any[]>[] | undefined = listing
+      ? listing.actions
+      : updatable && [{ id: RESULT_ROW_ACTIONS.delete, destructive: true, when: row => buildDeleteStatement(updatable, columnNames(), row) !== undefined }];
 
     const session: ResultSetSession = {
       ...from,
@@ -508,13 +638,14 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         title: listing?.heading ?? from.options.basicSelect.replace(/\s+/g, ` `).trim(),
         columns: carried ? from.dtOptions.columns : [],
         rows: [],
-        actions: listing?.actions,
+        actions: rowActions,
         search: from.serverQuery,
         searchPlaceholder: listing?.searchPlaceholder,
         initialQuery: from.search,
         emptyMessage: listing?.emptyMessage ?? `No rows match the search.`,
         noRowsMessage: listing?.noRowsMessage,
         sort: from.sort,
+        info: describeParameters(from.options.parameters ?? [], from.options.parameterNames),
         streaming: true,
         awaitingRows: carried,
         serverQuery: from.serverQuery,
@@ -542,6 +673,34 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       session.isDone = false;
       resetDataTableRows(post, dtOptions);
       post({ command: `requestFetch`, allRows: false });
+    };
+
+    const addToHistory = (statement: string, bindings: SqlParameter[]) => {
+      const substatement = bindings.length
+        ? `bind: ${bindings.map(binding => typeof binding === 'string' ? `'${binding}'` : String(binding)).join(', ')}`
+        : undefined;
+      commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement, substatement);
+    };
+
+    const deleteRow = async (row: any[], table: DataTableRowActionContext) => {
+      const sql = updatable ? buildDeleteStatement(updatable, columnNames(), row) : undefined;
+      if (!updatable || !sql) return;
+
+      const choice = await window.showWarningMessage(
+        `Delete this row from ${updatable.table}?`,
+        { modal: true, detail: inlineParameters(sql.statement, sql.bindings) },
+        `Delete`,
+      );
+      // The result may have been re-run while asking
+      if (choice !== `Delete` || this.session !== session || !dtOptions.rows.includes(row)) return;
+
+      try {
+        await JobManager.runSQL(sql.statement, { parameters: sql.bindings });
+        addToHistory(sql.statement, sql.bindings);
+        table.removeRow();
+      } catch (e: any) {
+        window.showWarningMessage(e.message);
+      }
     };
 
     const handlers: DataTableHandlers<any[]> = {
@@ -632,19 +791,32 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
           // Also on a superseded fetch's early return, unless a newer fetch now owns the button
           if (this.fetchingEpoch === undefined) setCancelButtonVisibility(false);
           updateStatusBar();
+          this.settleFetchWaiters();
         }
       },
 
       onCellUpdate: async ({ id, statement, bindings }) => {
         try {
           await JobManager.runSQL(statement, { parameters: bindings });
-          const substatement = bindings.length
-            ? `bind: ${bindings.map(binding => typeof binding === 'string' ? `'${binding}'` : String(binding)).join(', ')}`
-            : undefined;
-          commands.executeCommand(`vscode-db2i.queryHistory.prepend`, statement, substatement);
+          addToHistory(statement, bindings);
           postDataTableCellResponse(post, id, true);
+          // Re-run, so the rows show what the database stored (triggers, row change timestamps, conversions)
+          if (this.session === session) restartQuery();
         } catch (e: any) {
           postDataTableCellResponse(post, id, false);
+          window.showWarningMessage(e.message);
+        }
+      },
+
+      onRowInsert: async ({ id, statement, bindings }) => {
+        try {
+          await JobManager.runSQL(statement, { parameters: bindings });
+          addToHistory(statement, bindings);
+          postDataTableInsertResponse(post, id, true);
+          // Re-run, so the row shows what the database filled in (RRN, defaults, identity)
+          if (this.session === session) restartQuery();
+        } catch (e: any) {
+          postDataTableInsertResponse(post, id, false);
           window.showWarningMessage(e.message);
         }
       },
@@ -665,12 +837,18 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
       onOpenInEditor: () => this.moveResultSetToEditor(session),
 
-      onAction: listing?.onAction,
+      onAction: listing
+        ? listing.onAction
+        : async (actionId, row, table) => {
+          if (actionId === RESULT_ROW_ACTIONS.delete) await deleteRow(row, table);
+        },
     };
 
-    const registration = listing?.actions?.length ? registerDataTable(dtOptions, handlers, post) : undefined;
+    const registration = rowActions?.length ? registerDataTable(dtOptions, handlers, post) : undefined;
     this.setRouter(message => handleDataTableMessage(message, dtOptions, handlers, post), registration);
     this.session = session;
+    // Not offered again when `update:` was tried and the table turned out not to be updatable
+    this.setEditMode(updatable ? `updatable` : options.editableRef && !options.ref ? `available` : undefined);
 
     if (this._view) {
       this._view.webview.html = renderDataTable(dtOptions, registration?.id);
@@ -825,6 +1003,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
     this.tableRegistration = registration;
     this.session = undefined;
     this.tableSession = undefined;
+    this.settleFetchWaiters();
+    this.setEditMode(undefined);
   }
 }
 
