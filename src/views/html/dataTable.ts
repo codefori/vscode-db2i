@@ -59,9 +59,11 @@ export interface BasicColumn {
   jsType: "number" | "asString";
   isNullable: boolean;
   maxInputLength?: number;
+  /** False for a column the database fills in (RRN, identity): a new row leaves it out of the `INSERT`. Default true. */
+  insertable?: boolean;
 }
 
-/** Describes an updatable query result: the table an edited cell writes back to, and how */
+/** Describes an updatable query result: the table an edited cell or a new row writes back to, and how */
 export interface UpdatableInfo {
   table: string;
   columns: BasicColumn[];
@@ -103,7 +105,7 @@ export interface DataTableOptions<T> {
   awaitingRows?: boolean;
   /** With `streaming: true` — routes sort/search through `handlers.onSortChange`/`onSearchChange` instead of disabling them, so the caller can re-run the query server-side */
   serverQuery?: boolean;
-  /** Enables click-to-edit cells that write back with an `UPDATE ... WHERE ...` statement */
+  /** Enables click-to-edit cells that write back with an `UPDATE ... WHERE ...` statement, and new rows written with an `INSERT` (see {@link requestDataTableAddRow}) */
   updatable?: UpdatableInfo;
   /** Enables drag-to-resize column headers (and a double-click to reset a column to its natural width) */
   resizable?: boolean;
@@ -145,6 +147,8 @@ export interface DataTableHandlers<T> {
   onSearchChange?: (params: { query: string }) => void | Promise<void>;
   /** Fired when the user finishes editing an updatable cell. `cell` locates the edit in `rows` (by index and column id) with its new value. */
   onCellUpdate?: (params: { id: number; statement: string; bindings: (string | number)[]; cell?: { row: number; column: string; value: string | number | null } }) => void | Promise<void>;
+  /** Fired when the user confirms a new row of an updatable table. Answer with {@link postDataTableInsertResponse}. */
+  onRowInsert?: (params: { id: number; statement: string; bindings: (string | number)[] }) => void | Promise<void>;
   /** Fired when the user clicks the in-webview Cancel button (see `cancellable`) */
   onCancel?: () => void | Promise<void>;
 }
@@ -423,6 +427,20 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       border-bottom: 1px solid var(--dt-border);
     }
     #title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #dtEditBadge {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 8px;
+      border-radius: 10px;
+      font-size: 0.9em;
+      white-space: nowrap;
+      color: var(--vscode-badge-foreground);
+      background-color: var(--vscode-badge-background);
+      cursor: default;
+    }
+    #dtEditBadge svg { display: block; }
     #search { width: min(280px, 45vw); }
     #toolbarEnd { margin-left: auto; display: flex; align-items: center; gap: 6px; }
     .dt-search-icon { display: flex; align-items: center; color: var(--dt-muted); }
@@ -567,6 +585,44 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     }
     .dt-c:has(.dt-hoverable) { position: relative; }
 
+    /* New row of an updatable table, until its INSERT runs */
+    .dt-row.dt-draft > .dt-c { background-color: var(--vscode-diffEditor-insertedLineBackground, rgba(155, 185, 85, 0.2)); }
+    .dt-row.dt-draft.dt-pending > .dt-c { opacity: 0.6; }
+    .dt-draft-value { min-height: 1lh; }
+    .dt-draft-value[contenteditable="true"] {
+      outline: 1px solid var(--dt-border);
+      outline-offset: -1px;
+    }
+    .dt-draft-value[contenteditable="true"]:focus { outline-color: var(--dt-accent); }
+    .dt-draft-value:empty::before {
+      content: attr(data-placeholder);
+      font-style: italic;
+      color: var(--dt-muted);
+    }
+    .dt-draft-value.dt-null:empty::before { color: var(--dt-null-color); font-weight: bold; }
+    .dt-draft-fixed { font-style: italic; color: var(--dt-muted); }
+
+    /* Statement an edit or a new row will run, above the grid so it can wrap. Always shown, so the grid doesn't move under the pointer. */
+    #dtUpdateMessage {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-height: 30vh;
+      overflow-y: auto;
+      padding: 4px 14px;
+      background-color: var(--dt-surface);
+      border-bottom: 1px solid var(--dt-border);
+    }
+    #dtUpdateMessage pre {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-family: var(--vscode-editor-font-family, monospace);
+    }
+    #dtUpdateMessage .dt-hint { color: var(--dt-muted); }
+    #dtUpdateMessage .dt-error { color: var(--vscode-errorForeground); }
+
     .dt-grip {
       position: absolute;
       top: 0; right: 0; bottom: 0;
@@ -602,8 +658,6 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     #pager { display: flex; align-items: center; gap: 4px; }
     #pager[hidden] { display: none; }
     #rangeInfo { color: var(--dt-muted); }
-    #dtUpdateMessage { font-family: monospace; }
-    #dtUpdateMessage:empty { display: none; }
 
     /* --- initial loading overlay (streaming, or a static table opened while still loading) --- */
     #dtLoading {
@@ -683,6 +737,13 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
 <body style="padding: 0;">
   <div id="toolbar" ${showToolbar ? `` : `style="display:none"`}>
     <span id="title" title="${escapeHtml(model.title)}">${escapeHtml(model.title)}</span>
+    ${model.updatable ? /*html*/ `<span id="dtEditBadge" title="Changes are written to ${escapeHtml(model.updatable.table)}: click a cell to change it, right-click a row to delete it, use Add Row to insert one">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true">
+        <path d="M11 2.5 13.5 5 6 12.5H3.5V10z"/>
+        <path d="M9.5 4 12 6.5"/>
+      </svg>
+      Editing ${escapeHtml(model.updatable.table)}
+    </span>` : ``}
     <span id="toolbarEnd">
       <span id="dtModified" role="button" tabindex="0" aria-label="Query details" aria-controls="dtModifiedPopup" aria-expanded="false" hidden>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
@@ -711,6 +772,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     </span>
   </div>
 
+  ${model.updatable ? /*html*/ `<div id="dtUpdateMessage" aria-live="polite"></div>` : ``}
   <dl id="dtHeaderHover" role="tooltip" hidden></dl>
   <div id="gridScroll">
     <div id="grid"></div>
@@ -729,7 +791,6 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       <span id="dtStatus"></span>
       <span id="dtJobId"></span>
       <span class="spacer"></span>
-      <span id="dtUpdateMessage"></span>
     ` : /*html*/ `
       <span id="subtitle">${escapeHtml(initialSubtitle)}</span>
       <span class="spacer"></span>
@@ -768,6 +829,9 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     };
     let headerBuilt = false;
     let handleCellResponse = function (id, success) {};
+    let handleInsertResponse = function (id, success) {};
+    let discardDraftRow = function () {};
+    let openDraftRow = function () {};
 
     const el = (id) => document.getElementById(id);
     const grid = el("grid");
@@ -1184,6 +1248,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
 
     // Drops rows on screen and shows the loading overlay again, keeping the built header.
     function resetStreamingRows() {
+      discardDraftRow();
       const headerCount = headerCellCount();
       while (grid.children.length > headerCount) grid.removeChild(grid.lastChild);
       MODEL.rows = [];
@@ -1240,9 +1305,9 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       return state.appliedQuery.trim() ? MODEL.emptyMessage : (MODEL.noRowsMessage || "No rows returned.");
     }
 
-    // Rows are append-only, so a row's index is also its position on screen
+    // Rows are append-only, so a row's index is also its position on screen (a new row being typed is not one of them)
     function removeStreamingRow(index) {
-      const rowEls = grid.querySelectorAll(":scope > .dt-row");
+      const rowEls = grid.querySelectorAll(":scope > .dt-row:not(.dt-draft)");
       if (!rowEls[index]) return;
       rowEls[index].remove();
       MODEL.rows.splice(index, 1);
@@ -1363,11 +1428,31 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         return !isNaN(str) && !isNaN(parseFloat(str));
       }
 
-      function updateMessageContent(show, initialMessage) {
+      // Statement (or error) on top, keys below
+      function showSqlPreview(text, hintText, isError) {
         const box = el("dtUpdateMessage");
         if (!box) return;
-        if (initialMessage) box.innerHTML = initialMessage;
-        box.style.display = show ? "" : "none";
+        const statement = document.createElement("pre");
+        statement.textContent = text;
+        if (isError) statement.className = "dt-error";
+        const hint = document.createElement("span");
+        hint.className = "dt-hint";
+        hint.textContent = hintText;
+        box.replaceChildren(statement, hint);
+      }
+
+      function showIdleHint() {
+        const box = el("dtUpdateMessage");
+        if (!box) return;
+        const hint = document.createElement("span");
+        hint.className = "dt-hint";
+        hint.textContent = "Click a cell to change it, right-click a row to delete it, or use Add Row in the toolbar to insert one.";
+        box.replaceChildren(hint);
+      }
+
+      function restorePreview() {
+        if (draft) showDraftPreview();
+        else showIdleHint();
       }
 
       function restoreCell(cellNode, originalValue, wasNull) {
@@ -1414,6 +1499,13 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
           }
         });
 
+        // Without every key column the WHERE could match other rows too
+        const missingKeys = updateKeyColumns.filter((c) => !(c.name in idValues)).map((c) => c.name);
+        if (missingKeys.length) {
+          showSqlPreview("Add " + missingKeys.join(", ") + " to the select to change rows of " + updateTable.table + ".", "These columns identify the row.", true);
+          return;
+        }
+
         const originalValue = hoverable.innerText;
         const editableNode = hoverable;
         const wasNull = editableNode.classList.contains("dt-null");
@@ -1444,7 +1536,6 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
 
           const conditions = [];
           updateKeyColumns.forEach((keyColumn) => {
-            if (!(keyColumn.name in idValues)) return;
             const value = idValues[keyColumn.name];
             const target = useRrn && keyColumn.name === "RRN" ? "RRN(t)" : keyColumn.name;
             if (value === null) {
@@ -1475,9 +1566,11 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
           return { updateStatement, bindings, saneStatement };
         };
 
+        const updateHint = "Enter to save" + (chosenColumnDetail.isNullable ? ", Shift+Enter for null" : "") + ", Escape to cancel";
         const updateMessageWithSql = (newValue) => {
           const sql = getSqlStatement(newValue, true, false);
-          if (sql) updateMessageContent(true, "<pre style=\\"margin:0;\\">" + sql.saneStatement + "</pre>");
+          if (sql) showSqlPreview(sql.saneStatement, updateHint, false);
+          else showSqlPreview("Not a valid value for " + chosenColumn, updateHint, true);
         };
 
         if (wasNull) {
@@ -1515,7 +1608,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         };
 
         const finishEditing = () => {
-          updateMessageContent(false);
+          restorePreview();
           editableNode.removeEventListener("keydown", keydownEvent);
           editableNode.removeEventListener("keyup", keyupEvent);
           editableNode.contentEditable = false;
@@ -1554,6 +1647,183 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         editableNode.addEventListener("keydown", keydownEvent);
         editableNode.addEventListener("keyup", keyupEvent);
       });
+
+      // ----- new row: typed in place, written with an INSERT --------------
+      let draft = null;
+
+      // Names Db2 folds to upper case need no quotes
+      function sqlName(name) {
+        return /^[A-Z_#@$][A-Z0-9_#@$]*$/.test(name) ? name : '"' + name.replace(/"/g, '""') + '"';
+      }
+
+      // undefined = left empty, so the column gets its default
+      function draftValue(cell) {
+        if (cell.isNull) return null;
+        const text = cell.node.innerText;
+        return text === "" ? undefined : text;
+      }
+
+      function buildInsertStatement() {
+        const names = [], markers = [], literals = [], bindings = [];
+        for (const cell of draft.cells) {
+          const value = draftValue(cell);
+          if (value === undefined) continue;
+          names.push(sqlName(cell.detail.name));
+          if (value === null) {
+            markers.push("NULL");
+            literals.push("NULL");
+          } else if (cell.detail.jsType === "number") {
+            const number = value.trim();
+            if (!isNumeric(number)) return { error: cell.detail.name + " needs a number" };
+            markers.push("?");
+            literals.push(number);
+            bindings.push(number);
+          } else {
+            markers.push("?");
+            literals.push("'" + value.replace(/'/g, "''") + "'");
+            bindings.push(value);
+          }
+        }
+        if (names.length === 0) return { error: "Enter a value in at least one column" };
+        const start = "INSERT INTO " + updateTable.table + " (" + names.join(", ") + ") VALUES (";
+        return { statement: start + markers.join(", ") + ")", saneStatement: start + literals.join(", ") + ")", bindings };
+      }
+
+      function showDraftPreview() {
+        if (!draft) return;
+        const sql = buildInsertStatement();
+        showSqlPreview(sql.error || sql.saneStatement, "Enter to insert, Shift+Enter for null, Escape to cancel", !!sql.error);
+      }
+
+      function focusDraft() {
+        if (draft && draft.cells[0]) draft.cells[0].node.focus();
+      }
+
+      function setDraftEditable(editable) {
+        draft.rowEl.classList.toggle("dt-pending", !editable);
+        draft.cells.forEach((cell) => { cell.node.contentEditable = editable ? "true" : "false"; });
+      }
+
+      // Shift+Enter switches a nullable column between null and its default
+      function toggleDraftNull(cell) {
+        cell.isNull = !cell.isNull;
+        cell.node.replaceChildren();
+        cell.node.classList.toggle("dt-null", cell.isNull);
+        cell.node.dataset.placeholder = cell.isNull ? "null" : "default";
+        showDraftPreview();
+      }
+
+      function attachDraftCell(cell) {
+        const node = cell.node;
+        node.addEventListener("keydown", (ev) => {
+          switch (ev.key) {
+            case "Enter":
+              ev.preventDefault();
+              if (!ev.shiftKey) commitDraftRow();
+              else if (cell.detail.isNullable) toggleDraftNull(cell);
+              return;
+            case "Escape":
+              ev.preventDefault();
+              discardDraftRow();
+              return;
+          }
+          const max = cell.detail.maxInputLength;
+          const typing = ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey;
+          if (max && typing && node.innerText.length >= max && window.getSelection().isCollapsed) ev.preventDefault();
+        });
+        node.addEventListener("input", () => {
+          // Emptying a cell can leave a <br> behind, which would hide the placeholder
+          if (node.childNodes.length === 1 && node.firstChild.nodeName === "BR") node.replaceChildren();
+          if (node.textContent !== "" && cell.isNull) {
+            cell.isNull = false;
+            node.classList.remove("dt-null");
+            node.dataset.placeholder = "default";
+          }
+          showDraftPreview();
+        });
+        node.addEventListener("focus", showDraftPreview);
+        // Keeps formatting out of the cell
+        node.addEventListener("paste", (ev) => {
+          ev.preventDefault();
+          document.execCommand("insertText", false, ev.clipboardData ? ev.clipboardData.getData("text/plain") : "");
+        });
+      }
+
+      openDraftRow = function () {
+        if (draft) {
+          focusDraft();
+          return;
+        }
+
+        const rowEl = document.createElement("div");
+        rowEl.className = "dt-row dt-draft";
+        const cells = [];
+        MODEL.columns.forEach((col) => {
+          const cellEl = document.createElement("div");
+          cellEl.className = "dt-c" + (col.align !== "left" ? " " + col.align : "");
+          const node = document.createElement("div");
+          node.className = "dt-draft-value";
+          const detail = updateTable.columns.find((c) => c.name === col.id);
+          if (detail && detail.insertable !== false) {
+            node.contentEditable = "true";
+            node.spellcheck = false;
+            node.dataset.placeholder = "default";
+            cells.push({ detail, node, isNull: false });
+          } else {
+            node.classList.add("dt-draft-fixed");
+            node.textContent = detail ? "generated" : "default";
+          }
+          cellEl.appendChild(node);
+          rowEl.appendChild(cellEl);
+        });
+        if (cells.length === 0) return;
+        const filler = document.createElement("div");
+        filler.className = "dt-c dt-filler";
+        rowEl.appendChild(filler);
+
+        // On top, so rows still streaming in don't push it away
+        grid.insertBefore(rowEl, grid.querySelector(":scope > .dt-row"));
+        draft = { rowEl, cells, pendingId: undefined };
+        cells.forEach(attachDraftCell);
+        el("gridScroll").scrollTop = 0;
+        focusDraft();
+        showDraftPreview();
+      };
+
+      function commitDraftRow() {
+        if (!draft || draft.pendingId) return;
+        const sql = buildInsertStatement();
+        if (sql.error) {
+          showDraftPreview();
+          return;
+        }
+        const id = ++cellCounter;
+        draft.pendingId = id;
+        setDraftEditable(false);
+        vscode.postMessage({ command: "insert", id, statement: sql.statement, bindings: sql.bindings });
+      }
+
+      discardDraftRow = function () {
+        if (!draft) return;
+        draft.rowEl.remove();
+        draft = null;
+        showIdleHint();
+      };
+
+      // On failure the row stays, so the values can be fixed
+      handleInsertResponse = function (id, success) {
+        if (!draft || draft.pendingId !== id) return;
+        if (success) {
+          discardDraftRow();
+        } else {
+          draft.pendingId = undefined;
+          setDraftEditable(true);
+          focusDraft();
+          showDraftPreview();
+        }
+      };
+
+      showIdleHint();
     })();
 
     // ----- primary row action (double click) ------------------------
@@ -1626,6 +1896,9 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         case "cellResponse":
           if (data.id) handleCellResponse(data.id, data.success === true);
           break;
+        case "insertResponse":
+          if (data.id) handleInsertResponse(data.id, data.success === true);
+          break;
         case "requestFetch":
           state.myQueryId = data.queryId !== undefined ? data.queryId : state.myQueryId;
           state.allRows = state.allRows || data.allRows === true;
@@ -1633,6 +1906,9 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
           break;
         case "requestOpenInEditor":
           postOpenInEditor();
+          break;
+        case "requestAddRow":
+          openDraftRow();
           break;
         case "setQueryModification":
           setModification(data.text);
@@ -1704,6 +1980,10 @@ export async function handleDataTableMessage<T>(
     }
     case `update`: {
       await handlers.onCellUpdate?.({ id: message.id, statement: message.update, bindings: message.bindings ?? [], cell: message.cell });
+      return true;
+    }
+    case `insert`: {
+      await handlers.onRowInsert?.({ id: message.id, statement: message.statement, bindings: message.bindings ?? [] });
       return true;
     }
     case `cancel`: {
@@ -1807,6 +2087,11 @@ export function postDataTableCellResponse(post: (message: any) => void, id: numb
   post({ command: `cellResponse`, id, success });
 }
 
+/** Tell an updatable table whether the `INSERT` of its new row succeeded (the row goes away, or stays to be fixed) */
+export function postDataTableInsertResponse(post: (message: any) => void, id: number, success: boolean): void {
+  post({ command: `insertResponse`, id, success });
+}
+
 /** Clears a `streaming` table's rows and shows the loading overlay again, keeping its header — call before a fresh page-1 fetch on a `serverQuery` sort/search change */
 export function resetDataTableRows<T>(post: (message: any) => void, options: DataTableOptions<T>): void {
   options.rows = [];
@@ -1816,6 +2101,11 @@ export function resetDataTableRows<T>(post: (message: any) => void, options: Dat
 /** Asks the table to fire {@link DataTableHandlers.onOpenInEditor} with its current state */
 export function requestDataTableOpenInEditor(post: (message: any) => void): void {
   post({ command: `requestOpenInEditor` });
+}
+
+/** `updatable` only — opens a new row at the top of the table to type its values in; confirming it fires {@link DataTableHandlers.onRowInsert} */
+export function requestDataTableAddRow(post: (message: any) => void): void {
+  post({ command: `requestAddRow` });
 }
 
 /** `serverQuery` only — marks the rows as coming from a modified query, with `text` as tooltip */

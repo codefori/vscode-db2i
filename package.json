@@ -250,7 +250,7 @@
           "vscode-db2i.schemaBrowser.crudUseKeyColumns": {
             "type": "boolean",
             "default": true,
-            "description": "When generating an UPDATE or DELETE statement, use the table's primary or unique key to identify the row, if one is found. When disabled, every column is always used to identify the row, even if a key exists."
+            "description": "When generating an UPDATE or DELETE statement, use the table's primary or unique key to identify the row, if one is found. When disabled, every column is always used to identify the row, even if a key exists. Also applies to rows changed or deleted in an updatable result set (update: prefix), which otherwise identify the row by its identity column or relative record number."
           }
         }
       },
@@ -854,6 +854,29 @@
         "icon": "$(link-external)"
       },
       {
+        "command": "vscode-db2i.resultset.deleteRow",
+        "title": "Delete Row",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.resultset.addRow",
+        "title": "Add Row",
+        "category": "Db2 for i",
+        "icon": "$(add)"
+      },
+      {
+        "command": "vscode-db2i.resultset.makeUpdatable",
+        "title": "Make Updatable",
+        "category": "Db2 for i",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-db2i.resultset.exitEditMode",
+        "title": "Exit Edit Mode",
+        "category": "Db2 for i",
+        "icon": "$(lock)"
+      },
+      {
         "command": "vscode-db2i.dove.close",
         "title": "Close",
         "category": "Db2 for i",
@@ -1302,6 +1325,22 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.resultset.deleteRow",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.addRow",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.makeUpdatable",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.exitEditMode",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.dove.displayDetails",
           "when": "never"
         },
@@ -1473,6 +1512,21 @@
           "command": "vscode-db2i.refreshSchemaBrowser",
           "group": "navigation@2",
           "when": "view == schemaBrowser"
+        },
+        {
+          "command": "vscode-db2i.resultset.makeUpdatable",
+          "group": "navigation@00",
+          "when": "view == vscode-db2i.resultset && vscode-db2i:resultSetEditMode == available"
+        },
+        {
+          "command": "vscode-db2i.resultset.addRow",
+          "group": "navigation@00",
+          "when": "view == vscode-db2i.resultset && vscode-db2i:resultSetEditMode == updatable"
+        },
+        {
+          "command": "vscode-db2i.resultset.exitEditMode",
+          "group": "navigation@00",
+          "when": "view == vscode-db2i.resultset && vscode-db2i:resultSetEditMode == updatable"
         },
         {
           "submenu": "vscode-db2i.resultset.retrieve",
@@ -1866,6 +1920,11 @@
           "command": "vscode-db2i.advisedIndexes.remove",
           "when": "webviewSection == dtRow && dtAction_advisedRemove",
           "group": "9_destructive@1"
+        },
+        {
+          "command": "vscode-db2i.resultset.deleteRow",
+          "when": "webviewSection == dtRow && dtAction_resultDeleteRow",
+          "group": "9_destructive@1"
         }
       ],
       "editor/title": [
@@ -1878,6 +1937,21 @@
           "command": "vscode-db2i.statement.cancel",
           "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
           "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.resultset.makeUpdatable",
+          "group": "navigation@00",
+          "when": "activeWebviewPanelId == sqlResultSet && vscode-db2i:resultPanelEditMode == available"
+        },
+        {
+          "command": "vscode-db2i.resultset.addRow",
+          "group": "navigation@00",
+          "when": "activeWebviewPanelId == sqlResultSet && vscode-db2i:resultPanelEditMode == updatable"
+        },
+        {
+          "command": "vscode-db2i.resultset.exitEditMode",
+          "group": "navigation@00",
+          "when": "activeWebviewPanelId == sqlResultSet && vscode-db2i:resultPanelEditMode == updatable"
         },
         {
           "submenu": "vscode-db2i.resultset.retrieve",

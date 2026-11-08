@@ -202,6 +202,29 @@
         "title": "Move into Editor Area",
         "category": "Db2 for i",
         "icon": "$(link-external)"
+      },
+      {
+        "command": "vscode-db2i.resultset.deleteRow",
+        "title": "Delete Row",
+        "category": "Db2 for i"
+      },
+      {
+        "command": "vscode-db2i.resultset.addRow",
+        "title": "Add Row",
+        "category": "Db2 for i",
+        "icon": "$(add)"
+      },
+      {
+        "command": "vscode-db2i.resultset.makeUpdatable",
+        "title": "Make Updatable",
+        "category": "Db2 for i",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-db2i.resultset.exitEditMode",
+        "title": "Exit Edit Mode",
+        "category": "Db2 for i",
+        "icon": "$(lock)"
       }
     ],
     "submenus": [
@@ -230,6 +253,29 @@
         {
           "command": "vscode-db2i.resultset.moveToEditor",
           "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.deleteRow",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.addRow",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.makeUpdatable",
+          "when": "never"
+        },
+        {
+          "command": "vscode-db2i.resultset.exitEditMode",
+          "when": "never"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "vscode-db2i.resultset.deleteRow",
+          "when": "webviewSection == dtRow && dtAction_resultDeleteRow",
+          "group": "9_destructive@1"
         }
       ],
       "editor/title": [
@@ -242,6 +288,21 @@
           "command": "vscode-db2i.statement.cancel",
           "when": "editorLangId == sql && vscode-db2i:statementCanCancel == true",
           "group": "navigation@1"
+        },
+        {
+          "command": "vscode-db2i.resultset.makeUpdatable",
+          "group": "navigation@00",
+          "when": "activeWebviewPanelId == sqlResultSet && vscode-db2i:resultPanelEditMode == available"
+        },
+        {
+          "command": "vscode-db2i.resultset.addRow",
+          "group": "navigation@00",
+          "when": "activeWebviewPanelId == sqlResultSet && vscode-db2i:resultPanelEditMode == updatable"
+        },
+        {
+          "command": "vscode-db2i.resultset.exitEditMode",
+          "group": "navigation@00",
+          "when": "activeWebviewPanelId == sqlResultSet && vscode-db2i:resultPanelEditMode == updatable"
         },
         {
           "submenu": "vscode-db2i.resultset.retrieve",
@@ -340,6 +401,21 @@
         }
       ],
       "view/title": [
+        {
+          "command": "vscode-db2i.resultset.makeUpdatable",
+          "group": "navigation@00",
+          "when": "view == vscode-db2i.resultset && vscode-db2i:resultSetEditMode == available"
+        },
+        {
+          "command": "vscode-db2i.resultset.addRow",
+          "group": "navigation@00",
+          "when": "view == vscode-db2i.resultset && vscode-db2i:resultSetEditMode == updatable"
+        },
+        {
+          "command": "vscode-db2i.resultset.exitEditMode",
+          "group": "navigation@00",
+          "when": "view == vscode-db2i.resultset && vscode-db2i:resultSetEditMode == updatable"
+        },
         {
           "submenu": "vscode-db2i.resultset.retrieve",
           "group": "navigation@01",

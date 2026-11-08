@@ -20,8 +20,9 @@ import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ExplainTree } from "./explain/nodes";
-import { DataTableHandlers, DataTableOptions } from "../html/dataTable";
+import { DataTableHandlers, DataTableOptions, runDataTableRowAction } from "../html/dataTable";
 import { DataTableExtras, ResultSetListing, ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
+import { RESULT_ROW_ACTIONS } from "./rowChanges";
 
 export type StatementQualifier = "statement" | "bind" | "update" | "explain" | "onlyexplain" | "json" | "csv" | "md" | "cl" | "sql" | "rpg" | "udtf";
 
@@ -108,14 +109,25 @@ export function openResultSetPanel(title: string, column: ViewColumn = ViewColum
     } else if (activePanelProvider === provider) {
       activePanelProvider = undefined;
     }
+    setPanelEditModeContext();
   };
   trackActive();
   panel.onDidChangeViewState(trackActive);
   panel.onDidDispose(() => {
     if (activePanelProvider === provider) activePanelProvider = undefined;
+    setPanelEditModeContext();
   });
 
   return provider;
+}
+
+function setPanelEditModeContext() {
+  vscode.commands.executeCommand(`setContext`, `vscode-db2i:resultPanelEditMode`, activePanelProvider?.editMode);
+}
+
+/** Editor tabs share one context key, so it follows the active one */
+export function updatePanelEditMode(provider: ResultSetPanelProvider) {
+  if (provider === activePanelProvider) setPanelEditModeContext();
 }
 
 export function initialise(context: vscode.ExtensionContext) {
@@ -169,6 +181,14 @@ export function initialise(context: vscode.ExtensionContext) {
     ),
 
     vscode.commands.registerCommand(`vscode-db2i.resultset.moveToEditor`, () => resultSetProvider.moveToEditor()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.deleteRow`, (context) => runDataTableRowAction(RESULT_ROW_ACTIONS.delete, context)),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.addRow`, (resource?: vscode.Uri) => resultSetTarget(resource)?.addRow()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.makeUpdatable`, async (resource?: vscode.Uri) => await resultSetTarget(resource)?.makeUpdatable()),
+
+    vscode.commands.registerCommand(`vscode-db2i.resultset.exitEditMode`, async (resource?: vscode.Uri) => await resultSetTarget(resource)?.exitEditMode()),
 
     vscode.workspace.onDidChangeConfiguration(e => {
       // If the result set column headings setting has changed, update the header of the current result set
@@ -482,6 +502,8 @@ async function runHandler(options?: StatementInfo) {
             if (statementDetail.qualifier === `update` && statement?.type === StatementType.Select && ref) {
               updatableTable = ref
             }
+            // An unqualified table can't be made updatable
+            const editableRef = statement?.type === StatementType.Select && ref && (ref.object.schema || ref.object.system) ? ref : undefined;
 
             const uiId = registerRunStatement(statementDetail);
             const eol = editor?.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
@@ -491,6 +513,7 @@ async function runHandler(options?: StatementInfo) {
               basicSelect: basicSelect,
               withCancel: inWindow,
               ref: updatableTable,
+              editableRef,
               parameters,
               parameterNames: hasParameters(statementDetail.bindInfo) ? statementDetail.bindInfo!.parameterNames : undefined,
               uiId,
