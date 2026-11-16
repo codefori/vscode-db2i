@@ -30,6 +30,16 @@
               "*ERROR",
               "*WARNING"
             ]
+          },
+          "vscode-db2i.jobManager.jobSelfExcludes": {
+            "type": "array",
+            "order": 2,
+            "description": "Default SQLCODE values to exclude from SELF tracking (up to 32 values)",
+            "items": {
+              "type": "number",
+              "description": "The SQLCODE to exclude from SELF tracking"
+            },
+            "default": []
           }
         }
       }
@@ -100,6 +110,12 @@
         "title": "Set logging level for SELF",
         "category": "Db2 for i",
         "icon": "$(bracket-error)"
+      },
+      {
+        "command": "vscode-db2i.jobManager.editSelfExcludes",
+        "title": "Set excludes for SELF",
+        "category": "Db2 for i",
+        "icon": "$(filter)"
       },
       {
         "command": "vscode-db2i.jobManager.copyJobId",
@@ -183,6 +199,10 @@
           "when": "never"
         },
         {
+          "command": "vscode-db2i.jobManager.editSelfExcludes",
+          "when": "never"
+        },
+        {
           "command": "vscode-db2i.jobManager.copyJobId",
           "when": "never"
         },
@@ -261,6 +281,11 @@
           "command": "vscode-db2i.jobManager.editSelfCodes",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "self@2"
+        },
+        {
+          "command": "vscode-db2i.jobManager.editSelfExcludes",
+          "when": "view == jobManager && viewItem == sqlJob && vscode-db2i:7.6",
+          "group": "self@3"
         },
         {
           "command": "vscode-db2i.jobManager.copyJobId",

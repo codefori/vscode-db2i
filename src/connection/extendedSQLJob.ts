@@ -1,17 +1,20 @@
 import { SQLJob } from "@ibm/mapepire-js";
 import { QueryResult } from "@ibm/mapepire-js/dist/src/types";
 import { getInstance } from "../base";
+import { osDetail } from "../config";
 import { SelfValue } from "../views/jobManager/selfCodes/nodes";
 import { JobLogEntry } from "./types";
 
 export type ExtendedSQLJob = SQLJob & {
   selfState: SelfValue;
+  selfExcludes: number[];
   currentSchemaStore?: string;
   resetCurrentSchemaCache(): void
   getSelfCode(): SelfValue
+  getSelfExcludes(): number[]
   getCurrentSchema(): Promise<string>
   getNaming(): undefined | "sql" | "system"
-  setSelfState(code: SelfValue): Promise<void>
+  setSelfState(code: SelfValue, excludes?: number[]): Promise<void>
   getJobLog(): Promise<QueryResult<JobLogEntry>>
   requestCancel(): Promise<boolean>
 }
@@ -19,9 +22,11 @@ export type ExtendedSQLJob = SQLJob & {
 export function extendSQLJob(job: SQLJob) {
   const wrappedJob = job as ExtendedSQLJob;
   wrappedJob.selfState = "*NONE";
+  wrappedJob.selfExcludes = [];
 
   wrappedJob.resetCurrentSchemaCache = () => delete wrappedJob.currentSchemaStore;
   wrappedJob.getSelfCode = () => wrappedJob.selfState;
+  wrappedJob.getSelfExcludes = () => wrappedJob.selfExcludes;
 
   wrappedJob.getCurrentSchema = async () => {
     if (wrappedJob.getNaming() === `sql`) {
@@ -41,8 +46,23 @@ export function extendSQLJob(job: SQLJob) {
 
   wrappedJob.getNaming = () => wrappedJob.options.naming;
 
-  wrappedJob.setSelfState = async (code: SelfValue) => {
-    await wrappedJob.query<any>(`SET SYSIBMADM.SELFCODES = '${code}'`).execute();
+  wrappedJob.setSelfState = async (code: SelfValue, excludes?: number[]) => {
+    if (excludes !== undefined) {
+      wrappedJob.selfExcludes = excludes;
+    }
+
+    let sqlValue: string = code;
+    if (
+      code !== `*NONE` &&
+      osDetail &&
+      Number(osDetail.getVersion()) >= 7.6 &&
+      wrappedJob.selfExcludes.length > 0
+    ) {
+      const excludeList = wrappedJob.selfExcludes.slice(0, 32).join(`,`);
+      sqlValue = `${code} EXCLUDING ${excludeList}`;
+    }
+
+    await wrappedJob.query<any>(`SET SYSIBMADM.SELFCODES = '${sqlValue}'`).execute();
     wrappedJob.selfState = code;
   }
 

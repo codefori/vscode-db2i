@@ -58,6 +58,7 @@ export function initConfig(context: ExtensionContext) {
     JobManagerView.setVisible(false);
     await JobManager.endAll(true);
     updateStatusBar();
+    commands.executeCommand(`setContext`, `vscode-db2i:${osDetail?.getVersion()}`, false);
 
     // Remove old service examples
     delete Examples[ServiceInfoLabel];

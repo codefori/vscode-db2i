@@ -55,8 +55,9 @@ export class SQLJobManager {
       if (osDetail) {
         const features = osDetail.getFeatures();
         const selfDefault = SQLJobManager.getSelfDefault();
+        const selfExcludes = SQLJobManager.getSelfExcludes();
         if (features.SELF && selfDefault !== `*NONE`) {
-          await newJob.setSelfState(selfDefault);
+          await newJob.setSelfState(selfDefault, selfExcludes);
         }
       }
 
@@ -197,5 +198,9 @@ export class SQLJobManager {
 
   static getSelfDefault(): SelfValue {
     return Configuration.get<SelfValue>(`jobManager.jobSelfDefault`) || `*NONE`;
+  }
+
+  static getSelfExcludes(): number[] {
+    return Configuration.get<number[]>(`jobManager.jobSelfExcludes`) || [];
   }
 }

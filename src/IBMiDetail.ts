@@ -24,6 +24,11 @@ export class IBMiDetail {
     commands.executeCommand(`setContext`, `vscode-db2i:${featureId}Supported`, supported);
   }
 
+  setVersion(version: string) {
+    this.version = version;
+    commands.executeCommand(`setContext`, `vscode-db2i:${version}`, true);
+  }
+
   getVersion() {
     return this.version;
   }
@@ -44,7 +49,7 @@ export class IBMiDetail {
     let levelCheckFailed = false;
 
     const versionResults = await connection.runSQL(`SELECT CAST(SUBSTR(DATA_AREA_VALUE, 2, 1) CONCAT '.' CONCAT SUBSTR(DATA_AREA_VALUE, 4, 1) AS VARCHAR(32)) AS OS_VERSION FROM TABLE (QSYS2.DATA_AREA_INFO('QSS1MRI', '*LIBL'))`);
-    this.version = String(versionResults[0].OS_VERSION);
+    this.setVersion(String(versionResults[0].OS_VERSION));
 
     try {
       const db2LevelResults = await connection.runSQL([

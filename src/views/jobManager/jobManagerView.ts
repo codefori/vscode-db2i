@@ -27,7 +27,7 @@ export class JobManagerView implements TreeDataProvider<any> {
       ...ConfigManager.initialiseSaveCommands(),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.editDefaultSelf`, () => {
-        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobManager.jobSelfDefault');
+        vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-db2i.jobManager.jobSelf');
       }),
 
       vscode.commands.registerCommand(`vscode-db2i.jobManager.newJob`, async (options?: JDBCOptions, name?: string) => {
@@ -183,6 +183,49 @@ export class JobManagerView implements TreeDataProvider<any> {
               }
             });
             quickPick.show();
+          } catch (e: any) {
+            vscode.window.showErrorMessage(e.message);
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.editSelfExcludes`, async (node?: SQLJobItem) => {
+        const id = node ? node.label as string : undefined;
+        let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected) {
+          try {
+            const currentExcludes = selected.job.getSelfExcludes();
+            const currentExcludesString = currentExcludes.join(`, `);
+            const input = await vscode.window.showInputBox({
+              title: `Set SQL codes to exclude from SELF`,
+              prompt: `Enter a comma-separated list of up to 32 SQLCODE values to exclude (e.g. -204, -501)`,
+              value: currentExcludesString,
+              validateInput: (value) => {
+                if (!value.trim()) {
+                  return null;
+                }
+                const parts = value.split(/[\s,]+/).filter(Boolean);
+                if (parts.length > 32) {
+                  return `A maximum of 32 SQLCODE values can be excluded.`;
+                }
+                for (const part of parts) {
+                  if (isNaN(Number(part)) || !Number.isInteger(Number(part))) {
+                    return `Invalid SQLCODE: '${part}'. SQLCODEs must be integers (e.g. -204).`;
+                  }
+                }
+                return null;
+              }
+            });
+
+            if (input !== undefined) {
+              const codes = input.trim() ? input.split(/[\s,]+/).filter(Boolean).map(Number) : [];
+              try {
+                await selected.job.setSelfState(selected.job.getSelfCode(), codes);
+                vscode.window.showInformationMessage(`Applied excluded SELF codes: ${codes.join(`, `) || `none`}`);
+              } catch (e: any) {
+                vscode.window.showErrorMessage(`Cannot set excluded SELF codes: ${e.message || e}`);
+              }
+            }
           } catch (e: any) {
             vscode.window.showErrorMessage(e.message);
           }
