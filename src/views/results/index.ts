@@ -610,12 +610,18 @@ async function runHandler(options?: StatementInfo) {
                     if (result.metadata && result.metadata.columns) {
                       const columnNames = result.metadata.columns.map(col => col.name);
                       const decimalColumns = result.metadata.columns.map(col => DecimalColumnTypes.includes(col.type));
+                      const useLabels = Configuration.get<string>(`codegen.csvHeaderSource`) === `Label`;
+                      const headerNames = result.metadata.columns.map(col => {
+                        // Column headings can be up to 3 segments of 20 chars, padded with blanks
+                        const label = useLabels ? col.label?.replace(/\s+/g, ' ').trim() : undefined;
+                        return label || col.name;
+                      });
 
                       // Build CSV manually to preserve duplicate column names
                       const rows: string[][] = [];
 
                       // Add header row
-                      rows.push(columnNames.map(name => `"${String(name).replace(/"/g, '""')}"`));
+                      rows.push(headerNames.map(name => `"${String(name).replace(/"/g, '""')}"`));
                       // Add data rows - use column index to get values in correct order
                       for (const row of data) {
                         const values = columnNames.map((name, i) => {
@@ -634,6 +640,7 @@ async function runHandler(options?: StatementInfo) {
                       content = rows.map(row => row.join(delimiter)).join('\n');
                     } else {
                       // Fallback to original method if no metadata
+                      // Without metadata there are no labels: the header uses the data keys (column names) regardless of csvHeaderSource
                       content = csv.stringify(data, {
                         header: true,
                         quoted_string: true,
