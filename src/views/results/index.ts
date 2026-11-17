@@ -610,12 +610,18 @@ async function runHandler(options?: StatementInfo) {
                     if (result.metadata && result.metadata.columns) {
                       const columnNames = result.metadata.columns.map(col => col.name);
                       const decimalColumns = result.metadata.columns.map(col => DecimalColumnTypes.includes(col.type));
+                      const useLabels = Configuration.get<string>(`codegen.csvHeaderSource`) === `Label`;
+                      const headerNames = result.metadata.columns.map(col => {
+                        // Column headings can be up to 3 segments of 20 chars, padded with blanks
+                        const label = useLabels ? col.label?.replace(/\s+/g, ' ').trim() : undefined;
+                        return label || col.name;
+                      });
 
                       // Build CSV manually to preserve duplicate column names
                       const rows: string[][] = [];
 
                       // Add header row
-                      rows.push(columnNames.map(name => `"${String(name).replace(/"/g, '""')}"`));
+                      rows.push(headerNames.map(name => `"${String(name).replace(/"/g, '""')}"`));
                       // Add data rows - use column index to get values in correct order
                       for (const row of data) {
                         const values = columnNames.map((name, i) => {
