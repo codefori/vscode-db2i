@@ -163,12 +163,10 @@ const escapeHtml = (value: unknown): string =>
   }[ch] as string));
 
 /** Formats a cell value (pretty-printing JSON-looking strings); wraps it in `.dt-hoverable` when `wrapEditable` so the click-to-edit logic can find it */
-function formatCellValue(value: string | number | null | undefined, wrapEditable: boolean, nullable: boolean): string {
-  const nullableClass = wrapEditable && nullable ? ` dt-nullable` : ``;
-
+function formatCellValue(value: string | number | null | undefined, wrapEditable: boolean): string {
   if (value === null || value === undefined) {
     return wrapEditable
-      ? `<div class="dt-hoverable dt-null${nullableClass}" contenteditable="false">null</div>`
+      ? `<div class="dt-hoverable dt-null" contenteditable="false">null</div>`
       : `<span class="dt-null">null</span>`;
   }
 
@@ -182,7 +180,7 @@ function formatCellValue(value: string | number | null | undefined, wrapEditable
     try {
       const pretty = escapeHtml(JSON.stringify(JSON.parse(trimmed), null, 2));
       return wrapEditable
-        ? `<div class="dt-hoverable dt-json${nullableClass}" contenteditable="false">${pretty}</div>`
+        ? `<div class="dt-hoverable dt-json" contenteditable="false">${pretty}</div>`
         : `<span class="dt-json">${pretty}</span>`;
     } catch {
       // Not actually JSON — fall through to plain text
@@ -191,7 +189,7 @@ function formatCellValue(value: string | number | null | undefined, wrapEditable
 
   const escaped = escapeHtml(str);
   return wrapEditable
-    ? `<div class="dt-hoverable${nullableClass}" contenteditable="false">${escaped}</div>`
+    ? `<div class="dt-hoverable" contenteditable="false">${escaped}</div>`
     : escaped;
 }
 
@@ -232,10 +230,6 @@ function toWireColumns<T>(columns: DataTableColumn<T>[], streaming: boolean, ser
   }));
 }
 
-function nullableColumnIds(updatable: UpdatableInfo | undefined): Set<string> | undefined {
-  return updatable ? new Set(updatable.columns.filter(c => c.isNullable).map(c => c.name)) : undefined;
-}
-
 /** Structured values (e.g. an ARRAY column, which the driver returns as an object) become JSON text instead of `[object Object]` */
 function plainValue(value: unknown): string | number | null | undefined {
   if (value === null || value === undefined) return value as null | undefined;
@@ -256,11 +250,10 @@ function rowToWire<T>(
   columns: DataTableColumn<T>[],
   actions: DataTableRowAction<T>[],
   wrapEditable: boolean,
-  nullableIds: Set<string> | undefined,
 ): WireRow {
   const rawValues = columns.map(col => plainValue(col.value(row)));
   const cells = columns.map((col, c) =>
-    col.html ? col.html(row) : formatCellValue(rawValues[c], wrapEditable, !!nullableIds?.has(col.id)),
+    col.html ? col.html(row) : formatCellValue(rawValues[c], wrapEditable),
   );
   const searchText = columns
     .map((col, c) => (col.searchable === false ? `` : String(rawValues[c] ?? ``)))
@@ -283,10 +276,9 @@ function toWire<T>(options: DataTableOptions<T>, tableId: string) {
   const streaming = options.streaming === true;
   const serverQuery = streaming && options.serverQuery === true;
   const wrapEditable = options.updatable !== undefined;
-  const nullableIds = nullableColumnIds(options.updatable);
 
   const wireColumns = toWireColumns(columns, streaming, serverQuery);
-  const wireRows = options.rows.map((row, i) => rowToWire(row, i, columns, actions, wrapEditable, nullableIds));
+  const wireRows = options.rows.map((row, i) => rowToWire(row, i, columns, actions, wrapEditable));
 
   let initialSort = -1;
   let initialDir: "asc" | "desc" = `asc`;
@@ -569,21 +561,6 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       outline: 1px solid var(--dt-accent);
       outline-offset: -1px;
     }
-    .dt-hoverable[contenteditable="true"].dt-nullable:before {
-      color: var(--vscode-foreground);
-      position: absolute;
-      transform: translateY(-24px);
-      content: "Shift+Enter for null";
-      background-color: var(--vscode-list-hoverBackground);
-      opacity: 1;
-      padding: 2px;
-      font-style: normal;
-      font-weight: normal;
-      border: 1px solid var(--dt-accent);
-      width: max-content;
-      z-index: 2;
-    }
-    .dt-c:has(.dt-hoverable) { position: relative; }
 
     /* New row of an updatable table, until its INSERT runs */
     .dt-row.dt-draft > .dt-c { background-color: var(--vscode-diffEditor-insertedLineBackground, rgba(155, 185, 85, 0.2)); }
@@ -1578,9 +1555,12 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         }
         editableNode.contentEditable = true;
         editableNode.focus();
-        updateMessageWithSql(originalValue);
+        updateMessageWithSql(wasNull ? "" : originalValue);
 
         let nullify = false;
+        // Enter saves even an unchanged empty value (null to ''), Escape discards any change
+        let confirmed = false;
+        let cancelled = false;
 
         const keydownEvent = (ev) => {
           const newValue = editableNode.innerText;
@@ -1590,11 +1570,12 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
           switch (ev.key) {
             case "Enter":
               if (chosenColumnDetail.isNullable && ev.shiftKey) nullify = true;
+              confirmed = true;
               ev.preventDefault();
               editableNode.blur();
               break;
             case "Escape":
-              restoreCell(editableNode, originalValue, wasNull);
+              cancelled = true;
               editableNode.blur();
               break;
           }
@@ -1614,8 +1595,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
           editableNode.contentEditable = false;
 
           let newValue = editableNode.innerText;
-          // A null cell is emptied for editing: leaving it empty is no change
-          const unchanged = wasNull ? (nullify || newValue === "") : (!nullify && newValue === originalValue);
+          // A null cell is emptied for editing: leaving it empty is no change, unless Enter saves it as ''
+          const unchanged = cancelled || (wasNull ? (nullify || (newValue === "" && !confirmed)) : (!nullify && newValue === originalValue));
           if (unchanged) {
             restoreCell(editableNode, originalValue, wasNull);
             return;
@@ -2055,9 +2036,8 @@ export function appendDataTableRows<T>(
 
   const actions = options.actions ?? [];
   const wrapEditable = options.updatable !== undefined;
-  const nullableIds = nullableColumnIds(options.updatable);
   const startIndex = options.rows.length;
-  const wireRows = newRows.map((row, i) => rowToWire(row, startIndex + i, options.columns, actions, wrapEditable, nullableIds));
+  const wireRows = newRows.map((row, i) => rowToWire(row, startIndex + i, options.columns, actions, wrapEditable));
   options.rows.push(...newRows);
 
   post({

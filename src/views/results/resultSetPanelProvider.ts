@@ -325,7 +325,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
       const choice = await window.showQuickPick([
         { label: `All rows`, detail: `Retrieves the remaining rows first`, allRows: true },
         { label: `Loaded rows only`, detail: `${loaded} row${loaded === 1 ? `` : `s`}`, allRows: false },
-      ], { title: `Export as ${EXPORT_FORMATS[format].label}`, placeHolder: `Not all rows have been retrieved yet` });
+      ], { title: `Export as ${EXPORT_FORMATS[format].label}`, prompt: `Not all rows have been retrieved yet. Which rows would you like to export?` });
 
       if (!choice || (choice.allRows && !await this.retrieveAllRows(session))) return;
     }
