@@ -640,6 +640,7 @@ async function runHandler(options?: StatementInfo) {
                       content = rows.map(row => row.join(delimiter)).join('\n');
                     } else {
                       // Fallback to original method if no metadata
+                      // Without metadata there are no labels: the header uses the data keys (column names) regardless of csvHeaderSource
                       content = csv.stringify(data, {
                         header: true,
                         quoted_string: true,
