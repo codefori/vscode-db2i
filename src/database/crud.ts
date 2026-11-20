@@ -140,6 +140,11 @@ function generatedKind(column: TableColumn): string | undefined {
   return column.IS_IDENTITY === `YES` ? `identity` : undefined;
 }
 
+/** True for a column the database fills in (identity, row change timestamp, ROWID, …) */
+export function isGeneratedColumn(column: TableColumn): boolean {
+  return generatedKind(column) !== undefined;
+}
+
 function omissionWarnings(generatedColumns: TableColumn[]): string[] {
   return generatedColumns.map(column => `-- ${Statement.delimName(column.COLUMN_NAME)} omitted: ${generatedKind(column)}`);
 }
