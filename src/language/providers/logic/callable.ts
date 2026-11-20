@@ -1,9 +1,11 @@
 import { CompletionItem, CompletionItemKind, SnippetString } from "vscode";
+import { ExtendedSQLJob } from "../../../connection/extendedSQLJob";
 import { CallableType } from "../../../database/callable";
 import Statement from "../../../database/statement";
 import { SQLParm } from "../../../types";
 import { getPositionData } from "../../sql/document";
-import { CallableReference, ObjectRef } from "../../sql/types";
+import LanguageStatement from "../../sql/statement";
+import { CallableReference, ObjectRef, StatementType } from "../../sql/types";
 import { DbCache } from "./cache";
 import { createCompletionItem, getParmAttributes } from "./completion";
 
@@ -27,6 +29,41 @@ export async function isCallableType(ref: ObjectRef, type: CallableType) {
   }
 
   return false;
+}
+
+/**
+ * Returns the routine type of a reference, or undefined when it is not a routine
+ */
+export function getRoutineType(statement: LanguageStatement, ref: ObjectRef): CallableType | undefined {
+  if (statement.type === StatementType.Call && statement.getObjectReferences()[0] === ref) {
+    return `PROCEDURE`;
+  }
+
+  if (ref.isUDTF || ref.tokens[ref.tokens.length - 1]?.type === `closebracket`) {
+    return `FUNCTION`;
+  }
+
+  return undefined;
+}
+
+/**
+ * Unqualified routines resolve through the SQL path, like Db2 does.
+ * Returns the first schema in the path that has the routine, or undefined when the path is *LIBL or no schema has it
+ */
+export async function getRoutineSchemaFromPath(job: ExtendedSQLJob, name: string, type: CallableType): Promise<string | undefined> {
+  const path = await job.getCurrentPath();
+  if (path) {
+    name = Statement.noQuotes(Statement.delimName(name, true));
+
+    for (const pathSchema of path) {
+      const schema = Statement.noQuotes(Statement.delimName(pathSchema, true));
+      if (await DbCache.getRoutine(schema, name, type)) {
+        return schema;
+      }
+    }
+  }
+
+  return undefined;
 }
 
 /**

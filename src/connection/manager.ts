@@ -143,16 +143,6 @@ export class SQLJobManager {
     return this.jobs[jobExists];
   }
 
-  private resetCurrentSchema(query: string, job: ExtendedSQLJob) {
-    if (query.toUpperCase().startsWith(`SET`)) {
-      const newSchema = query.split(` `)[2];
-      if (newSchema) {
-        job.resetCurrentSchemaCache();
-      }
-    }
-    return query;
-  }
-
   async runSQL<T>(query: string, opts?: QueryOptions, rowsToFetch = 2147483647): Promise<T[]> {
     // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
     // int. This is the largest number available without overflow (Integer.MAX_VALUE)
@@ -164,7 +154,6 @@ export class SQLJobManager {
     const results = await statement.execute(rowsToFetch);
     statement.close();
 
-    this.resetCurrentSchema(query, this.jobs[this.selectedJob].job);
     return results.data;
   }
 
@@ -176,14 +165,12 @@ export class SQLJobManager {
     const results = await statement.execute(rowsToFetch);
     statement.close();
 
-    this.resetCurrentSchema(query, this.jobs[this.selectedJob].job);
     return results;
   }
 
   async getPagingStatement<T>(query: string, opts?: QueryOptions): Promise<Query<T>> {
     const selected = this.jobs[this.selectedJob];
     if (selected) {
-      this.resetCurrentSchema(query, selected?.job);
       return selected.job.query<T>(query, opts);
     } else {
       const hasNewJob = await askAboutNewJob();

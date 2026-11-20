@@ -88,6 +88,13 @@
         "icon": "$(edit)"
       },
       {
+        "command": "vscode-db2i.jobManager.changeLibraryList",
+        "title": "Change Library List",
+        "category": "Db2 for i",
+        "icon": "$(list-ordered)",
+        "enablement": "vscode-db2i:jobManager.hasJob"
+      },
+      {
         "command": "vscode-db2i.jobManager.editDefaultJobProps",
         "title": "Connection Properties"
       },
@@ -256,6 +263,11 @@
           "command": "vscode-db2i.jobManager.editJobProps",
           "when": "view == jobManager && viewItem == sqlJob",
           "group": "inline"
+        },
+        {
+          "command": "vscode-db2i.jobManager.changeLibraryList",
+          "when": "view == jobManager && viewItem == sqlJob",
+          "group": "libl@1"
         },
         {
           "command": "vscode-db2i.jobManager.editSelfCodes",
