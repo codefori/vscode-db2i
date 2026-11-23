@@ -532,7 +532,7 @@
           "vscode-db2i.schemaBrowser.crudUseKeyColumns": {
             "type": "boolean",
             "default": true,
-            "description": "When generating an UPDATE or DELETE statement, use the table's primary or unique key to identify the row, if one is found. When disabled, every column is always used to identify the row, even if a key exists."
+            "description": "When generating an UPDATE or DELETE statement, use the table's primary or unique key to identify the row, if one is found. When disabled, every column is always used to identify the row, even if a key exists. Also applies to rows changed or deleted in an updatable result set (update: prefix), which otherwise identify the row by its identity column or relative record number."
           }
         }
       }
