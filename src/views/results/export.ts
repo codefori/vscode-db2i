@@ -16,11 +16,15 @@ export interface ExportTable {
   rows: unknown[][];
   /** SQL type of each column */
   types?: (string | undefined)[];
+  /** Label (heading) of each column, available with extended metadata */
+  labels?: (string | undefined)[];
 }
 
 export interface CsvOptions {
   delimiter?: string;
   decimalSeparator?: string;
+  /** Use the column labels for the header row instead of the column names */
+  useLabels?: boolean;
 }
 
 const CSV_DELIMITERS: Record<string, string> = { Comma: `,`, Semicolon: `;`, Tab: `\t` };
@@ -46,6 +50,7 @@ function formatWithSettings(format: ExportFormat, table: ExportTable): string {
   return formatResults(format, table, {
     delimiter: CSV_DELIMITERS[Configuration.get<string>(`codegen.csvColumnDelimiter`) || `Comma`],
     decimalSeparator: CSV_DECIMAL_SEPARATORS[Configuration.get<string>(`codegen.csvDecimalSeparator`) || `Period`],
+    useLabels: Configuration.get<string>(`codegen.csvHeaderSource`) === `Label`,
   });
 }
 
@@ -57,7 +62,7 @@ export async function openResultsAs(format: ExportFormat, table: ExportTable) {
 
 const isNull = (value: unknown) => value === null || value === undefined;
 
-function toCsv({ columns, rows, types = [] }: ExportTable, { delimiter = `,`, decimalSeparator = `.` }: CsvOptions): string {
+function toCsv({ columns, rows, types = [], labels = [] }: ExportTable, { delimiter = `,`, decimalSeparator = `.`, useLabels = false }: CsvOptions): string {
   const quote = (value: unknown) => `"${String(value).replace(/"/g, `""`)}"`;
   const decimal = columns.map((_, i) => DECIMAL_TYPES.has(String(types[i]).toUpperCase()));
   const cell = (value: unknown, i: number) => {
@@ -66,7 +71,10 @@ function toCsv({ columns, rows, types = [] }: ExportTable, { delimiter = `,`, de
     return quote(value);
   };
 
-  const lines = [columns.map(quote).join(delimiter)];
+  // Column headings can be up to 3 segments of 20 chars, padded with blanks. Fall back to the name when there is no label
+  const header = (column: string, i: number) => (useLabels ? labels[i]?.replace(/\s+/g, ` `).trim() : undefined) || column;
+
+  const lines = [columns.map((column, i) => quote(header(column, i))).join(delimiter)];
   for (const row of rows) {
     lines.push(columns.map((_, i) => cell(row[i], i)).join(delimiter));
   }
