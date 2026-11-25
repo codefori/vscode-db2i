@@ -528,6 +528,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       user-select: none;
     }
     .dt-h.sortable { cursor: pointer; }
+    /* Dragging a header moves its column; the bar shows where it will land */
+    .dt-h.dt-dragging { opacity: 0.5; }
+    .dt-h.dt-drop-before { box-shadow: inset 3px 0 0 var(--dt-accent); }
+    .dt-h.dt-drop-after { box-shadow: inset -3px 0 0 var(--dt-accent); }
     .dt-h .arrow { margin-left: 5px; opacity: 0.7; font-size: 0.85em; }
     .dt-h-label { display: inline; }
 
@@ -813,10 +817,44 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     const el = (id) => document.getElementById(id);
     const grid = el("grid");
 
-    function gridTemplate() {
+    // Columns in the order shown (indexes into MODEL.columns), and each column's grid track by that index
+    let columnOrder = [];
+    let columnTracks = [];
+
+    function resetColumnLayout() {
       const capped = MODEL.resizable && MODEL.collapsedInitialWidth;
-      const tracks = MODEL.columns.map((c) => (capped ? MODEL.collapsedInitialWidth : c.track));
-      return tracks.join(" ") + " minmax(0, 1fr)";
+      columnOrder = MODEL.columns.map((_, i) => i);
+      columnTracks = MODEL.columns.map((c) => (capped ? MODEL.collapsedInitialWidth : c.track));
+    }
+
+    function applyGridTemplate() {
+      grid.style.gridTemplateColumns = columnOrder.map((i) => columnTracks[i] || "max-content").join(" ") + " minmax(0, 1fr)";
+    }
+
+    /** Appends a row's cells (indexed by column) in the order the columns are shown */
+    function appendInColumnOrder(rowEl, cells, before) {
+      const order = columnOrder.length === cells.length ? columnOrder : cells.map((_, i) => i);
+      order.forEach((c) => { if (cells[c]) rowEl.insertBefore(cells[c], before || null); });
+    }
+
+    function moveColumn(from, to, after) {
+      const order = columnOrder.filter((c) => c !== from);
+      const at = order.indexOf(to) + (after ? 1 : 0);
+      order.splice(at, 0, from);
+      if (order.every((c, i) => c === columnOrder[i])) return;
+      columnOrder = order;
+      applyGridTemplate();
+
+      const headerFiller = grid.querySelector(":scope > .dt-h.dt-filler");
+      const headers = [];
+      grid.querySelectorAll(":scope > .dt-h:not(.dt-filler)").forEach((h) => { headers[Number(h.dataset.c)] = h; });
+      appendInColumnOrder(grid, headers, headerFiller);
+
+      grid.querySelectorAll(":scope > .dt-row").forEach((rowEl) => {
+        const cells = [];
+        Array.from(rowEl.children).forEach((cell) => { if (cell.dataset.c !== undefined) cells[Number(cell.dataset.c)] = cell; });
+        appendInColumnOrder(rowEl, cells, rowEl.querySelector(":scope > .dt-filler"));
+      });
     }
 
     function headerCellCount() {
@@ -867,37 +905,100 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       grip.className = "dt-grip";
       grip.addEventListener("mousedown", (e) => {
         e.stopPropagation();
+        // Keeps the header from starting a column drag
+        e.preventDefault();
         state.adjustingColumn = index;
         state.startOffset = headerCell.offsetWidth - e.pageX;
       });
-      // Otherwise the click generated on mouseup bubbles to the header and toggles sort.
-      grip.addEventListener("click", (e) => e.stopPropagation());
       grip.addEventListener("dblclick", (e) => {
         e.stopPropagation();
-        const tracks = grid.style.gridTemplateColumns.split(" ");
-        tracks[index] = "max-content";
-        grid.style.gridTemplateColumns = tracks.join(" ");
+        columnTracks[index] = "max-content";
+        applyGridTemplate();
       });
       headerCell.appendChild(grip);
     }
 
     if (MODEL.resizable) {
+      let endedResize = false;
       document.addEventListener("mousemove", (e) => {
         if (state.adjustingColumn === undefined) return;
-        const tracks = grid.style.gridTemplateColumns.split(" ");
-        tracks[state.adjustingColumn] = Math.max(state.startOffset + e.pageX, 40) + "px";
-        grid.style.gridTemplateColumns = tracks.join(" ");
+        columnTracks[state.adjustingColumn] = Math.max(state.startOffset + e.pageX, 40) + "px";
+        applyGridTemplate();
       });
-      document.addEventListener("mouseup", () => { state.adjustingColumn = undefined; });
+      document.addEventListener("mouseup", () => {
+        if (state.adjustingColumn === undefined) return;
+        state.adjustingColumn = undefined;
+        // The click that follows lands on whatever holds both the grip and the release point,
+        // usually the header itself, and would toggle its sort.
+        endedResize = true;
+        setTimeout(() => { endedResize = false; });
+      });
+      document.addEventListener("click", (e) => {
+        if (!endedResize) return;
+        endedResize = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }, true);
+    }
+
+    // ----- drag a header onto another to move its column ----------------
+    let draggedColumn;
+
+    function clearDropMarks() {
+      grid.querySelectorAll(":scope > .dt-drop-before, :scope > .dt-drop-after").forEach((h) => h.classList.remove("dt-drop-before", "dt-drop-after"));
+    }
+
+    function attachColumnDrag(h, index) {
+      h.draggable = true;
+      h.addEventListener("dragstart", (e) => {
+        // A drag that starts on the resize grip resizes instead
+        if (state.adjustingColumn !== undefined) {
+          e.preventDefault();
+          return;
+        }
+        hideHeaderHover();
+        draggedColumn = index;
+        h.classList.add("dt-dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", MODEL.columns[index]?.title ?? "");
+      });
+      h.addEventListener("dragover", (e) => {
+        if (draggedColumn === undefined) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const rect = h.getBoundingClientRect();
+        const after = e.clientX > rect.left + rect.width / 2;
+        if (!h.classList.contains(after ? "dt-drop-after" : "dt-drop-before")) {
+          clearDropMarks();
+          if (draggedColumn !== index) h.classList.add(after ? "dt-drop-after" : "dt-drop-before");
+        }
+      });
+      h.addEventListener("dragleave", (e) => {
+        if (!h.contains(e.relatedTarget)) h.classList.remove("dt-drop-before", "dt-drop-after");
+      });
+      h.addEventListener("drop", (e) => {
+        if (draggedColumn === undefined) return;
+        e.preventDefault();
+        const after = h.classList.contains("dt-drop-after");
+        const before = h.classList.contains("dt-drop-before");
+        if (draggedColumn !== index && (after || before)) moveColumn(draggedColumn, index, after);
+      });
+      h.addEventListener("dragend", () => {
+        draggedColumn = undefined;
+        clearDropMarks();
+        h.classList.remove("dt-dragging");
+      });
     }
 
     function buildHeader() {
       hideHeaderHover();
       Array.from(grid.querySelectorAll(":scope > .dt-h")).forEach((n) => n.remove());
-      grid.style.gridTemplateColumns = gridTemplate();
-      MODEL.columns.forEach((col, index) => {
+      resetColumnLayout();
+      applyGridTemplate();
+      const headers = MODEL.columns.map((col, index) => {
         const h = document.createElement("div");
         h.className = "dt-h" + (col.sortable ? " sortable" : "");
+        h.dataset.c = String(index);
         if (col.tooltip) h.title = col.tooltip;
         const label = document.createElement("span");
         label.className = "dt-h-label";
@@ -910,8 +1011,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         arrow.dataset.for = String(index);
         h.appendChild(arrow);
         if (MODEL.resizable) attachGrip(h, index);
-        grid.appendChild(h);
+        attachColumnDrag(h, index);
+        return h;
       });
+      appendInColumnOrder(grid, headers);
       const filler = document.createElement("div");
       filler.className = "dt-h dt-filler";
       grid.appendChild(filler);
@@ -919,7 +1022,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     }
 
     function updateHeaderTitles() {
-      const headers = Array.from(grid.querySelectorAll(":scope > .dt-h:not(.dt-filler)"));
+      const headers = [];
+      grid.querySelectorAll(":scope > .dt-h:not(.dt-filler)").forEach((h) => { headers[Number(h.dataset.c)] = h; });
       MODEL.columns.forEach((col, i) => {
         const h = headers[i];
         if (!h) return;
@@ -1064,15 +1168,17 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         rowEl.dataset.vscodeContext = JSON.stringify(context);
       }
       if (wireRow.p) rowEl.dataset.primary = wireRow.p;
-      wireRow.c.forEach((cellHtml, c) => {
+      const cells = wireRow.c.map((cellHtml, c) => {
         const col = MODEL.columns[c];
         const cell = document.createElement("div");
         cell.className = "dt-c" + (col && col.align !== "left" ? " " + col.align : "");
+        cell.dataset.c = String(c);
         if (MODEL.updatable && col) cell.dataset.col = col.id;
         cell.innerHTML = cellHtml;
         if (terms.length) highlightIn(cell, terms);
-        rowEl.appendChild(cell);
+        return cell;
       });
+      appendInColumnOrder(rowEl, cells);
       const filler = document.createElement("div");
       filler.className = "dt-c dt-filler";
       rowEl.appendChild(filler);
@@ -1739,9 +1845,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
         const rowEl = document.createElement("div");
         rowEl.className = "dt-row dt-draft";
         const cells = [];
-        MODEL.columns.forEach((col) => {
+        const cellEls = MODEL.columns.map((col, index) => {
           const cellEl = document.createElement("div");
           cellEl.className = "dt-c" + (col.align !== "left" ? " " + col.align : "");
+          cellEl.dataset.c = String(index);
           const node = document.createElement("div");
           node.className = "dt-draft-value";
           const detail = updateTable.columns.find((c) => c.name === col.id);
@@ -1755,9 +1862,10 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
             node.textContent = detail ? "generated" : "default";
           }
           cellEl.appendChild(node);
-          rowEl.appendChild(cellEl);
+          return cellEl;
         });
         if (cells.length === 0) return;
+        appendInColumnOrder(rowEl, cellEls);
         const filler = document.createElement("div");
         filler.className = "dt-c dt-filler";
         rowEl.appendChild(filler);
