@@ -905,7 +905,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       grip.className = "dt-grip";
       grip.addEventListener("mousedown", (e) => {
         e.stopPropagation();
-        // Keeps the header from starting a column drag
+        // Keeps the header from starting a column drag, so a drag on the grip only resizes
         e.preventDefault();
         state.adjustingColumn = index;
         state.startOffset = headerCell.offsetWidth - e.pageX;
@@ -951,11 +951,6 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
     function attachColumnDrag(h, index) {
       h.draggable = true;
       h.addEventListener("dragstart", (e) => {
-        // A drag that starts on the resize grip resizes instead
-        if (state.adjustingColumn !== undefined) {
-          e.preventDefault();
-          return;
-        }
         hideHeaderHover();
         draggedColumn = index;
         h.classList.add("dt-dragging");
@@ -1783,7 +1778,8 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       }
 
       function focusDraft() {
-        if (draft && draft.cells[0]) draft.cells[0].node.focus();
+        // The first editable cell on screen, which may not be the first one in draft.cells once columns are moved
+        if (draft) draft.rowEl.querySelector('.dt-draft-value[contenteditable="true"]')?.focus();
       }
 
       function setDraftEditable(editable) {
