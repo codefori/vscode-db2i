@@ -339,9 +339,11 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
     const columns = dtOptions.columns;
     const metaData: any[] = session?.columnMetaData ?? [];
+    const columnMeta = columns.map((column, i) => metaData[i]?.name === column.id ? metaData[i] : metaData.find(meta => meta.name === column.id));
     return {
       columns: columns.map(column => column.id),
-      types: columns.map((column, i) => (metaData[i]?.name === column.id ? metaData[i] : metaData.find(meta => meta.name === column.id))?.type),
+      types: columnMeta.map(meta => meta?.type),
+      labels: columnMeta.map(meta => meta?.label),
       rows: dtOptions.rows.map(row => columns.map(column => column.value(row))),
     };
   }

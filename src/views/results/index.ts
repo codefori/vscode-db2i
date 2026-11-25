@@ -609,7 +609,7 @@ async function runHandler(options?: StatementInfo) {
           if (data.length > 0) {
             if (isExportFormat(statementDetail.qualifier)) {
               const columns = result.metadata.columns;
-              await openResultsAs(statementDetail.qualifier, { columns: columns.map(column => column.name), types: columns.map(column => column.type), rows: data });
+              await openResultsAs(statementDetail.qualifier, { columns: columns.map(column => column.name), types: columns.map(column => column.type), labels: columns.map(column => column.label), rows: data });
               chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
             }
 

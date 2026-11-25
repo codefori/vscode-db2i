@@ -335,6 +335,19 @@
               "Period (1234.56)",
               "Comma (1234,56)"
             ]
+          },
+          "vscode-db2i.codegen.csvHeaderSource": {
+            "type": "string",
+            "description": "Descriptor to use for the header row when exporting a result set in CSV format",
+            "default": "Name",
+            "enum": [
+              "Name",
+              "Label"
+            ],
+            "enumDescriptions": [
+              "Use the column name",
+              "Use the column label (heading)\n'Extended metadata' must be set to true in the JDBC configuration"
+            ]
           }
         }
       },

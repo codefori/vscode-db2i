@@ -37,6 +37,17 @@ test('Export to CSV with a decimal separator', () => {
   expect(formatResults(`csv`, prices).split(`\n`)[1]).toBe(`"1","12.5","A.1","1234.5678"`);
 });
 
+test('Export to CSV with column labels', () => {
+  const labeled = {
+    columns: [`ID`, `NAME`, `CODE`],
+    labels: [`Customer            Number`, `  `, undefined],
+    rows: [[1, `Ann`, `A`]],
+  };
+
+  expect(formatResults(`csv`, labeled, { useLabels: true }).split(`\n`)[0]).toBe(`"Customer Number","NAME","CODE"`);
+  expect(formatResults(`csv`, labeled).split(`\n`)[0]).toBe(`"ID","NAME","CODE"`);
+});
+
 test('Export to JSON', () => {
   expect(JSON.parse(formatResults(`json`, { columns: [`ID`, `NAME`], rows: [[1, `Ann`], [2, undefined]] }))).toEqual([
     { ID: 1, NAME: `Ann` },
