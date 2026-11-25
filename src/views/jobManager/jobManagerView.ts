@@ -291,11 +291,14 @@ export class JobManagerView implements TreeDataProvider<any> {
 
   refresh() {
     this._onDidChangeTreeData.fire();
-    updateStatusBar();
 
     const selectedJob = JobManager.getSelection();
 
+    // Read the job status before updating the status bar: updateStatusBar may send
+    // queries (current schema, library list, pending transactions) that mark the job
+    // as busy straight away, which would leave the Cancel button showing.
     setCancelButtonVisibility(selectedJob?.job.getStatus() === "busy");
+    updateStatusBar();
     sqlLanguageStatus.setState(selectedJob !== undefined);
     commands.executeCommand(
       `setContext`,
