@@ -672,7 +672,7 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
         updatable: from.updatable,
         resizable: true,
         collapsedInitialWidth: Configuration.get<boolean>(`collapsedResultSet`) ? `200px` : undefined,
-        loadingText: listing?.loadingText ?? (from.options.isCL ? `Running CL command...` : `Running statement...`),
+        loadingText: listing?.loadingText ?? (from.options.isCL ? `Running CL command ${from.baseSelect}...` : `Running statement...`),
       },
     };
     const dtOptions = session.dtOptions;
@@ -747,7 +747,8 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
                 columns: CL_COLUMNS,
                 executionTimeMs: query.execution_time,
                 jobId: session.jobId,
-                updateCount: 0
+                updateCount: 0,
+                isCL: true
               });
               session.isDone = true;
               return;

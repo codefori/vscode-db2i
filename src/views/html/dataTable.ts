@@ -1358,7 +1358,7 @@ export function renderDataTable<T>(options: DataTableOptions<T>, tableId = ``): 
       const doneSuffix = state.isDone ? " End of data." : " More available.";
       const timed = typeof data.executionTimeMs === "number";
       const statusEl = el("dtStatus");
-      if (MODEL.columns.length === 0) {
+      if (data.isCL === true || MODEL.columns.length === 0) {
         statusEl.textContent = timed ? "Executed in " + Math.round(data.executionTimeMs) + "ms." : "Executed.";
       } else if (timed) {
         statusEl.textContent = "Loaded " + MODEL.rows.length + " rows in " + Math.round(data.executionTimeMs) + "ms." + doneSuffix + updatableSuffix;
@@ -2132,6 +2132,7 @@ export function appendDataTableRows<T>(
     executionTimeMs?: number;
     jobId?: string;
     updateCount?: number;
+    isCL?:boolean
   },
 ): void {
   if (meta.columns) {
@@ -2152,6 +2153,7 @@ export function appendDataTableRows<T>(
     executionTimeMs: meta.executionTimeMs,
     jobId: meta.jobId,
     updateCount: meta.updateCount,
+    isCL: meta.isCL
   });
 }
 
