@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
+import { getInstance } from '../../base';
 import { JobManager } from '../../config';
 import { generateChart } from './chart';
-import { chartJsTypes, ChartJsType, generateChartHTMLEmbedded } from './chartJs';
+import { ChartJsType, chartJsTypes, generateChartHTMLEmbedded } from './chartJs';
 import { getStatementDetail } from './statement';
-import { getInstance } from '../../base';
 
 import chartjs from 'chart.js/dist/chart.umd.js';
 
@@ -62,14 +62,14 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                     const markdown = cell.document.getText();
                     cellContents.push(converter.makeHtml(markdown));
                     break;
-            
+
                   case `sql`:
                     try {
                       if (selected) {
                         const eol = cell.document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
-                
+
                         let content = cell.document.getText().trim();
-  
+
                         const detail = getStatementDetail(content, eol);
 
                         content = detail.content;
@@ -77,17 +77,17 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                         if (detail.settings.hideStatement !== `true`) {
                           cellContents.push(`<pre>${content}</pre>`);
                         }
-  
+
                         // Execute the query
-                        const query = selected.job.query(content);
+                        const query = selected.job.query<any>(content);
                         const results = await query.execute();
-  
+
                         const table = results.data;
-  
+
                         if (table.length > 0) {
-  
-                          const keys = Object.keys(table[0]);
-  
+
+                          const keys = Object.keys(table?.[0] ?? {});
+
                           // Add `-` for blanks.
                           table.forEach(row => {
                             keys.forEach(key => {
@@ -95,11 +95,11 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                               if (!row[key]) { row[key] = `-`; }
                             });
                           });
-  
-                          const columns = results.metadata.columns.map(c => c.label);
-  
+
+                          const columns = results.metadata.columns?.map(c => c.label) ?? [];
+
                           let fallbackToTable = true;
-  
+
                           const { chartDetail } = detail;
                           if (chartDetail.type) {
                             if (chartJsTypes.includes(chartDetail.type as ChartJsType)) {
@@ -112,7 +112,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                               }
                             }
                           }
-  
+
                           if (fallbackToTable) {
                             cellContents.push(
                               [
@@ -150,7 +150,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                         } else {
                           // items.push(vscode.NotebookCellOutputItem.stderr(`No rows returned from statement.`));
                         }
-                
+
                       } else {
                         // items.push(vscode.NotebookCellOutputItem.stderr(`No job selected in SQL Job Manager.`));
                       }
@@ -158,17 +158,18 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                       // items.push(vscode.NotebookCellOutputItem.stderr(e.message));
                     }
                     break;
-  
+
                   case `cl`:
                     const commandText = cell.document.getText();
                     cellContents.push(`<pre>${commandText}</pre>`);
-              
+
                     try {
                       const command = await connection.runCommand({
                         command: commandText,
-                        environment: `ile`
+                        environment: `ile`,
+                        getSpooledFiles: true
                       });
-  
+
                       if (command.stdout) {
                         cellContents.push([
                           `<pre>`,
@@ -176,7 +177,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                           `</pre>`
                         ].join(`\n`));
                       }
-  
+
                       if (command.stderr) {
                         cellContents.push([
                           `<pre>`,
@@ -191,7 +192,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                       // );
                     }
                     break;
-  
+
                   case `shellscript`:
                     const shellText = cell.document.getText();
 
@@ -202,7 +203,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                         command: shellText,
                         environment: `pase`
                       });
-  
+
                       if (command.stdout) {
                         cellContents.push([
                           `<pre>`,
@@ -210,7 +211,7 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
                           `</pre>`
                         ].join(`\n`));
                       }
-  
+
                       if (command.stderr) {
                         cellContents.push([
                           `<pre>`,
@@ -274,7 +275,9 @@ export const exportNotebookAsHtml = vscode.commands.registerCommand(`vscode-db2i
 
                 if (saveAt) {
                   const uri = await saveAt;
-                  await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(document));
+                  if (uri) {
+                    await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(document));
+                  }
                 }
               }
             });
