@@ -26,6 +26,22 @@ export const extensions = {
   getExtension: () => undefined,
 };
 
+export class LanguageModelTextPart {
+  constructor(public value: string) { }
+}
+
+export class LanguageModelToolResult {
+  constructor(public content: LanguageModelTextPart[]) { }
+}
+
+export const lm = {
+  registerTool: () => ({ dispose: () => { } }),
+};
+
+export class MarkdownString {
+  constructor(public value: string) { }
+}
+
 export class EventEmitter {
   event = () => ({ dispose: () => { } });
   fire() { }
