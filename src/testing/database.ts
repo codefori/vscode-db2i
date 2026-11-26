@@ -1,10 +1,10 @@
 import assert from "assert";
 import { TestSuite } from ".";
+import { getInstance } from "../base";
 import { JobManager } from "../config";
+import Callable from "../database/callable";
 import Database, { AllSQLTypes } from "../database/schemas";
 import Statement from "../database/statement";
-import Callable from "../database/callable";
-import { getInstance } from "../base";
 import Table from "../database/table";
 import View from "../database/view";
 
@@ -199,8 +199,10 @@ export const DatabaseSuite: TestSuite = {
         for (const statement of statements) {
           await JobManager.runSQL(statement);
         }
-      } catch (e) {
-        assert.fail(e);
+      } catch (e:unknown) {
+        if(e instanceof Error || typeof e === "string"){
+          assert.fail(e);
+        }        
         console.log(`Possible fail`);
         console.log(e);
       }
@@ -249,7 +251,7 @@ export const DatabaseSuite: TestSuite = {
       // Only one procedure should have parameters
       assert.strictEqual(signatures.length, 1);
       const multiProcAllMonitors = signatures.find(sig => sig.specificName === `MULTI_PROC_MY_MONITORS`);
-      assert.strictEqual(multiProcAllMonitors.parms.length, 1);
+      assert.strictEqual(multiProcAllMonitors?.parms.length, 1);
     }},
 
     {name: `Generate SQL for overloaded procedures`, test: async () => {

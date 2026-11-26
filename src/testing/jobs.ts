@@ -108,13 +108,13 @@ export const JobsSuite: TestSuite = {
     {name: `CL Command (success)`, test: async () => {  
       const newJob = await JobManager.newJob();
 
-      let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVSNAKES)  CRTFILE(*YES) `).execute();
+      const clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVSNAKES)  CRTFILE(*YES) `);
       assert.equal(clRes.success, true);
       assert.notEqual(0, clRes.data.length);
       let CPF2880: boolean = false;
       console.log(JSON.stringify(clRes));
       for (let joblogEntry of clRes.data) {
-        if (joblogEntry.MESSAGE_ID === "CPF2880") {
+        if (joblogEntry.id === "CPF2880") {
           CPF2880 = true;
           break;
         }
@@ -126,13 +126,13 @@ export const JobsSuite: TestSuite = {
     {name: `CL Command (error)`, test: async () => {
       const newJob = await JobManager.newJob();
 
-      let clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVDB2) MBROPT(*UPDADD) CRTFILE(*YES) `).execute();
+      const clRes = await newJob.clcommand(`CPYF FROMFILE(QIWS/QCUSTCDT) TOFILE(QTEMP/ILUVDB2) MBROPT(*UPDADD) CRTFILE(*YES) `);
       console.log(JSON.stringify(clRes));
       assert.equal(clRes.success, false);
       let CPD2825: boolean = false;
       console.log(JSON.stringify(clRes));
       for (let joblogEntry of clRes.data) {
-        if (joblogEntry.MESSAGE_ID === "CPD2825") {
+        if (joblogEntry.id === "CPD2825") {
           CPD2825 = true;
           break;
         }
@@ -144,7 +144,7 @@ export const JobsSuite: TestSuite = {
     {name: `Retrieve job log`, test: async () => {
       const newJob = await JobManager.newJob();      
 
-      await newJob.clcommand(`DLTLIB QTEMP`).execute();
+      await newJob.clcommand(`DLTLIB QTEMP`);
       let joblog = await newJob.getJobLog();
       assert.equal(joblog.success, true);
       let CPD2165: boolean = false;
@@ -241,7 +241,7 @@ export const JobsSuite: TestSuite = {
       let newJob = await JobManager.newJob({libraries: [`QIWS`], naming: `system`});
 
       try {
-        const rows = await newJob.query(`select * from qcustcdt where cusnum = ? and zipcod = ?`, {isClCommand: false, parameters: [938485, 30545]}).execute();
+        const rows = await newJob.query(`select * from qcustcdt where cusnum = ? and zipcod = ?`, { parameters: [938485, 30545] }).execute();
         assert.strictEqual(rows.data.length, 1);
       } catch (e) {
         assert.fail(`Should not have errored.`);

@@ -6,7 +6,7 @@ export interface StatementSettings {
   title?: string;
   y?: string;
   hideStatement?: string;
-  [key: string]: string
+  [key: string]: string | undefined
 };
 
 export function getStatementDetail(content: string, eol: string) {

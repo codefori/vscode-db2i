@@ -1,15 +1,13 @@
 import { CancellationToken, ProgressLocation, WebviewPanel, WebviewView, WebviewViewProvider, WebviewViewResolveContext, commands, env, window } from "vscode";
 
-import { ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
+import { CLCommandResult, CLMessage, ColumnMetaData, QueryResult } from "@ibm/mapepire-js";
 import { Query } from "@ibm/mapepire-js/dist/src/query";
 import { openResultSetPanel, setCancelButtonVisibility, updatePanelEditMode } from ".";
-import { describeParameters, inlineParameters } from "./parameterInfo";
-import { resultColumnDetails } from "./columnDetails";
 import { JobManager } from "../../config";
 import Configuration from "../../configuration";
+import { isGeneratedColumn } from "../../database/crud";
 import Statement from "../../database/statement";
 import Table from "../../database/table";
-import { isGeneratedColumn } from "../../database/crud";
 import Document from "../../language/sql/document";
 import { ObjectRef, StatementType } from "../../language/sql/types";
 import { TableColumn } from "../../types";
@@ -36,9 +34,11 @@ import {
   updateDataTableRows,
 } from "../html/dataTable";
 import { updateStatusBar } from "../jobManager/statusBar";
+import { resultColumnDetails } from "./columnDetails";
 import { statementDone } from "./editorUi";
 import { EXPORT_FORMATS, ExportFormat, ExportTable, openResultsAs } from "./export";
 import * as html from "./html";
+import { describeParameters, inlineParameters } from "./parameterInfo";
 import { RESULT_ROW_ACTIONS, buildDeleteStatement } from "./rowChanges";
 
 export type SqlParameter = string | number;
@@ -108,6 +108,23 @@ interface DataTableSession {
   handlers: DataTableHandlers<any>;
   extras: DataTableExtras<any>;
 }
+const CL_COLUMNS: DataTableColumn<CLMessage>[] = ["Id", "Severity", "Type", "Text", "Help", "Timestamp"]
+  .map((name, i) => ({
+    id: name,
+    title: name,    
+    value: (row) => {
+      switch (i) {
+        case 1: return row.severity;
+        case 2: return row.type;
+        case 3: return row.text;
+        case 4: return row.help;
+        case 5: return new Date(row.time).toLocaleString();
+        default: return row.id;
+      }
+    },
+    headerDetails: [],
+    sortable: false
+  }));
 
 /** SQL column heading display mode, from the `resultsets.columnHeadings` setting */
 function resultColumnTitle(column: any, columnHeadings: string): string {
@@ -720,18 +737,33 @@ export class ResultSetPanelProvider implements WebviewViewProvider {
 
         this.fetchingEpoch = myEpoch;
         try {
-          let query = this.currentQuery;
+          let query: Query<any> | CLCommandResult | undefined = this.currentQuery;
           if (query === undefined) {
-            const { sql, params } = buildQueryText(session);
-            const prepared = await JobManager.getPagingStatement(sql, { parameters: params, isClCommand: options.isCL, isTerseResults: !listing });
-            // Superseded by a restart while preparing
-            if (myEpoch !== this.queryEpoch) {
-              prepared.close();
+            if (options.isCL) {
+              query = await JobManager.runCL(session.baseSelect);
+              appendDataTableRows(post, dtOptions as any, query.data, {
+                isDone: true,
+                queryId: query.id,
+                columns: CL_COLUMNS,
+                executionTimeMs: query.execution_time,
+                jobId: session.jobId,
+                updateCount: 0
+              });
+              session.isDone = true;
               return;
             }
-            query = this.currentQuery = prepared;
-            if (session.serverQuery) {
-              setDataTableQueryModification(post, describeModification(session, sql));
+            else {
+              const { sql, params } = buildQueryText(session);
+              const prepared = await JobManager.getPagingStatement(sql, { parameters: params, isTerseResults: !listing });
+              // Superseded by a restart while preparing
+              if (myEpoch !== this.queryEpoch) {
+                prepared.close();
+                return;
+              }
+              query = this.currentQuery = prepared;
+              if (session.serverQuery) {
+                setDataTableQueryModification(post, describeModification(session, sql));
+              }
             }
           }
 

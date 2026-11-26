@@ -2339,8 +2339,8 @@
     ]
   },
   "devDependencies": {
-    "@halcyontech/vscode-ibmi-types": "^3.0.12",
-    "@ibm/mapepire-js": "^0.5.0",
+    "@halcyontech/vscode-ibmi-types": "3.0.16",
+    "@ibm/mapepire-js": "1.1.1",
     "@types/glob": "^7.1.3",
     "@types/node": "25.x",
     "@types/vscode": "^1.95.0",
