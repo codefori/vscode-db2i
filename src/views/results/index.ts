@@ -452,7 +452,7 @@ async function runHandler(options?: StatementInfo) {
             // CL does not throw
             const result = await JobManager.runCL(statementDetail.content);
             if (!result.success) {
-              throw new Error(result.error ? result.error : `${result.data[0].text}${result.data[0].help ? " - " + result.data[0].help : ""}`);
+              throw new Error(result.error ?? `${result.data[0].text}${result.data[0].help ? " - " + result.data[0].help : ""}`);
             }
 
           } else {
@@ -553,9 +553,11 @@ async function runHandler(options?: StatementInfo) {
 
             explainTree = new ExplainTree(explained.vedata);
             const topLevel = explainTree.get();
-            const rootNode = doveResultsView.setRootNode(topLevel);
-            doveNodeView.setNode(rootNode.explainNode);
-            doveTreeDecorationProvider.updateTreeItems(rootNode);
+            if (topLevel) {
+              const rootNode = doveResultsView.setRootNode(topLevel);
+              doveNodeView.setNode(rootNode.explainNode);
+              doveTreeDecorationProvider.updateTreeItems(rootNode);
+            }
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
@@ -609,8 +611,10 @@ async function runHandler(options?: StatementInfo) {
           if (data.length > 0) {
             if (isExportFormat(statementDetail.qualifier)) {
               const columns = result.metadata.columns;
-              await openResultsAs(statementDetail.qualifier, { columns: columns.map(column => column.name), types: columns.map(column => column.type), labels: columns.map(column => column.label), rows: data });
-              chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
+              if (columns) {
+                await openResultsAs(statementDetail.qualifier, { columns: columns.map(column => column.name), types: columns.map(column => column.type), labels: columns.map(column => column.label), rows: data });
+                chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
+              }
             }
 
           } else {
