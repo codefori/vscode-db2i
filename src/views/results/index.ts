@@ -10,17 +10,17 @@ import Document from "../../language/sql/document";
 import Statement from "../../language/sql/statement";
 import { ObjectRef, ParsedEmbeddedStatement, StatementGroup, StatementType } from "../../language/sql/types";
 import { VisualExplainData } from "../../types";
+import { DataTableHandlers, DataTableOptions, runDataTableRowAction } from "../html/dataTable";
 import { updateStatusBar } from "../jobManager/statusBar";
 import { getLiteralsFromStatement, getPriorBindableStatement, hasParameters, promptForParameterValues } from "./binding";
 import { queryResultToRpgDs, queryResultToUdtf } from "./codegen";
 import { registerRunStatement } from "./editorUi";
-import { EXPORT_FORMATS, ExportFormat, isExportFormat, openResultsAs } from "./export";
 import { generateSqlForAdvisedIndexes } from "./explain/advice";
 import { DoveNodeView, PropertyNode } from "./explain/doveNodeView";
 import { DoveResultsView, ExplainTreeItem } from "./explain/doveResultsView";
 import { DoveTreeDecorationProvider } from "./explain/doveTreeDecorationProvider";
 import { ExplainTree } from "./explain/nodes";
-import { DataTableHandlers, DataTableOptions, runDataTableRowAction } from "../html/dataTable";
+import { EXPORT_FORMATS, ExportFormat, isExportFormat, openResultsAs } from "./export";
 import { DataTableExtras, ResultSetListing, ResultSetPanelProvider, SqlParameter } from "./resultSetPanelProvider";
 import { RESULT_ROW_ACTIONS } from "./rowChanges";
 
@@ -450,9 +450,9 @@ async function runHandler(options?: StatementInfo) {
 
             chosenView.setLoadingText(`Running CL command... (${command})`, false);
             // CL does not throw
-            const result = await JobManager.runSQLVerbose<{ SUMMARY: string }>(statementDetail.content, { isClCommand: true });
+            const result = await JobManager.runCL(statementDetail.content);
             if (!result.success) {
-              throw new Error(result.data && result.data[0] ? result.data[0].SUMMARY : `CL command ${command} executed successfully.`);
+              throw new Error(result.error ?? `${result.data[0].text}${result.data[0].help ? " - " + result.data[0].help : ""}`);
             }
 
           } else {
@@ -553,9 +553,11 @@ async function runHandler(options?: StatementInfo) {
 
             explainTree = new ExplainTree(explained.vedata);
             const topLevel = explainTree.get();
-            const rootNode = doveResultsView.setRootNode(topLevel);
-            doveNodeView.setNode(rootNode.explainNode);
-            doveTreeDecorationProvider.updateTreeItems(rootNode);
+            if (topLevel) {
+              const rootNode = doveResultsView.setRootNode(topLevel);
+              doveNodeView.setNode(rootNode.explainNode);
+              doveTreeDecorationProvider.updateTreeItems(rootNode);
+            }
           } else {
             vscode.window.showInformationMessage(`No job currently selected.`);
           }
@@ -609,8 +611,10 @@ async function runHandler(options?: StatementInfo) {
           if (data.length > 0) {
             if (isExportFormat(statementDetail.qualifier)) {
               const columns = result.metadata.columns;
-              await openResultsAs(statementDetail.qualifier, { columns: columns.map(column => column.name), types: columns.map(column => column.type), labels: columns.map(column => column.label), rows: data });
-              chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
+              if (columns) {
+                await openResultsAs(statementDetail.qualifier, { columns: columns.map(column => column.name), types: columns.map(column => column.type), labels: columns.map(column => column.label), rows: data });
+                chosenView.setLoadingText(`Query executed with ${data.length} rows returned.`, false);
+              }
             }
 
           } else {

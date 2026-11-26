@@ -1,7 +1,7 @@
 
-import { JobManager } from "../config";
 import { getInstance } from "../base";
-import { TableColumn, CPYFOptions } from "../types";
+import { JobManager } from "../config";
+import { CPYFOptions, TableColumn } from "../types";
 import Statement from "./statement";
 
 export default class Table {
@@ -114,13 +114,10 @@ export default class Table {
   static async clearFile(library: string, objectName: string): Promise<void> {
     const command = `QSYS/CLRPFM ${Statement.escapeString(library)}/${Statement.escapeString(objectName)}`;
               
-    const commandResult = await getInstance().getConnection().runCommand({
-      command: command,
-      environment: `ile`
-    });
+    const commandResult = await getInstance().getConnection().runCL(command);
 
-    if (commandResult.code !== 0) {
-      throw new Error(commandResult.stderr);
+    if (!commandResult.success) {
+      throw new Error(commandResult.error);
     }
   }
 
@@ -131,13 +128,10 @@ export default class Table {
       `CRTFILE(${options.crtFile}) OUTFMT(${options.outFmt})`
     ].join(` `);
                   
-    const commandResult = await getInstance().getConnection().runCommand({
-      command: command,
-      environment: `ile`
-    });
+    const commandResult = await getInstance().getConnection().runCL(command);
 
-    if (commandResult.code !== 0) {
-      throw new Error(commandResult.stderr);
+    if (!commandResult.success) {
+      throw new Error(commandResult.error);
     }
   }
 }

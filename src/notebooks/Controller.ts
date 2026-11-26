@@ -138,7 +138,6 @@ export class IBMiController {
             const command = await connection.runCommand({
               command: cell.document.getText(),
               environment: `ile`,
-              //@ts-ignore (remove comment when Code for i v3 is released)
               getSpooledFiles: true
             });
             success = command.code === 0;

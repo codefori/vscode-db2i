@@ -172,7 +172,7 @@ async function submitIndexCreation(statement: string, name: string, table: strin
     jobName = await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: `Submitting job to create index ${name}...` },
       async () => {
-        const result = await JobManager.runSQLVerbose<any>(buildSubmitCommand(statement, afterCreate), { isClCommand: true });
+        const result = await JobManager.runCL(buildSubmitCommand(statement, afterCreate));
         return submittedJobName(result.data ?? []);
       }
     );

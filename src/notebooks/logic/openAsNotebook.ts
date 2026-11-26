@@ -1,5 +1,5 @@
 import path from "path";
-import { commands, Uri, workspace, NotebookCellData, NotebookCellKind, window } from "vscode";
+import { commands, NotebookCellData, NotebookCellKind, Uri, window, workspace } from "vscode";
 import Document from "../../language/sql/document";
 
 export const notebookFromSqlUri = commands.registerCommand(`vscode-db2i.notebook.fromSqlUri`, async (sqlUri?: Uri) => {
@@ -16,8 +16,8 @@ export const notebookFromSqlUri = commands.registerCommand(`vscode-db2i.notebook
 
       notebookFromStatements(statements)
 
-    } catch (e) {
-      window.showWarningMessage(`Failed to parse SQL file: ${e.message}`);
+    } catch (e : unknown) {
+      window.showWarningMessage(`Failed to parse SQL file: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 });

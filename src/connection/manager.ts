@@ -44,7 +44,14 @@ export class SQLJobManager {
       }
 
       if (!options.libraries) {
-        options.libraries = [config.currentLibrary, ...config.libraryList.filter((item) => item != config.currentLibrary)];
+        const libraries = new Set<string>(...config.libraryList);
+        if (config.currentLibrary) {
+          libraries.delete(config.currentLibrary);
+          options.libraries = [config.currentLibrary, ...libraries];
+        }
+        else {
+          options.libraries = [...libraries];
+        }
       }
     }
 
@@ -154,18 +161,7 @@ export class SQLJobManager {
   }
 
   async runSQL<T>(query: string, opts?: QueryOptions, rowsToFetch = 2147483647): Promise<T[]> {
-    // 2147483647 is NOT arbitrary. On the server side, this is processed as a Java
-    // int. This is the largest number available without overflow (Integer.MAX_VALUE)
-
-    // const s = performance.now()
-    // console.log(`Running statement: ${query.padEnd(40).substring(0, 40)}`);
-
-    const statement = await this.getPagingStatement<T>(query, opts);
-    const results = await statement.execute(rowsToFetch);
-    statement.close();
-
-    this.resetCurrentSchema(query, this.jobs[this.selectedJob].job);
-    return results.data;
+    return (await this.runSQLVerbose<T>(query, opts, rowsToFetch)).data;
   }
 
   async runSQLVerbose<T>(query: string, opts?: QueryOptions, rowsToFetch = 2147483647): Promise<QueryResult<T>> {
@@ -176,23 +172,26 @@ export class SQLJobManager {
     const results = await statement.execute(rowsToFetch);
     statement.close();
 
-    this.resetCurrentSchema(query, this.jobs[this.selectedJob].job);
+    this.resetCurrentSchema(query, await this.getSelectedJob());
     return results;
   }
 
+  async runCL(command: string) {
+    return (await this.getSelectedJob()).clcommand(command);
+  }
+
   async getPagingStatement<T>(query: string, opts?: QueryOptions): Promise<Query<T>> {
-    const selected = this.jobs[this.selectedJob];
-    if (selected) {
-      this.resetCurrentSchema(query, selected?.job);
-      return selected.job.query<T>(query, opts);
-    } else {
-      const hasNewJob = await askAboutNewJob();
-      if (hasNewJob) {
-        return this.getPagingStatement(query, opts);
-      } else {
-        throw new Error(`Active SQL job is required. Please spin one up in the 'SQL Job Manager' view and try again.`);
-      }
+    const selected = await this.getSelectedJob()
+    this.resetCurrentSchema(query, selected);
+    return selected.query<T>(query, opts);
+  }
+
+  async getSelectedJob() {
+    let selected = this.getSelection();
+    if (selected || await askAboutNewJob()) {
+      return this.getSelection()!.job;
     }
+    throw new Error(`Active SQL job is required. Please spin one up in the 'SQL Job Manager' view and try again.`);
   }
 
   static getSelfDefault(): SelfValue {
