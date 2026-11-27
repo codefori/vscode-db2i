@@ -5,6 +5,7 @@ import { getPositionData } from "../sql/document";
 import { StatementType } from "../sql/types";
 import { remoteAssistIsEnabled } from "./logic/available";
 import { DbCache, LookupResult, RoutineDetail } from "./logic/cache";
+import { getRoutineSchemaFromPath, getRoutineType } from "./logic/callable";
 import { prepareParamType } from "./logic/completion";
 import { getSqlDocument } from "./logic/parse";
 
@@ -31,7 +32,7 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
             const first = refs[0];
             if (first.object.name) {
               const name = Statement.noQuotes(Statement.delimName(first.object.name, true));
-              const schema = Statement.noQuotes(Statement.delimName(first.object.schema || defaultSchema, true));
+              const schema = Statement.noQuotes(Statement.delimName(first.object.schema || await getRoutineSchemaFromPath(selected.job, name, `PROCEDURE`) || defaultSchema, true));
               const result = await DbCache.getRoutine(schema, name, `PROCEDURE`);
               if (result) {
                 await DbCache.getSignaturesFor(schema, name, result.specificNames);
@@ -42,13 +43,14 @@ export const openProvider = workspace.onDidOpenTextDocument(async (document) => 
             for (const ref of refs) {
               if (ref.object.name) {
                 const name = Statement.noQuotes(Statement.delimName(ref.object.name, true));
-                const schema = Statement.noQuotes(Statement.delimName(ref.object.schema || defaultSchema, true));
                 if (ref.isUDTF) {
+                  const schema = Statement.noQuotes(Statement.delimName(ref.object.schema || await getRoutineSchemaFromPath(selected.job, name, `FUNCTION`) || defaultSchema, true));
                   const result = await DbCache.getRoutine(schema, name, `FUNCTION`);
                   if (result) {
                     await DbCache.getSignaturesFor(schema, name, result.specificNames);
                   }
                 } else {
+                  const schema = Statement.noQuotes(Statement.delimName(ref.object.schema || defaultSchema, true));
                   await DbCache.getObjectColumns(schema, name);
                 }
               }
@@ -85,7 +87,10 @@ export const hoverProvider = languages.registerHoverProvider({ language: `sql` }
         const atRef = offset >= ref.tokens[0].range.start && offset <= ref.tokens[ref.tokens.length - 1].range.end;
 
         if (atRef && ref.object.name) {
-          const schema = ref.object.schema || defaultSchema;
+          const routineType = ref.object.schema ? undefined : getRoutineType(statementAt, ref);
+          const schema = ref.object.schema
+            || (routineType && await getRoutineSchemaFromPath(selected.job, ref.object.name, routineType))
+            || defaultSchema;
           const result = await lookupSymbol(ref.object.name, schema, possibleNames);
 
 

@@ -14,6 +14,7 @@ import { SelfCodesQuickPickItem } from "./selfCodes/selfCodesBrowser";
 import { updateStatusBar } from "./statusBar";
 
 const selectJobCommand = `vscode-db2i.jobManager.selectJob`;
+const splitLibraries = (value: string) => value.split(/[\s,]+/).filter(lib => lib.length > 0);
 const activeColor = new vscode.ThemeColor(`minimapGutter.addedBackground`);
 
 export class JobManagerView implements TreeDataProvider<any> {
@@ -108,7 +109,8 @@ export class JobManagerView implements TreeDataProvider<any> {
         const id = node ? node.label as string : undefined;
         let selected = id ? JobManager.getJob(id) : JobManager.getSelection();
         if (selected) {
-          editJobUi(selected.job.options, selected.name).then(newOptions => {
+          // The library list only applies to saved configurations: on a running job it is changed with Change Library List
+          editJobUi(selected.job.options, selected.name, [`libraries`]).then(newOptions => {
             if (newOptions) {
               window.withProgress({ location: ProgressLocation.Window }, async (progress) => {
                 progress.report({ message: `Ending current job` });
@@ -127,6 +129,33 @@ export class JobManagerView implements TreeDataProvider<any> {
               })
             }
           })
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-db2i.jobManager.changeLibraryList`, async (node?: SQLJobItem) => {
+        const id = node ? node.label as string : undefined;
+        const selected = id ? JobManager.getJob(id) : JobManager.getSelection();
+        if (selected) {
+          const current = await selected.job.getLibraryList();
+          const input = await window.showInputBox({
+            title: `Change library list for ${selected.name}`,
+            prompt: `User libraries separated by commas or spaces. Applied to the running job with CHGLIBL, the current library is not changed.`,
+            value: current.join(`, `),
+            validateInput: (value) => {
+              const invalid = splitLibraries(value).find(lib => !/^[A-Z$#@][A-Z0-9$#@_.]{0,9}$/i.test(lib));
+              return invalid ? `${invalid} is not a valid library name.` : undefined;
+            }
+          });
+
+          if (input !== undefined) {
+            try {
+              await selected.job.setLibraryList(splitLibraries(input));
+            } catch (e: any) {
+              window.showErrorMessage(`Failed to change library list. ${e.message}`);
+            }
+
+            this.refresh();
+          }
         }
       }),
 
